@@ -1,3 +1,3 @@
-# Mk48.io
+# Mk48.io Game
 
-Online multiplayer ship combat game
+![Logo](/client/static/logo-712.png)
