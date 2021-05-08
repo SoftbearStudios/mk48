@@ -1,0 +1,15 @@
+{
+	"background_color": "#00487d",
+	"theme_color": "#ff6600",
+	"name": "Mk48.io",
+	"short_name": "Free online ship combat game. Sail your way to victory, watch out for torpedoes!",
+	"display": "minimal-ui",
+	"start_url": "/",
+	"icons": [
+		{
+			"src": "logo-712.png",
+			"sizes": "712x400",
+			"type": "image/png"
+		}
+	]
+}
