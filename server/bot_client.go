@@ -145,7 +145,8 @@ func (bot *BotClient) Send(out outbound) {
 
 			if data.Kind == world.EntityKindCollectible {
 				closestCollectible.Closest(contact, distanceSquared)
-			} else {
+			} else if !(data.Kind == world.EntityKindBoat && ship.EntityType.Data().SubKind == world.EntitySubKindRam) {
+				// Rams don't regard boats as hazards
 				closestHazard.Closest(contact, distanceSquared)
 			}
 
