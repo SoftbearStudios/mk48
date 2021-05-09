@@ -575,6 +575,110 @@
 			}
 		]
 	},
+	"leander": {
+		"label": "Leander",
+		"link": "https://en.wikipedia.org/wiki/Leander-class_cruiser_(1931)",
+		"type": "boat",
+		"subtype": "cruiser",
+		"level": 4,
+		"length": 169.1,
+		"width": 17.1,
+		"speed": 16.71945,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 1100
+			},
+			{
+				"type": "radar",
+				"range": 10000
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.26,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.78,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.26,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.78,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -3.41018,
+				"positionSide": 6.52922,
+				"angle": 180
+			},
+			{
+				"positionForward": -3.41018,
+				"positionSide": -6.52922,
+				"angle": 180
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": 52.7746,
+				"positionSide": 0
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": 43.2429,
+				"positionSide": 0
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": -45.3247,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": -56.3283,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
 	"momi": {
 		"label": "Momi",
 		"link": "https://en.wikipedia.org/wiki/Momi-class_destroyer",
@@ -1088,6 +1192,27 @@
 		"width": 0.57,
 		"speed": 853,
 		"range": 1510
+	},
+	"bl6MkXXIII": {
+		"label": "BL 6-inch Mk XXIII",
+		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 11.9,
+		"width": 5.671,
+		"positionForward": 2,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"symmetrical": true,
+				"external": true,
+				"hidden": false
+			}
+		]
 	},
 	"dredger": {
 		"label": "Dredger",

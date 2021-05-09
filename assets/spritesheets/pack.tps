@@ -291,6 +291,21 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
+            <key type="filename">../../client/static/sprites/bl6MkXXIII.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>64,31,128,61</rect>
+                <key>scale9Paddings</key>
+                <rect>64,31,128,61</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">../../client/static/sprites/crate.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
@@ -409,6 +424,21 @@
                 <rect>128,31,256,63</rect>
                 <key>scale9Paddings</key>
                 <rect>128,31,256,63</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/sprites/leander.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>256,26,512,52</rect>
+                <key>scale9Paddings</key>
+                <rect>256,26,512,52</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
