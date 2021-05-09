@@ -186,11 +186,23 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			*/
 			damage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
 
+			isRam := boat.Data().SubKind == world.EntitySubKindRam
+			isOtherRam := otherBoat.Data().SubKind == world.EntitySubKindRam
+
+			if isRam || isOtherRam {
+				// Ouch
+				damage *= 2
+			}
+
 			posDiff := boat.Position.Sub(otherBoat.Position).Norm()
 
-			boat.Damage += damage
+			if !isRam || isOtherRam {
+				boat.Damage += damage
+			}
 			boat.Velocity += 3 * posDiff.Dot(boat.Direction.Vec2f())
-			otherBoat.Damage += damage
+			if !isOtherRam || isRam {
+				otherBoat.Damage += damage
+			}
 			otherBoat.Velocity -= 3 * posDiff.Dot(otherBoat.Direction.Vec2f())
 
 			if boat.Dead() {

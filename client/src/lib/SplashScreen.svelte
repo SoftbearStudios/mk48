@@ -19,6 +19,8 @@
 		const list = [];
 		for (const entityType of Object.keys(entityData)) {
 			const data = entityData[entityType];
+			// JS doesn't know if the auth is correct, so give user the benefit
+			// of the doubt (server will enforce)
 			if (data.type === 'boat' && (data.level === 1 || storage.auth)) {
 				list.push(entityType);
 			}

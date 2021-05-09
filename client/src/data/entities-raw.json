@@ -713,6 +713,22 @@
 			}
 		]
 	},
+	"olympias": {
+		"label": "Olympias",
+		"link": "https://en.wikipedia.org/wiki/Olympias_%28trireme%29",
+		"type": "boat",
+		"subtype": "ram",
+		"level": 1,
+		"length": 36.9,
+		"width": 5.5,
+		"speed": 16,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 700
+			}
+		]
+	},
 	"osa": {
 		"label": "Osa",
 		"link": "https://en.wikipedia.org/wiki/Osa-class_missile_boat",

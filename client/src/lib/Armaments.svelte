@@ -97,6 +97,9 @@
 				<span class='consumption'>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
+		{#if entityData[type].subtype === 'ram'}
+			<small>Your boat is designed<br/>to ram other boats!</small>
+		{/if}
 	</Section>
 </div>
 
