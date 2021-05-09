@@ -19,7 +19,7 @@ jobs:
         go-version: 1.16
 
     - name: Build
-      run: make server
+      run: make -C server server
 
     - name: Test
-      run: make test
+      run: make -C server test
