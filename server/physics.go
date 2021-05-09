@@ -50,11 +50,10 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		h.world.ForEntities(func(_ world.EntityID, e *world.Entity) (_, remove bool) {
 			remove = e.Update(timeDeltaSeconds, h.worldRadius, terrain)
 			if e.Data().Kind == world.EntityKindBoat {
-				if e.Data().SubKind == world.EntitySubKindDredger {
-					h.terrain.Sculpt(e.Position, -5)
-				}
 				if remove {
 					output <- *e // Copy entity
+				} else if e.Data().SubKind == world.EntitySubKindDredger {
+					h.terrain.Sculpt(e.Position, -5)
 				}
 			}
 			return
@@ -99,7 +98,9 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		//	return
 		//}
 
-		var weapon, boat, otherBoat, collectible *world.Entity
+		// Collisions are resolved by identifying the collision signature
+		// i.e. the EntityKind of entities that are colliding
+		var weapon, boat, otherBoat, collectible, obstacle *world.Entity
 
 		if entityData.Kind == world.EntityKindBoat {
 			boat = entity
@@ -139,13 +140,15 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			return
 		}
 
-		// e must be entity or other (no-op if is obstacle)
+		if entityData.Kind == world.EntityKindObstacle {
+			obstacle = entity
+		} else if otherData.Kind == world.EntityKindObstacle {
+			obstacle = other
+		}
+
+		// e must be either entity or other
 		removeEntity := func(e *world.Entity, reason string) {
 			data := e.Data()
-
-			if data.Kind == world.EntityKindObstacle {
-				return // obstacles never die
-			}
 
 			if data.Kind == world.EntityKindBoat {
 				e.Owner.DeathMessage = reason
@@ -211,11 +214,21 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			if otherBoat.Dead() {
 				removeEntity(otherBoat, fmt.Sprintf("Crashed into %s!", boat.Owner.Name))
 			}
+		case boat != nil && obstacle != nil:
+			posDiff := boat.Position.Sub(obstacle.Position).Norm()
+			boat.Velocity += 3 * posDiff.Dot(boat.Direction.Vec2f())
+			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
+			if boat.Dead() {
+				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
+			}
 		default:
-			// Other ex weapon against weapon collision
-			// note: will not remove obstacle entities
-			removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label))
-			removeEntity(other, fmt.Sprintf("Crashed into %s!", entity.Data().Label))
+			// Other ex weapon vs. weapon collision
+			if entityData.Kind != world.EntityKindObstacle {
+				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label))
+			}
+			if otherData.Kind != world.EntityKindObstacle {
+				removeEntity(other, fmt.Sprintf("Crashed into %s!", entity.Data().Label))
+			}
 		}
 
 		return
