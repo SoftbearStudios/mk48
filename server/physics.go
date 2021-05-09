@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/chewxy/math32"
 	"mk48/server/world"
 	"runtime"
 	"sync"
@@ -87,7 +86,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 		return
 	}, func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, other *world.Entity) (stop, remove, removeOther bool) {
-		if entity.Owner.Friendly(other.Owner) || math32.Abs(entity.Altitude()-other.Altitude()) > world.AltitudeCollisionThreshold {
+		if entity.Owner.Friendly(other.Owner) || !entity.AltitudeOverlap(other) {
 			return
 		}
 		entityData := entity.Data()

@@ -3,10 +3,22 @@
 
 package world
 
+import (
+	"github.com/chewxy/math32"
+)
+
 // Collider is anything that can collide with an Entity but can't be collided back such as terrain.
 // It also is required to not change while inside the world radius.
 type Collider interface {
 	Collides(entity *Entity, seconds float32) bool
+}
+
+// Entities within this of eachother's altitudes can collide
+const AltitudeCollisionThreshold = 0.25
+
+// Returns if entities have sufficiently similar altitudes to collide
+func (entity *Entity) AltitudeOverlap(otherEntity *Entity) bool {
+	return math32.Abs(entity.Altitude()-otherEntity.Altitude()) <= AltitudeCollisionThreshold
 }
 
 // Collides does a rectangle to rectangle collision with another Entity.

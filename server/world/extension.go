@@ -30,9 +30,6 @@ func (entity *Entity) ArmamentConsumption() []float32 {
 	return entity.ext.armamentConsumption(entity.EntityType)
 }
 
-// Entities within this of eachother's altitudes can collide
-const AltitudeCollisionThreshold = 0.25
-
 // -1 = deep, 0 = surface, 1 = high in the air
 func (entity *Entity) Altitude() float32 {
 	if entity.EntityType.Data().Kind == EntityKindBoat {
