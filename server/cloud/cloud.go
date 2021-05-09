@@ -6,6 +6,7 @@ package cloud
 import (
 	"encoding/json" // oof
 	"errors"
+	"fmt"
 	"mk48/server/cloud/db"
 	"mk48/server/cloud/dns"
 	"mk48/server/cloud/fs"
@@ -231,4 +232,13 @@ func (cloud *Cloud) UpdateLeaderboard(playerScores map[string]int) (err error) {
 		_ = cloud.fs.UploadStaticFile("leaderboard.json", 10, leaderboardJSON)
 	}
 	return
+}
+
+func (cloud *Cloud) UploadTerrainSnapshot(data []byte) error {
+	if cloud == nil {
+		return nil
+	}
+	millis := time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
+	filename := fmt.Sprintf("%s-%d/terrain/%d.png", cloud.region, cloud.serverSlot, millis)
+	return cloud.fs.UploadStaticFile(filename, 0, data)
 }
