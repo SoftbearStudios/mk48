@@ -1066,6 +1066,14 @@
 				"symmetrical": false,
 				"external": false
 			}
+		],
+		"turrets": [
+			{
+				"type": "8_8cmSKC35",
+				"positionForward": -4.35,
+				"positionSide": 0,
+				"angle": 180
+			}
 		]
 	},
 	"zubr": {
@@ -1192,6 +1200,25 @@
 		"width": 0.57,
 		"speed": 853,
 		"range": 1510
+	},
+	"8_8cmSKC35": {
+		"label": "8.8 cm SK C/35",
+		"link": "https://en.wikipedia.org/wiki/8.8_cm_SK_C/35_naval_gun",
+		"type": "turret",
+		"positionForward": 0.4,
+		"positionSide": -0.1,
+		"subtype": "gun",
+		"length": 3.41,
+		"width": 1.812,
+		"armaments": [
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 0.5,
+				"external": false,
+				"hidden": true
+			}
+		]
 	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
