@@ -4,6 +4,8 @@
 
 ![Logo](/client/static/logo-712.png)
 
+[Mk48.io](https://mk48.io) is an online multiplayer naval combat game, in which you take command of a ship and sail your way to victory. Watch out for torpedoes!
+
 ## Developing
 
 ### Client
