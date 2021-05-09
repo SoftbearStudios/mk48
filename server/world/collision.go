@@ -17,8 +17,38 @@ type Collider interface {
 const AltitudeCollisionThreshold = 0.25
 
 // Returns if entities have sufficiently similar altitudes to collide
-func (entity *Entity) AltitudeOverlap(otherEntity *Entity) bool {
-	return math32.Abs(entity.Altitude()-otherEntity.Altitude()) <= AltitudeCollisionThreshold
+func (entity *Entity) AltitudeOverlap(other *Entity) bool {
+	entityData, otherData := entity.Data(), other.Data()
+	var boat, weapon *Entity
+
+	if entityData.Kind == EntityKindBoat {
+		boat = entity
+	} else if otherData.Kind == EntityKindBoat {
+		boat = other
+	}
+
+	if entityData.Kind == EntityKindWeapon {
+		weapon = entity
+	} else if otherData.Kind == EntityKindWeapon {
+		weapon = other
+	}
+
+	if boat != nil && weapon != nil && boat.Altitude() <= 0.0 {
+		if weapon.Data().SubKind == EntitySubKindDepthCharge {
+			// Depth charges can hit submerged submarines regardless of depth
+			return true
+		}
+		for _, sensor := range weapon.Data().Sensors {
+			if sensor.Type == SensorTypeSonar {
+				// Weapon has sonar, can modify theoretically modify altitude
+				// to hit deep submarines (although this is not directly
+				// simulated)
+				return true
+			}
+		}
+	}
+
+	return math32.Abs(entity.Altitude()-other.Altitude()) <= AltitudeCollisionThreshold
 }
 
 // Collides does a rectangle to rectangle collision with another Entity.
