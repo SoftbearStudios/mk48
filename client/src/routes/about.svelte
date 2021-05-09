@@ -5,6 +5,7 @@
 
 <script>
 	import entityData from '../data/entities.json';
+	import Link from '../lib/Link.svelte';
 
 	let shipTypeCount = 0;
 	let shipLevelMax = 0;
@@ -40,10 +41,10 @@
 
 	<h2>Technical details</h2>
 
-	<p>The game's server is written in Go.</p>
-	<p>The game's client is written in the SvelteKit JavaScript framework, and
-	uses PIXI.js for the 2D graphics.</p>
-	<p>The game assets were modeled and rendered in Blender.</p>
+	<p>The game's <Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">server</Link> is written in <Link href="https://golang.org/">Go</Link>.</p>
+	<p>The game's <Link href="https://github.com/SoftbearStudios/mk48/tree/main/client">client</Link> is written in the <Link href="https://kit.svelte.dev/">SvelteKit</Link> JavaScript framework, and
+	uses <Link href="https://www.pixijs.com/">PIXI.js</Link> for the 2D graphics.</p>
+	<p>The game assets were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</p>
 
 	<h2>Contact Us</h2>
 
