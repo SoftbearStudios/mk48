@@ -36,6 +36,8 @@ type Terrain interface {
 	Clamp(world.AABB) world.AABB
 	// Collides tests if an entity collides with the Terrain.
 	Collides(e *world.Entity, seconds float32) bool
+	// Decodes data from this terrain into a heightmap
+	Decode(*Data) ([]byte, error)
 	// Modifies terrain at the position
 	Sculpt(pos world.Vec2f, change float32)
 	// Repairs the terrain a small amount towards its original state (prior to sculpting)

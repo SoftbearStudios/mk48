@@ -159,6 +159,7 @@ func (h *Hub) run() {
 			h.world.Resize(h.worldRadius)
 		case <-h.debugTicker.C:
 			h.Debug()
+			h.SnapshotTerrain()
 		case <-h.botsTicker.C:
 			// Add as many as fit in the channel but don't block because it would deadlock
 			for i := h.clients.Len + len(h.register) - len(h.unregister); i < h.minPlayers; i++ {

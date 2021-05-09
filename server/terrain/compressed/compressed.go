@@ -84,6 +84,14 @@ func (t *Terrain) At(aabb world.AABB) *terrain.Data {
 	return data
 }
 
+func (t *Terrain) Decode(data *terrain.Data) (raw []byte, err error) {
+	var buf Buffer
+	buf.Reset(data.Data)
+	raw = make([]byte, data.Length)
+	_, err = buf.Read(raw)
+	return
+}
+
 func (t *Terrain) Repair() {
 	millis := time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
 	for ucx, chunks := range t.chunks {

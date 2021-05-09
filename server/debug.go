@@ -5,7 +5,11 @@ package main
 
 import (
 	"fmt"
+	"image/png"
+	"mk48/server/terrain"
+	"mk48/server/terrain/compressed"
 	"mk48/server/world"
+	"os"
 	"runtime"
 	"sort"
 	"strconv"
@@ -133,6 +137,25 @@ func (h *Hub) Debug() {
 		unixMillis(),
 		countBuf.String(),
 	})
+}
+
+// Saves a snapshot of the terrain to a tmp directory
+func (h *Hub) SnapshotTerrain() {
+	img := terrain.Render(h.terrain, compressed.Size/4)
+
+	const path = "/tmp/mk48-terrain"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		os.Mkdir(path, 0744)
+	}
+	file, err := os.Create(fmt.Sprintf("%s/%d.png", path, unixMillis()))
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	if err = png.Encode(file, img); err != nil {
+		fmt.Println(err)
+	}
 }
 
 // funcBench is a benchmark of a core function.
