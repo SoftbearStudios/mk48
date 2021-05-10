@@ -66,7 +66,9 @@
 			new: storage.join == undefined
 		});
 
-		storage.join = Date.now();
+		if (storage.join == undefined) {
+			storage.join = Date.now();
+		}
 	}
 </script>
 
