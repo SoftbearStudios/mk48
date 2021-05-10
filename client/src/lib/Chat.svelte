@@ -3,18 +3,28 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+<script context='module'>
+	import {writable} from 'svelte/store';
+	// Store message in module context to persist it between
+	// player deaths (See #22)
+	let message = writable('');
+</script>
+
 <script>
 	import {chats} from '../lib/socket.js';
 	import Section from './Section.svelte';
 
 	export let callback;
 
-	let message = '';
 	let input; // ref
 
+	function onInput(event) {
+		message.set(event.target.value);
+	}
+
 	function onSubmit() {
-		callback(message);
-		message = '';
+		callback($message);
+		message.set('');
 		input && input.blur && input.blur();
 	}
 
@@ -51,11 +61,11 @@
 				</tr>
 			{/each}
 		</table>
-		{#if auto(message)}
-			<p><b>Automated help: {auto(message)}</b></p>
+		{#if auto($message)}
+			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
 		<form on:submit|preventDefault={onSubmit}>
-			<input type='text' name='message' placeholder='Message' autocomplete='off' minLength={1} maxLength={100} bind:value={message} bind:this={input}/>
+			<input type='text' name='message' placeholder='Message' autocomplete='off' minLength={1} maxLength={100} value={$message} on:input={onInput} bind:this={input}/>
 		</form>
 	</Section>
 </div>
