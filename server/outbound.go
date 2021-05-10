@@ -28,7 +28,7 @@ type (
 		Friendly            bool             `json:"friendly,omitempty"`
 		EntityType          world.EntityType `json:"type"`
 		Altitude            float32          `json:"altitude,omitempty"`
-		Health              float32          `json:"health,omitempty"`
+		Damage              float32          `json:"damage,omitempty"`
 		Uncertainty         float32          `json:"uncertainty"`
 	}
 

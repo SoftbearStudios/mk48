@@ -316,7 +316,7 @@
 
 					if (sprite.nameText) {
 						// Quantize health to avoid frequent GUI updates
-						const health = Math.ceil((entity.health || 1) * 10) / 10;
+						const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
 
 						if (currentEntityData.type === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
 							if (!sprite.healthBar) {

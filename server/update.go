@@ -149,7 +149,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 				c.ArmamentConsumption = entity.ArmamentConsumption()
 				c.TurretAngles = entity.TurretAngles()
 
-				c.Health = entity.HealthPercent()
+				c.Damage = entity.DamagePercent()
 
 				// You only know the Guidance of allies
 				if known {
