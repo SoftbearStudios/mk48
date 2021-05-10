@@ -65,6 +65,8 @@
 			invite,
 			new: storage.join == undefined
 		});
+
+		storage.join = Date.now();
 	}
 </script>
 

@@ -70,7 +70,6 @@ export async function connect(callback) {
 		socket.onopen = () => {
 			console.log("socket - Connected to server.");
 			connected.set(true);
-			storage.join = Date.now();
 			callback && callback();
 		};
 
