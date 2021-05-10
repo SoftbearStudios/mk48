@@ -4,6 +4,15 @@
 import fs from 'fs';
 import {mapRanges} from '../util/math.js';
 
+/*
+	This file applies basic operations on the raw entity data, such
+	as computing a damage value for weapons based on their type and size
+	and limiting the range of sensors and weapons to a max value
+
+	This type of data is not dynamic at runtime, but it would be redundant
+	to hardcode it into the raw entity data
+*/
+
 const entityDatas = JSON.parse(fs.readFileSync('./entities-raw.json'));
 
 for (const entityType of Object.keys(entityDatas)) {
