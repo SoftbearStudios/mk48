@@ -86,11 +86,13 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 		return
 	}, func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, other *world.Entity) (stop, remove, removeOther bool) {
-		if entity.Owner.Friendly(other.Owner) || !entity.AltitudeOverlap(other) {
+		// Don't do friendly check, to allow team members to collide (See #27)
+		if entity.Owner == other.Owner || !entity.AltitudeOverlap(other) {
 			return
 		}
 		entityData := entity.Data()
 		otherData := other.Data()
+		friendly := entity.Owner.Friendly(other.Owner)
 
 		// Only do collision once when concurrent
 		//if entityData.Radius < otherData.Radius || (entityData.Radius == otherData.Radius && entityID > otherEntityID) {
@@ -132,7 +134,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			}
 
 			// Home towards target
-			if entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && otherData.Kind == world.EntityKindBoat {
+			if !friendly && entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && otherData.Kind == world.EntityKindBoat {
 				entity.UpdateSensor(other)
 			}
 
@@ -169,7 +171,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			boat.Owner.Score += 1
 
 			removeEntity(collectible, "collected")
-		case boat != nil && weapon != nil:
+		case boat != nil && weapon != nil && !friendly:
 			boat.Damage += weapon.Data().Damage
 
 			if boat.Dead() {
@@ -188,6 +190,10 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			*/
 
 			baseDamage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
+
+			if friendly {
+				baseDamage = 0
+			}
 
 			// Process boats both orders (each time acting only on the first boat, b)
 			for _, ordering := range [2][2]*world.Entity{{boat, otherBoat}, {otherBoat, boat}} {
@@ -209,7 +215,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 				if !isRam || isOtherRam {
 					b.Damage += damage
 				}
-				b.Velocity += 3 * posDiff.Dot(b.Direction.Vec2f())
+				b.Velocity = 15 * posDiff.Dot(b.Direction.Vec2f())
 
 				if b.Dead() {
 					verb := "Crashed into"
@@ -221,12 +227,12 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
-			boat.Velocity += 3 * posDiff.Dot(boat.Direction.Vec2f())
+			boat.Velocity = 15 * posDiff.Dot(boat.Direction.Vec2f())
 			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
 			if boat.Dead() {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
 			}
-		default:
+		case !friendly:
 			// Other ex weapon vs. weapon collision
 			if entityData.Kind != world.EntityKindObstacle {
 				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label))
