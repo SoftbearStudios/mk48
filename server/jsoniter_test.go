@@ -20,7 +20,7 @@ func TestJsonIter(t *testing.T) {
 	}
 
 	testPlayerData := world.PlayerData{Name: "bob", Score: 2, TeamID: teamID}
-	testUpdate := Message{Data: Update{
+	testUpdate := Message{Data: &Update{
 		Chats: []Chat{{Message: "hi", PlayerData: testPlayerData}},
 		Contacts: []IDContact{{EntityID: testEntityID, Contact: Contact{
 			Guidance:            world.Guidance{DirectionTarget: 0.0},
@@ -35,7 +35,7 @@ func TestJsonIter(t *testing.T) {
 		PlayerID: testPlayerID,
 	}}
 
-	const testUpdateString = `{"data":{"chats":[{"name":"bob","score":2,"team":"foo","message":"hi"}],"contacts":{"ffff":{"positionTarget":{"x":0,"y":0},"velocityTarget":0,"name":"bob","score":2,"team":"foo","playerID":"963fa0","position":{"x":1,"y":0.5},"velocity":0.2,"direction":0.25,"armamentConsumption":[0,0.1,0.2,1],"type":"fairmileD","uncertainty":0.2}},"entityID":"ffff","playerID":"963fa0"},"type":"update"}`
+	const testUpdateString = `{"data":{"chats":[{"name":"bob","score":2,"team":"foo","message":"hi"}],"contacts":{"ffff":{"name":"bob","score":2,"team":"foo","playerID":"963fa0","position":{"x":1,"y":0.5},"velocity":0.2,"direction":0.25,"armamentConsumption":[0,0.1,0.2,1],"type":"fairmileD","uncertainty":0.2}},"playerID":"963fa0","entityID":"ffff"},"type":"update"}`
 
 	buf, err := json.Marshal(testUpdate)
 	if err != nil {

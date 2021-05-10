@@ -12,6 +12,8 @@ import (
 )
 
 func createPlayerSet(n int) world.PlayerSet {
+	random := rand.New(rand.NewSource(0))
+
 	set := make(world.PlayerSet, n)
 	for i := range set {
 		score := int(rand.NormFloat64()*30 + 10)
@@ -21,9 +23,9 @@ func createPlayerSet(n int) world.PlayerSet {
 
 		set[i] = &world.Player{
 			PlayerData: world.PlayerData{
-				Name:   randomBotName(),
+				Name:   randomBotName(random),
 				Score:  score,
-				TeamID: "",
+				TeamID: 0,
 			},
 		}
 	}

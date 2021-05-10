@@ -38,6 +38,7 @@ race:
 	go build -o server_race -race && ./server_race $(s)
 
 test: server
+	go test
 	go build -o server_test -race
 	/usr/bin/test `GORACE="halt_on_error=1" timeout --preserve-status 60 ./server_test -players 100 > ./out.txt 2> ./err.txt; echo $$?;` -eq 143 || (cat out.txt err.txt; false)
 
