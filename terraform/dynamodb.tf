@@ -49,3 +49,24 @@ resource "aws_dynamodb_table" "servers" {
 		enabled = true
 	}
 }
+
+resource "aws_dynamodb_table" "statistics" {
+	name = "mk48-${var.stage}-statistics"
+	billing_mode = "PAY_PER_REQUEST"
+	hash_key = "region"
+	range_key = "timestamp"
+
+	attribute {
+		name = "region"
+		type = "S"
+	}
+
+	attribute {
+		name = "timestamp"
+		type = "N"
+	}
+
+	point_in_time_recovery {
+		enabled = true
+	}
+}

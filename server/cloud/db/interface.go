@@ -8,6 +8,7 @@ type Database interface {
 	ReadScores() (scores []Score, err error)
 	ReadScoresByType(scoreType string) (scores []Score, err error)
 	UpdateServer(server Server) error
+	UpdateStatistic(statistic Statistic) error
 	ReadServers() (servers []Server, err error)
 	ReadServersByRegion(region string) (servers []Server, err error)
 }

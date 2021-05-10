@@ -21,3 +21,15 @@ type Server struct {
 	Players int    `dynamo:"players"`
 	TTL     int64  `dynamo:"ttl,omitempty"`
 }
+
+type Statistic struct {
+	Region string `dynamo:"region"`
+
+	// Unix millis; should be aligned to the hour
+	Timestamp int64 `dynamo:"timestamp"`
+
+	// Atomic counters
+	Plays      int `dynamo:"plays"`      // i.e. each spawn
+	Players    int `dynamo:"players"`    // i.e. each connection
+	NewPlayers int `dynamo:"newPlayers"` // i.e. each "new" spawn
+}

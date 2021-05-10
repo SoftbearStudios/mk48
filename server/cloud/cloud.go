@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -28,6 +29,11 @@ type Cloud struct {
 	database   db.Database
 	dns        dns.DNS
 	fs         fs.Filesystem
+
+	// accumulators of statistics since the last update
+	accPlays      int32
+	accPlayers    int32
+	accNewPlayers int32
 }
 
 func (cloud *Cloud) String() string {
@@ -140,6 +146,53 @@ func (cloud *Cloud) UpdateServer(players int) error {
 	})
 }
 
+// The following statistics methods are safe to call concurrently
+func (cloud *Cloud) IncrementPlayerStatistic() {
+	if cloud == nil {
+		return
+	}
+	atomic.AddInt32(&cloud.accPlayers, 1)
+}
+
+func (cloud *Cloud) IncrementNewPlayerStatistic() {
+	if cloud == nil {
+		return
+	}
+	atomic.AddInt32(&cloud.accNewPlayers, 1)
+}
+
+func (cloud *Cloud) IncrementPlaysStatistic() {
+	if cloud == nil {
+		return
+	}
+	atomic.AddInt32(&cloud.accPlays, 1)
+}
+
+// Flushes accumulated statistics to database
+func (cloud *Cloud) FlushStatistics() error {
+	if cloud == nil {
+		return nil
+	}
+
+	stat := db.Statistic{
+		Region:    cloud.region,
+		Timestamp: unixMillis(),
+	}
+
+	// Atomically move the accumulators to the database statistic
+	stat.Plays = int(atomic.SwapInt32(&cloud.accPlays, 0))
+	stat.Players = int(atomic.SwapInt32(&cloud.accPlayers, 0))
+	stat.NewPlayers = int(atomic.SwapInt32(&cloud.accNewPlayers, 0))
+
+	err := cloud.database.UpdateStatistic(stat)
+
+	if err != nil {
+		// TODO: Add the counds back to the accumulators and try again next time
+	}
+
+	return err
+}
+
 func (cloud *Cloud) UpdateLeaderboard(playerScores map[string]int) (err error) {
 	if cloud == nil {
 		return nil
@@ -241,4 +294,8 @@ func (cloud *Cloud) UploadTerrainSnapshot(data []byte) error {
 	millis := time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
 	filename := fmt.Sprintf("%s-%d/terrain/%d.png", cloud.region, cloud.serverSlot, millis)
 	return cloud.fs.UploadStaticFile(filename, 0, data)
+}
+
+func unixMillis() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
 }

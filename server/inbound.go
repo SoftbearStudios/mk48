@@ -69,6 +69,7 @@ type (
 		Type world.EntityType `json:"type"`
 		Auth string           `json:"auth"`   // Auth unlocks certain names and removes some checks
 		Code world.TeamCode   `json:"invite"` // Code automatically adds the Player to the team with that code
+		New  bool             `json:"new"`    // Whether first time playing
 	}
 
 	// Trace sends debug info.
@@ -214,7 +215,7 @@ func (data RemoveFromTeam) Inbound(h *Hub, _ Client, player *Player) {
 	}
 }
 
-func (data Spawn) Inbound(h *Hub, _ Client, player *Player) {
+func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(oldShip *world.Entity) (_ bool) {
 		if oldShip != nil {
 			return // can only have one ship
@@ -291,6 +292,13 @@ func (data Spawn) Inbound(h *Hub, _ Client, player *Player) {
 		}
 
 		h.spawnEntity(entity, spawnRadius)
+
+		if _, bot := client.(*BotClient); !bot {
+			h.cloud.IncrementPlaysStatistic()
+			if data.New {
+				h.cloud.IncrementNewPlayerStatistic()
+			}
+		}
 
 		return
 	})

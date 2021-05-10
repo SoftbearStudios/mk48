@@ -38,7 +38,8 @@ resource "aws_iam_role_policy" "server" {
 			"Action": "dynamodb:*",
 			"Resource": [
 				"${aws_dynamodb_table.scores.arn}",
-				"${aws_dynamodb_table.servers.arn}"
+				"${aws_dynamodb_table.servers.arn}",
+				"${aws_dynamodb_table.statistics.arn}"
 			]
 		},
 		{

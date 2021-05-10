@@ -10,10 +10,11 @@ import (
 )
 
 type DynamoDBDatabase struct {
-	svc          *dynamodb.DynamoDB
-	db           *dynamo.DB
-	scoresTable  dynamo.Table
-	serversTable dynamo.Table
+	svc             *dynamodb.DynamoDB
+	db              *dynamo.DB
+	scoresTable     dynamo.Table
+	serversTable    dynamo.Table
+	statisticsTable dynamo.Table
 }
 
 func NewDynamoDBDatabase(session *session.Session, stage string) (*DynamoDBDatabase, error) {
@@ -21,6 +22,7 @@ func NewDynamoDBDatabase(session *session.Session, stage string) (*DynamoDBDatab
 	ddb.db = dynamo.NewFromIface(ddb.svc)
 	ddb.scoresTable = ddb.db.Table("mk48-" + stage + "-scores")
 	ddb.serversTable = ddb.db.Table("mk48-" + stage + "-servers")
+	ddb.statisticsTable = ddb.db.Table("mk48-" + stage + "-statistics")
 	return ddb, nil
 }
 
@@ -104,4 +106,16 @@ func (ddb *DynamoDBDatabase) ReadServersByRegion(region string) (servers []Serve
 
 	// Unreachable
 	return
+}
+
+func (ddb *DynamoDBDatabase) UpdateStatistic(statistic Statistic) error {
+	const hourMillis = 60 * 60 * 1000
+	hour := (statistic.Timestamp / hourMillis) * hourMillis
+	update := ddb.statisticsTable.Update("region", statistic.Region).Range("timestamp", hour)
+
+	update.Add("plays", statistic.Plays)
+	update.Add("players", statistic.Players)
+	update.Add("newPlayers", statistic.NewPlayers)
+
+	return update.Run()
 }

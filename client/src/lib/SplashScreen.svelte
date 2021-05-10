@@ -58,7 +58,13 @@
 			storage.name = name;
 		}
 		storage.type = type;
-		callback({name: name || 'Guest', type, auth: storage.auth, invite});
+		callback({
+			name: name || 'Guest',
+			type,
+			auth: storage.auth,
+			invite,
+			new: storage.join == undefined
+		});
 	}
 </script>
 

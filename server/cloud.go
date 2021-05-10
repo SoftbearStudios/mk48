@@ -10,6 +10,11 @@ import (
 func (h *Hub) Cloud() {
 	fmt.Println("Updating cloud")
 
+	err := h.cloud.FlushStatistics()
+	if err != nil {
+		fmt.Println("Error flushing statistics:", err)
+	}
+
 	playerCount := 0
 
 	// Note: Cannot use to determine number of players, as long as there
@@ -29,7 +34,7 @@ func (h *Hub) Cloud() {
 	go func() {
 		err := h.cloud.UpdateLeaderboard(playerScores)
 		if err != nil {
-			fmt.Println("leaderboard error:", err)
+			fmt.Println("Error updating leaderboard:", err)
 		}
 	}()
 
@@ -45,5 +50,8 @@ func (h *Hub) Cloud() {
 		fmt.Println("error marshaling status:", err)
 	}
 
-	_ = h.cloud.UpdateServer(playerCount)
+	err = h.cloud.UpdateServer(playerCount)
+	if err != nil {
+		fmt.Println("Error updating server:", err)
+	}
 }
