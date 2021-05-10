@@ -38,6 +38,7 @@ for (const entityType of Object.keys(entityDatas)) {
 		switch (entityData.subtype) {
 			case 'torpedo':
 				entityData.damage = mapRanges(entityData.length, 3, 7, 0.6, 1.1, true);
+				// NOTE: This makes homing torpedoes do less damage.
 				/*
 				if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
 					entityData.damage -= 0.1;
@@ -66,7 +67,10 @@ for (const entityType of Object.keys(entityDatas)) {
 	if (turrets) {
 		for (let i = 0; i < turrets.length; i++) {
 			const turret = turrets[i];
+
+			// Degrees to radians
 			turret.angle = (turret.angle || 0) * Math.PI / 180;
+
 			const sym = turret.symmetrical;
 			delete turret.symmetrical;
 			entityData.turrets.push(turret);
