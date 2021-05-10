@@ -1080,7 +1080,7 @@
 		"label": "Zubr",
 		"link": "https://en.wikipedia.org/wiki/Zubr-class_LCAC",
 		"type": "boat",
-		"subtype": "LCAC",
+		"subtype": "hovercraft",
 		"level": 2,
 		"length": 57,
 		"width": 21.15234375,

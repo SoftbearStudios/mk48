@@ -116,7 +116,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 				return true
 			}
 			entity.Velocity = clampMagnitude(entity.Velocity, 5)
-			if data.SubKind != EntitySubKindDredger {
+			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
 				entity.Damage += seconds * entity.MaxHealth() * 0.25
 				if entity.Dead() {
 					if owner := entity.Owner; owner != nil {
