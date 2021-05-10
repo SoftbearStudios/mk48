@@ -186,32 +186,38 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 				  percentage both die (no seemingly arbitrary survivor) hence 110%
 				- Low health boats still do damage, hence scale health percent
 			*/
-			damage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
 
-			isRam := boat.Data().SubKind == world.EntitySubKindRam
-			isOtherRam := otherBoat.Data().SubKind == world.EntitySubKindRam
+			baseDamage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
 
-			if isRam || isOtherRam {
-				// Ouch
-				damage *= 2
-			}
+			// Process boats both orders (each time acting only on the first boat, b)
+			for _, ordering := range [2][2]*world.Entity{{boat, otherBoat}, {otherBoat, boat}} {
+				b := ordering[0]
+				oB := ordering[1]
 
-			posDiff := boat.Position.Sub(otherBoat.Position).Norm()
+				isRam := b.Data().SubKind == world.EntitySubKindRam
+				isOtherRam := oB.Data().SubKind == world.EntitySubKindRam
 
-			if !isRam || isOtherRam {
-				boat.Damage += damage
-			}
-			boat.Velocity += 3 * posDiff.Dot(boat.Direction.Vec2f())
-			if !isOtherRam || isRam {
-				otherBoat.Damage += damage
-			}
-			otherBoat.Velocity -= 3 * posDiff.Dot(otherBoat.Direction.Vec2f())
+				posDiff := b.Position.Sub(oB.Position).Norm()
 
-			if boat.Dead() {
-				removeEntity(boat, fmt.Sprintf("Crashed into %s!", otherBoat.Owner.Name))
-			}
-			if otherBoat.Dead() {
-				removeEntity(otherBoat, fmt.Sprintf("Crashed into %s!", boat.Owner.Name))
+				damage := baseDamage
+
+				if isRam || isOtherRam {
+					// Ouch
+					damage *= 2
+				}
+
+				if !isRam || isOtherRam {
+					b.Damage += damage
+				}
+				b.Velocity += 3 * posDiff.Dot(b.Direction.Vec2f())
+
+				if b.Dead() {
+					verb := "Crashed into"
+					if isOtherRam {
+						verb = "Rammed by"
+					}
+					removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name))
+				}
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
