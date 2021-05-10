@@ -840,7 +840,8 @@
 				40: 'backward',
 			};
 
-			if (armamentsRef) {
+			// Last 2 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
+			if (armamentsRef && armamentsRef.incrementSelection && armamentsRef.setSelectionIndex) {
 				// tab
 				keys[9] = armamentsRef.incrementSelection.bind(armamentsRef);
 
