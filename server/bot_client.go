@@ -15,7 +15,8 @@ type (
 	BotClient struct {
 		ClientData
 		aggression    float32
-		levelAmbition uint8 // max level to upgrade to
+		home          world.Vec2f // where bot will head towards if no other objective
+		levelAmbition uint8       // max level to upgrade to
 		destroying    bool
 		request       int64 // last time requested team in millis
 	}
@@ -165,11 +166,16 @@ func (bot *BotClient) Send(out outbound) {
 
 		shipData := ship.EntityType.Data()
 
+		if (bot.home == world.Vec2f{}) || ship.Position.DistanceSquared(bot.home) < 100*100 {
+			// Pick a new random home
+			bot.home = world.Angle(r.Float32() * math32.Pi * 2).Vec2f().Mul(data.WorldRadius * 0.9)
+		}
+
 		manual := Manual{
 			EntityID: data.EntityID,
 			Guidance: world.Guidance{
 				VelocityTarget:  10,
-				DirectionTarget: ship.Position.Angle().Inv(),
+				DirectionTarget: bot.home.Sub(ship.Position).Angle(),
 			},
 		}
 
