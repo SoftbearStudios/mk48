@@ -215,7 +215,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 				if !isRam || isOtherRam {
 					b.Damage += damage
 				}
-				b.Velocity = 15 * posDiff.Dot(b.Direction.Vec2f())
+				b.Velocity = clampMagnitude(b.Velocity+6*posDiff.Dot(b.Direction.Vec2f()), 15)
 
 				if b.Dead() {
 					verb := "Crashed into"
@@ -227,7 +227,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
-			boat.Velocity = 15 * posDiff.Dot(boat.Direction.Vec2f())
+			boat.Velocity = clampMagnitude(boat.Velocity+6*posDiff.Dot(boat.Direction.Vec2f()), 30)
 			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
 			if boat.Dead() {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))

@@ -63,38 +63,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		entity.ext.setAltitude(Lerp(entity.Altitude(), targetAltitude, altitudeSpeed*seconds))
 	}
 
-	turretsCopied := false
-
-	// Don't rotate turret if aim first is semi-fresh
-	turretTargetTime := entity.TurretTargetTime()
-	if entity.Lifespan < turretTargetTime+1 || entity.Lifespan > turretTargetTime+5 {
-		for i := range entity.TurretAngles() {
-			turretData := data.Turrets[i]
-			directionTarget := turretData.Angle
-			if entity.Lifespan < turretTargetTime+5 { // turret target lasts for 5 seconds
-				turretGlobalTransform := entity.Transform.Add(Transform{
-					Position: Vec2f{
-						X: turretData.PositionForward,
-						Y: turretData.PositionSide,
-					},
-					Direction: entity.TurretAngles()[i],
-				})
-				globalDirection := entity.TurretTarget().Sub(turretGlobalTransform.Position).Angle()
-				directionTarget = globalDirection - entity.Direction
-			}
-			deltaAngle := directionTarget.Diff(entity.TurretAngles()[i])
-			angle := deltaAngle.ClampMagnitude(2) * Angle(seconds)
-
-			if angle != 0 {
-				// Copy on write
-				if !turretsCopied {
-					turretsCopied = true
-					entity.ext.copyTurretAngles(entity.EntityType)
-				}
-				entity.TurretAngles()[i] += angle
-			}
-		}
-	}
+	turretsCopied := entity.updateTurretAim(seconds)
 
 	if entity.VelocityTarget > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
 		deltaVelocity := min(entity.VelocityTarget, data.Speed) - entity.Velocity
@@ -177,6 +146,45 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	homingStrength := otherEntity.Data().Radius * 600 / (1 + diff.LengthSquared() + 20000*square(float32(angleDiff)))
 
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
+}
+
+// Returns whether copied turret angles
+func (entity *Entity) updateTurretAim(seconds float32) bool {
+	turretsCopied := false
+
+	// Don't rotate turret if aim first is semi-fresh
+	turretTargetTime := entity.TurretTargetTime()
+	data := entity.Data()
+	if entity.Lifespan < turretTargetTime+1 || entity.Lifespan > turretTargetTime+5 {
+		for i := range entity.TurretAngles() {
+			turretData := data.Turrets[i]
+			directionTarget := turretData.Angle
+			if entity.Lifespan < turretTargetTime+5 { // turret target lasts for 5 seconds
+				turretGlobalTransform := entity.Transform.Add(Transform{
+					Position: Vec2f{
+						X: turretData.PositionForward,
+						Y: turretData.PositionSide,
+					},
+					Direction: entity.TurretAngles()[i],
+				})
+				globalDirection := entity.TurretTarget().Sub(turretGlobalTransform.Position).Angle()
+				directionTarget = globalDirection - entity.Direction
+			}
+			deltaAngle := directionTarget.Diff(entity.TurretAngles()[i])
+			angle := deltaAngle.ClampMagnitude(Angle(seconds))
+
+			if angle != 0 {
+				// Copy on write
+				if !turretsCopied {
+					turretsCopied = true
+					entity.ext.copyTurretAngles(entity.EntityType)
+				}
+				entity.TurretAngles()[i] += angle
+			}
+		}
+	}
+
+	return turretsCopied
 }
 
 // Repair regenerates the Entity's health by an amount.
@@ -330,6 +338,10 @@ func (entity *Entity) ConsumeArmament(index int) {
 func (entity *Entity) Initialize(entityType EntityType) {
 	entity.EntityType = entityType
 	entity.ext.setType(entity.EntityType)
+
+	// TODO(caibear): This call doesn't work, since the unsafeExtension
+	// clears the turret "target" Vec2f when it's entity type is set
+	// entity.updateTurretAim(1)
 
 	// Starting depth
 	switch entityType.Data().SubKind {

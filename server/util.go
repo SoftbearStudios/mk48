@@ -51,6 +51,10 @@ func clamp(val, minimum, maximum float32) float32 {
 	return min(max(val, minimum), maximum)
 }
 
+func clampMagnitude(val, maximum float32) float32 {
+	return min(max(val, -maximum), maximum)
+}
+
 func square(a float32) float32 {
 	return a * a
 }
