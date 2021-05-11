@@ -110,6 +110,10 @@ func (h *Hub) run() {
 			h.clients.Add(client)
 			client.Data().Hub = h
 			client.Init()
+
+			if _, bot := client.(*BotClient); !bot {
+				h.cloud.IncrementPlayerStatistic()
+			}
 		case client := <-h.unregister:
 			client.Close()
 

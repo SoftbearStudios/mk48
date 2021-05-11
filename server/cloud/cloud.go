@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -31,9 +30,7 @@ type Cloud struct {
 	fs         fs.Filesystem
 
 	// accumulators of statistics since the last update
-	accPlays      int32
-	accPlayers    int32
-	accNewPlayers int32
+	statAcc db.Statistic
 }
 
 func (cloud *Cloud) String() string {
@@ -146,26 +143,25 @@ func (cloud *Cloud) UpdateServer(players int) error {
 	})
 }
 
-// The following statistics methods are safe to call concurrently
 func (cloud *Cloud) IncrementPlayerStatistic() {
 	if cloud == nil {
 		return
 	}
-	atomic.AddInt32(&cloud.accPlayers, 1)
+	cloud.statAcc.Players++
 }
 
 func (cloud *Cloud) IncrementNewPlayerStatistic() {
 	if cloud == nil {
 		return
 	}
-	atomic.AddInt32(&cloud.accNewPlayers, 1)
+	cloud.statAcc.NewPlayers++
 }
 
 func (cloud *Cloud) IncrementPlaysStatistic() {
 	if cloud == nil {
 		return
 	}
-	atomic.AddInt32(&cloud.accPlays, 1)
+	cloud.statAcc.Plays++
 }
 
 // Flushes accumulated statistics to database
@@ -174,20 +170,14 @@ func (cloud *Cloud) FlushStatistics() error {
 		return nil
 	}
 
-	stat := db.Statistic{
-		Region:    cloud.region,
-		Timestamp: unixMillis(),
-	}
+	cloud.statAcc.Region = cloud.region
+	cloud.statAcc.Timestamp = unixMillis()
 
-	// Atomically move the accumulators to the database statistic
-	stat.Plays = int(atomic.SwapInt32(&cloud.accPlays, 0))
-	stat.Players = int(atomic.SwapInt32(&cloud.accPlayers, 0))
-	stat.NewPlayers = int(atomic.SwapInt32(&cloud.accNewPlayers, 0))
+	err := cloud.database.UpdateStatistic(cloud.statAcc)
 
-	err := cloud.database.UpdateStatistic(stat)
-
-	if err != nil {
-		// TODO: Add the counds back to the accumulators and try again next time
+	if err == nil {
+		// Clear statistic accumulator
+		cloud.statAcc = db.Statistic{}
 	}
 
 	return err

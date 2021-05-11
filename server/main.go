@@ -28,8 +28,6 @@ func (h *Hub) serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.register <- NewSocketClient(conn)
-
-	h.cloud.IncrementPlayerStatistic()
 }
 
 func main() {
