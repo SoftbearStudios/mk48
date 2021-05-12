@@ -183,6 +183,11 @@ func (bot *BotClient) Send(out outbound) {
 			},
 		}
 
+		if shipData.SubKind == world.EntitySubKindSubmarine {
+			altitudeTarget := float32(-1)
+			manual.AltitudeTarget = &altitudeTarget
+		}
+
 		if closestCollectible.Found() {
 			manual.VelocityTarget = 20
 			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
