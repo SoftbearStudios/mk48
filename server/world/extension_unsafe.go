@@ -35,10 +35,17 @@ func unsafeDataLen(data *EntityTypeData) int {
 // setEntityType initializes to a size defined by entityType
 func (ext *unsafeExtension) setType(entityType EntityType) {
 	data := entityType.Data()
+	oldExt := ext.data
 
 	// Allocate enough space for target, time, armaments, and angles
 	size := unsafeDataLen(data)
 	ext.data = (*unsafeData)(unsafe.Pointer(&make([]float32, size)[0]))
+
+	// Only keep target and target time
+	if oldExt != nil {
+		ext.data.target = oldExt.target
+		ext.data.time = oldExt.time
+	}
 
 	angles := ext.turretAngles(entityType)
 	for i, turret := range data.Turrets {

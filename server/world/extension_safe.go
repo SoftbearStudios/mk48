@@ -17,6 +17,9 @@ var _ = extension(&safeExtension{})
 func (ext *safeExtension) setType(entityType EntityType) {
 	data := entityType.Data()
 
+	// Only keep target and target time
+	*ext = safeExtension{target: ext.target, time: ext.time}
+
 	// Replenish all
 	ext.armaments = make([]float32, len(data.Armaments))
 

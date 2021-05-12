@@ -339,9 +339,8 @@ func (entity *Entity) Initialize(entityType EntityType) {
 	entity.EntityType = entityType
 	entity.ext.setType(entity.EntityType)
 
-	// TODO(caibear): This call doesn't work, since the unsafeExtension
-	// clears the turret "target" Vec2f when it's entity type is set
-	// entity.updateTurretAim(1)
+	// Make sure all the new turrets are re-aimed to the old target.
+	entity.updateTurretAim(5)
 
 	// Starting depth
 	switch entityType.Data().SubKind {
