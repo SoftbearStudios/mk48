@@ -22,6 +22,10 @@
 		message.set(event.target.value);
 	}
 
+	export function focus() {
+		input && input.focus && input.focus();
+	}
+
 	function onSubmit() {
 		callback($message);
 		message.set('');

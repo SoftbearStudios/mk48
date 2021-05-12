@@ -24,7 +24,7 @@
 	import {onMount} from 'svelte'
 	import entityData from '../data/entities.json';
 
-	let canvas, shipRef, heightFract, widthFract;
+	let canvas, chatRef, shipRef, heightFract, widthFract;
 	$: height = Math.floor(heightFract);
 	$: width = Math.floor(widthFract);
 
@@ -846,6 +846,11 @@
 				40: 'backward',
 			};
 
+			if (chatRef && chatRef.focus) {
+				// enter
+				keys[13] = chatRef.focus.bind(chatRef);
+			}
+
 			// Last 3 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
 			if (shipRef &&  shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
 				// tab
@@ -901,7 +906,7 @@
 			callback={type => send('upgrade', {type})}
 		/>
 		<Teams {contacts}/>
-		<Chat callback={message => send('sendChat', {message})}/>
+		<Chat callback={message => send('sendChat', {message})} bind:this={chatRef}/>
 	{:else}
 		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
 		{#if globalLeaderboard && globalLeaderboard['single/all']}
