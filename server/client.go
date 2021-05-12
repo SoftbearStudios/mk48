@@ -3,10 +3,6 @@
 
 package main
 
-import (
-	"mk48/server/terrain"
-)
-
 type (
 	// Client is an actor on the Hub.
 	Client interface {
@@ -22,9 +18,8 @@ type (
 		Destroy()
 
 		// Init sets up receive channel and destroy func.
-		// It also provides the terrain, for efficiency over sending terrain data to bot clients on every update
 		// Always called by hub goroutine.
-		Init(terrain.Terrain)
+		Init()
 
 		// Send sends a message
 		Send(out outbound)

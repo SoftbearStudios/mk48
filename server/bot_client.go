@@ -15,12 +15,11 @@ import (
 type (
 	BotClient struct {
 		ClientData
-		terrain       terrain.Terrain
-		aggression    float32
-		home          world.Vec2f // where bot will head towards if no other objective
+		destination   world.Vec2f // where bot will head towards if no other objective
+		aggression    float32     // how likely bot is to attack when given a chance
 		levelAmbition uint8       // max level to upgrade to
-		destroying    bool
-		request       int64 // last time requested team in millis
+		destroying    bool        // already called destroy
+		request       int64       // last time requested team in millis
 	}
 
 	// Target is a contact that is closest or furthest
@@ -37,8 +36,9 @@ func (bot *BotClient) Data() *ClientData {
 }
 
 func (bot *BotClient) Destroy() {
+	// In case goroutine hasn't run yet don't overload server by creating another one.
 	if bot.destroying {
-		return // In case goroutine hasn't run yet
+		return
 	}
 
 	bot.destroying = true
@@ -54,19 +54,18 @@ func (bot *BotClient) Destroy() {
 	}
 }
 
-func (bot *BotClient) Init(t terrain.Terrain) {
-	bot.terrain = t
-
+func (bot *BotClient) Init() {
 	r := getRand()
+	defer poolRand(r)
 
 	bot.aggression = square(r.Float32())
 	bot.levelAmbition = uint8(r.Intn(int(world.EntityLevelMax)) + 1)
 	bot.spawn(r)
-
-	poolRand(r)
 }
 
 func (bot *BotClient) Send(out outbound) {
+	defer out.Pool()
+
 	if bot.destroying {
 		return
 	}
@@ -80,29 +79,29 @@ func (bot *BotClient) Send(out outbound) {
 
 	// Use local rand to avoid locking
 	r := getRand()
+	defer poolRand(r)
 
-	switch data := out.(type) {
+	switch update := out.(type) {
 	case *Update:
-		if data.EntityID == world.EntityIDInvalid {
+		if update.EntityID == world.EntityIDInvalid {
+			// When bot dies it either quits, leaves its team, or does nothing.
 			if prob(r, 0.25) {
-				bot.Destroy() // rage quit
-				return
+				bot.Destroy()
 			} else {
-				// Leave team if die
 				if prob(r, 0.5) {
-					bot.receiveAsync(RemoveFromTeam{
-						PlayerID: data.PlayerID,
-					})
+					bot.receiveAsync(RemoveFromTeam{PlayerID: update.PlayerID})
 				}
 				bot.spawn(r)
 			}
 			return
 		}
 
+		// Get contact with linear search once.
+		// Map has higher overhead so we use a slice.
 		var ship Contact
-		for i := range data.Contacts {
-			if data.Contacts[i].EntityID == data.EntityID {
-				ship = data.Contacts[i].Contact
+		for i := range update.Contacts {
+			if update.Contacts[i].EntityID == update.EntityID {
+				ship = update.Contacts[i].Contact
 			}
 		}
 
@@ -114,12 +113,14 @@ func (bot *BotClient) Send(out outbound) {
 				})
 			} else if prob(r, 0.5) {
 				bot.receiveAsync(RemoveFromTeam{
-					PlayerID: data.PlayerID,
+					PlayerID: update.PlayerID,
 				})
 			}
 		}
 
-		for _, request := range data.TeamRequests {
+		// Accept new members
+		// TODO(caibear) deny members
+		for _, request := range update.TeamRequests {
 			diff := float64(ship.Score - request.Score)
 
 			// Only accept members with similar score
@@ -130,32 +131,35 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
+		// Only team request every 5 seconds
 		now := unixMillis()
 		requesting := now-bot.request > int64(time.Second*5/time.Millisecond) // in milliseconds
 
+		// Find enemies, collectibles, and hazards.
 		var closestEnemy, closestCollectible, closestHazard Target
+		shipData := ship.EntityType.Data()
 
-		for i := range data.Contacts {
-			contact := &data.Contacts[i].Contact
+		for i := range update.Contacts {
+			contact := &update.Contacts[i].Contact
 			if contact.Friendly {
 				continue
 			}
 
 			distanceSquared := ship.Position.DistanceSquared(contact.Position)
-			data := contact.EntityType.Data()
+			contactData := contact.EntityType.Data()
 
-			if data.Kind == world.EntityKindBoat {
+			if contactData.Kind == world.EntityKindBoat {
 				closestEnemy.Closest(contact, distanceSquared)
 			}
 
-			if data.Kind == world.EntityKindCollectible {
+			if contactData.Kind == world.EntityKindCollectible {
 				closestCollectible.Closest(contact, distanceSquared)
-			} else if !(data.Kind == world.EntityKindBoat && ship.EntityType.Data().SubKind == world.EntitySubKindRam) {
+			} else if !(contactData.Kind == world.EntityKindBoat && shipData.SubKind == world.EntitySubKindRam) {
 				// Rams don't regard boats as hazards
 				closestHazard.Closest(contact, distanceSquared)
 			}
 
-			// Join teams that have more score most of the time for protection
+			// Favor joining teams that have more score for protection.
 			if requesting && ship.TeamID == world.TeamIDInvalid && contact.TeamID != world.TeamIDInvalid &&
 				((ship.Score < contact.Score-5 && prob(r, 2e-3)) || prob(r, 1e-4)) {
 
@@ -168,18 +172,16 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
-		shipData := ship.EntityType.Data()
-
-		if (bot.home == world.Vec2f{}) || ship.Position.DistanceSquared(bot.home) < 100*100 {
-			// Pick a new random home
-			bot.home = world.Angle(r.Float32() * math32.Pi * 2).Vec2f().Mul(data.WorldRadius * 0.9)
+		// Pick a random destination to wander to.
+		if (bot.destination == world.Vec2f{}) || ship.Position.DistanceSquared(bot.destination) < 100*100 {
+			bot.destination = world.Angle(r.Float32() * math32.Pi * 2).Vec2f().Mul(update.WorldRadius * 0.9)
 		}
 
 		manual := Manual{
-			EntityID: data.EntityID,
+			EntityID: update.EntityID,
 			Guidance: world.Guidance{
 				VelocityTarget:  10,
-				DirectionTarget: bot.home.Sub(ship.Position).Angle(),
+				DirectionTarget: bot.destination.Sub(ship.Position).Angle(),
 			},
 		}
 
@@ -202,6 +204,7 @@ func (bot *BotClient) Send(out outbound) {
 			manual.TurretTarget = new(world.Vec2f)
 			*manual.TurretTarget = closestEnemy.Position
 
+			// Attack based on aggression.
 			if prob(r, float64(bot.aggression)) {
 				bestArmamentIndex := -1
 				bestArmamentAngleDiff := world.Angle(math32.MaxFloat32)
@@ -240,13 +243,16 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
-		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
+		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
+			// Avoid terrain by turning slowly.
 			manual.VelocityTarget = 5
 			manual.DirectionTarget = ship.Direction + world.Angle(math32.Pi/2)
 		} else if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
+			// Try to turn away from threats.
 			manual.VelocityTarget = 10
 			manual.DirectionTarget = closestHazard.Position.Sub(ship.Position).Angle().Inv()
 		} else if shipData.Level < bot.levelAmbition {
+			// Upgrade up to level ambition if available.
 			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
 				bot.receiveAsync(Upgrade{
 					Type: randomType(r, upgradePaths),
@@ -256,18 +262,14 @@ func (bot *BotClient) Send(out outbound) {
 
 		bot.receiveAsync(manual)
 	}
-
-	// Pool resources
-	poolRand(r)
-	out.Pool()
 }
 
-// receiveAsync Doesn't deadlock the hub
+// receiveAsync doesn't deadlock the hub.
 func (bot *BotClient) receiveAsync(in inbound) {
 	select {
 	case bot.Hub.inbound <- SignedInbound{Client: bot, inbound: in}:
 	default:
-		// Drop bot messages to avoid downfall of server
+		// Drop bot messages to avoid downfall of server.
 	}
 }
 

@@ -109,7 +109,7 @@ func (h *Hub) run() {
 		case client := <-h.register:
 			h.clients.Add(client)
 			client.Data().Hub = h
-			client.Init(h.terrain)
+			client.Init()
 
 			if _, bot := client.(*BotClient); !bot {
 				h.cloud.IncrementPlayerStatistic()
