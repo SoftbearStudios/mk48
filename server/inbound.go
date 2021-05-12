@@ -49,8 +49,9 @@ type (
 	// TODO embed AimTurrets
 	Manual struct {
 		world.Guidance
-		TurretTarget *world.Vec2f   `json:"turretTarget"`
-		EntityID     world.EntityID `json:"entityID"`
+		AltitudeTarget *float32       `json:"altitudeTarget"`
+		TurretTarget   *world.Vec2f   `json:"turretTarget"`
+		EntityID       world.EntityID `json:"entityID"`
 	}
 
 	// RemoveFromTeam either kicks someone from your team if you are Owner or leaves your team.
@@ -396,6 +397,10 @@ func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
 		}
 
 		entity.Guidance = data.Guidance
+
+		if data.AltitudeTarget != nil {
+			entity.SetAltitudeTarget(*data.AltitudeTarget)
+		}
 
 		if data.TurretTarget != nil {
 			entity.SetTurretTarget(*data.TurretTarget)

@@ -54,7 +54,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 			}
 		}
 
-		targetAltitude := float32(-1)
+		targetAltitude := clamp(entity.ext.altitudeTarget(), -1, 0)
 		altitudeSpeed := float32(0.1)
 		if surfacing {
 			targetAltitude = 0

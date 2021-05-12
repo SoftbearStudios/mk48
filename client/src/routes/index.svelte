@@ -6,7 +6,7 @@
 <script>
 	import {hasWebP, getMouseButton, isMobile} from '../util/compatibility.js';
 	import {angleDiff, clamp, clampMagnitude, dist, mapRanges} from '../util/math.js';
-	import Armaments, {getArmamentType} from '../lib/Armaments.svelte';
+	import Ship, {getArmamentType} from '../lib/Ship.svelte';
 	import Chat from '../lib/Chat.svelte';
 	import Instructions from '../lib/Instructions.svelte';
 	import Leaderboard from '../lib/Leaderboard.svelte';
@@ -24,7 +24,7 @@
 	import {onMount} from 'svelte'
 	import entityData from '../data/entities.json';
 
-	let canvas, armamentsRef, heightFract, widthFract;
+	let canvas, shipRef, heightFract, widthFract;
 	$: height = Math.floor(heightFract);
 	$: width = Math.floor(widthFract);
 
@@ -33,6 +33,8 @@
 	let overlay = {};
 	let viewportPositionCache = {x: 0, y: 0};
 	let armamentSelection;
+	let altitudeTarget;
+	let lastAltitudeTarget; // last altitudeTarget sent to server
 	let lastSend = 0; // secondsTotal of last manual/aim
 
 	// Global leaderboard
@@ -577,11 +579,12 @@
 					}
 				}
 
-				if (mouseDownNotClick() || keyboard.forward || keyboard.backward || keyboard.right || keyboard.left) {
+				const keyEvent = keyboard.forward || keyboard.backward || keyboard.right || keyboard.left;
+				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
 					if (mouseDownNotClick()) {
 						localSprite.directionTarget = mouseAngle;
 						localSprite.velocityTarget = mapRanges(mouseDistance / localSprite.width, THROTTLE_START, THROTTLE_END, 0, entityData[localEntity.type].speed, true);
-					} else {
+					} else if (keyEvent) {
 						if (typeof localSprite.velocityTarget !== 'number') {
 							localSprite.velocityTarget = 0;
 						}
@@ -594,7 +597,7 @@
 							localSprite.velocityTarget -= 300 * seconds;
 						}
 
-						if (Math.abs(localSprite.velocityTarget) <= 3) {
+						if (Math.abs(localSprite.velocityTarget) <= 1) {
 							localSprite.velocityTarget = 0;
 						}
 
@@ -612,8 +615,11 @@
 						entityID: localEntityID,
 						velocityTarget: localSprite.velocityTarget,
 						directionTarget: localSprite.directionTarget,
+						altitudeTarget: localEntityData.subtype === 'submarine' ? altitudeTarget : undefined,
 						turretTarget: mousePosition,
 					});
+
+					lastAltitudeTarget = altitudeTarget;
 
 					timesMoved++;
 				} else if (Array.isArray(localEntityData.turrets) && localEntityData.turrets.length > 0) {
@@ -840,14 +846,17 @@
 				40: 'backward',
 			};
 
-			// Last 2 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
-			if (armamentsRef && armamentsRef.incrementSelection && armamentsRef.setSelectionIndex) {
+			// Last 3 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
+			if (shipRef &&  shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
 				// tab
-				keys[9] = armamentsRef.incrementSelection.bind(armamentsRef);
+				keys[9] = shipRef.incrementSelection.bind(shipRef);
+
+				// r
+				keys[82] = shipRef.toggleAltitudeTarget.bind(shipRef);
 
 				// numbers
 				for (let i = 0; i < 5; i++) {
-					keys[49 + i] = armamentsRef.setSelectionIndex.bind(armamentsRef, i);
+					keys[49 + i] = shipRef.setSelectionIndex.bind(shipRef, i);
 				}
 			}
 
@@ -885,7 +894,7 @@
 	{#if localEntityID && contacts[localEntityID]}
 		<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
 		<Status {overlay}/>
-		<Armaments type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:selection={armamentSelection} bind:this={armamentsRef}/>
+		<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
 		<Upgrades
 			score={contacts[localEntityID].score}
 			type={contacts[localEntityID].type}

@@ -59,6 +59,7 @@
 	export let type;
 	export let consumption;
 	export let selection = 'weapon/torpedo';
+	export let altitudeTarget = -1;
 
 	$: armaments = entityData[type].armaments;
 	$: armaments && incrementSelection(0); // make sure a valid armament is selected
@@ -86,19 +87,29 @@
 		}
 	}
 
+	export function toggleAltitudeTarget() {
+		if (altitudeTarget === 0) {
+			altitudeTarget = -1;
+		} else {
+			altitudeTarget = 0;
+		}
+	}
+
 	// style={`opacity: ${group.ready === group.total ? 1 : group.incremental};`}
 </script>
 
 <div class='container'>
-	<Section name='Weapons'>
+	<Section name={entityData[type].label}>
 		{#each groupArmaments(armaments, consumption) as [type, group]}
-			<div class='armament' class:selected={type === selection} on:click={() => selection = type}>
+			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
 				<img title={entityData[group.type].label} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
 				<span class='consumption'>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
 		{#if entityData[type].subtype === 'ram'}
 			<small>Your boat is designed<br/>to ram other boats!</small>
+		{:else if entityData[type].subtype === 'submarine'}
+			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>Surface</div>
 		{/if}
 	</Section>
 </div>
@@ -114,22 +125,23 @@
 		position: absolute;
 	}
 
-	div.armament {
+	div.button {
 		background-color: #44444480;
 		padding: 5px;
 		filter: brightness(0.8);
+		user-select: none;
 	}
 
-	div.armament:hover {
+	div.button:hover {
 		filter: brightness(0.9);
 	}
 
-	div.armament.selected {
+	div.button.selected {
 		filter: brightness(1.2);
 		padding: 5px;
 	}
 
-	div.armament:not(.selected) {
+	div.button:not(.selected) {
 		cursor: pointer;
 	}
 

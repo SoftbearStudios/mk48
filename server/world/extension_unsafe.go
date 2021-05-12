@@ -16,10 +16,11 @@ type (
 	// unsafeData is allocated with extra space for armaments and angles
 	// basics documented in extension_safe
 	unsafeData struct {
-		target Vec2f
-		alt    float32
-		time   float32
-		first  [0]float32
+		target    Vec2f
+		alt       float32
+		altTarget float32
+		time      float32
+		first     [0]float32
 		// armaments [?]float32
 		// angles    [?]float32
 	}
@@ -104,6 +105,17 @@ func (ext *unsafeExtension) altitude() float32 {
 
 func (ext *unsafeExtension) setAltitude(a float32) {
 	ext.data.alt = a
+}
+
+func (ext *unsafeExtension) altitudeTarget() float32 {
+	if ext.data == nil {
+		return 0
+	}
+	return ext.data.altTarget
+}
+
+func (ext *unsafeExtension) setAltitudeTarget(a float32) {
+	ext.data.altTarget = a
 }
 
 func (ext *unsafeExtension) turretTarget() Vec2f {

@@ -24,6 +24,9 @@ type extension interface {
 
 	altitude() float32
 	setAltitude(float32)
+
+	altitudeTarget() float32
+	setAltitudeTarget(float32)
 }
 
 func (entity *Entity) ArmamentConsumption() []float32 {
@@ -48,6 +51,10 @@ func (entity *Entity) Altitude() float32 {
 	default:
 		return 0
 	}
+}
+
+func (entity *Entity) SetAltitudeTarget(altitudeTarget float32) {
+	entity.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))
 }
 
 func (entity *Entity) TurretAngles() []Angle {

@@ -984,7 +984,7 @@
 		]
 	},
 	"tshd": {
-		"label": "Trailing Suction Hopper Dredger",
+		"label": "Dredger",
 		"link": "https://en.wikipedia.org/wiki/Trailing_suction_hopper_dredger",
 		"type": "boat",
 		"subtype": "dredger",
