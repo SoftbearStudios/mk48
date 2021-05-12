@@ -130,7 +130,7 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	if data.Radius < 4 {
 		// Not worth doing multiple terrain samples for small entities
-		return t.atPos(entity.Position) > terrain.OceanLevel-6
+		return t.AtPos(entity.Position) > terrain.OceanLevel-6
 	}
 
 	sweep := seconds * entity.Velocity
@@ -143,7 +143,7 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	for l := -dimensions.X; l < dimensions.X; l += min(16, dimensions.Y*0.333) {
 		for w := -dimensions.Y; w < dimensions.Y; w += min(8, dimensions.Y*0.49) {
-			if t.atPos(position.Add(normal.Mul(l)).Add(tangent.Mul(w))) > terrain.OceanLevel-6 {
+			if t.AtPos(position.Add(normal.Mul(l)).Add(tangent.Mul(w))) > terrain.OceanLevel-6 {
 				return true
 			}
 		}
@@ -160,7 +160,7 @@ func (t *Terrain) Debug() {
 	fmt.Println("compressed terrain: chunks:", t.chunkCount)
 }
 
-func (t *Terrain) atPos(pos world.Vec2f) byte {
+func (t *Terrain) AtPos(pos world.Vec2f) byte {
 	pos = pos.Mul(1.0 / terrain.Scale)
 
 	// Floor and Ceiling pos

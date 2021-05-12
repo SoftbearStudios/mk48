@@ -32,6 +32,8 @@ type Source interface {
 type Terrain interface {
 	// At returns the heightmap data of a rect.
 	At(world.AABB) *Data
+	// AtPos returns the height at a point
+	AtPos(world.Vec2f) byte
 	// Clamp outputs the clamps the bounding box.
 	Clamp(world.AABB) world.AABB
 	// Collides tests if an entity collides with the Terrain.

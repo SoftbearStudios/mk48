@@ -7,6 +7,7 @@ import (
 	"github.com/chewxy/math32"
 	"io"
 	"math/rand"
+	"mk48/server/terrain"
 	"mk48/server/world"
 	"time"
 )
@@ -14,6 +15,7 @@ import (
 type (
 	BotClient struct {
 		ClientData
+		terrain       terrain.Terrain
 		aggression    float32
 		home          world.Vec2f // where bot will head towards if no other objective
 		levelAmbition uint8       // max level to upgrade to
@@ -52,7 +54,9 @@ func (bot *BotClient) Destroy() {
 	}
 }
 
-func (bot *BotClient) Init() {
+func (bot *BotClient) Init(t terrain.Terrain) {
+	bot.terrain = t
+
 	r := getRand()
 
 	bot.aggression = square(r.Float32())
@@ -231,7 +235,10 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
-		if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
+		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
+			manual.VelocityTarget = 5
+			manual.DirectionTarget = ship.Direction + world.Angle(math32.Pi/2)
+		} else if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
 			manual.VelocityTarget = 10
 			manual.DirectionTarget = closestHazard.Position.Sub(ship.Position).Angle().Inv()
 		} else if shipData.Level < bot.levelAmbition {

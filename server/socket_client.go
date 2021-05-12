@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"mk48/server/terrain"
 	"net/http"
 	"sync"
 	"time"
@@ -78,7 +79,7 @@ func (client *SocketClient) Destroy() {
 	})
 }
 
-func (client *SocketClient) Init() {
+func (client *SocketClient) Init(_ terrain.Terrain) {
 	go client.writePump()
 	go client.readPump()
 }
