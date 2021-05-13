@@ -22,12 +22,12 @@ type (
 		Type            EntityKind    `json:"type"`
 		Subtype         EntitySubKind `json:"subtype"`
 		Default         EntityType    `json:"default"`
+		Vertical        bool          `json:"vertical"`
 		Length          float32       `json:"length"`
 		Width           float32       `json:"width"`
 		PositionForward float32       `json:"positionForward"`
 		PositionSide    float32       `json:"positionSide"`
 		Angle           Angle         `json:"angle"`
-		Vertical        bool          `json:"vertical"`
 		Turret          *int          `json:"turret,omitempty"` // If non-nil, index of turret
 	}
 
