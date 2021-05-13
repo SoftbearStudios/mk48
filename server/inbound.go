@@ -24,7 +24,7 @@ type (
 
 	// AimTurrets sets your ship's TurretTarget.
 	AimTurrets struct {
-		Target world.Vec2f `json:"destination"`
+		Target world.Vec2f `json:"target"`
 	}
 
 	// CreateTeam creates a new team
