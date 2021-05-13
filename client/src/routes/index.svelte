@@ -686,7 +686,8 @@
 							wakeParticles.addChild(wakeParticle);
 						}
 
-						wakeParticle.position.set(sprite.position.x - Math.cos(sprite.rotation) * sprite.width / 2.25, sprite.position.y - Math.sin(sprite.rotation) * sprite.width / 2.25);
+						const r = sprite.width * 0.5 - 2;
+						wakeParticle.position.set(sprite.position.x - Math.cos(sprite.rotation) * r, sprite.position.y - Math.sin(sprite.rotation) * r);
 						const direction = sprite.rotation + Math.sign(Math.random() - 0.5) * wakeAngle * (0.75 * Math.random() + 0.25);
 						wakeParticle.sinDirection = Math.sin(direction);
 						wakeParticle.cosDirection = Math.cos(direction);
