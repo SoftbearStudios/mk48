@@ -263,6 +263,10 @@ func (entity *Entity) DamagePercent() float32 {
 	return entity.Damage / entity.MaxHealth()
 }
 
+func (entity *Entity) SetDamagePercent(percent float32) {
+	entity.Damage = percent * entity.MaxHealth()
+}
+
 // HealthPercent returns an Entity's health in the range [0, 1.0].
 func (entity *Entity) HealthPercent() float32 {
 	return 1 - entity.DamagePercent()
