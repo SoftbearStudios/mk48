@@ -31,39 +31,58 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 	{
 		terrain := world.Collider(h.terrain)
 
-		// For boats that die during iteration
-		output := make(chan world.Entity, runtime.NumCPU())
-		deadBoats := make([]world.Entity, 0, 4)
 		var outputWait sync.WaitGroup
-		outputWait.Add(1)
 
+		// For boats that die during iteration.
+		boatOutput := make(chan world.Entity, runtime.NumCPU())
+		deadBoats := make([]world.Entity, 0, 4)
+
+		// For sculpting do on hub goroutine.
+		sculptOutput := make(chan world.Vec2f, runtime.NumCPU())
+		sculptPositions := make([]world.Vec2f, 0, 8)
+
+		outputWait.Add(1)
 		go func() {
-			for id := range output {
-				deadBoats = append(deadBoats, id)
+			for boat := range boatOutput {
+				deadBoats = append(deadBoats, boat)
 			}
 			outputWait.Done()
 		}()
 
-		// Update movement and terrain
+		outputWait.Add(1)
+		go func() {
+			for pos := range sculptOutput {
+				sculptPositions = append(sculptPositions, pos)
+			}
+			outputWait.Done()
+		}()
+
+		// Update movement and record various outputs
 		h.world.SetParallel(true)
 		h.world.ForEntities(func(_ world.EntityID, e *world.Entity) (_, remove bool) {
 			remove = e.Update(timeDeltaSeconds, h.worldRadius, terrain)
 			if e.Data().Kind == world.EntityKindBoat {
 				if remove {
-					output <- *e // Copy entity
+					boatOutput <- *e // Copy entity
 				} else if e.Data().SubKind == world.EntitySubKindDredger {
-					h.terrain.Sculpt(e.Position, -5)
+					sculptOutput <- e.Position
 				}
 			}
 			return
 		})
 		h.world.SetParallel(false)
 
-		close(output)
+		close(boatOutput)
+		close(sculptOutput)
+
 		outputWait.Wait()
 
 		for i := range deadBoats {
 			h.boatDied(&deadBoats[i])
+		}
+
+		for _, pos := range sculptPositions {
+			h.terrain.Sculpt(pos, -5)
 		}
 	}
 

@@ -141,13 +141,17 @@ func (h *Hub) Debug() {
 
 // Saves a snapshot of the terrain to a tmp directory
 func (h *Hub) SnapshotTerrain() {
+	if h.cloud == nil {
+		return
+	}
+
 	img := terrain.Render(h.terrain, compressed.Size/4)
 	var buf bytes.Buffer
 	err := png.Encode(&buf, img)
 	if err != nil {
 		return
 	}
-	h.cloud.UploadTerrainSnapshot(buf.Bytes())
+	_ = h.cloud.UploadTerrainSnapshot(buf.Bytes())
 
 	// TODO: Will fill disk space
 	/*

@@ -14,11 +14,22 @@ import (
 	"unsafe"
 )
 
-const Size = 2048
+const (
+	Size       = 2048
+	chunkCount = Size / chunkSize
+)
 
+// Coordinate types
+// World coordinates:            world.Entity.Position
+// Terrain coordinates:          World coordinates / terrain.Scale
+// Unsigned terrain coordinates: Terrain coordinates + Size / 2
+// Chunk coordinates:            Unsigned terrain coordinates / chunkSize
+
+// Terrain is a compressed implementation of terrain.Terrain.
+// It is safe to call all methods on it concurrently.
 type Terrain struct {
 	generator  terrain.Source
-	chunks     [Size / chunkSize][Size / chunkSize]*chunk
+	chunks     [chunkCount][chunkCount]*chunk
 	chunkCount int32
 	mutex      sync.Mutex
 }
@@ -29,21 +40,23 @@ func New(generator terrain.Source) *Terrain {
 	}
 }
 
-func (t *Terrain) clamp(aabb world.AABB) (aabb2 world.AABB, x, y, width, height int) {
-	minX, minY := t.start()
-	maxX, maxY := t.end()
-
+// clamp returns a signed terrain coords aabb and unsigned terrain coords ux, uy, width, and height.
+func (t *Terrain) clamp(aabb world.AABB) (aabb2 world.AABB, ux, uy, width, height uint) {
 	p := aabb.Vec2f.Mul(1.0 / terrain.Scale).Floor()
-	x = maxInt(minX, int(p.X))
-	y = maxInt(minY, int(p.Y))
 
-	if x >= maxX || y >= maxY {
+	// Signed terrain coords
+	x := maxInt(-Size/2, int(p.X))
+	y := maxInt(-Size/2, int(p.Y))
+
+	if x >= Size/2 || y >= Size/2 {
 		return
 	}
 
 	s := world.Vec2f{X: aabb.Width, Y: aabb.Height}.Mul(1.0 / terrain.Scale).Ceil()
-	width = minInt(maxX-x, int(s.X)+1)
-	height = minInt(maxY-y, int(s.Y)+1)
+	ux = uint(x + Size/2)
+	uy = uint(y + Size/2)
+	width = uint(minInt(Size/2-x, int(s.X)+1))
+	height = uint(minInt(Size/2-y, int(s.Y)+1))
 
 	aabb2 = world.AABB{
 		Vec2f: world.Vec2f{
@@ -70,16 +83,16 @@ func (t *Terrain) At(aabb world.AABB) *terrain.Data {
 		buf: data.Data,
 	}
 
-	for j := 0; j < height; j++ {
-		for i := 0; i < width; i++ {
-			buffer.writeByte(t.at(x+i, y+j))
+	for j := y; j < height+y; j++ {
+		for i := x; i < width+x; i++ {
+			buffer.writeByte(t.at(i, j))
 		}
 	}
 
 	data.AABB = clamped
 	data.Data = buffer.Buffer()
-	data.Stride = width
-	data.Length = width * height
+	data.Stride = int(width)
+	data.Length = int(width * height)
 
 	return data
 }
@@ -98,7 +111,7 @@ func (t *Terrain) Repair() {
 		for ucy, c := range chunks {
 			if c != nil && millis >= c.regen {
 				if c.regen != 0 { // Don't regen the first time
-					generateChunk(t.generator, ucx-Size/chunkSize/2, ucy-Size/chunkSize/2, c)
+					generateChunk(t.generator, uint(ucx)-Size/chunkSize/2, uint(ucy)-Size/chunkSize/2, c)
 				}
 				c.regen = millis + regenMillis + int64(rand.Intn(10000)) // add some randomness to avoid simultaneous regen
 			}
@@ -106,44 +119,28 @@ func (t *Terrain) Repair() {
 	}
 }
 
-// Changes the terrain height at pos by change
-func (t *Terrain) Sculpt(pos world.Vec2f, change float32) {
-	pos = pos.Mul(1.0 / terrain.Scale)
-
-	// Floor and Ceiling pos
-	cPos := pos.Ceil()
-	fPos := pos.Floor()
-
-	delta := pos.Sub(fPos)
-
-	// Set 4x4 grid
-	// 00 10
-	// 01 11
-	t.set2(fPos, clampToGrassByte(float32(t.at2(fPos))+change*(2-delta.X-delta.Y)*0.5))
-	t.set2(world.Vec2f{X: cPos.X, Y: fPos.Y}, clampToGrassByte(float32(t.at2(world.Vec2f{X: cPos.X, Y: fPos.Y}))*change*(1+delta.X-delta.Y)*0.5))
-	t.set2(world.Vec2f{X: fPos.X, Y: cPos.Y}, clampToGrassByte(float32(t.at2(world.Vec2f{X: fPos.X, Y: cPos.Y}))*change*(1-delta.X+delta.Y)*0.5))
-	t.set2(cPos, clampToGrassByte(float32(t.at2(cPos))+change*(delta.X+delta.Y)/2))
-}
-
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
 
-	if data.Radius < 4 {
-		// Not worth doing multiple terrain samples for small entities
+	// Not worth doing multiple terrain samples for small entities
+	if data.Radius <= terrain.Scale/5 {
 		return t.AtPos(entity.Position) > terrain.OceanLevel-6
 	}
 
 	sweep := seconds * entity.Velocity
+	normal := entity.Direction.Vec2f()
+	tangent := normal.Rot90()
 
 	const graceMargin = 0.9
 	dimensions := world.Vec2f{X: data.Length + sweep, Y: data.Width}.Mul(0.5 * graceMargin)
-	normal := entity.Direction.Vec2f()
-	tangent := normal.Rot90()
-	position := entity.Position.AddScaled(normal, sweep/2)
+	position := entity.Position.AddScaled(normal, sweep*0.5)
 
-	for l := -dimensions.X; l < dimensions.X; l += min(16, dimensions.Y*0.333) {
-		for w := -dimensions.Y; w < dimensions.Y; w += min(8, dimensions.Y*0.49) {
-			if t.AtPos(position.Add(normal.Mul(l)).Add(tangent.Mul(w))) > terrain.OceanLevel-6 {
+	dx := min(terrain.Scale*2/3, dimensions.X*0.499)
+	dy := min(terrain.Scale*2/3, dimensions.Y*0.499)
+
+	for l := -dimensions.X; l <= dimensions.X; l += dx {
+		for w := -dimensions.Y; w <= dimensions.Y; w += dy {
+			if t.AtPos(position.AddScaled(normal, l).AddScaled(tangent, w)) > terrain.OceanLevel-6 {
 				return true
 			}
 		}
@@ -153,10 +150,6 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 }
 
 func (t *Terrain) Debug() {
-	// Take lock so all generation is done
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
 	fmt.Println("compressed terrain: chunks:", t.chunkCount)
 }
 
@@ -165,97 +158,115 @@ func (t *Terrain) AtPos(pos world.Vec2f) byte {
 
 	// Floor and Ceiling pos
 	cPos := pos.Ceil()
-	fPos := pos.Floor()
+	cx := uint(int(cPos.X) + Size/2)
+	cy := uint(int(cPos.Y) + Size/2)
+	if cx >= Size || cy >= Size {
+		return 0
+	}
 
-	delta := pos.Sub(fPos)
+	fPos := pos.Floor()
+	fx := uint(int(fPos.X) + Size/2)
+	fy := uint(int(fPos.Y) + Size/2)
+	if fx >= Size || fy >= Size {
+		return 0
+	}
 
 	// Sample 4x4 grid
 	// 00 10
 	// 01 11
-	c00 := t.at2(fPos)
-	c10 := t.at2(world.Vec2f{X: cPos.X, Y: fPos.Y})
-	c01 := t.at2(world.Vec2f{X: fPos.X, Y: cPos.Y})
-	c11 := t.at2(cPos)
+	var c00, c10, c01, c11 byte
 
+	// Fast version if in the same chunk
+	if fx/chunkSize == cx/chunkSize && fy/chunkSize == cy/chunkSize {
+		c := t.getChunk(fx, fy)
+		c00 = c.at(fx, fy)
+		c10 = c.at(cx, fy)
+		c01 = c.at(fx, cy)
+		c11 = c.at(cx, cy)
+	} else {
+		c00 = t.at(fx, fy)
+		c10 = t.at(cx, fy)
+		c01 = t.at(fx, cy)
+		c11 = t.at(cx, cy)
+	}
+
+	delta := pos.Sub(fPos)
 	return blerp(c00, c10, c01, c11, delta.X, delta.Y)
 }
 
-func (t *Terrain) at2(terrainPos world.Vec2f) byte {
-	minX, minY := t.start()
-	maxX, maxY := t.end()
+// Changes the terrain height at pos by change
+func (t *Terrain) Sculpt(pos world.Vec2f, change float32) {
+	pos = pos.Mul(1.0 / terrain.Scale)
 
-	x, y := int(terrainPos.X), int(terrainPos.Y)
-	if x >= minX && x < maxX && y >= minY && y < maxY {
-		return t.at(x, y)
+	// Floor and Ceiling pos
+	cPos := pos.Ceil()
+	cx := uint(int(cPos.X) + Size/2)
+	cy := uint(int(cPos.Y) + Size/2)
+	if cx >= Size || cy >= Size {
+		return
 	}
-	return 0
-}
 
-func (t *Terrain) set2(terrainPos world.Vec2f, value byte) {
-	minX, minY := t.start()
-	maxX, maxY := t.end()
-
-	x, y := int(terrainPos.X), int(terrainPos.Y)
-	if x >= minX && x < maxX && y >= minY && y < maxY {
-		t.set(x, y, value)
+	fPos := pos.Floor()
+	fx := uint(int(fPos.X) + Size/2)
+	fy := uint(int(fPos.Y) + Size/2)
+	if fx >= Size || fy >= Size {
+		return
 	}
+
+	delta := pos.Sub(fPos)
+	change *= 0.5
+
+	// Set 4x4 grid
+	// 00 10
+	// 01 11
+	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy))+change*(2-delta.X-delta.Y)))
+	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))*change*(1+delta.X-delta.Y)))
+	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))*change*(1-delta.X+delta.Y)))
+	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy))+change*(delta.X+delta.Y)))
 }
 
-func (t *Terrain) at(x, y int) byte {
-	x += Size / 2
-	y += Size / 2
-
-	c := t.getChunk(x, y)
-	return c.at(uint(x&(chunkSize-1)), uint(y&(chunkSize-1)))
+// at gets the height of the terrain given x and y unsigned terrain coords.
+func (t *Terrain) at(x, y uint) byte {
+	return t.getChunk(x, y).at(x, y)
 }
 
-func (t *Terrain) set(x, y int, value byte) {
-	x += Size / 2
-	y += Size / 2
-
-	c := t.getChunk(x, y)
-	c.set(uint(x&(chunkSize-1)), uint(y&(chunkSize-1)), value)
+// at sets the height of the terrain given x, y unsigned terrain coords and the value to set it to.
+func (t *Terrain) set(x, y uint, value byte) {
+	t.getChunk(x, y).set(x, y, value)
 }
 
-// X and Y in 0 -> Size coordinates
-func (t *Terrain) getChunk(x, y int) *chunk {
-	ucx := x / chunkSize
-	ucy := y / chunkSize
+// getChunk gets a chunk given its unsigned terrain coordinates.
+// TODO figure out how to get this inlined
+func (t *Terrain) getChunk(x, y uint) *chunk {
+	// Elide bounds checks
+	x = (x / chunkSize) & (chunkCount - 1)
+	y = (y / chunkSize) & (chunkCount - 1)
 
 	// Use atomics/mutex to make sure chunk is generated
 	// Basically sync.Once for each chunk but with shared mutex
-	chunkPtr := (*unsafe.Pointer)(unsafe.Pointer(&t.chunks[ucx][ucy]))
-	c := (*chunk)(atomic.LoadPointer(chunkPtr))
-
+	c := (*chunk)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&t.chunks[x][y]))))
 	if c == nil {
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
-
-		// Load again to make sure its still nil after acquiring the lock
-		c = (*chunk)(atomic.LoadPointer(chunkPtr))
-		if c == nil {
-			// Generate chunk
-			c = generateChunk(t.generator, ucx-Size/chunkSize/2, ucy-Size/chunkSize/2, nil)
-			t.chunkCount++
-
-			// Store pointer
-			atomic.StorePointer(chunkPtr, unsafe.Pointer(c))
-		}
+		return t.getChunkSlow(x, y)
 	}
-
 	return c
 }
 
-// x and y must be >= start
-func (t *Terrain) start() (x, y int) {
-	x = -Size / 2
-	y = -Size / 2
-	return
-}
+func (t *Terrain) getChunkSlow(x, y uint) *chunk {
+	chunkPtr := (*unsafe.Pointer)(unsafe.Pointer(&t.chunks[x][y]))
 
-// x and y must be < end
-func (t *Terrain) end() (x, y int) {
-	x = Size / 2
-	y = Size / 2
-	return
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
+	// Load again to make sure its still nil after acquiring the lock
+	c := (*chunk)(atomic.LoadPointer(chunkPtr))
+	if c == nil {
+		// Generate chunk
+		c = generateChunk(t.generator, x-chunkCount/2, y-chunkCount/2, nil)
+		t.chunkCount++
+
+		// Store pointer
+		atomic.StorePointer(chunkPtr, unsafe.Pointer(c))
+	}
+
+	return c
 }
