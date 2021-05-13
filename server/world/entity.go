@@ -65,7 +65,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	turretsCopied := entity.updateTurretAim(seconds)
 
-	if entity.VelocityTarget > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
+	if math32.Abs(entity.VelocityTarget) > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
 		deltaVelocity := min(entity.VelocityTarget, data.Speed) - entity.Velocity
 		entity.Velocity += seconds * deltaVelocity
 
