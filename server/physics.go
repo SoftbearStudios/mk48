@@ -143,9 +143,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			collectible = other
 		}
 
-		if !entity.Collides(other, timeDeltaSeconds) || (weapon != nil &&
-			weapon.Data().SubKind == world.EntitySubKindMissile && weapon.Distance < 150) {
-
+		if !entity.Collides(other, timeDeltaSeconds) {
 			// Collectibles gravitate towards players
 			if boat != nil && collectible != nil {
 				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)

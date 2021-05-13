@@ -39,8 +39,7 @@
 		torpedo will turn until it reaches the desired angle. Some torpedoes
 		have the ability to track targets automatically, with sonar.</li>
 
-		<li><b>Missiles</b> are are faster, but less maneuverable than torpedoes,
-		and have a minimum range.</li>
+		<li><b>Missiles</b> are airborne and are faster, but less maneuverable than torpedoes.</li>
 
 		<li><b>Rockets</b> are like missiles but lack guidance.</li>
 
