@@ -858,6 +858,42 @@
 				"angle": 0,
 				"symmetrical": true,
 				"external": false
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 32,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 24,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 16,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 8,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
 			}
 		]
 	},
@@ -1543,6 +1579,23 @@
 		"sensors": [
 			{
 				"type": "sonar",
+				"range": 800
+			}
+		]
+	},
+	"tomahawk": {
+		"label": "Tomahawk",
+		"link": "https://en.wikipedia.org/wiki/Tomahawk_(missile)",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 5.56,
+		"width": 2.60625,
+		"speed": 245.872,
+		"range": 250000,
+		"sensors": [
+			{
+				"type": "radar",
 				"range": 800
 			}
 		]

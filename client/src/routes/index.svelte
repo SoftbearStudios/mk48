@@ -244,7 +244,9 @@
 						for (let a = 0; a < armaments.length; a++) {
 							const armament = armaments[a];
 
-							if (armament.hidden || !(entity.external || entity.friendly)) {
+							// For now, vertically-launched armaments are hidden
+							// TODO: Create top-down sprites
+							if (armament.hidden || armament.vertical || !(entity.external || entity.friendly)) {
 								continue;
 							}
 
@@ -554,7 +556,11 @@
 							armamentAngle += (localEntity.turretAngles[armament.turret] || localEntityData.turrets[armament.turret].angle);
 						}
 
-						const diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
+						let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
+						if (armament.vertical) {
+							// Vertically-launched armaments can fire in any horizontal direction
+							diff = 0;
+						}
 						if (diff < bestArmamentAngleDiff) {
 							bestArmamentIndex = index;
 							bestArmamentAngleDiff = diff;

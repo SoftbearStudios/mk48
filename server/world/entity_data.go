@@ -27,6 +27,7 @@ type (
 		PositionForward float32       `json:"positionForward"`
 		PositionSide    float32       `json:"positionSide"`
 		Angle           Angle         `json:"angle"`
+		Vertical        bool          `json:"vertical"`
 		Turret          *int          `json:"turret,omitempty"` // If non-nil, index of turret
 	}
 

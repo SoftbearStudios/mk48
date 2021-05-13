@@ -370,6 +370,11 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				armamentGuidance.VelocityTarget = armamentEntityData.Speed
 			}
 
+			if armamentData.Vertical {
+				// Vertically-launched armaments can be launched in any horizontal direction
+				transform.Direction = armamentGuidance.DirectionTarget
+			}
+
 			if armamentEntityData.SubKind == world.EntitySubKindRocket {
 				transform.Direction += world.Angle(rand.Float32()-0.5) * 0.1
 			}
