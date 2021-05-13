@@ -121,10 +121,18 @@ func (t *Terrain) Repair() {
 
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
+	threshold := byte(terrain.OceanLevel)
+	switch data.SubKind {
+	case world.EntitySubKindMissile, world.EntitySubKindRocket, world.EntitySubKindShell:
+		threshold = terrain.SandLevel
+	}
+
+	// Kludge offset
+	threshold -= 6
 
 	// Not worth doing multiple terrain samples for small entities
 	if data.Radius <= terrain.Scale/5 {
-		return t.AtPos(entity.Position) > terrain.OceanLevel-6
+		return t.AtPos(entity.Position) > threshold
 	}
 
 	sweep := seconds * entity.Velocity
@@ -140,7 +148,7 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	for l := -dimensions.X; l <= dimensions.X; l += dx {
 		for w := -dimensions.Y; w <= dimensions.Y; w += dy {
-			if t.AtPos(position.AddScaled(normal, l).AddScaled(tangent, w)) > terrain.OceanLevel-6 {
+			if t.AtPos(position.AddScaled(normal, l).AddScaled(tangent, w)) > threshold {
 				return true
 			}
 		}
