@@ -817,6 +817,50 @@
 			}
 		]
 	},
+	"ohio": {
+		"label": "Ohio",
+		"link": "https://en.wikipedia.org/wiki/Ohio-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 5,
+		"length": 170,
+		"width": 13,
+		"speed": 12.8611,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 600
+			},
+			{
+				"type": "sonar",
+				"range": 1200
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
 	"olympias": {
 		"label": "Olympias",
 		"link": "https://en.wikipedia.org/wiki/Olympias_%28trireme%29",
