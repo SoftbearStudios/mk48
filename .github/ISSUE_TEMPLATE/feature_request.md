@@ -9,8 +9,8 @@ assignees: ''
 
 **Describe your feature request**
 
-Ex. Please add the [...] ship to the game
+<!--Ex. Please add the [...] ship to the game-->
 
 **Additional context**
 
-Ex. Here's the Wikipedia page for the ship: [...]
+<!--Ex. Here's the Wikipedia page for the ship: [...]-->
