@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"mk48/server/world"
 	"runtime"
 	"sync"
@@ -275,9 +276,15 @@ func (h *Hub) boatDied(e *world.Entity) {
 	data := e.Data()
 	logDeath(e)
 
-	// Loot is based on the length of the boat (TODO: with a small random factor)
-	loot := int(data.Length * 0.25)
-	for i := 0; i < loot; i++ {
+	// Loot is based on the length of the boat
+	loot := data.Length * 0.25 * (rand.Float32()*0.1 + 0.9)
+
+	// Makes spawn killing less effective
+	if data.Level == 1 && e.Lifespan < 20.0 {
+		loot *= 0.25
+	}
+
+	for i := 0; i < int(loot); i++ {
 		crate := &world.Entity{
 			EntityType: world.EntityTypeCrate,
 			Transform:  e.Transform,
