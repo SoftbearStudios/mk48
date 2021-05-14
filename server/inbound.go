@@ -479,6 +479,14 @@ func trimUtf8(in string, low, high int) (str string, ok bool) {
 
 	// Remove spaces
 	str = strings.TrimSpace(in)
+	str = strings.TrimFunc(str, func(r rune) bool {
+		// NOTE: The following characters are not detected by
+		// unicode.IsSpace() but show up as blank
+
+		// https://www.compart.com/en/unicode/U+2800
+		// https://www.compart.com/en/unicode/U+200B
+		return r == 0x2800 || r == 0x200B
+	})
 
 	// Too long but can resize down
 	if len(str) > high {

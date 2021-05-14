@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Updates a container of container, where each particle has a velocity and
+// Updates a container of particles, where each particle has a velocity and
 // direction in addition to normal fields
 export function updateParticles(container, seconds) {
 	if (container.deadParticles) {
