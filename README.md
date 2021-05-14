@@ -10,6 +10,7 @@
 
 ### Client
 
+0. Install `NodeJS 14` or higher
 1. Enter `/client`
 2. `npm install`
 3. `make` or `npm run dev`
@@ -17,5 +18,10 @@
 
 ### Server
 
+0. Install `go1.16` or higher
 1. Enter `/server`
 2. `make`
+3. Profile with `make pprof` and optionally specify `seconds=<number>` and/or `profile=heap`
+
+## Contributing
+See [Contributing](https://github.com/SoftbearStudios/mk48/wiki/Contributing) Wiki page.
