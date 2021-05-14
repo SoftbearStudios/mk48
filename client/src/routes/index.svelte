@@ -29,7 +29,7 @@
 	$: width = Math.floor(widthFract);
 
 	let mouse = {x: 0, y: 0, touch: false, leftDown: 0, rightDown: false, click: false};
-	let keyboard = {shoot: false, forward: false, backward: false, right: false, left: false}; // what keys are down
+	let keyboard = {shoot: false, forward: false, backward: false, right: false, left: false, stop: false}; // what keys are down
 	let overlay = {};
 	let viewportPositionCache = {x: 0, y: 0};
 	let armamentSelection;
@@ -585,7 +585,7 @@
 					}
 				}
 
-				const keyEvent = keyboard.forward || keyboard.backward || keyboard.right || keyboard.left;
+				const keyEvent = keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
 				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
 					if (mouseDownNotClick()) {
 						localSprite.directionTarget = mouseAngle;
@@ -603,18 +603,18 @@
 							localSprite.velocityTarget -= 300 * seconds;
 						}
 
-						if (Math.abs(localSprite.velocityTarget) <= 1) {
-							localSprite.velocityTarget = 0;
-						}
-
-						localSprite.velocityTarget = clamp(localSprite.velocityTarget, -0.25 * localEntityData.speed, localEntityData.speed);
-
 						if (keyboard.right) {
 							localSprite.directionTarget += 256 * Math.PI * seconds;
 						}
 						if (keyboard.left) {
 							localSprite.directionTarget -= 256 * Math.PI * seconds;
 						}
+
+						localSprite.velocityTarget = clamp(localSprite.velocityTarget, -0.33 * localEntityData.speed, localEntityData.speed);
+					}
+
+					if (keyboard.stop || Math.abs(localSprite.velocityTarget) <= 1) {
+						localSprite.velocityTarget = 0;
 					}
 
 					send('manual', {
@@ -839,6 +839,7 @@
 			const keys = {
 				32: 'shoot', // space
 				69: 'shoot', // e
+				88: 'stop', // x
 
 				// WASD
 				65: 'left',
