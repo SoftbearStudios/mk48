@@ -39,7 +39,7 @@ func (h *Hub) Cloud() {
 	}()
 
 	statusJSON, err := json.Marshal(struct {
-		Players int `json:"clients"`
+		Players int `json:"players"`
 	}{
 		Players: playerCount,
 	})
