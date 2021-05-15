@@ -190,7 +190,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 			removeEntity(collectible, "collected")
 		case boat != nil && weapon != nil && !friendly:
-			boat.Damage += weapon.Data().Damage
+			boat.Damage += weapon.Data().Damage * boat.RecentSpawnFactor()
 
 			if boat.Dead() {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
@@ -201,13 +201,15 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		case boat != nil && otherBoat != nil:
 			/*
 				Goals:
-				- (Canceled) At least one boat is guaranteed to receive fatal damage
+				- (Cancelled) At least one boat is guaranteed to receive fatal damage
 				- Ships with near equal max health and near equal health
 				  percentage both die (no seemingly arbitrary survivor) hence 110%
 				- Low health boats still do damage, hence scale health percent
 			*/
 
 			baseDamage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
+
+			baseDamage *= boat.RecentSpawnFactor() * otherBoat.RecentSpawnFactor()
 
 			if friendly {
 				baseDamage = 0
@@ -279,10 +281,8 @@ func (h *Hub) boatDied(e *world.Entity) {
 	// Loot is based on the length of the boat
 	loot := data.Length * 0.25 * (rand.Float32()*0.1 + 0.9)
 
-	// Makes spawn killing less effective
-	if data.Level == 1 && e.Lifespan < 20.0 {
-		loot *= 0.25
-	}
+	// Makes spawn killing less profitable
+	loot *= e.RecentSpawnFactor()
 
 	for i := 0; i < int(loot); i++ {
 		crate := &world.Entity{

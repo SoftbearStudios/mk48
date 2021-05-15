@@ -148,6 +148,15 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 
+// Returns value in the range [0,1] as time since spawn increases
+// Intended to be multiplied by, for example, damage, to decrease damage taken
+// while having been spawned recently
+func (entity *Entity) RecentSpawnFactor() float32 {
+	const initial float32 = 0.9 // initial protection against damage, etc.
+	const seconds float32 = 20  // how long effect lasts
+	return min(1-initial+entity.Lifespan*(initial/seconds), 1)
+}
+
 // Returns whether copied turret angles
 func (entity *Entity) updateTurretAim(seconds float32) bool {
 	turretsCopied := false
