@@ -39,10 +39,17 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		return true
 	}
 
+	// The following movement-related code must match the client's code
+	maxSpeed := data.Speed
+
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
-		turnRate := Angle(math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(data.Speed+1)))
+
+		// See #45 - automatically slow down to turn faster
+		maxSpeed /= max(square(float32(deltaAngle.Abs())), 1)
+
+		turnRate := Angle(math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(maxSpeed+1)))
 		entity.Direction += deltaAngle.ClampMagnitude(Angle(seconds) * turnRate)
 	}
 
@@ -67,7 +74,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	turretsCopied := entity.updateTurretAim(seconds)
 
 	if math32.Abs(entity.VelocityTarget) > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
-		deltaVelocity := min(entity.VelocityTarget, data.Speed) - entity.Velocity
+		deltaVelocity := min(entity.VelocityTarget, maxSpeed) - entity.Velocity
 		entity.Velocity += seconds * deltaVelocity
 
 		distance := seconds * entity.Velocity
