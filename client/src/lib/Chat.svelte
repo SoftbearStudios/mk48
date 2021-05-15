@@ -22,13 +22,19 @@
 		message.set(event.target.value);
 	}
 
+	function populateReply(name) {
+		if (!$message || ($message.trim().length === 0) || $message.startsWith('@')) {
+			$message = `@${name} `;
+		}
+	}
+
 	export function focus() {
 		input && input.focus && input.focus();
 	}
 
 	function onSubmit() {
 		callback($message);
-		message.set('');
+		$message = '';
 		input && input.blur && input.blur();
 	}
 
@@ -60,7 +66,7 @@
 		<table>
 			{#each $chats as {name, team, message}}
 				<tr>
-					<td class='name'>{team ? `[${team}] ${name}` : name}</td>
+					<td class='name' on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</td>
 					<td class='message'>{message}</td>
 				</tr>
 			{/each}
@@ -99,6 +105,7 @@
 	}
 
 	td.name {
+		cursor: pointer;
 		font-weight: bold;
 		white-space: nowrap;
 		width: 1%;
