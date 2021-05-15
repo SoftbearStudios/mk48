@@ -42,7 +42,8 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
-		entity.Direction += deltaAngle.ClampMagnitude(Angle(math32.Pi/4*max(0.25, 1-math32.Abs(entity.Velocity)/(data.Speed+1)))) * Angle(seconds)
+		turnRate := Angle(math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(data.Speed+1)))
+		entity.Direction += deltaAngle.ClampMagnitude(Angle(seconds) * turnRate)
 	}
 
 	if data.SubKind == EntitySubKindSubmarine {

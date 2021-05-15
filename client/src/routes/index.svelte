@@ -660,10 +660,10 @@
 					const topSpeed = entityData[entity.type].speed || 20;
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
-					sprite.rotation += clampMagnitude(angleDifference, maxTurnSpeed * Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (topSpeed + 1))) * seconds;
+					sprite.rotation += clampMagnitude(angleDifference, seconds * maxTurnSpeed * Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (topSpeed + 1)));
 
 					angleDifference = angleDiff(entity.direction, entity.directionTarget || 0);
-					entity.direction += clampMagnitude(angleDifference, maxTurnSpeed * Math.max(0.25, 1 - Math.abs(entity.velocity || 0) / (topSpeed + 1))) * seconds;
+					entity.direction += clampMagnitude(angleDifference, seconds * maxTurnSpeed * Math.max(0.25, 1 - Math.abs(entity.velocity || 0) / (topSpeed + 1)));
 				}
 
 				sprite.position.x = mapRanges(seconds, 0, 0.25, sprite.position.x, entity.position.x, true);
