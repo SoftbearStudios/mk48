@@ -40,12 +40,6 @@
 	or implied, and hereby disclaim all implied warranties, including any warranty of
 	merchantibility and warranty of fitness of fitness for a particular purpose.</b></p>
 
-	<h2>Intellectual Property</h2>
-
-	<p>Mk48.io and its individual game assets (textures, sounds, source code, etc.) are the
-	intellectual property of its developers. You may not use or distribute them
-	except as allowed by these terms.</p>
-
 	<h2>Changes</h2>
 
 	<p>We reserve the right to alter these Terms of Service at any time, without notice.</p>
