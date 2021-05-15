@@ -41,10 +41,13 @@
 
 	<h2>Technical details</h2>
 
-	<p>The game's <Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">server</Link> is written in <Link href="https://golang.org/">Go</Link>.</p>
-	<p>The game's <Link href="https://github.com/SoftbearStudios/mk48/tree/main/client">client</Link> is written in the <Link href="https://kit.svelte.dev/">SvelteKit</Link> JavaScript framework, and
-	uses <Link href="https://www.pixijs.com/">PIXI.js</Link> for the 2D graphics.</p>
-	<p>The game assets were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</p>
+	<p>The game's source code and assets are <Link href="https://github.com/SoftbearStudios/mk48">open source</Link>.</p>
+	<ul>
+		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">server</Link> is written in <Link href="https://golang.org/">Go</Link>.</li>
+		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/client">client</Link> is written in the <Link href="https://kit.svelte.dev/">SvelteKit</Link> JavaScript framework, and
+		uses <Link href="https://www.pixijs.com/">PIXI.js</Link> for the 2D graphics.</li>
+		<li>The assets were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</li>
+	</ul>
 
 	<h2>Contact Us</h2>
 
