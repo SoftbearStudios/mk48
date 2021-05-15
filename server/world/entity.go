@@ -152,8 +152,12 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 // Intended to be multiplied by, for example, damage, to decrease damage taken
 // while having been spawned recently
 func (entity *Entity) RecentSpawnFactor() float32 {
-	const initial float32 = 0.9 // initial protection against damage, etc.
-	const seconds float32 = 20  // how long effect lasts
+	// Upgrading invalidates spawn protection
+	if entity.Data().Level > 1 {
+		return 1
+	}
+	const initial float32 = 0.75 // initial protection against damage, etc.
+	const seconds float32 = 15   // how long effect lasts
 	return min(1-initial+entity.Lifespan*(initial/seconds), 1)
 }
 
