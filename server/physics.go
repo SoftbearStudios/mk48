@@ -190,7 +190,13 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 			removeEntity(collectible, "collected")
 		case boat != nil && weapon != nil && !friendly:
-			boat.Damage += weapon.Data().Damage * boat.RecentSpawnFactor()
+			damageMultiplier := boat.RecentSpawnFactor()
+
+			dist2 := boat.Position.DistanceSquared(weapon.Position)
+			r2 := square(boat.Data().Radius)
+			damageMultiplier *= clamp(1.5*(r2-dist2)/r2, 0.5, 1.5)
+
+			boat.Damage += weapon.Data().Damage * damageMultiplier
 
 			if boat.Dead() {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
