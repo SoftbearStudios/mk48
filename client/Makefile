@@ -5,10 +5,10 @@ all: dev
 node_modules:
 	npm install
 
-dev:
+dev: node_modules
 	npm run dev
 
-build: src/*/*.js src/*/*.svelte src/*
+build: src/*/*.js src/*/*.svelte src/* node_modules
 	npm run build
 
 install: build
