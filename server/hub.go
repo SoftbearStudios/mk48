@@ -123,6 +123,7 @@ func (h *Hub) run() {
 
 			h.world.ForEntities(func(_ world.EntityID, entity *world.Entity) (_, remove bool) {
 				if entity.Owner == &player.Player {
+					h.boatDied(entity)
 					remove = true
 				}
 				return
