@@ -50,10 +50,10 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.9, true);
 				break;
 			case 'shell':
-				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.3, 0.8, true);
+				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.8, true);
 				break;
 			case 'depthCharge':
-				entityData.damage = 1;
+				entityData.damage = 0.8;
 				break;
 		}
 	}

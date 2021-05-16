@@ -55,18 +55,18 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	if data.SubKind == EntitySubKindSubmarine {
 		surfacing := false
-		for _, consumption := range entity.ArmamentConsumption() {
-			if consumption > 0.5 {
+		for i, consumption := range entity.ArmamentConsumption() {
+			if data.Armaments[i].Default.Data().SubKind != EntitySubKindTorpedo && consumption > 0 {
 				surfacing = true
 				break
 			}
 		}
 
 		targetAltitude := clamp(entity.ext.altitudeTarget(), -1, 0)
-		altitudeSpeed := float32(0.1)
+		altitudeSpeed := float32(0.2)
 		if surfacing {
 			targetAltitude = 0
-			altitudeSpeed = 1
+			altitudeSpeed = 0.75
 		}
 		entity.ext.setAltitude(Lerp(entity.Altitude(), targetAltitude, altitudeSpeed*seconds))
 	}
