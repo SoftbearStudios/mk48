@@ -64,7 +64,7 @@
 	screen, and are greyed out until they are available.</p>
 
 	<p>Enemies are more likely to detect larger ships. However, some modern ships have
-	a property known as <b>stealth</b> that reduces the chance of being detected.</p>
+	a property known as <b>stealth</b> to help you evade detection.</p>
 
 	<h2>Weapons</h2>
 
