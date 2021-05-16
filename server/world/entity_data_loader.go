@@ -147,7 +147,7 @@ func init() {
 			EntityLevelMax = data.Level
 		}
 
-		data.InvSize = 1.0 / min(1, data.Radius*(1.0/50.0)*(1.0-data.Stealth))
+		data.InvSize = 1.0 / min(1, data.Radius*(1.0/30.0)*(1.0-data.Stealth))
 	}
 
 	EntityKindBoat = ParseEntityKind("boat")

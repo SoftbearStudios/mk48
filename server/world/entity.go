@@ -69,7 +69,8 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 			targetAltitude = 0
 			altitudeSpeed = 0.75
 		}
-		entity.ext.setAltitude(Lerp(entity.Altitude(), targetAltitude, altitudeSpeed*seconds))
+		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
+		entity.ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
 	turretsCopied := entity.updateTurretAim(seconds)
@@ -114,7 +115,9 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		return true
 	}
 
-	if len(entity.ArmamentConsumption()) > 0 {
+	underwater := entity.Altitude() < 0
+
+	if len(entity.ArmamentConsumption()) > 0 && !underwater {
 		// If turrets were already copied and the extension
 		// copies everything armaments don't need to be copied
 		armamentsCopied := entity.ext.copiesAll() && turretsCopied
@@ -122,7 +125,11 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	}
 
 	if entity.Damage > 0 {
-		entity.Repair(seconds * (1.0 / 60.0))
+		repairAmount := seconds * (1.0 / 60.0)
+		if underwater {
+			repairAmount *= 0.5
+		}
+		entity.Repair(repairAmount)
 	}
 
 	return false
@@ -133,7 +140,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	if entity.Owner.Friendly(otherEntity.Owner) {
 		return
 	}
-	if entity.Distance < 25 || entity.Lifespan < 0.5 {
+	if entity.Distance < 50 || entity.Lifespan < 1 {
 		// Sensor not active yet
 		return
 	}

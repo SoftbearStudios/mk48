@@ -200,7 +200,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 			dist2 := boat.Position.DistanceSquared(weapon.Position)
 			r2 := square(boat.Data().Radius)
-			damageMultiplier *= clamp(1.5*(r2-dist2)/r2, 0.5, 1.5)
+			damageMultiplier *= clamp(max(r2-dist2+90, 0)/r2, 0.5, 1.5)
 
 			boat.Damage += weapon.Data().Damage * damageMultiplier
 
