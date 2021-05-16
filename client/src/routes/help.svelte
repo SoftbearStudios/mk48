@@ -41,7 +41,7 @@
 	<ol>
 		<li><b>Motor-torpedo boats</b> are the type of most level one ships,
 		generally having multiple torpedoes and possibly guns.</li>
-		<li><b>Destroyers</b> are larger boats that carry more weapons, including
+		<li><b>Corvettes</b> and <b>Destroyers</b> are larger boats that carry more weapons, including
 		slightly more powerful guns.</li>
 		<li><b>Cruisers</b> are a compromise between destroyers and battleships.</li>
 		<li><b>Battleships</b> are very formidable ships, having extremely
@@ -62,6 +62,9 @@
 	<p>Once you earn enough points, you are able to <b>upgrade</b> your ship to the
 	next level. The upgrade choices are shown in the top left corner of the
 	screen, and are greyed out until they are available.</p>
+
+	<p>Enemies are more likely to detect larger ships. However, some modern ships have
+	a property known as <b>stealth</b> that reduces the chance of being detected.</p>
 
 	<h2>Weapons</h2>
 
