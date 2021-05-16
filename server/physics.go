@@ -152,7 +152,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			}
 
 			// Home towards target
-			if !friendly && entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && otherData.Kind == world.EntityKindBoat {
+			if !friendly && entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
 				entity.UpdateSensor(other)
 			}
 

@@ -1527,6 +1527,13 @@
 				"external": false
 			},
 			{
+				"default": "mk70",
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"external": false
+			},
+			{
 				"default": "tomahawk",
 				"positionForward": 32,
 				"positionSide": 2,
@@ -1803,20 +1810,6 @@
 				"external": false
 			},
 			{
-				"default": "harpoon",
-				"positionForward": 34,
-				"positionSide": 0,
-				"angle": 0,
-				"external": false
-			},
-			{
-				"default": "harpoon",
-				"positionForward": 34,
-				"positionSide": 0,
-				"angle": 0,
-				"external": false
-			},
-			{
 				"type": "weapon",
 				"subtype": "torpedo",
 				"default": "mark48",
@@ -1833,6 +1826,27 @@
 				"width": 0.533,
 				"positionForward": 33.75,
 				"positionSide": -0.7,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "mk70",
+				"positionForward": 33.75,
+				"positionSide": 0.7,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "harpoon",
+				"positionForward": 34,
+				"positionSide": 0,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "harpoon",
+				"positionForward": 34,
+				"positionSide": 0,
 				"angle": 0,
 				"external": false
 			}
@@ -2675,6 +2689,7 @@
 		"level": 2,
 		"length": 2.075,
 		"width": 0.29,
+		"speed": 10,
 		"lifespan": 15,
 		"armaments": [],
 		"turrets": [],

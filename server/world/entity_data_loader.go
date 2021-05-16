@@ -152,6 +152,7 @@ func init() {
 
 	EntityKindBoat = ParseEntityKind("boat")
 	EntityKindCollectible = ParseEntityKind("collectible")
+	EntityKindDecoy = ParseEntityKind("decoy")
 	EntityKindObstacle = ParseEntityKind("obstacle")
 	EntityKindWeapon = ParseEntityKind("weapon")
 
@@ -163,6 +164,7 @@ func init() {
 	EntitySubKindRam = ParseEntitySubKind("ram")
 	EntitySubKindRocket = ParseEntitySubKind("rocket")
 	EntitySubKindShell = ParseEntitySubKind("shell")
+	EntitySubKindSonar = ParseEntitySubKind("sonar")
 	EntitySubKindSubmarine = ParseEntitySubKind("submarine")
 
 	EntityTypeBarrel = ParseEntityType("barrel")
@@ -187,6 +189,7 @@ func init() {
 var (
 	EntityKindBoat        EntityKind
 	EntityKindCollectible EntityKind
+	EntityKindDecoy       EntityKind
 	EntityKindObstacle    EntityKind
 	EntityKindWeapon      EntityKind
 
@@ -197,6 +200,7 @@ var (
 	EntitySubKindRam         EntitySubKind
 	EntitySubKindRocket      EntitySubKind
 	EntitySubKindShell       EntitySubKind
+	EntitySubKindSonar       EntitySubKind
 	EntitySubKindSubmarine   EntitySubKind
 	EntitySubKindTorpedo     EntitySubKind
 

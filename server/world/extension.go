@@ -35,8 +35,14 @@ func (entity *Entity) ArmamentConsumption() []float32 {
 
 // -1 = deep, 0 = surface, 1 = high in the air
 func (entity *Entity) Altitude() float32 {
-	if entity.EntityType.Data().Kind == EntityKindBoat {
+	switch entity.EntityType.Data().Kind {
+	case EntityKindBoat:
 		return entity.ext.altitude()
+	case EntityKindDecoy:
+		switch entity.EntityType.Data().SubKind {
+		case EntitySubKindSonar:
+			return -0.9 * AltitudeCollisionThreshold
+		}
 	}
 
 	switch entity.EntityType.Data().SubKind {

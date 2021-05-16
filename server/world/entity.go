@@ -56,7 +56,8 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	if data.SubKind == EntitySubKindSubmarine {
 		surfacing := false
 		for i, consumption := range entity.ArmamentConsumption() {
-			if data.Armaments[i].Default.Data().SubKind != EntitySubKindTorpedo && consumption > 0 {
+			armamentEntityData := data.Armaments[i].Default.Data()
+			if !(armamentEntityData.Kind == EntityKindDecoy || armamentEntityData.SubKind == EntitySubKindTorpedo) && consumption > 0 {
 				surfacing = true
 				break
 			}
@@ -151,7 +152,12 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		return
 	}
 
-	homingStrength := otherEntity.Data().Radius * 600 / (1 + diff.LengthSquared() + 20000*square(float32(angleDiff)))
+	size := otherEntity.Data().Radius
+	if otherEntity.Data().Kind == EntityKindDecoy {
+		// Decoys appear very large to weapons
+		size = 100
+	}
+	homingStrength := size * 600 / (1 + diff.LengthSquared() + 20000*square(float32(angleDiff)))
 
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
