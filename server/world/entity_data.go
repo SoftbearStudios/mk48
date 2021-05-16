@@ -54,6 +54,7 @@ type (
 		Lifespan  float32       `json:"lifespan"`
 		Speed     float32       `json:"speed"`
 		Damage    float32       `json:"damage"`
+		Stealth   float32       `json:"stealth"`
 		Sensors   []Sensor      `json:"sensors"`
 		Armaments []Armament    `json:"armaments"`
 		Turrets   []Turret      `json:"turrets"`

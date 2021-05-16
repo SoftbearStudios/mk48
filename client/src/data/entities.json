@@ -44,6 +44,7 @@
 		"length": 154,
 		"width": 20,
 		"speed": 17,
+		"stealth": 0.25,
 		"sensors": [
 			{
 				"type": "visual",
@@ -1958,6 +1959,193 @@
 			}
 		]
 	},
+	"visby": {
+		"label": "Visby",
+		"link": "https://en.wikipedia.org/wiki/Visby-class_corvette",
+		"type": "boat",
+		"subtype": "corvette",
+		"level": 5,
+		"length": 72.7,
+		"width": 10.4,
+		"speed": 18.00556,
+		"stealth": 0.75,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 1000
+			},
+			{
+				"type": "radar",
+				"range": 2000
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": -0.25,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": 3.5,
+				"angle": 1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": -3.5,
+				"angle": -1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": 3.5,
+				"angle": 1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": -3.5,
+				"angle": -1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": 3.5,
+				"angle": 1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": -3.5,
+				"angle": -1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": 3.5,
+				"angle": 1.5707963267948966,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": -3.5,
+				"angle": -1.5707963267948966,
+				"external": true
+			},
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -22,
+				"positionSide": 4.5,
+				"angle": 0
+			},
+			{
+				"positionForward": -22,
+				"positionSide": -4.5,
+				"angle": 0
+			},
+			{
+				"type": "bofors57mmMK3",
+				"positionForward": 20,
+				"positionSide": 0,
+				"angle": 0
+			}
+		]
+	},
 	"zubr": {
 		"label": "Zubr",
 		"link": "https://en.wikipedia.org/wiki/Zubr-class_LCAC",
@@ -2266,6 +2454,27 @@
 				"positionSide": -2,
 				"external": true,
 				"hidden": false
+			}
+		],
+		"turrets": [],
+		"sensors": []
+	},
+	"bofors57mmMK3": {
+		"label": "Bofors 57mm MK3",
+		"link": "https://en.wikipedia.org/wiki/Bofors_57_mm_L/70_naval_artillery_gun",
+		"type": "turret",
+		"positionForward": 1,
+		"positionSide": 0,
+		"subtype": "gun",
+		"length": 6.925,
+		"width": 4.2199,
+		"armaments": [
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": true
 			}
 		],
 		"turrets": [],
@@ -2597,6 +2806,26 @@
 		"armaments": [],
 		"turrets": []
 	},
+	"rbs15": {
+		"label": "RBS-15",
+		"link": "https://en.wikipedia.org/wiki/RBS-15",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 3,
+		"length": 4.33,
+		"width": 1.2516,
+		"speed": 300,
+		"range": 807,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1000
+			}
+		],
+		"damage": 0.6495000000000001,
+		"armaments": [],
+		"turrets": []
+	},
 	"set65": {
 		"label": "Set 65",
 		"link": "https://commons.wikimedia.org/wiki/File:SET-65.svg",
@@ -2634,6 +2863,26 @@
 			}
 		],
 		"damage": 0.834,
+		"armaments": [],
+		"turrets": []
+	},
+	"torped45": {
+		"label": "Torped 45",
+		"link": "https://en.wikipedia.org/wiki/Torped_45",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 2.85,
+		"width": 0.4,
+		"speed": 20.57779,
+		"range": 1500,
+		"sensors": [
+			{
+				"type": "sonar",
+				"range": 1000
+			}
+		],
+		"damage": 0.6,
 		"armaments": [],
 		"turrets": []
 	},

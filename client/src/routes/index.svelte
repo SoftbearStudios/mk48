@@ -829,11 +829,11 @@
 	function handleKey(event) {
 		const {keyCode, preventDefault, shiftKey, target, type} = event;
 
-		if (target && (target instanceof HTMLInputElement)) {
+		const down = {keydown: true, keyup: false}[type];
+
+		if (down && target && (target instanceof HTMLInputElement)) {
 			return;
 		}
-
-		const down = {keydown: true, keyup: false}[type];
 
 		if (down !== undefined) {
 			const keys = {

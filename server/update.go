@@ -11,7 +11,7 @@ import (
 )
 
 // Update sends an Update message to each Client.
-// Its run in parallel because it doesn't write to World
+// It's run in parallel because it doesn't write to World
 func (h *Hub) Update() {
 	defer h.timeFunction("update", time.Now())
 
@@ -100,18 +100,18 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 			if !known {
 				data := entity.Data()
 
-				invSize := data.InvSize // cached 1.0 / min(1, data.Radius*(1.0/50.0))
+				invSize := data.InvSize // cached 1.0 / min(1, data.Radius*(1.0/50.0)*(1-data.Stealth))
 				defaultRatio := distanceSquared * invSize
 				uncertainty = 1.0
 
 				if radarRangeInv != 0 && alt >= -0.1 {
 					radarRatio := defaultRatio * radarRangeInv
-					uncertainty = min(uncertainty, radarRatio)
+					uncertainty = min(uncertainty, radarRatio*2)
 				}
 
 				if sonarRangeInv != 0 && alt <= 0 {
 					sonarRatio := defaultRatio * sonarRangeInv
-					uncertainty = min(uncertainty, sonarRatio)
+					uncertainty = min(uncertainty, sonarRatio*3)
 				}
 
 				if visualRangeInv != 0 {
@@ -120,7 +120,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 						visualRatio /= clamp(alt+1.0, 0.05, 1)
 					}
 					visible = visualRatio < 1
-					uncertainty = min(uncertainty, visualRatio*0.5)
+					uncertainty = min(uncertainty, visualRatio)
 				}
 
 				if uncertainty >= 1.0 {
