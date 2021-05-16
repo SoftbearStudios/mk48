@@ -958,7 +958,7 @@
 		cursor: pointer;
 		font-weight: bold;
 		margin-top: 5px;
-		min-width: 180px;
+		min-width: 200px;
 		outline: 0px;
 		padding: 8px;
 		pointer-events: all;

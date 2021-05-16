@@ -95,6 +95,7 @@
 	<span>
 		<a href='/help' target='_blank'>Help</a>
 		<a href='/about' target='_blank'>About</a>
+		<a href='/privacy' target='_blank'>Privacy</a>
 		<a href='/terms' target='_blank'>Terms</a>
 	</span>
 </div>
