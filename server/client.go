@@ -34,6 +34,10 @@ type (
 	}
 
 	// ClientList is a doubly-linked list of Clients.
+	// It can be iterated like this:
+	// for client := list.First; client != nil; client = client.Data().Next {}
+	// Or to remove all iterated items like this:
+	// for client := list.First; client != nil; client = list.Remove(client) {}
 	ClientList struct {
 		First Client
 		Last  Client
@@ -63,7 +67,8 @@ func (list *ClientList) Add(client Client) {
 }
 
 // Remove removes a Client from the list.
-func (list *ClientList) Remove(client Client) {
+// Returns the next element of the list.
+func (list *ClientList) Remove(client Client) (next Client) {
 	data := client.Data()
 
 	// Repair list
@@ -84,6 +89,9 @@ func (list *ClientList) Remove(client Client) {
 	}
 
 	list.Len--
+	next = data.Next
 	data.Next = nil
 	data.Previous = nil
+
+	return
 }

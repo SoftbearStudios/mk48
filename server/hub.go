@@ -35,6 +35,7 @@ type Hub struct {
 	worldRadius float32 // interpolated
 	terrain     terrain.Terrain
 	clients     ClientList // implemented as double-linked list
+	despawn     ClientList // clients that are being removed
 	teams       map[world.TeamID]*world.Team
 
 	// Flags
@@ -116,21 +117,20 @@ func (h *Hub) run() {
 			}
 		case client := <-h.unregister:
 			client.Close()
+			player := &client.Data().Player.Player
 
-			player := &client.Data().Player
-			h.clearTeamRequests(&player.Player) // Player no longer is joining teams
-			h.leaveTeam(&player.Player)         // Removes team or transfers ownership, if applicable
+			// Player no longer is joining teams
+			// May want to do this during despawn because clearing team requests in O(n).
+			h.clearTeamRequests(player)
 
-			h.world.ForEntities(func(_ world.EntityID, entity *world.Entity) (_, remove bool) {
-				if entity.Owner == &player.Player {
-					h.boatDied(entity)
-					remove = true
-				}
-				return
-			})
+			// Removes team or transfers ownership, if applicable
+			h.leaveTeam(player)
 
 			client.Data().Hub = nil
 			h.clients.Remove(client)
+
+			// Remove in Despawn during leaderboard update.
+			h.despawn.Add(client)
 		case in := <-h.inbound:
 			// Read all messages currently in the channel
 			n := len(h.inbound)
@@ -157,6 +157,7 @@ func (h *Hub) run() {
 			h.Update()
 		case <-h.leaderboardTicker.C:
 			h.terrain.Repair()
+			h.Despawn()
 			h.Spawn()
 			h.Leaderboard()
 
