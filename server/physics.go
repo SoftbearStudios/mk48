@@ -200,7 +200,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 			dist2 := boat.Position.DistanceSquared(weapon.Position)
 			r2 := square(boat.Data().Radius)
-			damageMultiplier *= clamp(1.5*(r2-dist2)/r2, 0.5, 1.5)
+			damageMultiplier *= collisionMultiplier(dist2, r2)
 
 			boat.Damage += weapon.Data().Damage * damageMultiplier
 
@@ -232,30 +232,51 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 				b := ordering[0]
 				oB := ordering[1]
 
-				isRam := b.Data().SubKind == world.EntitySubKindRam
-				isOtherRam := oB.Data().SubKind == world.EntitySubKindRam
+				d := b.Data()
+				oD := oB.Data()
 
 				posDiff := b.Position.Sub(oB.Position).Norm()
 
-				damage := baseDamage
+				// Approximate mass
+				m := d.Width * d.Length
+				oM := oD.Width * oD.Length
+				massDiff := oM / m
 
-				if isRam || isOtherRam {
-					// Ouch
-					damage *= 2
-				}
+				if baseDamage > 0 {
+					const ramDamage = 3
+					damage := baseDamage
 
-				if !isRam || isOtherRam {
-					b.Damage += damage
-				}
-				b.Velocity = clampMagnitude(b.Velocity+6*posDiff.Dot(b.Direction.Vec2f()), 15)
+					// Colliding with center of boat is more deadly
+					frontPos := oB.Position.AddScaled(oB.Direction.Vec2f(), oD.Length*0.5)
+					dist2 := frontPos.DistanceSquared(b.Position)
+					damage *= collisionMultiplier(dist2, square(d.Radius))
 
-				if b.Dead() {
-					verb := "Crashed into"
-					if isOtherRam {
-						verb = "Rammed by"
+					// Rams take less damage from ramming
+					isRam := d.SubKind == world.EntitySubKindRam
+					if isRam {
+						massDiff *= 0.5
+						damage *= 1.0 / ramDamage
 					}
-					removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name))
+
+					// Rams give more damage while ramming
+					isOtherRam := oD.SubKind == world.EntitySubKindRam
+					if isOtherRam {
+						massDiff *= 2
+						damage *= ramDamage
+					}
+
+					b.Damage += damage
+
+					if b.Dead() {
+						verb := "Crashed into"
+						if isOtherRam {
+							verb = "Rammed by"
+						}
+						removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name))
+					}
 				}
+
+				b.Velocity = clampMagnitude(b.Velocity+6*posDiff.Dot(b.Direction.Vec2f())*massDiff, 15)
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
@@ -304,4 +325,8 @@ func (h *Hub) boatDied(e *world.Entity) {
 
 		h.spawnEntity(crate, data.Radius*0.5)
 	}
+}
+
+func collisionMultiplier(d2, r2 float32) float32 {
+	return clamp(1.5*(r2-d2)/r2, 0.5, 1.5)
 }
