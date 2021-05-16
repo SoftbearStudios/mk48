@@ -121,7 +121,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 		// Collisions are resolved by identifying the collision signature
 		// i.e. the EntityKind of entities that are colliding
-		var weapon, boat, otherBoat, collectible, obstacle *world.Entity
+		var weapon, boat, otherBoat, collectible, decoy, obstacle *world.Entity
 
 		if entityData.Kind == world.EntityKindBoat {
 			boat = entity
@@ -157,6 +157,12 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			}
 
 			return
+		}
+
+		if entityData.Kind == world.EntityKindDecoy {
+			decoy = entity
+		} else if otherData.Kind == world.EntityKindDecoy {
+			decoy = other
 		}
 
 		if entityData.Kind == world.EntityKindObstacle {
@@ -258,7 +264,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			if boat.Dead() {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
 			}
-		case !friendly:
+		case !(friendly || (boat != nil && decoy != nil)):
 			// Other ex weapon vs. weapon collision
 			if entityData.Kind != world.EntityKindObstacle {
 				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label))

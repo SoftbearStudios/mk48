@@ -78,7 +78,7 @@
 				"positionSide": 0.25,
 				"turret": 1,
 				"angle": 0,
-				"symmetrical": false,
+				"symmetrical": true,
 				"external": true
 			},
 			{
@@ -90,7 +90,7 @@
 				"positionSide": 0,
 				"turret": 1,
 				"angle": 0,
-				"symmetrical": true,
+				"symmetrical": false,
 				"external": true
 			},
 			{
@@ -1196,7 +1196,7 @@
 				"positionSide": 0.25,
 				"turret": 1,
 				"angle": 0,
-				"symmetrical": false,
+				"symmetrical": true,
 				"external": true
 			},
 			{
@@ -1208,7 +1208,7 @@
 				"positionSide": 0,
 				"turret": 1,
 				"angle": 0,
-				"symmetrical": true,
+				"symmetrical": false,
 				"external": true
 			},
 			{

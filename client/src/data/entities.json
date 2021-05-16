@@ -106,7 +106,7 @@
 				"default": "mark54",
 				"width": 0.324,
 				"positionForward": 0.25,
-				"positionSide": 0,
+				"positionSide": -0.25,
 				"turret": 1,
 				"angle": 0,
 				"external": true
@@ -2044,7 +2044,7 @@
 				"default": "torped45",
 				"width": 0.324,
 				"positionForward": 0.25,
-				"positionSide": 0,
+				"positionSide": -0.25,
 				"turret": 1,
 				"angle": 0,
 				"external": true
