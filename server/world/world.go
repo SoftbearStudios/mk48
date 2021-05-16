@@ -14,7 +14,7 @@ const (
 	MinRadius = 500
 
 	// PlayerSpace Target space (square meters) per each
-	PlayerSpace   = 350000
+	PlayerSpace   = 300000
 	CrateSpace    = 30000
 	ObstacleSpace = 1000000
 )

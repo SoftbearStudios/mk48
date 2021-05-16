@@ -328,5 +328,5 @@ func (h *Hub) boatDied(e *world.Entity) {
 }
 
 func collisionMultiplier(d2, r2 float32) float32 {
-	return clamp(1.5*(r2-d2)/r2, 0.5, 1.5)
+	return clamp(max(r2-d2+90, 0)/r2, 0.5, 1.5)
 }

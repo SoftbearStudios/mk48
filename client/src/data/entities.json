@@ -53,6 +53,10 @@
 			{
 				"type": "radar",
 				"range": 1308
+			},
+			{
+				"type": "sonar",
+				"range": 1154
 			}
 		],
 		"armaments": [
@@ -1991,6 +1995,10 @@
 			{
 				"type": "radar",
 				"range": 1145.4
+			},
+			{
+				"type": "sonar",
+				"range": 1072.7
 			}
 		],
 		"armaments": [

@@ -42,6 +42,9 @@
 			},
 			{
 				"type": "radar"
+			},
+			{
+				"type": "sonar"
 			}
 		],
 		"armaments": [
@@ -1160,6 +1163,9 @@
 			},
 			{
 				"type": "radar"
+			},
+			{
+				"type": "sonar"
 			}
 		],
 		"armaments": [

@@ -157,7 +157,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 				}
 			}
 
-			if c.Uncertainty < 0.5 && entity.Owner != nil {
+			if c.Uncertainty < 0.75 && entity.Owner != nil {
 				c.Friendly = entity.Owner.Friendly(player)
 				c.IDPlayerData = entity.Owner.IDPlayerData()
 			}
