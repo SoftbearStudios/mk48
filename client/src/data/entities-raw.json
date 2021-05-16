@@ -38,12 +38,10 @@
 		"stealth": 0.25,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1200
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 15000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -163,12 +161,10 @@
 		"speed": 15.438478,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1000
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 11000
+				"type": "radar"
 			}
 		],
 		"armaments": [],
@@ -208,8 +204,7 @@
 		"speed": 15.9477,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1000
+				"type": "visual"
 			}
 		],
 		"armaments": [
@@ -270,12 +265,10 @@
 		"speed": 18.777,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1000
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 10000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -436,8 +429,7 @@
 		"speed": 27.26557,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 600
+				"type": "visual"
 			}
 		],
 		"armaments": [
@@ -465,12 +457,10 @@
 		"speed": 8.7455,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 500
+				"type": "visual"
 			},
 			{
-				"type": "sonar",
-				"range": 800
+				"type": "sonar"
 			}
 		],
 		"armaments": [
@@ -520,12 +510,10 @@
 		"speed": 22.6,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 900
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 55000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -587,12 +575,10 @@
 		"speed": 16.71945,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1100
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 10000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -691,12 +677,10 @@
 		"speed": 18.52,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 900
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 10000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -784,12 +768,10 @@
 		"speed": 14.404,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1200
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 10000
+				"type": "radar"
 			}
 		],
 		"armaments": [],
@@ -829,12 +811,10 @@
 		"speed": 12.8611,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 600
+				"type": "visual"
 			},
 			{
-				"type": "sonar",
-				"range": 1200
+				"type": "sonar"
 			}
 		],
 		"armaments": [
@@ -909,8 +889,7 @@
 		"speed": 16,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 700
+				"type": "visual"
 			}
 		]
 	},
@@ -925,12 +904,10 @@
 		"speed": 21.6067,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 500
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 55000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -983,8 +960,7 @@
 		"speed": 21.09,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 800
+				"type": "visual"
 			}
 		],
 		"armaments": [
@@ -1023,12 +999,10 @@
 		"speed": 16.976667,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 500
+				"type": "visual"
 			},
 			{
-				"type": "sonar",
-				"range": 1000
+				"type": "sonar"
 			}
 		],
 		"armaments": [
@@ -1075,8 +1049,7 @@
 		"speed": 8,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1200
+				"type": "visual"
 			}
 		],
 		"armaments": [
@@ -1105,12 +1078,10 @@
 		"speed": 9.06,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 500
+				"type": "visual"
 			},
 			{
-				"type": "sonar",
-				"range": 600
+				"type": "sonar"
 			}
 		],
 		"armaments": [
@@ -1169,12 +1140,10 @@
 		"stealth": 0.75,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 1000
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 12000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -1294,12 +1263,10 @@
 		"speed": 28.29446,
 		"sensors": [
 			{
-				"type": "visual",
-				"range": 600
+				"type": "visual"
 			},
 			{
-				"type": "radar",
-				"range": 30000
+				"type": "radar"
 			}
 		],
 		"armaments": [
@@ -1487,8 +1454,7 @@
 		"range": 280000,
 		"sensors": [
 			{
-				"type": "radar",
-				"range": 1000
+				"type": "radar"
 			}
 		]
 	},
@@ -1594,8 +1560,7 @@
 		"range": 38000,
 		"sensors": [
 			{
-				"type": "sonar",
-				"range": 1000
+				"type": "sonar"
 			}
 		]
 	},
@@ -1611,8 +1576,7 @@
 		"range": 9100,
 		"sensors": [
 			{
-				"type": "sonar",
-				"range": 1000
+				"type": "sonar"
 			}
 		]
 	},
@@ -1707,8 +1671,7 @@
 		"range": 40000,
 		"sensors": [
 			{
-				"type": "radar",
-				"range": 1000
+				"type": "radar"
 			}
 		]
 	},
@@ -1724,8 +1687,7 @@
 		"range": 70000,
 		"sensors": [
 			{
-				"type": "radar",
-				"range": 1000
+				"type": "radar"
 			}
 		]
 	},
@@ -1741,8 +1703,7 @@
 		"range": 16000,
 		"sensors": [
 			{
-				"type": "sonar",
-				"range": 800
+				"type": "sonar"
 			}
 		]
 	},
@@ -1758,8 +1719,7 @@
 		"range": 250000,
 		"sensors": [
 			{
-				"type": "radar",
-				"range": 800
+				"type": "radar"
 			}
 		]
 	},
@@ -1775,8 +1735,7 @@
 		"range": 20000,
 		"sensors": [
 			{
-				"type": "sonar",
-				"range": 1000
+				"type": "sonar"
 			}
 		]
 	},

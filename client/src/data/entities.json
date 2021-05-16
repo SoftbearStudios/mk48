@@ -48,11 +48,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1200
+				"range": 962
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1308
 			}
 		],
 		"armaments": [
@@ -234,11 +234,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1000
+				"range": 1224.8
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1483.2
 			}
 		],
 		"armaments": [
@@ -362,7 +362,7 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1000
+				"range": 605
 			}
 		],
 		"armaments": [
@@ -466,11 +466,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1000
+				"range": 844.4
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1229.6
 			}
 		],
 		"armaments": [
@@ -702,7 +702,7 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 600
+				"range": 556.55
 			}
 		],
 		"armaments": [
@@ -741,11 +741,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 500
+				"range": 795.2
 			},
 			{
 				"type": "sonar",
-				"range": 800
+				"range": 1098.4
 			}
 		],
 		"armaments": [
@@ -824,11 +824,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 900
+				"range": 576.2
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1050.8
 			}
 		],
 		"armaments": [
@@ -932,11 +932,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1100
+				"range": 1007.3
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1338.2
 			}
 		],
 		"armaments": [
@@ -1158,11 +1158,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 900
+				"range": 755.9
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1170.6
 			}
 		],
 		"armaments": [
@@ -1314,11 +1314,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1200
+				"range": 1342.4
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1561.6
 			}
 		],
 		"armaments": [
@@ -1478,11 +1478,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 600
+				"range": 1010
 			},
 			{
 				"type": "sonar",
-				"range": 1200
+				"range": 1170
 			}
 		],
 		"armaments": [
@@ -1605,7 +1605,7 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 700
+				"range": 610.7
 			}
 		],
 		"armaments": [],
@@ -1623,11 +1623,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 500
+				"range": 615.8
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1077.2
 			}
 		],
 		"armaments": [
@@ -1715,7 +1715,7 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 800
+				"range": 569
 			}
 		],
 		"armaments": [
@@ -1774,11 +1774,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 500
+				"range": 730.13
 			},
 			{
 				"type": "sonar",
-				"range": 1000
+				"range": 1076.71
 			}
 		],
 		"armaments": [
@@ -1851,7 +1851,7 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1200
+				"range": 797
 			}
 		],
 		"armaments": [
@@ -1883,11 +1883,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 500
+				"range": 701.3
 			},
 			{
 				"type": "sonar",
-				"range": 600
+				"range": 1067.1
 			}
 		],
 		"armaments": [
@@ -1972,11 +1972,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 1000
+				"range": 718.1
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1145.4
 			}
 		],
 		"armaments": [
@@ -2158,11 +2158,11 @@
 		"sensors": [
 			{
 				"type": "visual",
-				"range": 600
+				"range": 671
 			},
 			{
 				"type": "radar",
-				"range": 2000
+				"range": 1114
 			}
 		],
 		"armaments": [
@@ -2504,7 +2504,7 @@
 		"sensors": [
 			{
 				"type": "radar",
-				"range": 1000
+				"range": 1007.6
 			}
 		],
 		"damage": 0.57,
@@ -2640,7 +2640,7 @@
 		"sensors": [
 			{
 				"type": "sonar",
-				"range": 1000
+				"range": 1005.8
 			}
 		],
 		"damage": 0.95,
@@ -2660,7 +2660,7 @@
 		"sensors": [
 			{
 				"type": "sonar",
-				"range": 1000
+				"range": 1002.72
 			}
 		],
 		"damage": 0.6,
@@ -2799,7 +2799,7 @@
 		"sensors": [
 			{
 				"type": "radar",
-				"range": 1000
+				"range": 1011.6
 			}
 		],
 		"damage": 0.87,
@@ -2819,7 +2819,7 @@
 		"sensors": [
 			{
 				"type": "radar",
-				"range": 1000
+				"range": 1008.66
 			}
 		],
 		"damage": 0.6495000000000001,
@@ -2839,7 +2839,7 @@
 		"sensors": [
 			{
 				"type": "sonar",
-				"range": 800
+				"range": 1007.9
 			}
 		],
 		"damage": 1.1,
@@ -2859,7 +2859,7 @@
 		"sensors": [
 			{
 				"type": "radar",
-				"range": 800
+				"range": 1011.12
 			}
 		],
 		"damage": 0.834,
@@ -2879,7 +2879,7 @@
 		"sensors": [
 			{
 				"type": "sonar",
-				"range": 1000
+				"range": 1002.85
 			}
 		],
 		"damage": 0.6,

@@ -110,7 +110,25 @@ for (const entityType of Object.keys(entityDatas)) {
 
 	if (sensors) {
 		for (const sensor of sensors) {
-			if (sensor.range) {
+			if (typeof sensor.range !== 'number') {
+				let base = 0;
+				let factor = 0;
+				switch (sensor.type) {
+					case 'visual':
+						base = 500;
+						factor = 3;
+						break;
+					case 'radar':
+						base = 1000;
+						factor = 2;
+						break;
+					case 'sonar':
+						base = 1000
+						factor = 1
+						break;
+				}
+
+				sensor.range = base + factor * entityData.length;
 				sensor.range = Math.min(sensor.range, 2000);
 			}
 			entityData.sensors.push(sensor);
