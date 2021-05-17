@@ -45,8 +45,7 @@
 		slightly more powerful guns.</li>
 		<li><b>Cruisers</b> are a compromise between destroyers and battleships.</li>
 		<li><b>Battleships</b> are very formidable ships, having extremely
-		powerful main cannons. They need some help to defend against submarines,
-		though.</li>
+		powerful main cannons. They can call in airstrikes to defend against submarines.</li>
 		<li><b>Submarines</b> travel underwater, making them immune to certain
 		types of weapons, but must surface to fire certain types of weapons and regenerate others.</li>
 		<li><b>Hovercraft</b> can travel on land and water.</li>
@@ -90,8 +89,11 @@
 		can be used as a weapon.</li>
 	</ol>
 
-	<p>Once fired, all weapons take some time to reload. Each type of weapon
+	<p>Once fired, all weapons take some time to <b>reload</b>. Each type of weapon
 	and each turret reload independently. Consuming crates speeds up reloading.</p>
+
+	<p>Some battleships have the ability to <b>airdrop</b> torpedoes. These torpedoes
+	will enter the water near the target and approach it from all angles.</p>
 
 	<h2>Sensors</h2>
 
