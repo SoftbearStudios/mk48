@@ -596,23 +596,32 @@
 						if (typeof localSprite.velocityTarget !== 'number') {
 							localSprite.velocityTarget = localSprite.velocity || 0;
 						}
+
 						if (typeof localSprite.directionTarget !== 'number') {
 							localSprite.directionTarget = localSprite.rotation;
 						}
-
-						if (keyboard.forward) {
-							localSprite.velocityTarget += 300 * seconds;
-						}
-						if (keyboard.backward) {
-							localSprite.velocityTarget -= 300 * seconds;
-						}
-
 						let newTarget = localSprite.directionTarget;
+
+						if (keyboard.forward || keyboard.backward) {
+							if (keyboard.forward) {
+								localSprite.velocityTarget += 300 * seconds;
+							}
+							if (keyboard.backward) {
+								localSprite.velocityTarget -= 300 * seconds;
+							}
+
+							// Straighten out
+							newTarget = localSprite.rotation;
+						}
+
+						const turnSpeed = 8;
+						const sign = 1; // localSprite.velocity >= -0.1 ? 1 : -1;
+
 						if (keyboard.right) {
-							newTarget += 5 * Math.PI * seconds;
+							newTarget += turnSpeed * sign * Math.PI * seconds;
 						}
 						if (keyboard.left) {
-							newTarget -= 5 * Math.PI * seconds;
+							newTarget -= turnSpeed * sign * Math.PI * seconds;
 						}
 						if (Math.abs(angleDiff(newTarget, localSprite.rotation)) < 0.5 * Math.PI) {
 							localSprite.directionTarget = newTarget;
