@@ -4,8 +4,8 @@ let supportedType = null;
 let mediaRecorder = null;
 
 const TYPES = {
-	'video/mpeg': '.mp4',
-	'video/webm': '.webm'
+	'video/mpeg': 'mp4',
+	'video/webm': 'webm'
 };
 
 export function startRecording(canvas) {
