@@ -610,11 +610,11 @@
 								localSprite.velocityTarget -= 300 * seconds;
 							}
 
-							// Straighten out
-							newTarget = localSprite.rotation;
+							// Straighten out (and damp oscillation by using the entity ground truth)
+							newTarget = (localSprite.rotation + localEntity.direction) / 2;
 						}
 
-						const turnSpeed = 8;
+						const turnSpeed = 500 / (100 + localEntityData.length);
 						const sign = 1; // localSprite.velocity >= -0.1 ? 1 : -1;
 
 						if (keyboard.right) {

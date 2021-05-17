@@ -47,7 +47,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				break;
 			case 'rocket':
 			case 'missile':
-				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.9, true);
+				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
 				break;
 			case 'shell':
 				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.8, true);
