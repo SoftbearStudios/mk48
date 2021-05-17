@@ -21,6 +21,7 @@
 	import {linearSpritesheet} from '../lib/textures.js';
 	import spritesheetData from '../data/spritesheet.json';
 	import backgroundShader from '../lib/background.js';
+	import {startRecording, stopRecording} from '../lib/recording.js';
 	import {onMount} from 'svelte'
 	import entityData from '../data/entities.json';
 
@@ -44,6 +45,7 @@
 	let timesMoved = 0;
 	let weaponsFired = 0;
 	let instructZoom = true; // when player figures out how to zoom, set to false
+	let recording = false;
 
 	const MOUSE_CLICK_MILLIS = 180;
 	const DEFAULT_ZOOM = 4;
@@ -843,6 +845,15 @@
 				32: 'shoot', // space
 				69: 'shoot', // e
 				88: 'stop', // x
+				86: () => {
+					if (recording) {
+						stopRecording();
+						recording = false;
+					} else {
+						startRecording(canvas);
+						recording = true;
+					}
+				}, // v
 
 				// WASD
 				65: 'left',
@@ -909,7 +920,7 @@
 	{/if}
 	{#if localEntityID && contacts[localEntityID]}
 		<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
-		<Status {overlay}/>
+		<Status {overlay} {recording}/>
 		<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
 		<Upgrades
 			score={contacts[localEntityID].score}

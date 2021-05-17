@@ -8,6 +8,7 @@
 	import {fly} from 'svelte/transition';
 
 	export let overlay;
+	export let recording = false;
 
 	function positionString(element, positiveLabel, negativeLabel) {
 		return `${Math.round(Math.abs(element))}${element >= 0 ? positiveLabel : negativeLabel}`
@@ -26,7 +27,8 @@
 	<h2>{overlay.score || 0} {plural('point', overlay.score || 0)} —
 	{(overlay.speed * 1.943844492).toFixed(1)}kn —
 	{Math.round(((overlay.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(overlay.direction)}] —
-	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})</h2>
+	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})
+	{recording ? ' — Recording' : ''}</h2>
 </div>
 
 <style>
