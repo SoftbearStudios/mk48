@@ -594,7 +594,10 @@
 						if (typeof localSprite.velocityTarget !== 'number') {
 							localSprite.velocityTarget = 0;
 						}
-						localSprite.directionTarget = localSprite.rotation;
+						localSprite.directionTarget = localEntity.directionTarget;
+						if (keyboard.left || keyboard.right) {
+							localSprite.directionTarget = localSprite.rotation;
+						}
 
 						if (keyboard.forward) {
 							localSprite.velocityTarget += 300 * seconds;
