@@ -594,10 +594,9 @@
 						localSprite.velocityTarget = mapRanges(mouseDistance / localSprite.width, THROTTLE_START, THROTTLE_END, 0, entityData[localEntity.type].speed, true);
 					} else if (keyEvent) {
 						if (typeof localSprite.velocityTarget !== 'number') {
-							localSprite.velocityTarget = 0;
+							localSprite.velocityTarget = localSprite.velocity || 0;
 						}
-						localSprite.directionTarget = localEntity.directionTarget;
-						if (keyboard.left || keyboard.right) {
+						if (typeof localSprite.directionTarget !== 'number') {
 							localSprite.directionTarget = localSprite.rotation;
 						}
 
@@ -608,11 +607,15 @@
 							localSprite.velocityTarget -= 300 * seconds;
 						}
 
+						let newTarget = localSprite.directionTarget;
 						if (keyboard.right) {
-							localSprite.directionTarget += 256 * Math.PI * seconds;
+							newTarget += 5 * Math.PI * seconds;
 						}
 						if (keyboard.left) {
-							localSprite.directionTarget -= 256 * Math.PI * seconds;
+							newTarget -= 5 * Math.PI * seconds;
+						}
+						if (Math.abs(angleDiff(newTarget, localSprite.rotation)) < 0.5 * Math.PI) {
+							localSprite.directionTarget = newTarget;
 						}
 
 						localSprite.velocityTarget = clamp(localSprite.velocityTarget, -0.33 * localEntityData.speed, localEntityData.speed);

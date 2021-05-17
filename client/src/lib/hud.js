@@ -18,6 +18,12 @@ export function drawHud(hud, entity, sprite, contacts) {
 	hud.lineStyle(0.3, 0xffffff, 0.25)
 	hud.drawCircle(0, 0, sprite.width * throttle);
 	hud.drawCircle(0, 0, sprite.width * speed);
+	if (typeof sprite.directionTarget === 'number') {
+		const cos = Math.cos(sprite.directionTarget) * sprite.width;
+		const sin = Math.sin(sprite.directionTarget) * sprite.width;
+		hud.moveTo(cos * THROTTLE_START, sin * THROTTLE_START);
+		hud.lineTo(cos * THROTTLE_END, sin * THROTTLE_END);
+	}
 
 	/*
 	for (const sensor of entityData[entity.type].sensors) {
