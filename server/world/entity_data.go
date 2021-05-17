@@ -22,6 +22,7 @@ type (
 		Type            EntityKind    `json:"type"`
 		Subtype         EntitySubKind `json:"subtype"`
 		Default         EntityType    `json:"default"`
+		Airdrop         bool          `json:"airdrop"`
 		Vertical        bool          `json:"vertical"`
 		Length          float32       `json:"length"`
 		Width           float32       `json:"width"`

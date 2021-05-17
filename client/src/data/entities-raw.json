@@ -170,7 +170,15 @@
 				"type": "radar"
 			}
 		],
-		"armaments": [],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"airdrop": true,
+				"count": 4
+			}
+		],
 		"turrets": [
 			{
 				"type": "38cmSKC34",
@@ -777,7 +785,15 @@
 				"type": "radar"
 			}
 		],
-		"armaments": [],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"airdrop": true,
+				"count": 4
+			}
+		],
 		"turrets": [
 			{
 				"type": "mark7",

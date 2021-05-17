@@ -248,7 +248,7 @@
 
 							// For now, vertically-launched armaments are hidden
 							// TODO: Create top-down sprites
-							if (armament.hidden || armament.vertical || !(entity.external || entity.friendly)) {
+							if (armament.hidden || armament.airdrop || armament.vertical || !(entity.external || entity.friendly)) {
 								continue;
 							}
 
@@ -559,8 +559,8 @@
 						}
 
 						let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
-						if (armament.vertical) {
-							// Vertically-launched armaments can fire in any horizontal direction
+						if (armament.airdrop || armament.vertical) {
+							// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 							diff = 0;
 						}
 						if (diff < bestArmamentAngleDiff) {

@@ -94,16 +94,31 @@ for (const entityType of Object.keys(entityDatas)) {
 
 	if (armaments) {
 		for (const armament of armaments) {
-			armament.angle = armament.angle * Math.PI / 180;
+			if (typeof armament.angle === 'number') {
+				armament.angle *= Math.PI / 180;
+			}
 			const sym = armament.symmetrical;
 			delete armament.symmetrical;
-			entityData.armaments.push(armament);
-			if (sym) {
-				const copy = {...armament, angle: -armament.angle, positionSide: -armament.positionSide};
-				entityData.armaments.push(copy);
+
+			for (let i = 0; i < (armament.count || 1); i++) {
+				entityData.armaments.push({...armament, count: undefined});
+				if (sym) {
+					const copy = {...armament, angle: -armament.angle, positionSide: -armament.positionSide, count: undefined};
+					entityData.armaments.push(copy);
+				}
 			}
 		}
 	}
+
+	entityData.armaments.sort((first, second) => {
+		if (first.airdrop) {
+			return 1;
+		}
+		if (second.airdrop) {
+			return -1;
+		}
+		return 0;
+	})
 
 	const sensors = entityData.sensors;
 	entityData.sensors = [];

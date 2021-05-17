@@ -30,7 +30,7 @@
 
 			let group = groups[type];
 			if (!group) {
-				group = {type: armament.default, ready: 0, total: 0, incremental: 0};
+				group = {type: armament.default, airdrop: armament.airdrop, ready: 0, total: 0, incremental: 0};
 				groups[type] = group;
 			}
 			group.total++;
@@ -58,7 +58,7 @@
 
 	export let type;
 	export let consumption;
-	export let selection = 'weapon/torpedo';
+	export let selection = null;
 	export let altitudeTarget = 0;
 
 	$: armaments = entityData[type].armaments;
@@ -102,7 +102,7 @@
 	<Section name={entityData[type].label}>
 		{#each groupArmaments(armaments, consumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
-				<img title={entityData[group.type].label} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
+				<img title={entityData[group.type].label + (group.airdrop ? ' (Airdropped)' : '')} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
 				<span class='consumption'>{group.ready}/{group.total}</span>
 			</div>
 		{/each}

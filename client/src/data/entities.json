@@ -325,6 +325,30 @@
 				"external": false,
 				"hidden": true,
 				"turret": 3
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"airdrop": true
 			}
 		],
 		"turrets": [
@@ -396,7 +420,7 @@
 				"default": "mark9",
 				"positionForward": 4.5,
 				"positionSide": 2.5,
-				"angle": 3.211405823669566,
+				"angle": 3.2114058236695664,
 				"external": true
 			},
 			{
@@ -405,7 +429,7 @@
 				"default": "mark9",
 				"positionForward": 4.5,
 				"positionSide": -2.5,
-				"angle": -3.211405823669566,
+				"angle": -3.2114058236695664,
 				"external": true
 			},
 			{
@@ -414,7 +438,7 @@
 				"default": "mark9",
 				"positionForward": 5,
 				"positionSide": 2.55,
-				"angle": 3.211405823669566,
+				"angle": 3.2114058236695664,
 				"external": true
 			},
 			{
@@ -423,7 +447,7 @@
 				"default": "mark9",
 				"positionForward": 5,
 				"positionSide": -2.55,
-				"angle": -3.211405823669566,
+				"angle": -3.2114058236695664,
 				"external": true
 			},
 			{
@@ -1441,6 +1465,30 @@
 				"external": false,
 				"hidden": true,
 				"turret": 3
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"airdrop": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"airdrop": true
 			}
 		],
 		"turrets": [
@@ -1877,8 +1925,7 @@
 				"default": "dredger",
 				"positionForward": 7,
 				"turret": 0,
-				"external": true,
-				"angle": null
+				"external": true
 			}
 		],
 		"turrets": [

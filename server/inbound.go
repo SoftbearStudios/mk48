@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/chewxy/math32"
 	"github.com/finnbear/moderation"
 	"math/rand"
 	"mk48/server/world"
@@ -371,7 +372,16 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				armamentGuidance.VelocityTarget = armamentEntityData.Speed
 			}
 
-			if armamentData.Vertical {
+			if armamentData.Airdrop {
+				if entity.TurretTarget().DistanceSquared(entity.Position) > 750*750 {
+					// Exceeded max range
+					return
+				}
+				// Drop the torpedo a bit away, pointed towards the target
+				transform.Direction = world.Angle(rand.Float32() * math32.Pi * 2)
+				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
+				armamentGuidance.DirectionTarget = transform.Direction
+			} else if armamentData.Vertical {
 				// Vertically-launched armaments can be launched in any horizontal direction
 				transform.Direction = armamentGuidance.DirectionTarget
 			}
