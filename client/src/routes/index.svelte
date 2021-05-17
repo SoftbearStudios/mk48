@@ -513,79 +513,11 @@
 			const localSprite = entitySprites[localEntityID];
 			const localEntityData = localEntity ? entityData[localEntity.type] : null;
 
-			if (localEntity && localSprite && secondsTotal - lastSend >= SECONDS_PER_SEND) {
-				lastSend = secondsTotal;
-
-				setOverlay('speed', localSprite.velocity);
-				setOverlay('positionX', localSprite.position.x);
-				setOverlay('positionY', localSprite.position.y);
-				setOverlay('direction', localSprite.rotation);
-
+			if (localEntity && localSprite) {
 				const mousePositionScreen = app.renderer.plugins.interaction.mouse.global;
 				const mousePosition = viewport.toWorld(mouse); //mousePositionScreen);
 				const mouseDistance = dist(mousePosition, localSprite.position);
 				const mouseAngle = Math.atan2(mousePosition.y - localSprite.position.y, mousePosition.x - localSprite.position.x);
-
-				if ((mouse.click || keyboard.shoot) && localEntityData.armaments && armamentSelection) {
-					let directionTarget = mouseAngle;
-					if (keyboard.shoot) {
-						directionTarget = localSprite.rotation;
-					}
-
-					let bestArmamentIndex = -1;
-					let bestArmamentAngleDiff = Infinity;
-
-					function hasArmament(consumption, index) {
-						return !consumption || consumption.length <= index || consumption[index] < 0.001;
-					}
-
-					for (let index = 0; index < localEntityData.armaments.length; index++) {
-						const armament = localEntityData.armaments[index];
-
-						const type = getArmamentType(armament);
-
-						if (type !== armamentSelection) {
-							continue;
-						}
-
-						if (!hasArmament(localEntity.armamentConsumption, index)) {
-							continue;
-						}
-
-						let armamentAngle = armament.angle || 0;
-
-						if (armament.turret != null) {
-							armamentAngle += (localEntity.turretAngles[armament.turret] || localEntityData.turrets[armament.turret].angle);
-						}
-
-						let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
-						if (armament.airdrop || armament.vertical) {
-							// Air-dropped or vertically-launched armaments can fire in any horizontal direction
-							diff = 0;
-						}
-						if (diff < bestArmamentAngleDiff) {
-							bestArmamentIndex = index;
-							bestArmamentAngleDiff = diff;
-						}
-					}
-
-					if (bestArmamentIndex != -1) {
-						let requiredAngle = 1.1 * Math.PI / 2;
-						if (armamentSelection === 'weapon/shell') {
-							requiredAngle = 0.1 * Math.PI;
-						}
-
-						if (bestArmamentAngleDiff <= requiredAngle || keyboard.shoot) {
-							send('fire', {
-								entityID: localEntityID,
-								index: bestArmamentIndex,
-								directionTarget
-							});
-
-							weaponsFired++;
-						}
-					}
-				}
 
 				const keyEvent = keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
 				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
@@ -607,17 +539,17 @@
 
 						if (keyboard.forward || keyboard.backward) {
 							if (keyboard.forward) {
-								localSprite.velocityTarget += 300 * seconds;
+								localSprite.velocityTarget += 50 * seconds;
 							}
 							if (keyboard.backward) {
-								localSprite.velocityTarget -= 300 * seconds;
+								localSprite.velocityTarget -= 50 * seconds;
 							}
 
 							// Straighten out (and damp oscillation by using the entity ground truth)
 							newTarget = (localSprite.rotation + localEntity.direction) / 2;
 						}
 
-						const turnSpeed = 500 / (100 + localEntityData.length);
+						const turnSpeed = 80 / (100 + localEntityData.length);
 						const sign = 1; // localSprite.velocity >= -0.1 ? 1 : -1;
 
 						if (keyboard.right) {
@@ -633,31 +565,104 @@
 						localSprite.velocityTarget = clamp(localSprite.velocityTarget, -0.33 * localEntityData.speed, localEntityData.speed);
 					}
 
-					if (keyboard.stop || Math.abs(localSprite.velocityTarget) <= 1) {
+					if (keyboard.stop) {
 						localSprite.velocityTarget = 0;
 					}
 
-					send('manual', {
-						entityID: localEntityID,
-						velocityTarget: localSprite.velocityTarget,
-						directionTarget: localSprite.directionTarget,
-						altitudeTarget: localEntityData.subtype === 'submarine' ? altitudeTarget : undefined,
-						turretTarget: mousePosition,
-					});
-
-					lastAltitudeTarget = altitudeTarget;
-
 					timesMoved++;
-				} else if (Array.isArray(localEntityData.turrets) && localEntityData.turrets.length > 0) {
-					send('aimTurrets', {
-						target: mousePosition
-					});
 				}
 
-				drawHud(hud, localEntity, localSprite, contacts);
+			 	if (secondsTotal - lastSend >= SECONDS_PER_SEND) {
+					lastSend = secondsTotal;
 
-				// Reset clicks
-				mouse.click = false;
+					setOverlay('speed', localSprite.velocity);
+					setOverlay('positionX', localSprite.position.x);
+					setOverlay('positionY', localSprite.position.y);
+					setOverlay('direction', localSprite.rotation);
+
+					// Fire weapons when sending as a form of rate limiting
+					if ((mouse.click || keyboard.shoot) && localEntityData.armaments && armamentSelection) {
+						let directionTarget = mouseAngle;
+						if (keyboard.shoot) {
+							directionTarget = localSprite.rotation;
+						}
+
+						let bestArmamentIndex = -1;
+						let bestArmamentAngleDiff = Infinity;
+
+						function hasArmament(consumption, index) {
+							return !consumption || consumption.length <= index || consumption[index] < 0.001;
+						}
+
+						for (let index = 0; index < localEntityData.armaments.length; index++) {
+							const armament = localEntityData.armaments[index];
+
+							const type = getArmamentType(armament);
+
+							if (type !== armamentSelection) {
+								continue;
+							}
+
+							if (!hasArmament(localEntity.armamentConsumption, index)) {
+								continue;
+							}
+
+							let armamentAngle = armament.angle || 0;
+
+							if (armament.turret != null) {
+								armamentAngle += (localEntity.turretAngles[armament.turret] || localEntityData.turrets[armament.turret].angle);
+							}
+
+							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
+							if (armament.airdrop || armament.vertical) {
+								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
+								diff = 0;
+							}
+							if (diff < bestArmamentAngleDiff) {
+								bestArmamentIndex = index;
+								bestArmamentAngleDiff = diff;
+							}
+						}
+
+						if (bestArmamentIndex != -1) {
+							let requiredAngle = 1.1 * Math.PI / 2;
+							if (armamentSelection === 'weapon/shell') {
+								requiredAngle = 0.1 * Math.PI;
+							}
+
+							if (bestArmamentAngleDiff <= requiredAngle || keyboard.shoot) {
+								send('fire', {
+									entityID: localEntityID,
+									index: bestArmamentIndex,
+									directionTarget
+								});
+
+								weaponsFired++;
+							}
+						}
+					}
+
+					if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
+						send('manual', {
+							entityID: localEntityID,
+							velocityTarget: localSprite.velocityTarget,
+							directionTarget: localSprite.directionTarget,
+							altitudeTarget: localEntityData.subtype === 'submarine' ? altitudeTarget : undefined,
+							turretTarget: mousePosition,
+						});
+
+						lastAltitudeTarget = altitudeTarget;
+					} else if (Array.isArray(localEntityData.turrets) && localEntityData.turrets.length > 0) {
+						send('aimTurrets', {
+							target: mousePosition
+						});
+					}
+
+					drawHud(hud, localEntity, localSprite, contacts);
+
+					// Reset clicks
+					mouse.click = false;
+				}
 			}
 
 			const visualRange = Math.min(terrainDimensions[2], terrainDimensions[3]) / 2;
