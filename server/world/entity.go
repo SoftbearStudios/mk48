@@ -388,7 +388,7 @@ func (entity *Entity) Initialize(entityType EntityType) {
 	// Starting depth
 	switch entityType.Data().SubKind {
 	case EntitySubKindSubmarine:
-		entity.ext.setAltitude(-0.25)
+		entity.ext.setAltitude(-0.5)
 	default:
 		entity.ext.setAltitude(0)
 	}

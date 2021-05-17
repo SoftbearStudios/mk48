@@ -45,6 +45,7 @@ func (ext *unsafeExtension) setType(entityType EntityType) {
 	if oldExt != nil {
 		ext.data.target = oldExt.target
 		ext.data.time = oldExt.time
+		ext.data.altTarget = oldExt.altTarget
 	}
 
 	angles := ext.turretAngles(entityType)
