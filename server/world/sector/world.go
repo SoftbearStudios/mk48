@@ -119,6 +119,7 @@ func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.
 
 func (w *World) Resize(radius float32) {
 	w.assertDepth(0)
+	radius *= world.RadiusClearance
 
 	intWidth := int(radius*(1.0/size))*2 + 1
 	if radius < 0 || intWidth > math32.MaxInt16/2 {

@@ -13,6 +13,10 @@ import (
 const (
 	MinRadius = 500
 
+	// Worlds grow this much larger than requested radius
+	// Entities outside this * radius die instantly, to protect the world
+	RadiusClearance = 1.1
+
 	// PlayerSpace Target space (square meters) per each
 	PlayerSpace   = 300000
 	CrateSpace    = 30000

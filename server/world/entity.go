@@ -108,10 +108,11 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	}
 
 	// Border (note: radius can shrink)
-	if entity.Position.LengthSquared() > worldRadius*worldRadius {
+	centerDist2 := entity.Position.LengthSquared()
+	if centerDist2 > square(worldRadius) {
 		entity.Damage += seconds * entity.MaxHealth() * 0.25
 		entity.Velocity += clampMagnitude(entity.Velocity-6*entity.Position.Dot(entity.Direction.Vec2f()), 15)
-		if entity.Dead() {
+		if entity.Dead() || centerDist2 > square(worldRadius*RadiusClearance) {
 			if owner := entity.Owner; owner != nil && entity.Data().Kind == EntityKindBoat {
 				owner.DeathMessage = "Passed the border!"
 			}
