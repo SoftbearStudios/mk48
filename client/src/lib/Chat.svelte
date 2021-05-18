@@ -28,6 +28,10 @@
 		}
 	}
 
+	export function blur() {
+		input && input.blur && input.blur();
+	}
+
 	export function focus() {
 		input && input.focus && input.focus();
 	}

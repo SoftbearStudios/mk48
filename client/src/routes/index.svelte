@@ -835,6 +835,8 @@
 		event.preventDefault();
 		event.stopPropagation();
 
+		chatRef && chatRef.blur && chatRef.blur();
+
 		const button = getMouseButton(event);
 
 		const down = {mousedown: true, mouseup: false}[event.type];
