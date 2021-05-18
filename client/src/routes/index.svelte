@@ -658,11 +658,11 @@
 						});
 					}
 
-					drawHud(hud, localEntity, localSprite, contacts);
-
 					// Reset clicks
 					mouse.click = false;
 				}
+
+				drawHud(hud, localEntity, localSprite, contacts);
 			}
 
 			const visualRange = (Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50) || 500;
