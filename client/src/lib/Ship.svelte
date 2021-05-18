@@ -109,7 +109,7 @@
 		{#if entityData[type].subtype === 'ram'}
 			<small>Your boat is designed<br/>to ram other boats!</small>
 		{:else if entityData[type].subtype === 'submarine'}
-			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget} title={altitudeTarget === 0 ? 'You are forced to remain surfaced until you reload all fired weapons' : 'You must surface to repload your weapons'}>Surface</div>
+			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget} title={altitudeTarget === 0 ? 'You are forced to remain surfaced until you reload all fired weapons' : 'You must surface to reload your weapons'}>Surface</div>
 		{/if}
 	</Section>
 </div>
