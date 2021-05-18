@@ -666,7 +666,19 @@
 			}
 
 			const visualRange = (Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50) || 500;
-			viewport.clampZoom({minScale: 750 / visualRange, maxScale: 16});
+			let maxVisualRange = visualRange;
+			if (localEntityData && localEntityData.sensors) {
+				for (const sensor of localEntityData.sensors) {
+					if (sensor.type === 'visual') {
+						maxVisualRange = Math.max(maxVisualRange, sensor.range);
+						break;
+					}
+				}
+			}
+
+			// Bigger boats can zoom out wider
+			// Use max range to not zoom in and out when diving sub
+			viewport.clampZoom({minScale: 750 / maxVisualRange, maxScale: 8 * 750 / maxVisualRange});
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
