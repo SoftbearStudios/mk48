@@ -665,7 +665,8 @@
 				}
 			}
 
-			const visualRange = Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50;
+			const visualRange = (Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50) || 500;
+			viewport.clampZoom({minScale: 750 / visualRange, maxScale: 16});
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
