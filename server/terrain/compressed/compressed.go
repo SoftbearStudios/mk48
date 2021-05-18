@@ -26,7 +26,7 @@ const (
 // Chunk coordinates:            Unsigned terrain coordinates / chunkSize
 
 // Terrain is a compressed implementation of terrain.Terrain.
-// It is safe to call all methods on it concurrently.
+// It represents each terrain pixel with 4 bits of precision.
 type Terrain struct {
 	generator  terrain.Source
 	chunks     [chunkCount][chunkCount]*chunk
@@ -34,15 +34,16 @@ type Terrain struct {
 	mutex      sync.Mutex
 }
 
-func New(generator terrain.Source) *Terrain {
+// New creates a new Terrain from a source.
+func New(source terrain.Source) *Terrain {
 	return &Terrain{
-		generator: generator,
+		generator: source,
 	}
 }
 
-// clamp returns a signed terrain coords aabb and unsigned terrain coords ux, uy, width, and height.
-func (t *Terrain) clamp(aabb world.AABB) (aabb2 world.AABB, ux, uy, width, height uint) {
-	p := aabb.Vec2f.Mul(1.0 / terrain.Scale).Floor()
+// clampAABB returns a signed terrain coords aabb and unsigned terrain coords ux, uy, width, and height.
+func clampAABB(aabb world.AABB) (aabb2 world.AABB, ux, uy, width, height uint) {
+	p := aabb.Vec2f.Mul(1.0 / terrain.Scale).Sub(world.Vec2f{X: 1.0, Y: 1.0}).Floor()
 
 	// Signed terrain coords
 	x := maxInt(-Size/2, int(p.X))
@@ -52,31 +53,34 @@ func (t *Terrain) clamp(aabb world.AABB) (aabb2 world.AABB, ux, uy, width, heigh
 		return
 	}
 
-	s := world.Vec2f{X: aabb.Width, Y: aabb.Height}.Mul(1.0 / terrain.Scale).Ceil()
+	s := world.Vec2f{X: aabb.Width, Y: aabb.Height}.Mul(1.0 / terrain.Scale).Add(world.Vec2f{X: 2.0, Y: 2.0}).Ceil()
 	ux = uint(x + Size/2)
 	uy = uint(y + Size/2)
-	width = uint(minInt(Size/2-x, int(s.X)+1))
-	height = uint(minInt(Size/2-y, int(s.Y)+1))
+	width = uint(minInt(Size/2-x, int(s.X)))
+	height = uint(minInt(Size/2-y, int(s.Y)))
 
 	aabb2 = world.AABB{
 		Vec2f: world.Vec2f{
-			X: float32(x),
-			Y: float32(y),
+			X: float32(x) - 0.5,
+			Y: float32(y) - 0.5,
 		}.Mul(terrain.Scale),
-		Width:  float32(width-1) * terrain.Scale,
-		Height: float32(height-1) * terrain.Scale,
+		Width:  float32(width) * terrain.Scale,
+		Height: float32(height) * terrain.Scale,
 	}
 
 	return
 }
 
+// Clamp clamps a bounding box to what At will send.
+// It's useful for caching terrain data.
 func (t *Terrain) Clamp(aabb world.AABB) world.AABB {
-	clamped, _, _, _, _ := t.clamp(aabb)
+	clamped, _, _, _, _ := clampAABB(aabb)
 	return clamped
 }
 
+// At returns compressed terrain data at a given bounding box.
 func (t *Terrain) At(aabb world.AABB) *terrain.Data {
-	clamped, x, y, width, height := t.clamp(aabb)
+	clamped, x, y, width, height := clampAABB(aabb)
 
 	data := terrain.NewData()
 	buffer := Buffer{
@@ -97,6 +101,7 @@ func (t *Terrain) At(aabb world.AABB) *terrain.Data {
 	return data
 }
 
+// Decode decompresses terrain data compressed with this terrain.
 func (t *Terrain) Decode(data *terrain.Data) (raw []byte, err error) {
 	var buf Buffer
 	buf.Reset(data.Data)
@@ -105,6 +110,7 @@ func (t *Terrain) Decode(data *terrain.Data) (raw []byte, err error) {
 	return
 }
 
+// Repair reverts some of the terrain closer to its original generated state.
 func (t *Terrain) Repair() {
 	millis := time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
 	for ucx, chunks := range t.chunks {
@@ -119,6 +125,7 @@ func (t *Terrain) Repair() {
 	}
 }
 
+// Collides returns if an entity collides with the terrain given a time step in seconds.
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
 	threshold := byte(terrain.OceanLevel)
@@ -161,10 +168,10 @@ func (t *Terrain) Debug() {
 	fmt.Println("compressed terrain: chunks:", t.chunkCount)
 }
 
+// AtPos returns the height at a world position using bi-linear interpolation.
 func (t *Terrain) AtPos(pos world.Vec2f) byte {
 	pos = pos.Mul(1.0 / terrain.Scale)
 
-	// Floor and Ceiling pos
 	cPos := pos.Ceil()
 	cx := uint(int(cPos.X) + Size/2)
 	cy := uint(int(cPos.Y) + Size/2)
@@ -179,12 +186,12 @@ func (t *Terrain) AtPos(pos world.Vec2f) byte {
 		return 0
 	}
 
-	// Sample 4x4 grid
+	// Sample 2x2 grid
 	// 00 10
 	// 01 11
 	var c00, c10, c01, c11 byte
 
-	// Fast version if in the same chunk
+	// Use faster version if all 2x2 pixels are in the same chunk
 	if fx/chunkSize == cx/chunkSize && fy/chunkSize == cy/chunkSize {
 		c := t.getChunk(fx, fy)
 		c00 = c.at(fx, fy)
@@ -202,11 +209,10 @@ func (t *Terrain) AtPos(pos world.Vec2f) byte {
 	return blerp(c00, c10, c01, c11, delta.X, delta.Y)
 }
 
-// Changes the terrain height at pos by change
-func (t *Terrain) Sculpt(pos world.Vec2f, change float32) {
+// Sculpt changes the terrain height at pos by an amount.
+func (t *Terrain) Sculpt(pos world.Vec2f, amount float32) {
 	pos = pos.Mul(1.0 / terrain.Scale)
 
-	// Floor and Ceiling pos
 	cPos := pos.Ceil()
 	cx := uint(int(cPos.X) + Size/2)
 	cy := uint(int(cPos.Y) + Size/2)
@@ -222,15 +228,15 @@ func (t *Terrain) Sculpt(pos world.Vec2f, change float32) {
 	}
 
 	delta := pos.Sub(fPos)
-	change *= 0.5
+	amount *= 0.5
 
-	// Set 4x4 grid
+	// Set 2x2 grid
 	// 00 10
 	// 01 11
-	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy))+change*(2-delta.X-delta.Y)))
-	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))*change*(1+delta.X-delta.Y)))
-	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))*change*(1-delta.X+delta.Y)))
-	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy))+change*(delta.X+delta.Y)))
+	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy))+amount*(2-delta.X-delta.Y)))
+	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))*amount*(1+delta.X-delta.Y)))
+	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))*amount*(1-delta.X+delta.Y)))
+	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy))+amount*(delta.X+delta.Y)))
 }
 
 // at gets the height of the terrain given x and y unsigned terrain coords.
@@ -246,7 +252,7 @@ func (t *Terrain) set(x, y uint, value byte) {
 // getChunk gets a chunk given its unsigned terrain coordinates.
 // TODO figure out how to get this inlined
 func (t *Terrain) getChunk(x, y uint) *chunk {
-	// Elide bounds checks
+	// Convert to chunk coordinates and elide bounds checks
 	x = (x / chunkSize) & (chunkCount - 1)
 	y = (y / chunkSize) & (chunkCount - 1)
 
@@ -272,7 +278,7 @@ func (t *Terrain) getChunkSlow(x, y uint) *chunk {
 		c = generateChunk(t.generator, x-chunkCount/2, y-chunkCount/2, nil)
 		t.chunkCount++
 
-		// Store pointer
+		// Store generated chunk
 		atomic.StorePointer(chunkPtr, unsafe.Pointer(c))
 	}
 

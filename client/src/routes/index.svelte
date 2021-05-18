@@ -665,7 +665,7 @@
 				}
 			}
 
-			const visualRange = Math.min(terrainDimensions[2], terrainDimensions[3]) / 2;
+			const visualRange = Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50;
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];

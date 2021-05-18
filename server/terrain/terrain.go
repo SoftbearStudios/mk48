@@ -52,6 +52,7 @@ type Terrain interface {
 }
 
 // Data describes part of a heightmap.
+// It may be in a compressed format.
 type Data struct {
 	world.AABB
 	Data   []byte `json:"data"`   // Data is a possibly compressed terrain heightmap.

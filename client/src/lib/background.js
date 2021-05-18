@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 export default `
-//precision highp float;
+precision highp float;
 
 uniform vec2 iOffset;
 uniform vec2 iScale;
@@ -54,12 +54,14 @@ void main() {
 	} else if (h + nHeight * 0.01 > 0.29) {
 		gl_FragColor = vec4(mix(vec3(0.76, 0.7, 0.5), vec3(0.35, 0.6, 0.25), min((h + nHeight * 0.01 - 0.29) / 0.1, 1.0)), 1.0); // Grass
 	} else if (height > 0.25) {
-		gl_FragColor = vec4(mix(vec3(0.7, 0.6, 0.45), vec3(0.76, 0.7, 0.5), min((height - 0.25) / 0.015, 1.0)), 1.0); // Sand
+		gl_FragColor = vec4(mix(vec3(0.63, 0.55, 0.4), vec3(0.76, 0.7, 0.5), min((height - 0.25) / 0.015, 1.0)), 1.0); // Sand
+	} else if (height > 0.245) {
+		gl_FragColor = vec4(mix(vec3(0.0, 0.3, 0.5), vec3(0.63, 0.55, 0.4), (height - 0.245) / 0.005), 1.0); // Water to sand
 	} else {
-		gl_FragColor = mix(vec4(0.0, 0.196, 0.451, 1.0), vec4(0.0, 0.3, 0.5, 1.0), height * 4.0); // Water
+		gl_FragColor = vec4(mix(vec3(0.0, 0.2, 0.45), vec3(0.0, 0.3, 0.5), height / 0.245), 1.0); // Water
 	}
 
-    gl_FragColor = mix(gl_FragColor, vec4(1.0, 0.0, 0.0, 1.0), max(min((length(worldPos) - iBorderRange) * 0.1, 0.25), 0.0) * (mod(worldPos.x + worldPos.y + iTime * 20.0, 50.0) > 25.0 ? 1.0 : 0.75)), 
+	gl_FragColor = mix(gl_FragColor, vec4(1.0, 0.0, 0.0, 1.0), max(min((length(worldPos) - iBorderRange) * 0.5, 0.25), 0.0) * (mod(worldPos.x + worldPos.y + iTime * 20.0, 50.0) > 25.0 ? 1.0 : 0.75));
 	gl_FragColor = mix(gl_FragColor, vec4(vec3(0.0, 0.14, 0.32), 1.0), max(min((length(worldPos - iMiddle) - iVisualRange - 10.0) * 0.1, 1.0), 0.0));
 }
 `;

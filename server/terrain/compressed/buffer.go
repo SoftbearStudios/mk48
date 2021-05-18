@@ -5,8 +5,8 @@ package compressed
 
 import "io"
 
-// Buffer writes 4 bits of a byte and uses run length encoding
-// Each byte is 4 bits of data followed by 4 bits of count - 1
+// Buffer writes 4 bits of a byte and uses run length encoding.
+// Each byte is 4 bits of data followed by 4 bits of count - 1.
 type Buffer struct {
 	buf []byte
 	off int // Read position
@@ -17,7 +17,7 @@ func (buffer *Buffer) Reset(buf []byte) {
 	buffer.off = 0
 }
 
-// Encodes a byte as its 4 most significant bits
+// Encodes a byte as its 4 most significant bits.
 func (buffer *Buffer) writeByte(b byte) {
 	buf := buffer.buf
 
@@ -48,6 +48,7 @@ func (buffer *Buffer) writeByte(b byte) {
 	buffer.buf = buf
 }
 
+// Write implements io.Writer.
 func (buffer *Buffer) Write(buf []byte) (int, error) {
 	for _, b := range buf {
 		buffer.writeByte(b)
@@ -70,6 +71,7 @@ func (buffer *Buffer) readByte() (b byte, more bool) {
 	return
 }
 
+// Write implements io.Reader.
 func (buffer *Buffer) Read(buf []byte) (int, error) {
 	more := len(buffer.buf) > 0
 	i := 0
@@ -95,6 +97,7 @@ func (buffer *Buffer) Grow(n int) {
 	}
 }
 
+// Buffer returns the remaining bytes
 func (buffer *Buffer) Buffer() []byte {
 	return buffer.buf[buffer.off:]
 }
