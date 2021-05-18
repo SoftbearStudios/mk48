@@ -23,11 +23,11 @@ for (const entityType of Object.keys(entityDatas)) {
 		if (entityData.type === 'weapon') {
 			switch (entityData.subtype) {
 				case 'shell':
-					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 800, true);
+					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
 					break;
 				case 'rocket':
 				case 'missile':
-					maxRange = mapRanges(entityData.length, 1, 10, 400, maxRange, true);
+					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
 					break;
 			}
 		}
@@ -50,7 +50,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
 				break;
 			case 'shell':
-				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.8, true);
+				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.7, true);
 				break;
 			case 'depthCharge':
 				entityData.damage = 0.8;

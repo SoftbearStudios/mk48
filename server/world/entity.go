@@ -77,6 +77,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	if math32.Abs(entity.VelocityTarget) > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
 		deltaVelocity := clampMagnitude(entity.VelocityTarget, maxSpeed) - entity.Velocity
+		deltaVelocity = clampMagnitude(deltaVelocity, 800*seconds) // max acceleration
 		entity.Velocity += min(seconds, 1) * deltaVelocity
 
 		distance := seconds * entity.Velocity
@@ -123,11 +124,15 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	underwater := entity.Altitude() < 0
 
-	if len(entity.ArmamentConsumption()) > 0 && !underwater {
+	if len(entity.ArmamentConsumption()) > 0 {
 		// If turrets were already copied and the extension
 		// copies everything armaments don't need to be copied
 		armamentsCopied := entity.ext.copiesAll() && turretsCopied
-		entity.replenish(seconds*0.1, armamentsCopied)
+		replenishAmount := seconds * 0.1
+		if underwater {
+			replenishAmount *= 0.25
+		}
+		entity.replenish(replenishAmount, armamentsCopied)
 	}
 
 	if entity.Damage > 0 {
@@ -329,8 +334,8 @@ func ArmamentTransform(entityType EntityType, entityTransform Transform, turretA
 
 	weaponData := armamentData.Default.Data()
 	if weaponData.SubKind == EntitySubKindShell {
-		// Model shells with instantaneous accelerations to muzzle velocity
-		transform.Velocity = weaponData.Speed
+		// Model shells with instantaneous accelerations to half of muzzle velocity
+		transform.Velocity = weaponData.Speed * 0.5
 	}
 
 	if armamentData.Turret != nil {

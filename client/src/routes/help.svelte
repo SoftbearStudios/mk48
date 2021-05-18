@@ -47,7 +47,7 @@
 		<li><b>Battleships</b> are very formidable ships, having extremely
 		powerful main cannons. They can call in airstrikes to defend against submarines.</li>
 		<li><b>Submarines</b> travel underwater, making them immune to certain
-		types of weapons, but must surface to fire certain types of weapons and regenerate others.</li>
+		types of weapons, but must surface to fire certain types of weapons and regenerate others at a normal rate.</li>
 		<li><b>Hovercraft</b> can travel on land and water.</li>
 		<li><b>Rams</b> are a special ship type that is designed to ram other
 		ships. They take no damage in the process, and inflict extra damage to

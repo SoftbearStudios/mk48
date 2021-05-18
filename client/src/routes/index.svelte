@@ -634,7 +634,7 @@
 								send('fire', {
 									entityID: localEntityID,
 									index: bestArmamentIndex,
-									directionTarget
+									positionTarget: mousePosition
 								});
 
 								weaponsFired++;

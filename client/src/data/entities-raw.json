@@ -510,6 +510,75 @@
 			}
 		]
 	},
+	"kolkata": {
+		"label": "Kolkata",
+		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 5,
+		"length": 163,
+		"width": 17.4,
+		"speed": 15.43334,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"count": 4,
+				"symmetrical": true,
+				"vertical": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -2.5,
+				"positionSide": 2.5,
+				"angle": -90
+			},
+			{
+				"positionForward": -5.3,
+				"positionSide": -2.5,
+				"angle": 90
+			},
+			{
+				"type": "otoMelara76mm",
+				"positionForward": 54,
+				"positionSide": 0
+			}
+		]
+	},
 	"komar": {
 		"label": "Komar",
 		"link": "https://en.wikipedia.org/wiki/Komar-class_missile_boat",
@@ -1472,6 +1541,22 @@
 			}
 		]
 	},
+	"brahmos": {
+		"label": "BrahMos",
+		"link": "https://en.wikipedia.org/wiki/BrahMos",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 8.4,
+		"width": 0.9515625,
+		"speed": 993.9,
+		"range": 650000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
 	"dredger": {
 		"label": "Dredger",
 		"type": "weapon",
@@ -1697,6 +1782,36 @@
 		"width": 0.29883,
 		"speed": 200,
 		"range": 9810
+	},
+	"otoMelara76mm": {
+		"label": "OTO Melara 76 mm",
+		"link": "https://en.wikipedia.org/wiki/OTO_Melara_76_mm",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.3,
+		"positionForward": 1,
+		"width": 3.0796875,
+		"armaments": [
+			{
+				"default": "76x636mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"range": 10000
+	},
+	"76x636mmR": {
+		"label": "76 x 636 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"positionForward": 1,
+		"length": 0.636,
+		"width": 0.76,
+		"speed": 915,
+		"range": 16000
 	},
 	"p15": {
 		"label": "P-15 Termit",

@@ -36,8 +36,9 @@ type (
 	// Fire fires an armament
 	Fire struct {
 		world.Guidance
-		Index int              `json:"index"`
-		Type  world.EntityType `json:"type"`
+		PositionTarget world.Vec2f      `json:"positionTarget"`
+		Index          int              `json:"index"`
+		Type           world.EntityType `json:"type"`
 	}
 
 	// InvalidInbound means invalid message type from client (possibly out of date).
@@ -359,12 +360,15 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 		transform := entity.ArmamentTransform(data.Index)
 
 		if armamentEntityData.SubKind == world.EntitySubKindDredger {
-			if entity.TurretTarget().DistanceSquared(transform.Position) > square(armamentEntityData.Range) {
+			if data.PositionTarget.DistanceSquared(transform.Position) > square(armamentEntityData.Range) {
 				return
 			}
-			h.terrain.Sculpt(entity.TurretTarget(), 40)
+			h.terrain.Sculpt(data.PositionTarget, 40)
 		} else {
 			armamentGuidance := data.Guidance
+
+			// Calculate angle on server, since Transform math is present
+			armamentGuidance.DirectionTarget = data.PositionTarget.Sub(transform.Position).Angle()
 
 			if armamentGuidance.VelocityTarget == 0 || armamentData.Subtype == world.EntitySubKindShell ||
 				armamentData.Subtype == world.EntitySubKindMissile {
@@ -372,8 +376,12 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				armamentGuidance.VelocityTarget = armamentEntityData.Speed
 			}
 
+			// Start distance/lifespan at 0 seconds, with few exceptions
+			var distance, lifespan float32
+
 			if armamentData.Airdrop {
-				if entity.TurretTarget().DistanceSquared(entity.Position) > 750*750 {
+				const airdropRange = 500
+				if data.PositionTarget.DistanceSquared(entity.Position) > airdropRange*airdropRange {
 					// Exceeded max range
 					return
 				}
@@ -381,6 +389,17 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				transform.Direction = world.Angle(rand.Float32() * math32.Pi * 2)
 				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
 				armamentGuidance.DirectionTarget = transform.Direction
+
+				// Start the distance/lifespan near expiry to make these torpedoes not last long
+				const maxLifespan = 10
+				const maxRange = 150
+				if armamentEntityData.Lifespan > maxLifespan {
+					lifespan = armamentEntityData.Lifespan - maxLifespan
+				}
+				if armamentEntityData.Range > maxRange {
+					distance = armamentEntityData.Range - maxRange
+				}
+
 			} else if armamentData.Vertical {
 				// Vertically-launched armaments can be launched in any horizontal direction
 				transform.Direction = armamentGuidance.DirectionTarget
@@ -395,6 +414,8 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Owner:      &player.Player,
 				Transform:  transform,
 				Guidance:   armamentGuidance,
+				Distance:   distance,
+				Lifespan:   lifespan,
 			}
 
 			h.spawnEntity(armamentEntity, 0)

@@ -840,6 +840,159 @@
 		],
 		"turrets": []
 	},
+	"kolkata": {
+		"label": "Kolkata",
+		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 5,
+		"length": 163,
+		"width": 17.4,
+		"speed": 15.43334,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 989
+			},
+			{
+				"type": "radar",
+				"range": 1326
+			},
+			{
+				"type": "sonar",
+				"range": 1163
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": -0.25,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": -0.25,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"default": "76x636mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -2.5,
+				"positionSide": 2.5,
+				"angle": -1.5707963267948966
+			},
+			{
+				"positionForward": -5.3,
+				"positionSide": -2.5,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "otoMelara76mm",
+				"positionForward": 54,
+				"positionSide": 0,
+				"angle": 0
+			}
+		]
+	},
 	"komar": {
 		"label": "Komar",
 		"link": "https://en.wikipedia.org/wiki/Komar-class_missile_boat",
@@ -2435,8 +2588,8 @@
 		"length": 1.7,
 		"width": 0.38,
 		"speed": 820,
-		"range": 708.3333333333333,
-		"damage": 0.7314285714285714,
+		"range": 750,
+		"damage": 0.6485714285714286,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2470,8 +2623,8 @@
 		"length": 0.441,
 		"width": 0.57,
 		"speed": 853,
-		"range": 323.6388888888889,
-		"damage": 0.44365714285714286,
+		"range": 330.3333333333333,
+		"damage": 0.43274285714285715,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2549,6 +2702,26 @@
 		"turrets": [],
 		"sensors": []
 	},
+	"brahmos": {
+		"label": "BrahMos",
+		"link": "https://en.wikipedia.org/wiki/BrahMos",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 8.4,
+		"width": 0.9515625,
+		"speed": 993.9,
+		"range": 1411.111111111111,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1016.8
+			}
+		],
+		"damage": 0.8,
+		"armaments": [],
+		"turrets": []
+	},
 	"dredger": {
 		"label": "Dredger",
 		"type": "weapon",
@@ -2569,7 +2742,7 @@
 		"length": 3.8,
 		"width": 0.59375,
 		"speed": 240,
-		"range": 742.2222222222222,
+		"range": 1155.5555555555557,
 		"sensors": [
 			{
 				"type": "radar",
@@ -2626,8 +2799,8 @@
 		"length": 1.626,
 		"width": 0.406,
 		"speed": 760,
-		"range": 685.7222222222222,
-		"damage": 0.7145142857142858,
+		"range": 725.3333333333333,
+		"damage": 0.6358857142857143,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2675,8 +2848,8 @@
 		"length": 0.68,
 		"width": 0.127,
 		"speed": 790,
-		"range": 396.66666666666663,
-		"damage": 0.49828571428571433,
+		"range": 410,
+		"damage": 0.47371428571428575,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2850,8 +3023,43 @@
 		"length": 1.125,
 		"width": 0.29883,
 		"speed": 200,
-		"range": 415.27777777777777,
+		"range": 1006.9444444444445,
 		"damage": 0.16625,
+		"armaments": [],
+		"turrets": [],
+		"sensors": []
+	},
+	"otoMelara76mm": {
+		"label": "OTO Melara 76 mm",
+		"link": "https://en.wikipedia.org/wiki/OTO_Melara_76_mm",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.3,
+		"positionForward": 1,
+		"width": 3.0796875,
+		"armaments": [
+			{
+				"default": "76x636mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"range": 1500,
+		"turrets": [],
+		"sensors": []
+	},
+	"76x636mmR": {
+		"label": "76 x 636 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"positionForward": 1,
+		"length": 0.636,
+		"width": 0.76,
+		"speed": 915,
+		"range": 395.33333333333337,
+		"damage": 0.46617142857142857,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2865,7 +3073,7 @@
 		"length": 5.8,
 		"width": 2.084375,
 		"speed": 325.85,
-		"range": 986.6666666666666,
+		"range": 1266.6666666666667,
 		"sensors": [
 			{
 				"type": "radar",
@@ -2885,7 +3093,7 @@
 		"length": 4.33,
 		"width": 1.2516,
 		"speed": 300,
-		"range": 807,
+		"range": 1185,
 		"sensors": [
 			{
 				"type": "radar",
@@ -2925,7 +3133,7 @@
 		"length": 5.56,
 		"width": 2.60625,
 		"speed": 245.872,
-		"range": 957.3333333333333,
+		"range": 1253.3333333333333,
 		"sensors": [
 			{
 				"type": "radar",
