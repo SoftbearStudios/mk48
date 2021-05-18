@@ -73,14 +73,14 @@ export async function connect(callback) {
 			callback && callback();
 		};
 
-		socket.onclose = () => {
+		socket.onclose = event => {
 			socket = null;
 			connected.set(false);
 			contacts.set({});
 			chats.set([]);
 			entityID.set(null);
 			serverID.set(null);
-			console.log("socket - Disconnected from server.");
+			console.log(`socket - Disconnected from server with code ${event.code} due to '${event.reason}'.`);
 		};
 
 		socket.onmessage = messageRaw => {
