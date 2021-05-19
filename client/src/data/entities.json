@@ -2932,6 +2932,7 @@
 		"width": 0.29,
 		"speed": 10,
 		"lifespan": 15,
+		"reload": 20,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []

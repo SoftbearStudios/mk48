@@ -58,24 +58,32 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
-	if (entityData.type === 'weapon' && entityData.reload == undefined) {
-		switch (entityData.subtype) {
-			case 'dredger':
-				entityData.reload = 1;
+	if (entityData.reload == undefined) {
+		switch (entityData.type) {
+			case 'weapon':
+				switch (entityData.subtype) {
+					case 'dredger':
+						entityData.reload = 1;
+						break;
+					case 'rocket':
+						entityData.reload = 2.5;
+						break;
+					case 'missile':
+						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
+						break;
+					case 'shell':
+						entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 16, true);
+						break;
+					default:
+						entityData.reload = 8;
+						break;
+				}
 				break;
-			case 'rocket':
-				entityData.reload = 2.5;
-				break;
-			case 'missile':
-				entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
-				break;
-			case 'shell':
-				entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 16, true);
-				break;
-			default:
-				entityData.reload = 8;
+			case 'decoy':
+				entityData.reload = 20;
 				break;
 		}
+
 	}
 
 	const armaments = entityData.armaments;
