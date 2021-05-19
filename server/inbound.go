@@ -64,6 +64,7 @@ type (
 	// SendChat sends a chat message to global chat.
 	SendChat struct {
 		Message string `json:"message"`
+		Team    bool   `json:"team"`
 	}
 
 	// Spawn spawns your ship.
@@ -195,7 +196,9 @@ func (data CreateTeam) Inbound(h *Hub, _ Client, player *Player) {
 
 	player.TeamID = teamID
 	h.clearTeamRequests(&player.Player)
-	h.teams[teamID] = world.NewTeam(&player.Player)
+	team := &Team{}
+	team.Create(&player.Player)
+	h.teams[teamID] = team
 }
 
 func (data RemoveFromTeam) Inbound(h *Hub, _ Client, player *Player) {
@@ -479,7 +482,16 @@ func (data SendChat) Inbound(h *Hub, client Client, player *Player) {
 		return
 	}
 
-	h.chats = append(h.chats, Chat{Message: msg, PlayerData: player.PlayerData})
+	chat := Chat{Message: msg, PlayerData: player.PlayerData}
+	if data.Team {
+		team := h.teams[player.TeamID]
+		if team == nil {
+			return
+		}
+		team.Chats = append(team.Chats, chat)
+	} else {
+		h.chats = append(h.chats, chat)
+	}
 }
 
 func (trace Trace) Inbound(_ *Hub, _ Client, p *Player) {

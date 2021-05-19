@@ -40,8 +40,8 @@ type (
 	TeamID uint64
 )
 
-func NewTeam(owner *Player) *Team {
-	return &Team{
+func (team *Team) Create(owner *Player) {
+	*team = Team{
 		Code:    TeamCode(rand.Uint32()),
 		Members: PlayerSet{owner}, // First member is owner
 	}

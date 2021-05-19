@@ -48,6 +48,7 @@ type (
 	Update struct {
 		Chats        []Chat               `json:"chats,omitempty"`
 		Contacts     []IDContact          `json:"contacts,omitempty"`
+		TeamChats    []Chat               `json:"teamChat,omitempty"`
 		TeamCode     world.TeamCode       `json:"teamInvite,omitempty"`
 		TeamMembers  []world.IDPlayerData `json:"teamMembers,omitempty"`
 		TeamRequests []world.IDPlayerData `json:"teamJoinRequests,omitempty"`

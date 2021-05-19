@@ -52,6 +52,9 @@ func (h *Hub) Update() {
 	// chats have been sent, reset the buffer
 	// Cannot reuse slice because would cause data race
 	h.chats = nil
+	for _, team := range h.teams {
+		team.Chats = nil
+	}
 
 	h.updateCounter++
 }
@@ -181,6 +184,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 	})
 
 	if team := h.teams[player.TeamID]; team != nil {
+		update.TeamChats = team.Chats
 		update.TeamMembers = team.Members.AppendData(update.TeamMembers)
 
 		// Only team owner gets the requests

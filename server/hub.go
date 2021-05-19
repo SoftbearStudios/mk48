@@ -36,7 +36,7 @@ type Hub struct {
 	terrain     terrain.Terrain
 	clients     ClientList // implemented as double-linked list
 	despawn     ClientList // clients that are being removed
-	teams       map[world.TeamID]*world.Team
+	teams       map[world.TeamID]*Team
 
 	// Flags
 	minPlayers int
@@ -79,7 +79,7 @@ func newHub(minPlayers int, auth string) *Hub {
 		world:             sector.New(radius),
 		terrain:           compressed.New(noise.NewDefault()),
 		worldRadius:       radius,
-		teams:             make(map[world.TeamID]*world.Team),
+		teams:             make(map[world.TeamID]*Team),
 		minPlayers:        minPlayers,
 		auth:              auth,
 		inbound:           make(chan SignedInbound, 16+minPlayers*2),
