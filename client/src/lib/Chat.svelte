@@ -79,7 +79,7 @@
 			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
 		<form on:submit|preventDefault={onSubmit}>
-			<input type='text' name='message' placeholder='Message' autocomplete='off' minLength={1} maxLength={100} value={$message} on:input={onInput} bind:this={input}/>
+			<input type='text' name='message' placeholder='Message' autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} bind:this={input}/>
 		</form>
 	</Section>
 </div>
@@ -111,11 +111,13 @@
 	td.name {
 		cursor: pointer;
 		font-weight: bold;
+		text-overflow: ellipsis;
 		white-space: nowrap;
 		width: 1%;
 	}
 
 	td.message {
-		word-break: break-all;
+		overflow-wrap: anywhere;
+		word-break: normal;
 	}
 </style>
