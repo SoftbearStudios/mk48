@@ -48,7 +48,7 @@
 	let recording = false;
 
 	const MOUSE_CLICK_MILLIS = 180;
-	const DEFAULT_ZOOM = 4;
+	const DEFAULT_ZOOM = 2.5;
 	const SECONDS_PER_SEND = 0.1;
 	const NAME_SCALE = 6;
 
@@ -105,7 +105,6 @@
 		// Enable scroll and pinch zoom
 		viewport.wheel({smooth: true});
 		viewport.pinch();
-		viewport.clampZoom({minScale: 1, maxScale: 16});
 		const zoomHandler = viewport.on('zoomed', () => {
 			instructZoom = false;
 			viewport.off('zoomed', zoomHandler);
@@ -665,8 +664,11 @@
 				drawHud(hud, localEntity, localSprite, contacts);
 			}
 
-			const visualRange = (Math.min(terrainDimensions[2], terrainDimensions[3]) / 2 - 50) || 500;
-			let maxVisualRange = visualRange;
+			let maxVisualRange = Math.min(terrainDimensions[2], terrainDimensions[3]) / 2;
+			if (maxVisualRange === 0) {
+				maxVisualRange = 500;
+			}
+			let visualRange = maxVisualRange - 50; // don't show texture borders
 			if (localEntityData && localEntityData.sensors) {
 				for (const sensor of localEntityData.sensors) {
 					if (sensor.type === 'visual') {
@@ -678,7 +680,7 @@
 
 			// Bigger boats can zoom out wider
 			// Use max range to not zoom in and out when diving sub
-			viewport.clampZoom({minScale: 500 / maxVisualRange, maxScale: 6000 / maxVisualRange});
+			viewport.clampZoom({minScale: 600 / maxVisualRange, maxScale: 6000 / maxVisualRange});
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
