@@ -88,6 +88,15 @@ func (armament *Armament) TurretIndex() int {
 	return -1
 }
 
+// Reload returns the time it takes to reload an Armament in seconds.
+func (armament *Armament) Reload() float32 {
+	consumption := armament.Default.Data().Reload
+	if armament.Airdrop {
+		consumption *= 4
+	}
+	return consumption
+}
+
 // Similar returns if the Armament is on the same turret and the same type as other.
 func (armament *Armament) Similar(other *Armament) bool {
 	return armament.Default == other.Default && armament.TurretIndex() == other.TurretIndex()

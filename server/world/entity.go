@@ -374,18 +374,19 @@ func HasArmament(consumption []float32, index int) bool {
 
 func (entity *Entity) ConsumeArmament(index int) {
 	entity.ext.copyArmamentConsumption(entity.EntityType)
-	armamentData := entity.Data().Armaments[index]
-	consumption := armamentData.Default.Data().Reload
-	if armamentData.Airdrop {
-		consumption *= 4
-	}
-	entity.ArmamentConsumption()[index] = consumption
+	entity.ArmamentConsumption()[index] = entity.Data().Armaments[index].Reload()
 }
 
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
+	oldType := entity.EntityType
+	oldArmaments := entity.ArmamentConsumption()
+
 	entity.EntityType = entityType
 	entity.ext.setType(entity.EntityType)
+
+	// Keep similar consumption.
+	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldType, oldArmaments)
 
 	// Make sure all the new turrets are re-aimed to the old target.
 	entity.updateTurretAim(5)
@@ -396,6 +397,42 @@ func (entity *Entity) Initialize(entityType EntityType) {
 		entity.ext.setAltitude(-0.5)
 	default:
 		entity.ext.setAltitude(0)
+	}
+}
+
+// upgradeArmaments attempts to keep a similar amount of consumption when upgrading.
+// See #32 for rationale.
+func upgradeArmaments(entityType EntityType, new []float32, oldEntityType EntityType, old []float32) {
+	if len(new) == 0 || len(old) == 0 {
+		return
+	}
+
+	oldData := oldEntityType.Data()
+	sum := float32(0)
+
+	for i, c := range old {
+		reload := oldData.Armaments[i].Reload()
+
+		// Scale back to [0, 1].
+		sum += c / reload
+	}
+
+	// [0, 1]: 0 is none consumed and 1 is all consumed.
+	avg := sum / float32(len(old))
+	if avg == 0.0 {
+		return
+	}
+
+	consumed := avg * float32(len(new))
+	data := entityType.Data()
+
+	// Set armaments to avg percent used.
+	for i := range new {
+		new[i] = data.Armaments[i].Reload() * min(consumed, 1.0)
+		consumed--
+		if consumed <= 0.0 {
+			break
+		}
 	}
 }
 
