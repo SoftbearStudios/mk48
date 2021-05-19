@@ -2546,6 +2546,7 @@
 		"symmetrical": false,
 		"external": true,
 		"damage": 0.4,
+		"reload": 8,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2590,6 +2591,7 @@
 		"speed": 820,
 		"range": 750,
 		"damage": 0.6485714285714286,
+		"reload": 26.228571428571428,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2625,6 +2627,7 @@
 		"speed": 853,
 		"range": 330.3333333333333,
 		"damage": 0.43274285714285715,
+		"reload": 10.401142857142858,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2719,6 +2722,7 @@
 			}
 		],
 		"damage": 0.8,
+		"reload": 30,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2729,6 +2733,7 @@
 		"length": 21.9,
 		"width": 5.1328,
 		"range": 60,
+		"reload": 1,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2750,6 +2755,7 @@
 			}
 		],
 		"damage": 0.514,
+		"reload": 18.56,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2801,6 +2807,7 @@
 		"speed": 760,
 		"range": 725.3333333333333,
 		"damage": 0.6358857142857143,
+		"reload": 25.298285714285715,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2815,6 +2822,7 @@
 		"width": 0.701675,
 		"lifespan": 5,
 		"damage": 0.8,
+		"reload": 10,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2850,6 +2858,7 @@
 		"speed": 790,
 		"range": 410,
 		"damage": 0.47371428571428575,
+		"reload": 13.405714285714286,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2865,6 +2874,7 @@
 		"speed": 14.9189,
 		"range": 1500,
 		"damage": 1,
+		"reload": 10,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -2886,6 +2896,7 @@
 			}
 		],
 		"damage": 0.95,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2906,6 +2917,7 @@
 			}
 		],
 		"damage": 0.6,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3025,6 +3037,7 @@
 		"speed": 200,
 		"range": 1006.9444444444445,
 		"damage": 0.16625,
+		"reload": 2.5,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -3060,6 +3073,7 @@
 		"speed": 915,
 		"range": 395.33333333333337,
 		"damage": 0.46617142857142857,
+		"reload": 12.85257142857143,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -3081,6 +3095,7 @@
 			}
 		],
 		"damage": 0.774,
+		"reload": 28.96,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3101,6 +3116,7 @@
 			}
 		],
 		"damage": 0.5829000000000001,
+		"reload": 21.316000000000003,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3121,6 +3137,7 @@
 			}
 		],
 		"damage": 1.1,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3141,6 +3158,7 @@
 			}
 		],
 		"damage": 0.7428,
+		"reload": 27.711999999999996,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3161,6 +3179,7 @@
 			}
 		],
 		"damage": 0.6,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3175,6 +3194,7 @@
 		"speed": 23.2,
 		"range": 1500,
 		"damage": 1.1,
+		"reload": 10,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []

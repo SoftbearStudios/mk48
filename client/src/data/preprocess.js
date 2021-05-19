@@ -58,6 +58,26 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
+	if (entityData.type === 'weapon' && entityData.reload == undefined) {
+		switch (entityData.subtype) {
+			case 'dredger':
+				entityData.reload = 1;
+				break;
+			case 'rocket':
+				entityData.reload = 2.5;
+				break;
+			case 'missile':
+				entityData.reload = mapRanges(entityData.length, 1, 6, 4, 30, true);
+				break;
+			case 'shell':
+				entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 30, true);
+				break;
+			default:
+				entityData.reload = 10;
+				break;
+		}
+	}
+
 	const armaments = entityData.armaments;
 	entityData.armaments = [];
 

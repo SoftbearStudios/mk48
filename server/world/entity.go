@@ -128,11 +128,10 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		// If turrets were already copied and the extension
 		// copies everything armaments don't need to be copied
 		armamentsCopied := entity.ext.copiesAll() && turretsCopied
-		replenishAmount := seconds * 0.1
-		if data.SubKind == EntitySubKindBattleship {
-			replenishAmount *= 0.6
-		} else if underwater {
-			replenishAmount *= 0.25
+		replenishAmount := seconds
+		if underwater {
+			// Submerged submarines reload slower
+			replenishAmount *= 0.2
 		}
 		entity.replenish(replenishAmount, armamentsCopied)
 	}
@@ -375,12 +374,10 @@ func HasArmament(consumption []float32, index int) bool {
 
 func (entity *Entity) ConsumeArmament(index int) {
 	entity.ext.copyArmamentConsumption(entity.EntityType)
-	consumption := float32(1)
-	switch entity.Data().Armaments[index].Default.Data().SubKind {
-	case EntitySubKindDredger:
-		consumption = 0.1
-	case EntitySubKindRocket:
-		consumption = 0.25
+	armamentData := entity.Data().Armaments[index]
+	consumption := armamentData.Default.Data().Reload
+	if armamentData.Airdrop {
+		consumption *= 2
 	}
 	entity.ArmamentConsumption()[index] = consumption
 }

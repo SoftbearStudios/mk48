@@ -191,7 +191,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		case boat != nil && collectible != nil:
 			// All collectibles have these benefits
 			boat.Repair(0.05)
-			boat.Replenish(0.1)
+			boat.Replenish(1)
 			boat.Owner.Score += 1
 
 			removeEntity(collectible, "collected")

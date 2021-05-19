@@ -30,25 +30,17 @@
 
 			let group = groups[type];
 			if (!group) {
-				group = {type: armament.default, airdrop: armament.airdrop, ready: 0, total: 0, incremental: 0};
+				group = {type: armament.default, airdrop: armament.airdrop, ready: 0, total: 0};
 				groups[type] = group;
 			}
 			group.total++;
 
 			if (hasArmament(consumptions, i)) {
 				group.ready++;
-			} else {
-				group.incremental = Math.max(group.incremental, 1 - armamentConsumption(consumptions, i));
 			}
 		}
 
-		return Object.entries(groups).map(([type, group]) => {
-			if (group.ready === group.total) {
-				group.incremental = 1;
-			}
-
-			return [type, group];
-		});
+		return Object.entries(groups);
 	}
 </script>
 
@@ -94,8 +86,6 @@
 			altitudeTarget = 0;
 		}
 	}
-
-	// style={`opacity: ${group.ready === group.total ? 1 : group.incremental};`}
 </script>
 
 <div class='container'>
