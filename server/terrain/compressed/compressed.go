@@ -234,8 +234,8 @@ func (t *Terrain) Sculpt(pos world.Vec2f, amount float32) {
 	// 00 10
 	// 01 11
 	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy))+amount*(2-delta.X-delta.Y)))
-	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))*amount*(1+delta.X-delta.Y)))
-	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))*amount*(1-delta.X+delta.Y)))
+	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))+amount*(1+delta.X-delta.Y)))
+	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))+amount*(1-delta.X+delta.Y)))
 	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy))+amount*(delta.X+delta.Y)))
 }
 
