@@ -137,17 +137,17 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	// Kludge offset
 	threshold -= 6
 
-	// Not worth doing multiple terrain samples for small entities
-	if data.Radius <= terrain.Scale/5 {
+	sweep := seconds * entity.Velocity
+	const graceMargin = 0.9
+	dimensions := world.Vec2f{X: data.Length + sweep, Y: data.Width}.Mul(0.5 * graceMargin)
+
+	// Not worth doing multiple terrain samples for small, slow moving entities
+	if dimensions.X <= terrain.Scale/5 && dimensions.Y <= terrain.Scale/5 {
 		return t.AtPos(entity.Position) > threshold
 	}
 
-	sweep := seconds * entity.Velocity
 	normal := entity.Direction.Vec2f()
 	tangent := normal.Rot90()
-
-	const graceMargin = 0.9
-	dimensions := world.Vec2f{X: data.Length + sweep, Y: data.Width}.Mul(0.5 * graceMargin)
 	position := entity.Position.AddScaled(normal, sweep*0.5)
 
 	dx := min(terrain.Scale*2/3, dimensions.X*0.499)
