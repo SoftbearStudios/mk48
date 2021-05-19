@@ -377,7 +377,7 @@ func (entity *Entity) ConsumeArmament(index int) {
 	armamentData := entity.Data().Armaments[index]
 	consumption := armamentData.Default.Data().Reload
 	if armamentData.Airdrop {
-		consumption *= 2
+		consumption *= 4
 	}
 	entity.ArmamentConsumption()[index] = consumption
 }
