@@ -1413,6 +1413,7 @@
 		]
 	},
 	"25x129mmR": {
+		"label": "25 x 129 mmR",
 		"type": "weapon",
 		"subtype": "shell",
 		"angle": 0,

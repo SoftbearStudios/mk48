@@ -65,6 +65,8 @@
 	<p>Enemies are more likely to detect larger ships. However, some modern ships have
 	a property known as <b>stealth</b> to help you evade detection.</p>
 
+	<p>Here is a full list of ships: <a href='/ships'>Mk48.io Ships</a></p>
+
 	<h2>Weapons</h2>
 
 	<p>There are multiple different types of weapons available on various

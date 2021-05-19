@@ -18,7 +18,7 @@
 		return `${armamentType}/${armamentSubtype}`;
 	}
 
-	function groupArmaments(armaments, consumptions) {
+	export function groupArmaments(armaments, consumptions) {
 		const groups = {};
 		for (let i = 0; i < armaments.length; i++) {
 			const armament = armaments[i];
