@@ -54,7 +54,7 @@
 		the other ship.</li>
 		<li><b>Dredgers</b> have the special ability to modify the land. New land
 		can be created by clicking in front of them, and old land can be destroyed
-		by driving over them.</li>
+		by driving over it.</li>
 		<li><b>Aircraft carriers</b> are coming soon!</li>
 	</ol>
 
