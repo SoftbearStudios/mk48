@@ -678,7 +678,7 @@
 
 			// Bigger boats can zoom out wider
 			// Use max range to not zoom in and out when diving sub
-			viewport.clampZoom({minScale: 750 / maxVisualRange, maxScale: 8 * 750 / maxVisualRange});
+			viewport.clampZoom({minScale: 500 / maxVisualRange, maxScale: 6000 / maxVisualRange});
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
