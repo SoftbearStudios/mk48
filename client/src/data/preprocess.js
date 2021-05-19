@@ -67,13 +67,13 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.reload = 2.5;
 				break;
 			case 'missile':
-				entityData.reload = mapRanges(entityData.length, 1, 6, 4, 30, true);
+				entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
 				break;
 			case 'shell':
-				entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 30, true);
+				entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 16, true);
 				break;
 			default:
-				entityData.reload = 10;
+				entityData.reload = 8;
 				break;
 		}
 	}
