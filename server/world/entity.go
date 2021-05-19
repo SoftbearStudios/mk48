@@ -129,7 +129,9 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		// copies everything armaments don't need to be copied
 		armamentsCopied := entity.ext.copiesAll() && turretsCopied
 		replenishAmount := seconds * 0.1
-		if underwater {
+		if data.SubKind == EntitySubKindBattleship {
+			replenishAmount *= 0.6
+		} else if underwater {
 			replenishAmount *= 0.25
 		}
 		entity.replenish(replenishAmount, armamentsCopied)
