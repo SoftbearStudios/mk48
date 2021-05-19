@@ -7,6 +7,7 @@
 	import entityDatas from '../data/entities.json';
 	import Link from './Link.svelte';
 	import {groupArmaments} from './Ship.svelte';
+	import {fromCamelCase} from '../util/strings.js';
 
 	export let type;
 	let entityData;
@@ -25,7 +26,7 @@
 			{#if entityData.type === 'boat'}
 				<i>Level {entityData.level} {entityData.subtype}</i>
 			{:else}
-				<i>{entityData.subtype} {entityData.type}</i>
+				<i>{fromCamelCase(entityData.subtype)} {entityData.type === 'weapon' ? '' : entityData.type}</i>
 			{/if}
 			{#if entityData.link}
 				(<Link href={entityData.link}>Learn more</Link>)

@@ -28,7 +28,7 @@
 	{(overlay.speed * 1.943844492).toFixed(1)}kn —
 	{Math.round(((overlay.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(overlay.direction)}] —
 	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})
-	{recording ? ' — Recording' : ''}</h2>
+	{recording ? ' — Recording (v to stop)' : ''}</h2>
 </div>
 
 <style>

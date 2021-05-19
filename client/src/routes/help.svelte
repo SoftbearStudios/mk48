@@ -50,7 +50,7 @@
 		types of weapons, but must surface to fire certain types of weapons and regenerate others at a normal rate.</li>
 		<li><b>Hovercraft</b> can travel on land and water.</li>
 		<li><b>Rams</b> are a special ship type that is designed to ram other
-		ships. They take no damage in the process, and inflict extra damage to
+		ships. They take very little damage in the process, and inflict extra damage to
 		the other ship.</li>
 		<li><b>Dredgers</b> have the special ability to modify the land. New land
 		can be created by clicking in front of them, and old land can be destroyed
