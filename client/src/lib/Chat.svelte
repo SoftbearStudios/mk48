@@ -80,7 +80,7 @@
 			{#each $chats as {name, team, teamOnly, message}}
 				<tr>
 					<td class='name' class:teamOnly on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</td>
-					<td class='message'>{message}</td>
+					<td class='message' class:teamOnly>{message}</td>
 				</tr>
 			{/each}
 		</table>
@@ -124,8 +124,7 @@
 	}
 
 	td.teamOnly {
-		filter: brightness(0.85);
-		font-style: italic;
+		filter: brightness(0.6);
 	}
 
 	td.message {
