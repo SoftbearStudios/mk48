@@ -4,6 +4,7 @@
 -->
 
 <script context='module'>
+	import {teamMembers} from './socket.js';
 	import {writable} from 'svelte/store';
 	// Store message in module context to persist it between
 	// player deaths (See #22)
@@ -36,8 +37,12 @@
 		input && input.focus && input.focus();
 	}
 
-	function onSubmit() {
-		callback($message);
+	function onKeyDown(event) {
+		// Enter key
+		if (event.keyCode !== 13) {
+			return;
+		}
+		callback({message: $message, team: event.shiftKey});
 		$message = '';
 		input && input.blur && input.blur();
 	}
@@ -68,9 +73,9 @@
 <div>
 	<Section name='Radio'>
 		<table>
-			{#each $chats as {name, team, message}}
+			{#each $chats as {name, team, teamOnly, message}}
 				<tr>
-					<td class='name' on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</td>
+					<td class='name' class:teamOnly on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</td>
 					<td class='message'>{message}</td>
 				</tr>
 			{/each}
@@ -78,9 +83,7 @@
 		{#if auto($message)}
 			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
-		<form on:submit|preventDefault={onSubmit}>
-			<input type='text' name='message' placeholder='Message' autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} bind:this={input}/>
-		</form>
+		<input type='text' name='message' title={`Press Enter to send${$teamMembers ? ', or Shift+Enter to send to team only' : ''}`} placeholder='Message' autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} on:keydown={onKeyDown} bind:this={input}/>
 	</Section>
 </div>
 
@@ -114,6 +117,10 @@
 		text-overflow: ellipsis;
 		white-space: nowrap;
 		width: 1%;
+	}
+
+	td.teamOnly {
+		font-style: italic;
 	}
 
 	td.message {

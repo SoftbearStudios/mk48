@@ -965,7 +965,7 @@
 			callback={type => send('upgrade', {type})}
 		/>
 		<Teams {contacts}/>
-		<Chat callback={message => send('sendChat', {message})} bind:this={chatRef}/>
+		<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
 	{:else}
 		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
 		{#if globalLeaderboard && globalLeaderboard['single/all']}

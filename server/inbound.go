@@ -457,7 +457,9 @@ func (data SendChat) Inbound(h *Hub, client Client, player *Player) {
 	}
 
 	name := player.Name
-	msg, ok := player.ChatHistory.Update(data.Message)
+
+	// Allow spamming ones own team, since you can get kicked
+	msg, ok := player.ChatHistory.Update(data.Message, data.Team)
 
 	t := "user"
 	if _, bot := client.(*BotClient); bot {

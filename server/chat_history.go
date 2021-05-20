@@ -20,7 +20,7 @@ type ChatHistory struct {
 	updated int64
 }
 
-func (hist *ChatHistory) Update(message string) (string, bool) {
+func (hist *ChatHistory) Update(message string, allowSpam bool) (string, bool) {
 	hist.total++
 	result := moderation.Scan(message)
 	inappropriate := result.Is(moderation.Inappropriate)
@@ -105,8 +105,9 @@ func (hist *ChatHistory) Update(message string) (string, bool) {
 	frequencySpam := hist.total >= 10
 	inappropriateSpam := hist.inappropriate > 2 && inappropriateFraction > 0.20
 	repetitionSpam := int(hist.total) > repetitionThresholdTotal && lengthStandardDeviation < 3 && lengthSpecificDeviation < 3
+	anySpam := frequencySpam || inappropriateSpam || repetitionSpam
 
-	block := (inappropriate && censorAmount > 4) || severelyInappropriate || (frequencySpam || inappropriateSpam || repetitionSpam)
+	block := (inappropriate && censorAmount > 4) || severelyInappropriate || (anySpam && !allowSpam)
 
 	return message, !block
 }

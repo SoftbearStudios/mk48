@@ -97,9 +97,14 @@ export async function connect(callback) {
 					}
 					teamMembers.set(message.data.teamMembers);
 					teamJoinRequests.set(message.data.teamJoinRequests);
-					if (message.data.chats) {
+					if (message.data.chats || message.data.teamChats) {
 						chats.update(cs => {
-							cs = cs.concat(message.data.chats);
+							if (message.data.chats) {
+								cs = cs.concat(message.data.chats);
+							}
+							if (message.data.teamChats) {
+								cs = cs.concat(message.data.teamChats.map(chat => ({...chat, teamOnly: true})));
+							}
 							if (cs.length > 10) {
 								cs = cs.slice(cs.length - 10);
 							}
@@ -132,8 +137,11 @@ export function disconnect() {
 
 export function send(type, data = {}) {
 	if (!socket || socket.readyState !== WebSocket.OPEN) {
+		console.log('cannot send')
+		debugger;
 		return;
 	}
+	console.log('sending '+JSON.stringify({type, data}))
 	socket.send(JSON.stringify({type, data}));
 }
 
