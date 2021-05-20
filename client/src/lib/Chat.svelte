@@ -42,7 +42,11 @@
 		if (event.keyCode !== 13) {
 			return;
 		}
-		callback({message: $message, team: event.shiftKey});
+		const team = event.shiftKey;
+		if (team && !($teamMembers)) {
+			return;
+		}
+		callback({message: $message, team});
 		$message = '';
 		input && input.blur && input.blur();
 	}
@@ -120,6 +124,7 @@
 	}
 
 	td.teamOnly {
+		filter: brightness(0.85);
 		font-style: italic;
 	}
 
