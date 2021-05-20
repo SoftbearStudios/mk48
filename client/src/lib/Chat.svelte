@@ -124,7 +124,7 @@
 	}
 
 	td.teamOnly {
-		filter: brightness(0.6);
+		filter: brightness(0.7);
 	}
 
 	td.message {
