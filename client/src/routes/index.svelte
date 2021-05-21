@@ -384,7 +384,7 @@
 							continue;
 						}
 						const consumption = (entity.armamentConsumption || [])[i] || 0;
-						sprite.armaments[i].alpha = consumption === 0 ? 1 : 0.5 + 0.25 * (1 - consumption);
+						sprite.armaments[i].alpha = consumption === 0 ? 1 : 0.5;
 					}
 				}
 

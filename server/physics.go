@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/chewxy/math32"
 	"math/rand"
 	"mk48/server/world"
 	"runtime"
@@ -113,7 +114,6 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		entityData := entity.Data()
 		otherData := other.Data()
 		friendly := entity.Owner.Friendly(other.Owner)
-		dist2 := entity.Position.DistanceSquared(other.Position)
 
 		// Only do collision once when concurrent
 		//if entityData.Radius < otherData.Radius || (entityData.Radius == otherData.Radius && entityID > otherEntityID) {
@@ -154,9 +154,16 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 
 			if !friendly {
 				// Mines do too
-				if boat != nil && weapon != nil && weapon.Data().SubKind == world.EntitySubKindMine && dist2 < 50*50 {
-					weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
-					weapon.Velocity = 5
+				if boat != nil && weapon != nil && weapon.Data().SubKind == world.EntitySubKindMine {
+					const attractDist = 40
+					normal := boat.Direction.Vec2f()
+					tangent := normal.Rot90()
+					normalDistance := math32.Abs(normal.Dot(boat.Position) - normal.Dot(weapon.Position))
+					tangentDistance := math32.Abs(tangent.Dot(boat.Position) - tangent.Dot(weapon.Position))
+					if normalDistance < attractDist+boat.Data().Length*0.5 && tangentDistance < attractDist+boat.Data().Width*0.5 {
+						weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
+						weapon.Velocity = 5
+					}
 				}
 
 				// Home towards target/decoy
@@ -211,6 +218,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		case boat != nil && weapon != nil && !friendly:
 			damageMultiplier := boat.RecentSpawnFactor()
 
+			dist2 := entity.Position.DistanceSquared(other.Position)
 			r2 := square(boat.Data().Radius)
 			damageMultiplier *= collisionMultiplier(dist2, r2)
 
