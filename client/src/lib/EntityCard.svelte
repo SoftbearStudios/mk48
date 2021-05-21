@@ -10,6 +10,7 @@
 	import {fromCamelCase} from '../util/strings.js';
 
 	export let type;
+	export let depth = 0; // recursion depth
 	export let count = null;
 	let entityData;
 	$: {
@@ -61,13 +62,13 @@
 	</tr>
 	<tr>
 		<td>
-			<img class:ship={entityData.type === 'boat'} title={entityData.label} alt={type} src={`/sprites/${type}.png`}/>
+			<img class:ship={entityData.type === 'boat'} class:small={depth > 0} title={entityData.label} alt={type} src={`/sprites/${type}.png`}/>
 		</td>
 	</tr>
 	{#each groupArmaments(entityData.armaments, []) as [type, group]}
 		<tr>
 			<td colspan={2}>
-				<svelte:self type={group.type} count={group.total}/>
+				<svelte:self type={group.type} count={group.total} depth={depth + 1}/>
 			</td>
 		</tr>
 	{/each}
@@ -110,8 +111,12 @@
 	}
 
 	img {
-		width: 100%;
+		max-width: 100%;
 		max-height: 5em;
 		object-fit: contain;
+	}
+
+	img.small {
+		max-height: 2em;
 	}
 </style>
