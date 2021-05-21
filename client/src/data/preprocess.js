@@ -18,7 +18,18 @@ const entityDatas = JSON.parse(fs.readFileSync('./entities-raw.json'));
 for (const entityType of Object.keys(entityDatas)) {
 	const entityData = entityDatas[entityType];
 
-	if (entityData.range) {
+	if (entityData.speed) {
+		switch (entityData.type) {
+			case 'weapon':
+				switch (entityData.subtype) {
+					case 'shell':
+						entityData.speed *= 0.75;
+						break;
+				}
+		}
+	}
+
+	if (entityData.range && entityType !== 'dredger') {
 		let maxRange = 1500;
 		if (entityData.type === 'weapon') {
 			switch (entityData.subtype) {
@@ -32,6 +43,11 @@ for (const entityType of Object.keys(entityDatas)) {
 			}
 		}
 		entityData.range = Math.min(entityData.range, maxRange);
+		let rangeLifespan = Math.max(entityData.range / entityData.speed, 0.1);
+		if (!entityData.lifespan || rangeLifespan < entityData.lifespan) {
+			entityData.lifespan = rangeLifespan;
+		}
+		delete(entityData.range);
 	}
 
 	if (entityData.type === 'weapon' && entityData.damage == undefined) {
@@ -89,7 +105,6 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.reload = 20;
 				break;
 		}
-
 	}
 
 	const armaments = entityData.armaments;

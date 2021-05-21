@@ -15,7 +15,6 @@ type Entity struct {
 	Guidance
 	EntityType
 	Damage   float32
-	Distance float32
 	Lifespan float32 // In seconds
 	Owner    *Player
 	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
@@ -79,25 +78,16 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
 		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
-		deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800*seconds)) // max acceleration
+		deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800 * seconds)) // max acceleration
 		entity.Velocity += ToVelocity(seconds * deltaVelocity.Float())
-
-		distance := seconds * entity.Velocity.Float()
-
-		entity.Distance += distance
-		if data.Range != 0 && entity.Distance > data.Range {
-			return true
-		}
-
-		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), distance)
+		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
 		// Test collisions with stationary objects
-
 		if collider != nil && collider.Collides(entity, seconds) {
 			if entity.Data().Kind != EntityKindBoat {
 				return true
 			}
-			entity.Velocity = entity.Velocity.ClampMagnitude(5*MeterPerSecond)
+			entity.Velocity = entity.Velocity.ClampMagnitude(5 * MeterPerSecond)
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
 				entity.Damage += seconds * entity.MaxHealth() * 0.25
 				if entity.Dead() {
@@ -154,7 +144,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	if entity.Owner.Friendly(otherEntity.Owner) {
 		return
 	}
-	if entity.Distance < 50 || entity.Lifespan < 1 {
+	if entity.Lifespan < 1 {
 		// Sensor not active yet
 		return
 	}
@@ -178,7 +168,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		// Decoys appear very large to weapons
 		size = 100
 	}
-	homingStrength := size * 600 / (1 + diff.LengthSquared() + 20000*square(float32(angleDiff)))
+	homingStrength := size * 600 / (1 + diff.LengthSquared() + 20000*square(angleDiff))
 
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
@@ -336,9 +326,10 @@ func ArmamentTransform(entityType EntityType, entityTransform Transform, turretA
 	}
 
 	weaponData := armamentData.Default.Data()
+
+	// Shells start with all their velocity.
 	if weaponData.SubKind == EntitySubKindShell {
-		// Model shells with instantaneous accelerations to half of muzzle velocity
-		transform.Velocity = weaponData.Speed / 2
+		transform.Velocity = weaponData.Speed
 	}
 
 	if armamentData.Turret != nil {

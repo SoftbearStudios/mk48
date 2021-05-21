@@ -363,7 +363,8 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 		transform := entity.ArmamentTransform(data.Index)
 
 		if armamentEntityData.SubKind == world.EntitySubKindDredger {
-			if data.PositionTarget.DistanceSquared(transform.Position) > square(armamentEntityData.Range) {
+			// TODO find another way to calculate this
+			if data.PositionTarget.DistanceSquared(transform.Position) > 60 {
 				return
 			}
 			h.terrain.Sculpt(data.PositionTarget, 40)
@@ -380,7 +381,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			}
 
 			// Start distance/lifespan at 0 seconds, with few exceptions
-			var distance, lifespan float32
+			var lifespan float32
 
 			if armamentData.Airdrop {
 				const airdropRange = 500
@@ -395,12 +396,8 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 
 				// Start the distance/lifespan near expiry to make these torpedoes not last long
 				const maxLifespan = 10
-				const maxRange = 150
 				if armamentEntityData.Lifespan > maxLifespan {
 					lifespan = armamentEntityData.Lifespan - maxLifespan
-				}
-				if armamentEntityData.Range > maxRange {
-					distance = armamentEntityData.Range - maxRange
 				}
 
 			} else if armamentData.Vertical {
@@ -417,7 +414,6 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Owner:      &player.Player,
 				Transform:  transform,
 				Guidance:   armamentGuidance,
-				Distance:   distance,
 				Lifespan:   lifespan,
 			}
 

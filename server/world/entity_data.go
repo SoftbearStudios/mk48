@@ -51,7 +51,6 @@ type (
 		Width     float32       `json:"width"`
 		Radius    float32       `json:"-"`
 		InvSize   float32       `json:"-"`
-		Range     float32       `json:"range"`
 		Lifespan  float32       `json:"lifespan"`
 		Speed     Velocity      `json:"speed"`
 		Reload    float32       `json:"reload"` // time to reload

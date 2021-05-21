@@ -1703,8 +1703,7 @@
 				"external": false,
 				"hidden": false
 			}
-		],
-		"range": 10000
+		]
 	},
 	"127x680mmR": {
 		"label": "127 x 680 mmR",
@@ -1856,8 +1855,7 @@
 				"external": false,
 				"hidden": false
 			}
-		],
-		"range": 10000
+		]
 	},
 	"76x636mmR": {
 		"label": "76 x 636 mmR",
