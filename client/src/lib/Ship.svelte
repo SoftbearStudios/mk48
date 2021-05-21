@@ -4,6 +4,8 @@
 -->
 
 <script context='module'>
+	import {fromCamelCase} from '../util/strings.js';
+
 	function armamentConsumption(consumption, index) {
 		return (!consumption || consumption.length <= index) ? 0 : consumption[index]
 	}
@@ -42,6 +44,11 @@
 		}
 
 		return Object.entries(groups);
+	}
+
+	export function summarizeType(type) {
+		const data = entityData[type];
+		return fromCamelCase(data.subtype) + (data.type === 'weapon' ? '' : ` ${data.type}`);
 	}
 </script>
 
@@ -93,7 +100,7 @@
 	<Section name={entityData[type].label}>
 		{#each groupArmaments(armaments, consumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
-				<img title={entityData[group.type].label + (group.airdrop ? ' (Airdropped)' : '')} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
+				<img title={entityData[group.type].label + (group.airdrop ? ` (Airdropped ${summarizeType(group.type)})` : ` (${summarizeType(group.type)})`)} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
 				<span class='consumption' title={group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`}>{group.ready}/{group.total}</span>
 			</div>
 		{/each}

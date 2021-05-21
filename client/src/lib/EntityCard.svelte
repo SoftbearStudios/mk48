@@ -6,8 +6,7 @@
 <script>
 	import entityDatas from '../data/entities.json';
 	import Link from './Link.svelte';
-	import {groupArmaments} from './Ship.svelte';
-	import {fromCamelCase} from '../util/strings.js';
+	import {summarizeType, groupArmaments} from './Ship.svelte';
 
 	export let type;
 	export let depth = 0; // recursion depth
@@ -28,7 +27,7 @@
 			{#if entityData.type === 'boat'}
 				<i>Level {entityData.level} {entityData.subtype}</i>
 			{:else}
-				<i>{fromCamelCase(entityData.subtype)} {entityData.type === 'weapon' ? '' : entityData.type}</i>
+				<i>{summarizeType(type)}</i>
 			{/if}
 			{#if entityData.link}
 				(<Link href={entityData.link}>Learn more</Link>)

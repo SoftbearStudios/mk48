@@ -36,7 +36,7 @@
 <div>
 	<Section name={`${Math.round(progress * 100)}% to level ${nextLevel}`}>
 		{#each upgrades(nextLevel) as upgradeType}
-			<img title={entityData[upgradeType].label} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/sprites/${upgradeType}.png`}/>
+			<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/sprites/${upgradeType}.png`}/>
 			<br/>
 		{:else}
 			<p>Maximum ship level reached</p>

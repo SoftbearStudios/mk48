@@ -2147,7 +2147,7 @@
 		"turrets": []
 	},
 	"tshd": {
-		"label": "Dredger",
+		"label": "TSHD",
 		"link": "https://en.wikipedia.org/wiki/Trailing_suction_hopper_dredger",
 		"type": "boat",
 		"subtype": "dredger",
