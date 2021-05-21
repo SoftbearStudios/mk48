@@ -10,6 +10,7 @@
 	import {fromCamelCase} from '../util/strings.js';
 
 	export let type;
+	export let count = null;
 	let entityData;
 	$: {
 		entityData = entityDatas[type];
@@ -22,7 +23,7 @@
 <table class='item'>
 	<tr>
 		<td>
-			<h3>{entityData.label}</h3>
+			<h3>{entityData.label + (count != null ? ` × ${count}` : '')}</h3>
 			{#if entityData.type === 'boat'}
 				<i>Level {entityData.level} {entityData.subtype}</i>
 			{:else}
@@ -66,7 +67,7 @@
 	{#each groupArmaments(entityData.armaments, []) as [type, group]}
 		<tr>
 			<td colspan={2}>
-				<svelte:self type={group.type}/>
+				<svelte:self type={group.type} count={group.total}/>
 			</td>
 		</tr>
 	{/each}
