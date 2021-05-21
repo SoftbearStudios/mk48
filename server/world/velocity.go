@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package world
 
 import (
@@ -28,20 +31,20 @@ func (vel Velocity) Float() float32 {
 	return float32(vel) * (1.0 / (float32(MeterPerSecond)))
 }
 
-func ClampVelocity(val, mag Velocity) Velocity {
-	if val < -mag {
+func (vel Velocity) ClampMagnitude(mag Velocity) Velocity {
+	if vel < -mag {
 		return -mag
 	}
-	if val > mag {
+	if vel > mag {
 		return mag
 	}
-	return val
+	return vel
 }
 
-// AddVelocityClamped adds a float to a Velocity and clamps it to mag.
-func AddVelocityClamped(val Velocity, mag Velocity, amount float32) Velocity {
+// AddClamped adds a float to a Velocity and clamps it to mag.
+func (vel Velocity) AddClamped(amount float32, mag Velocity) Velocity {
 	// Use int64 to prevent overflow
-	v := int64(val) + int64(amount*float32(MeterPerSecond))
+	v := int64(vel) + int64(amount*float32(MeterPerSecond))
 	if v > int64(mag) {
 		return mag
 	}

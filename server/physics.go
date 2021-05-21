@@ -296,11 +296,11 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 					}
 				}
 
-				b.Velocity = world.AddVelocityClamped(b.Velocity, 15*world.MeterPerSecond, 6*posDiff.Dot(b.Direction.Vec2f())*massDiff)
+				b.Velocity = b.Velocity.AddClamped(6*posDiff.Dot(b.Direction.Vec2f())*massDiff, 15*world.MeterPerSecond)
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
-			boat.Velocity = world.AddVelocityClamped(boat.Velocity, 30*world.MeterPerSecond, 6*posDiff.Dot(boat.Direction.Vec2f()))
+			boat.Velocity = boat.Velocity.AddClamped(6*posDiff.Dot(boat.Direction.Vec2f()), 30*world.MeterPerSecond)
 			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
 			if boat.Dead() {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))

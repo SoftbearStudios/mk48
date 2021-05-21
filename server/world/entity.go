@@ -78,8 +78,8 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	turretsCopied := entity.updateTurretAim(seconds)
 
 	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
-		deltaVelocity := ClampVelocity(entity.VelocityTarget, maxSpeed) - entity.Velocity
-		deltaVelocity = ClampVelocity(deltaVelocity, ToVelocity(800*seconds)) // max acceleration
+		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
+		deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800*seconds)) // max acceleration
 		entity.Velocity += ToVelocity(seconds * deltaVelocity.Float())
 
 		distance := seconds * entity.Velocity.Float()
@@ -97,7 +97,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 			if entity.Data().Kind != EntityKindBoat {
 				return true
 			}
-			entity.Velocity = ClampVelocity(entity.Velocity, 5*MeterPerSecond)
+			entity.Velocity = entity.Velocity.ClampMagnitude(5*MeterPerSecond)
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
 				entity.Damage += seconds * entity.MaxHealth() * 0.25
 				if entity.Dead() {
