@@ -24,7 +24,7 @@ func (angle Angle) Float() float32 {
 }
 
 func (angle Angle) Vec2f() Vec2f {
-	// ~57ns to ~30ns by using fastmath
+	// ~57ns to ~38ns by using fastmath
 	sin := fastmath.Sin16(uint16(angle))
 	cos := fastmath.Cos16(uint16(angle))
 

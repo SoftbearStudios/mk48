@@ -13,7 +13,7 @@ func BenchmarkAngle_Diff(b *testing.B) {
 	const count = 1024
 	angles := make([]Angle, count)
 	for i := range angles {
-		angles[i] = Angle(rand.Float32() * math32.Pi * 2)
+		angles[i] = ToAngle(rand.Float32() * math32.Pi * 2)
 	}
 	b.ResetTimer()
 
@@ -30,7 +30,7 @@ func BenchmarkAngle_Vec2f(b *testing.B) {
 	const count = 1024
 	angles := make([]Angle, count)
 	for i := range angles {
-		angles[i] = Angle(rand.Float32() * math32.Pi * 2)
+		angles[i] = ToAngle(rand.Float32() * math32.Pi * 2)
 	}
 	b.ResetTimer()
 

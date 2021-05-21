@@ -5,8 +5,25 @@ package world
 
 import (
 	"github.com/chewxy/math32"
+	"math/rand"
 	"testing"
 )
+
+func BenchmarkVec2f_Angle(b *testing.B) {
+	const count = 1024
+	vectors := make([]Vec2f, count)
+	for i := range vectors {
+		vectors[i] = Vec2f{X: rand.Float32()*100 - 50, Y: rand.Float32()*100 - 50}
+	}
+	b.ResetTimer()
+
+	var acc Angle
+	for i := 0; i < b.N; i++ {
+		v := vectors[i&(count-1)]
+		acc += v.Angle()
+	}
+	_ = acc
+}
 
 func approx(a, b float32) bool {
 	return math32.Abs(a-b) < 0.02
