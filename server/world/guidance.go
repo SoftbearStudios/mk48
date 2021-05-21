@@ -4,6 +4,6 @@
 package world
 
 type Guidance struct {
-	DirectionTarget Angle   `json:"directionTarget,omitempty"`
-	VelocityTarget  float32 `json:"velocityTarget,omitempty"`
+	DirectionTarget Angle    `json:"directionTarget,omitempty"`
+	VelocityTarget  Velocity `json:"velocityTarget,omitempty"`
 }

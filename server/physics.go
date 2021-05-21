@@ -28,7 +28,7 @@ func logDeath(entity *world.Entity) {
 func (h *Hub) Physics(timeDelta time.Duration) {
 	defer h.timeFunction("physics", time.Now())
 
-	timeDeltaSeconds := float32(timeDelta.Seconds())
+	timeDeltaSeconds := min(float32(timeDelta.Seconds()), 1.0)
 
 	{
 		terrain := world.Collider(h.terrain)
@@ -149,7 +149,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 			// Collectibles gravitate towards players
 			if boat != nil && collectible != nil {
 				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
-				collectible.Velocity = 20.0
+				collectible.Velocity = 20 * world.MeterPerSecond
 			}
 
 			if !friendly {
@@ -162,7 +162,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 					tangentDistance := math32.Abs(tangent.Dot(boat.Position) - tangent.Dot(weapon.Position))
 					if normalDistance < attractDist+boat.Data().Length*0.5 && tangentDistance < attractDist+boat.Data().Width*0.5 {
 						weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
-						weapon.Velocity = 5
+						weapon.Velocity = 5 * world.MeterPerSecond
 					}
 				}
 
@@ -296,11 +296,11 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 					}
 				}
 
-				b.Velocity = clampMagnitude(b.Velocity+6*posDiff.Dot(b.Direction.Vec2f())*massDiff, 15)
+				b.Velocity = world.AddVelocityClamped(b.Velocity, 15*world.MeterPerSecond, 6*posDiff.Dot(b.Direction.Vec2f())*massDiff)
 			}
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
-			boat.Velocity = clampMagnitude(boat.Velocity+6*posDiff.Dot(boat.Direction.Vec2f()), 30)
+			boat.Velocity = world.AddVelocityClamped(boat.Velocity, 30*world.MeterPerSecond, 6*posDiff.Dot(boat.Direction.Vec2f()))
 			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
 			if boat.Dead() {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))

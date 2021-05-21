@@ -180,7 +180,7 @@ func (bot *BotClient) Send(out outbound) {
 		manual := Manual{
 			EntityID: update.EntityID,
 			Guidance: world.Guidance{
-				VelocityTarget:  10,
+				VelocityTarget:  10 * world.MeterPerSecond,
 				DirectionTarget: bot.destination.Sub(ship.Position).Angle(),
 			},
 		}
@@ -191,14 +191,14 @@ func (bot *BotClient) Send(out outbound) {
 		}
 
 		if closestCollectible.Found() {
-			manual.VelocityTarget = 20
+			manual.VelocityTarget = 20 * world.MeterPerSecond
 			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
 		}
 
 		if closestEnemy.Found() && closestEnemy.distanceSquared < 2*closestCollectible.distanceSquared {
 			closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 
-			manual.VelocityTarget = closestEnemy.Velocity + 10
+			manual.VelocityTarget = closestEnemy.Velocity + 10*world.MeterPerSecond
 			manual.DirectionTarget = closestEnemyAngle
 
 			manual.TurretTarget = new(world.Vec2f)
@@ -245,11 +245,11 @@ func (bot *BotClient) Send(out outbound) {
 
 		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
 			// Avoid terrain by turning slowly.
-			manual.VelocityTarget = 5
+			manual.VelocityTarget = 5 * world.MeterPerSecond
 			manual.DirectionTarget = ship.Direction + world.Pi/2
 		} else if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
 			// Try to turn away from threats.
-			manual.VelocityTarget = 10
+			manual.VelocityTarget = 10 * world.MeterPerSecond
 			manual.DirectionTarget = closestHazard.Position.Sub(ship.Position).Angle().Inv()
 		} else if shipData.Level < bot.levelAmbition {
 			// Upgrade up to level ambition if available.
