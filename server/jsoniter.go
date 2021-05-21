@@ -24,9 +24,11 @@ var json = func() jsoniter.API {
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(Message{}).String(), encodeMessage, neverEmpty)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.PlayerID(0)).String(), encodePlayerID, emptyPlayerID)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.TeamID(0)).String(), encodeTeamID, emptyTeamID)
+	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Angle(0)).String(), encodeAngle, emptyAngle)
 
 	// Decoders
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(Message{}).String(), decodeMessage)
+	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Angle(0)).String(), decodeAngle)
 
 	return jsoniter.Config{
 		IndentionStep:                 0,
@@ -105,6 +107,15 @@ func encodeUpdateContacts(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	sortedContactsPool.Put(sortedContactsPtr)
 }
 
+func encodeAngle(ptr unsafe.Pointer, stream *jsoniter.Stream) {
+	angle := *(*world.Angle)(ptr)
+	stream.WriteFloat32Lossy(angle.Float())
+}
+
+func emptyAngle(ptr unsafe.Pointer) bool {
+	return *(*world.Angle)(ptr) == 0
+}
+
 func encodeEntityID(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	id := *(*world.EntityID)(ptr)
 	// Quoted hex
@@ -139,6 +150,11 @@ func encodeTeamID(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 
 func emptyTeamID(ptr unsafe.Pointer) bool {
 	return *(*world.TeamID)(ptr) == world.TeamIDInvalid
+}
+
+func decodeAngle(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
+	f := iter.ReadFloat32()
+	*(*world.Angle)(ptr) = world.ToAngle(f)
 }
 
 // Buffers large enough to hold most inbounds

@@ -46,7 +46,7 @@ func (vec Vec2f) Dot(otherVec Vec2f) float32 {
 }
 
 func (vec Vec2f) Angle() Angle {
-	return Angle(math32.Atan2(vec.Y, vec.X))
+	return ToAngle(math32.Atan2(vec.Y, vec.X))
 }
 
 // Rot90 rotates 90 degrees clockwise.

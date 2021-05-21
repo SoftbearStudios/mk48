@@ -80,7 +80,7 @@ func (h *Hub) Spawn() {
 			Transform: world.Transform{
 				Position:  data,
 				Velocity:  rand.Float32()*10 + 10,
-				Direction: world.Angle(rand.Float32() * math32.Pi * 2),
+				Direction: world.ToAngle(rand.Float32() * math32.Pi * 2),
 			},
 			EntityType: world.EntityTypeBarrel,
 		}
@@ -119,11 +119,11 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		for entity.Position == center || (entity.Data().Kind != world.EntityKindCollectible &&
 			entity.Data().Kind != world.EntityKindWeapon && h.nearAny(entity, threshold)) {
 
-			angle := world.Angle(rand.Float32() * 2 * math32.Pi)
+			angle := world.ToAngle(rand.Float32() * 2 * math32.Pi)
 			position := angle.Vec2f().Mul(math32.Sqrt(rand.Float32()) * radius)
 			entity.Position = center.Add(position)
 
-			angle = world.Angle(rand.Float32() * 2 * math32.Pi)
+			angle = world.ToAngle(rand.Float32() * 2 * math32.Pi)
 			entity.Direction = angle
 
 			radius = min(radius*1.1, h.worldRadius)

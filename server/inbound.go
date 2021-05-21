@@ -409,7 +409,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			}
 
 			if armamentEntityData.SubKind == world.EntitySubKindRocket {
-				transform.Direction += world.Angle(rand.Float32()-0.5) * 0.1
+				transform.Direction += world.ToAngle((rand.Float32() - 0.5) * 0.1)
 			}
 
 			armamentEntity := &world.Entity{

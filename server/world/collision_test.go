@@ -5,7 +5,6 @@ package world
 
 import (
 	"fmt"
-	"github.com/chewxy/math32"
 	"math/rand"
 	"testing"
 )
@@ -45,11 +44,11 @@ func BenchmarkEntity_Collides(b *testing.B) {
 func collidingEntities() [2]Entity {
 	return [...]Entity{
 		{
-			Transform:  Transform{Position: Vec2f{X: 5.0, Y: 5.0}, Direction: Angle(math32.Pi / 4)},
+			Transform:  Transform{Position: Vec2f{X: 5.0, Y: 5.0}, Direction: Pi / 4},
 			EntityType: ParseEntityType("fairmileD"),
 		},
 		{
-			Transform:  Transform{Position: Vec2f{X: -5.0, Y: 5.0}, Direction: Angle(math32.Pi * 3 / 5)},
+			Transform:  Transform{Position: Vec2f{X: -5.0, Y: 5.0}, Direction: Pi / 5 * 3},
 			EntityType: ParseEntityType("komar"),
 		},
 	}
@@ -58,11 +57,11 @@ func collidingEntities() [2]Entity {
 func nonCollidingEntities() [2]Entity {
 	return [...]Entity{
 		{
-			Transform:  Transform{Position: Vec2f{X: 10.0, Y: 10.0}, Direction: Angle(math32.Pi / 4)},
+			Transform:  Transform{Position: Vec2f{X: 10.0, Y: 10.0}, Direction: Pi / 4},
 			EntityType: ParseEntityType("fairmileD"),
 		},
 		{
-			Transform:  Transform{Position: Vec2f{X: -10.0, Y: 5.0}, Direction: Angle(math32.Pi * 3 / 5)},
+			Transform:  Transform{Position: Vec2f{X: -10.0, Y: 5.0}, Direction: Pi / 5 * 3},
 			EntityType: ParseEntityType("komar"),
 		},
 	}

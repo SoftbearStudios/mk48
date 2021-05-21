@@ -207,7 +207,7 @@ func (bot *BotClient) Send(out outbound) {
 			// Attack based on aggression.
 			if prob(r, float64(bot.aggression)) {
 				bestArmamentIndex := -1
-				bestArmamentAngleDiff := world.Angle(math32.MaxFloat32)
+				bestArmamentAngleDiff := float32(math32.MaxFloat32)
 
 				for index, armament := range shipData.Armaments {
 					armamentType := armament.Type
@@ -232,11 +232,11 @@ func (bot *BotClient) Send(out outbound) {
 					}
 				}
 
-				if bestArmamentIndex != -1 && closestEnemy.distanceSquared < square(4*shipData.Length) && bestArmamentAngleDiff < world.Angle(math32.Pi/3) {
+				if bestArmamentIndex != -1 && closestEnemy.distanceSquared < square(4*shipData.Length) && bestArmamentAngleDiff < math32.Pi/3 {
 					bot.receiveAsync(Fire{
 						Index: bestArmamentIndex,
 						Guidance: world.Guidance{
-							DirectionTarget: closestEnemyAngle + 0.25*world.Angle(r.Float64()-0.5),
+							DirectionTarget: closestEnemyAngle + world.ToAngle(0.25*(r.Float32()-0.5)),
 						},
 					})
 				}
@@ -246,7 +246,7 @@ func (bot *BotClient) Send(out outbound) {
 		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
 			// Avoid terrain by turning slowly.
 			manual.VelocityTarget = 5
-			manual.DirectionTarget = ship.Direction + world.Angle(math32.Pi/2)
+			manual.DirectionTarget = ship.Direction + world.Pi/2
 		} else if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
 			// Try to turn away from threats.
 			manual.VelocityTarget = 10

@@ -25,7 +25,7 @@ func TestJsonIter(t *testing.T) {
 		Contacts: []IDContact{{EntityID: testEntityID, Contact: Contact{
 			Guidance:            world.Guidance{DirectionTarget: 0.0},
 			IDPlayerData:        world.IDPlayerData{PlayerID: testPlayerID, PlayerData: testPlayerData},
-			Transform:           world.Transform{Position: world.Vec2f{X: 1.0, Y: 0.5}, Velocity: 0.2, Direction: 0.25},
+			Transform:           world.Transform{Position: world.Vec2f{X: 1.0, Y: 0.5}, Velocity: 0.2, Direction: world.ToAngle(0.25)},
 			ArmamentConsumption: []float32{0, 0.1, 0.2, 1.0},
 			Friendly:            false,
 			EntityType:          world.ParseEntityType("fairmileD"),
@@ -35,7 +35,7 @@ func TestJsonIter(t *testing.T) {
 		PlayerID: testPlayerID,
 	}}
 
-	const testUpdateString = `{"data":{"chats":[{"name":"bob","score":2,"team":"foo","message":"hi"}],"contacts":{"ffff":{"name":"bob","score":2,"team":"foo","playerID":"963fa0","position":{"x":1,"y":0.5},"velocity":0.2,"direction":0.25,"armamentConsumption":[0,0.1,0.2,1],"type":"fairmileD","uncertainty":0.2}},"playerID":"963fa0","entityID":"ffff"},"type":"update"}`
+	const testUpdateString = `{"data":{"chats":[{"name":"bob","score":2,"team":"foo","message":"hi"}],"contacts":{"ffff":{"name":"bob","score":2,"team":"foo","playerID":"963fa0","position":{"x":1,"y":0.5},"velocity":0.2,"direction":0.249943,"armamentConsumption":[0,0.1,0.2,1],"type":"fairmileD","uncertainty":0.2}},"playerID":"963fa0","entityID":"ffff"},"type":"update"}`
 
 	buf, err := json.Marshal(testUpdate)
 	if err != nil {

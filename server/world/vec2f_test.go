@@ -5,11 +5,28 @@ package world
 
 import (
 	"github.com/chewxy/math32"
+	"math/rand"
 	"testing"
 )
 
+func BenchmarkVec2f_Angle(b *testing.B) {
+	const count = 1024
+	vectors := make([]Vec2f, count)
+	for i := range vectors {
+		vectors[i] = Vec2f{X: rand.Float32()*100 - 50, Y: rand.Float32()*100 - 50}
+	}
+	b.ResetTimer()
+
+	var acc Angle
+	for i := 0; i < b.N; i++ {
+		v := vectors[i&(count-1)]
+		acc += v.Angle()
+	}
+	_ = acc
+}
+
 func approx(a, b float32) bool {
-	return math32.Abs(a-b) < 0.0001
+	return math32.Abs(a-b) < 0.02
 }
 
 func TestVec2f_Angle(t *testing.T) {
@@ -18,20 +35,22 @@ func TestVec2f_Angle(t *testing.T) {
 		ang Angle
 	}{
 		{Vec2f{0, 0}, 0},
-		{Vec2f{1, 1}, Angle(math32.Pi / 4)},
-		{Vec2f{0, 1}, Angle(math32.Pi / 2)},
-		{Vec2f{0, -1}, Angle(-math32.Pi / 2)},
+		{Vec2f{1, 1}, Pi / 4},
+		{Vec2f{0, 1}, Pi / 2},
+		{Vec2f{0, -1}, Pi / 2 * 3},
 	}
 
 	for _, test := range tests {
 		if !approx(float32(test.ang), float32(test.vec.Angle())) {
-			t.Errorf("expected %v -> %f, found %f", test.vec, test.ang, test.vec.Angle())
+			t.Errorf("expected %v.Angle(): %s, got %s", test.vec, test.ang, test.vec.Angle())
 		}
 	}
 
-	for i := Angle(-10); i < 10; i += 0.25 {
-		if !approx(0, float32(i.Diff(i.Vec2f().Angle()))) {
-			t.Errorf("error, expected %s got %s", i, i.Vec2f().Angle())
+	for i := float32(-10.0); i < 10; i += 0.25 {
+		a := ToAngle(i)
+		a2 := a.Vec2f().Angle()
+		if !approx(0, a.Diff(a2).Float()) {
+			t.Errorf("expected %s got %s", a, a2)
 		}
 	}
 }

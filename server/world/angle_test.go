@@ -13,7 +13,7 @@ func BenchmarkAngle_Diff(b *testing.B) {
 	const count = 1024
 	angles := make([]Angle, count)
 	for i := range angles {
-		angles[i] = Angle(rand.Float32() * math32.Pi * 2)
+		angles[i] = ToAngle(rand.Float32() * math32.Pi * 2)
 	}
 	b.ResetTimer()
 
@@ -30,7 +30,7 @@ func BenchmarkAngle_Vec2f(b *testing.B) {
 	const count = 1024
 	angles := make([]Angle, count)
 	for i := range angles {
-		angles[i] = Angle(rand.Float32() * math32.Pi * 2)
+		angles[i] = ToAngle(rand.Float32() * math32.Pi * 2)
 	}
 	b.ResetTimer()
 
@@ -43,16 +43,26 @@ func BenchmarkAngle_Vec2f(b *testing.B) {
 }
 
 func TestAngle_Diff(t *testing.T) {
-	for step := Angle(0.01); step < Angle(math32.Pi); step += 0.01 {
-		for i := Angle(-math32.Pi * 2); i < Angle(math32.Pi*2); i += step {
-			if !approx(float32(i.Diff(i-step)), float32(step)) {
-				t.Errorf("%f expected %f, found %f", i, step, i.Diff(i-step))
+	errs := 0
+
+	for step := float32(0.01); step < math32.Pi; step += 0.01 {
+		for i := -math32.Pi * 2; i < math32.Pi*2; i += step {
+			diff := ToAngle(i).Diff(ToAngle(i - step)).Float()
+			if !approx(diff, step) {
+				if errs++; errs > 20 {
+					t.FailNow()
+				}
+				t.Errorf("%f expected %f, found %f", i, step, diff)
 			}
 		}
 
-		for i := Angle(-math32.Pi * 2); i < Angle(math32.Pi*2); i += step {
-			if !approx(float32(i.Diff(i+step)), float32(-step)) {
-				t.Errorf("%f expected %f, found %f", i, -step, i.Diff(i+step))
+		for i := -math32.Pi * 2; i < math32.Pi*2; i += step {
+			diff := ToAngle(i).Diff(ToAngle(i + step)).Float()
+			if !approx(diff, -step) {
+				if errs++; errs > 20 {
+					t.FailNow()
+				}
+				t.Errorf("%f expected %f, found %f", i, -step, diff)
 			}
 		}
 	}
