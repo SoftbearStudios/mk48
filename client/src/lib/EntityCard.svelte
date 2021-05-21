@@ -46,6 +46,9 @@
 				{#if entityData.lifespan}
 					<li>Lifespan: {entityData.lifespan.toFixed(1)}s</li>
 				{/if}
+				{#if entityData.reload}
+					<li>Reload: {entityData.reload.toFixed(1)}s</li>
+				{/if}
 				{#if entityData.damage}
 					<li>Damage: {entityData.damage.toFixed(1)}</li>
 				{/if}
