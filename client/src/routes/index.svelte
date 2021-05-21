@@ -37,6 +37,7 @@
 	let altitudeTarget;
 	let lastAltitudeTarget; // last altitudeTarget sent to server
 	let lastSend = 0; // secondsTotal of last manual/aim
+	let perf = 0.5; // performance level in interval [0,1]
 
 	// Global leaderboard
 	let globalLeaderboard;
@@ -486,6 +487,7 @@
 
 		let secondsTotal = 0;
 		let frames = 0;
+		let traceCounter = 0;
 
 		updateGlobalLeaderboard();
 
@@ -496,15 +498,21 @@
 
 			const seconds = app.ticker.elapsedMS / 1000;
 			frames++;
-			const FPS_INTEGRATION = 60; // seconds
-			if (Math.floor((secondsTotal + seconds) / FPS_INTEGRATION) > Math.floor(secondsTotal / FPS_INTEGRATION)) {
-				const fps = frames / FPS_INTEGRATION;
-				console.log(`fps: ${fps}`);
-				send('trace', {fps});
+			const FPS_INTERVAL = 4; // seconds
+			if (Math.floor((secondsTotal + seconds) / FPS_INTERVAL) > Math.floor(secondsTotal / FPS_INTERVAL)) {
+				const fps = frames / FPS_INTERVAL;
+				perf = mapRanges(fps, 20, 55, 0, 1, true);
 
-				updateGlobalLeaderboard();
+				// Trace the first FPS calculation and every ~15 subsequent ones
+				if (traceCounter == 0 || traceCounter >= 15) {
+					console.log(`fps: ${fps}, perf: ${perf}`);
+					send('trace', {fps});
+					updateGlobalLeaderboard();
+					traceCounter = 1;
+				}
 
 				frames = 0;
+				traceCounter++;
 			}
 			secondsTotal += seconds;
 
@@ -717,7 +725,7 @@
 				const spriteDistance = dist(sprite.position, viewport.center);
 
 				if (spriteDistance <= visualRange) {
-					const amount =  0.03 * sprite.width * Math.log(sprite.velocity);
+					const amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
 					for (let i = 0; i < amount; i++) {
 						const wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
 
