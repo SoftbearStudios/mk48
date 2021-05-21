@@ -79,7 +79,7 @@ func (h *Hub) Spawn() {
 		barrelEntity := &world.Entity{
 			Transform: world.Transform{
 				Position:  data,
-				Velocity:  rand.Float32()*10 + 10,
+				Velocity:  world.ToVelocity(rand.Float32()*10 + 10),
 				Direction: world.ToAngle(rand.Float32() * math32.Pi * 2),
 			},
 			EntityType: world.EntityTypeBarrel,

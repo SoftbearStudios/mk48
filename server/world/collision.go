@@ -52,8 +52,8 @@ func (entity *Entity) Collides(otherEntity *Entity, seconds float32) bool {
 	data := entity.Data()
 	otherData := otherEntity.Data()
 
-	sweep := seconds * entity.Velocity
-	otherSweep := seconds * otherEntity.Velocity
+	sweep := seconds * entity.Velocity.Float()
+	otherSweep := seconds * otherEntity.Velocity.Float()
 
 	r2 := data.Radius + otherData.Radius + sweep + otherSweep
 	r2 *= r2

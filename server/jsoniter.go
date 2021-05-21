@@ -25,10 +25,12 @@ var json = func() jsoniter.API {
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.PlayerID(0)).String(), encodePlayerID, emptyPlayerID)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.TeamID(0)).String(), encodeTeamID, emptyTeamID)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Angle(0)).String(), encodeAngle, emptyAngle)
+	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Velocity(0)).String(), encodeVelocity, emptyVelocity)
 
 	// Decoders
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(Message{}).String(), decodeMessage)
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Angle(0)).String(), decodeAngle)
+	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Velocity(0)).String(), decodeVelocity)
 
 	return jsoniter.Config{
 		IndentionStep:                 0,
@@ -152,9 +154,23 @@ func emptyTeamID(ptr unsafe.Pointer) bool {
 	return *(*world.TeamID)(ptr) == world.TeamIDInvalid
 }
 
+func encodeVelocity(ptr unsafe.Pointer, stream *jsoniter.Stream) {
+	velocity := *(*world.Velocity)(ptr)
+	stream.WriteFloat32Lossy(velocity.Float())
+}
+
+func emptyVelocity(ptr unsafe.Pointer) bool {
+	return *(*world.Velocity)(ptr) == 0
+}
+
 func decodeAngle(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
 	f := iter.ReadFloat32()
 	*(*world.Angle)(ptr) = world.ToAngle(f)
+}
+
+func decodeVelocity(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
+	f := iter.ReadFloat32()
+	*(*world.Velocity)(ptr) = world.ToVelocity(f)
 }
 
 // Buffers large enough to hold most inbounds

@@ -137,7 +137,7 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	// Kludge offset
 	threshold -= 6
 
-	sweep := seconds * entity.Velocity
+	sweep := seconds * entity.Velocity.Float()
 	const graceMargin = 0.9
 	dimensions := world.Vec2f{X: data.Length + sweep, Y: data.Width}.Mul(0.5 * graceMargin)
 

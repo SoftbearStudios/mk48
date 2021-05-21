@@ -53,7 +53,7 @@ type (
 		InvSize   float32       `json:"-"`
 		Range     float32       `json:"range"`
 		Lifespan  float32       `json:"lifespan"`
-		Speed     float32       `json:"speed"`
+		Speed     Velocity      `json:"speed"`
 		Reload    float32       `json:"reload"` // time to reload
 		Damage    float32       `json:"damage"`
 		Stealth   float32       `json:"stealth"`

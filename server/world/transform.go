@@ -4,9 +4,9 @@
 package world
 
 type Transform struct {
-	Position  Vec2f   `json:"position"`
-	Velocity  float32 `json:"velocity"` // TODO omitempty crashes client
-	Direction Angle   `json:"direction"`
+	Position  Vec2f    `json:"position"`
+	Velocity  Velocity `json:"velocity"` // TODO omitempty crashes client
+	Direction Angle    `json:"direction"`
 }
 
 func (transform Transform) Add(otherTransform Transform) Transform {

@@ -19,10 +19,12 @@ type Entity struct {
 	Lifespan float32 // In seconds
 	Owner    *Player
 	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
+	_        [8]byte         // %5 faster to be power of 2 vs 12.5% smaller.
 }
 
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
 // by an amount of time. It only modifies itself so each one can be processed by a different goroutine.
+// seconds cannot be > 1.0.
 func (entity *Entity) Update(seconds float32, worldRadius float32, collider Collider) (die bool) {
 	data := entity.Data()
 
@@ -47,9 +49,9 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
 
 		// See #45 - automatically slow down to turn faster
-		maxSpeed /= max(square(deltaAngle.Abs()), 1)
+		maxSpeed = ToVelocity(maxSpeed.Float() / max(square(deltaAngle.Abs()), 1))
 
-		turnRate := math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(maxSpeed+1))
+		turnRate := math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
 		entity.Direction += deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
 	}
 
@@ -75,12 +77,12 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 
 	turretsCopied := entity.updateTurretAim(seconds)
 
-	if math32.Abs(entity.VelocityTarget) > 0.01 || math32.Abs(entity.Velocity) > 0.01 {
-		deltaVelocity := clampMagnitude(entity.VelocityTarget, maxSpeed) - entity.Velocity
-		deltaVelocity = clampMagnitude(deltaVelocity, 800*seconds) // max acceleration
-		entity.Velocity += min(seconds, 1) * deltaVelocity
+	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
+		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
+		deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800*seconds)) // max acceleration
+		entity.Velocity += ToVelocity(seconds * deltaVelocity.Float())
 
-		distance := seconds * entity.Velocity
+		distance := seconds * entity.Velocity.Float()
 
 		entity.Distance += distance
 		if data.Range != 0 && entity.Distance > data.Range {
@@ -95,7 +97,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 			if entity.Data().Kind != EntityKindBoat {
 				return true
 			}
-			entity.Velocity = clampMagnitude(entity.Velocity, 5)
+			entity.Velocity = entity.Velocity.ClampMagnitude(5*MeterPerSecond)
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
 				entity.Damage += seconds * entity.MaxHealth() * 0.25
 				if entity.Dead() {
@@ -112,7 +114,7 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 	centerDist2 := entity.Position.LengthSquared()
 	if centerDist2 > square(worldRadius) {
 		entity.Damage += seconds * entity.MaxHealth() * 0.25
-		entity.Velocity += clampMagnitude(entity.Velocity-6*entity.Position.Dot(entity.Direction.Vec2f()), 15)
+		entity.Velocity += ToVelocity(clampMagnitude(entity.Velocity.Float()-6*entity.Position.Dot(entity.Direction.Vec2f()), 15))
 		// Everything but boats is instantly killed by border
 		if data.Kind != EntityKindBoat || entity.Dead() || centerDist2 > square(worldRadius*RadiusClearance) {
 			if owner := entity.Owner; owner != nil && entity.Data().Kind == EntityKindBoat {
@@ -336,7 +338,7 @@ func ArmamentTransform(entityType EntityType, entityTransform Transform, turretA
 	weaponData := armamentData.Default.Data()
 	if weaponData.SubKind == EntitySubKindShell {
 		// Model shells with instantaneous accelerations to half of muzzle velocity
-		transform.Velocity = weaponData.Speed * 0.5
+		transform.Velocity = weaponData.Speed / 2
 	}
 
 	if armamentData.Turret != nil {
