@@ -3297,9 +3297,9 @@
 		"level": 3,
 		"length": 1.0725,
 		"width": 1.32,
-		"lifespan": 1800,
+		"lifespan": 900,
 		"damage": 1.5,
-		"reload": 1350,
+		"reload": 30,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []

@@ -72,7 +72,7 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 2.5;
 						break;
 					case 'mine':
-						entityData.reload = entityData.lifespan * 0.75;
+						entityData.reload = 30;
 						break;
 					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
