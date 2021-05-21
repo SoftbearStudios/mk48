@@ -3,7 +3,6 @@ module mk48
 go 1.16
 
 require (
-	github.com/13rac1/fastmath v1.0.0
 	github.com/aquilax/go-perlin v1.0.0
 	github.com/aws/aws-sdk-go v1.38.39
 	github.com/chewxy/math32 v1.0.8

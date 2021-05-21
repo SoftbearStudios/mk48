@@ -6,32 +6,32 @@ package world
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/13rac1/fastmath"
 	"github.com/chewxy/math32"
 )
 
-const Pi Angle = 32768
+const Pi = 32768
 
 // Angle is a 2 byte fixed-point representation of an angle.
+// To convert a float in radians to an Angle use ToAngle.
 type Angle uint16
 
+// ToAngle converts a float in the range of an [MinInt32, MaxInt32] to an angle.
 func ToAngle(x float32) Angle {
-	return Angle(x * (float32(Pi) / math32.Pi))
+	x *= Pi / math32.Pi
+	return Angle(int16(int32(x)))
 }
 
+// Float returns angle in range [-π, π)
 func (angle Angle) Float() float32 {
-	return float32(int16(angle)) * (math32.Pi * 2 / 65536)
+	return float32(int16(angle)) * (math32.Pi / Pi)
 }
 
 func (angle Angle) Vec2f() Vec2f {
-	// ~57ns to ~38ns by using fastmath
-	sin := fastmath.Sin16(uint16(angle))
-	cos := fastmath.Cos16(uint16(angle))
-
-	// Using float64 for temporary increased precision maybe isn't necessary
+	// Converting to range [0, 2π) instead of [-π, π) increases speed by 10%.
+	sin, cos := math32.Sincos(float32(angle) * (math32.Pi / Pi))
 	return Vec2f{
-		X: float32(float64(cos) * (1.0 / 32767)),
-		Y: float32(float64(sin) * (1.0 / 32767)),
+		X: cos,
+		Y: sin,
 	}
 }
 
