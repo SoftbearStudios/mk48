@@ -612,8 +612,10 @@
 								armamentAngle += (localEntity.turretAngles[armament.turret] || localEntityData.turrets[armament.turret].angle);
 							}
 
+							const armamentEntityData = entityData[armament.default];
+
 							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
-							if (armament.airdrop || armament.vertical) {
+							if (armament.airdrop || armament.vertical || ['depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
 								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
 							}

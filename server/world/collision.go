@@ -34,9 +34,10 @@ func (entity *Entity) AltitudeOverlap(other *Entity) bool {
 	}
 
 	if boat != nil && weapon != nil && boat.Altitude() <= 0.0 {
-		if weapon.Data().SubKind == EntitySubKindDepthCharge || weapon.Data().SubKind == EntitySubKindTorpedo {
+		subKind := weapon.Data().SubKind
+		if subKind == EntitySubKindDepthCharge || subKind == EntitySubKindTorpedo || subKind == EntitySubKindMine {
 			// Until depth change for weapons is modeled:
-			// - Depth charges can hit submerged submarines regardless of depth
+			// - Depth charges/mines can hit submerged submarines regardless of depth
 			// - All torpedoes hit submerged submarines
 			return true
 		}

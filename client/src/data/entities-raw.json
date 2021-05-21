@@ -746,6 +746,61 @@
 			}
 		]
 	},
+	"lublin": {
+		"label": "Lublin",
+		"link": "https://en.wikipedia.org/wiki/Lublin-class_minelayer-landing_ship",
+		"type": "boat",
+		"subtype": "minelayer",
+		"level": 3,
+		"length": 95.8,
+		"width": 10.8,
+		"speed": 8.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "wz08_39",
+				"positionForward": -38,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -39,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -40,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -41,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -42,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			}
+		]
+	},
 	"momi": {
 		"label": "Momi",
 		"link": "https://en.wikipedia.org/wiki/Momi-class_destroyer",
@@ -1904,5 +1959,15 @@
 		"width": 0.533,
 		"speed": 23.2,
 		"range": 18000
+	},
+	"wz08_39": {
+		"label": "wz. 08/39",
+		"link": "https://pl.wikipedia.org/wiki/Plik:Mina_morska_typu_M_1908-39.jpg",
+		"type": "weapon",
+		"subtype": "mine",
+		"level":3,
+		"length": 1.0725,
+		"width": 1.32,
+		"lifespan": 1800
 	}
 }

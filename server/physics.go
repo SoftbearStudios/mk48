@@ -113,6 +113,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		entityData := entity.Data()
 		otherData := other.Data()
 		friendly := entity.Owner.Friendly(other.Owner)
+		dist2 := entity.Position.DistanceSquared(other.Position)
 
 		// Only do collision once when concurrent
 		//if entityData.Radius < otherData.Radius || (entityData.Radius == otherData.Radius && entityID > otherEntityID) {
@@ -151,9 +152,17 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 				collectible.Velocity = 20.0
 			}
 
-			// Home towards target
-			if !friendly && entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
-				entity.UpdateSensor(other)
+			if !friendly {
+				// Mines do too
+				if boat != nil && weapon != nil && weapon.Data().SubKind == world.EntitySubKindMine && dist2 < 50*50 {
+					weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
+					weapon.Velocity = 5
+				}
+
+				// Home towards target/decoy
+				if entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
+					entity.UpdateSensor(other)
+				}
 			}
 
 			return
@@ -202,7 +211,6 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		case boat != nil && weapon != nil && !friendly:
 			damageMultiplier := boat.RecentSpawnFactor()
 
-			dist2 := boat.Position.DistanceSquared(weapon.Position)
 			r2 := square(boat.Data().Radius)
 			damageMultiplier *= collisionMultiplier(dist2, r2)
 

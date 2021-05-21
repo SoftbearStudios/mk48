@@ -45,6 +45,9 @@ for (const entityType of Object.keys(entityDatas)) {
 				}
 				*/
 				break;
+			case 'mine':
+				entityData.damage = 1.5;
+				break;
 			case 'rocket':
 			case 'missile':
 				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
@@ -67,6 +70,9 @@ for (const entityType of Object.keys(entityDatas)) {
 						break;
 					case 'rocket':
 						entityData.reload = 2.5;
+						break;
+					case 'mine':
+						entityData.reload = entityData.lifespan * 0.75;
 						break;
 					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);

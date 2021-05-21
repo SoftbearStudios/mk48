@@ -137,11 +137,8 @@ export function disconnect() {
 
 export function send(type, data = {}) {
 	if (!socket || socket.readyState !== WebSocket.OPEN) {
-		console.log('cannot send')
-		debugger;
 		return;
 	}
-	console.log('sending '+JSON.stringify({type, data}))
 	socket.send(JSON.stringify({type, data}));
 }
 

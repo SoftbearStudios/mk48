@@ -46,7 +46,7 @@ func (entity *Entity) Altitude() float32 {
 	}
 
 	switch entity.EntityType.Data().SubKind {
-	case EntitySubKindTorpedo, EntitySubKindDepthCharge:
+	case EntitySubKindTorpedo, EntitySubKindDepthCharge, EntitySubKindMine:
 		// By multiplying by almost  negative one, these entities are allowed to
 		// hit surface ships, but not much airborne things
 		return -0.9 * AltitudeCollisionThreshold
