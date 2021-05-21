@@ -21,7 +21,7 @@ const (
 	debugPeriod       = time.Second * 5
 	leaderboardPeriod = time.Second
 	spawnPeriod       = leaderboardPeriod
-	updatePeriod      = time.Second / 10
+	updatePeriod      = world.TickPeriod
 
 	// encodeBotMessages makes BotClient.Send marshal json and check for errors.
 	// Only useful for testing/benchmarking (drops performance significantly).
@@ -150,10 +150,16 @@ func (h *Hub) run() {
 			}
 		case <-h.updateTicker.C:
 			now := time.Now()
-			timeDelta := now.Sub(h.updateTime)
+			timeDelta := now.Sub(h.updateTime) + updatePeriod/10 // Kludge factor
 			h.updateTime = now
 
-			h.Physics(timeDelta)
+			// Falling behind skip tick
+			if timeDelta%updatePeriod > updatePeriod/5 {
+				break
+			}
+
+			ticks := world.Ticks(timeDelta / updatePeriod)
+			h.Physics(ticks)
 			h.Update()
 		case <-h.leaderboardTicker.C:
 			h.terrain.Repair()

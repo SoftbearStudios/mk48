@@ -9,7 +9,7 @@ type safeExtension struct {
 	target    Vec2f     // turret target position
 	alt       float32   // altitude (see entity.Altitude for meaning)
 	altTarget float32   // desired altitude
-	time      float32   // entity lifespan when last aimed turrets
+	time      Ticks     // entity lifespan when last aimed turrets
 }
 
 var _ = extension(&safeExtension{})
@@ -60,11 +60,11 @@ func (ext *safeExtension) setTurretTarget(target Vec2f) {
 	ext.target = target
 }
 
-func (ext *safeExtension) turretTargetTime() float32 {
+func (ext *safeExtension) turretTargetTime() Ticks {
 	return ext.time
 }
 
-func (ext *safeExtension) setTurretTargetTime(t float32) {
+func (ext *safeExtension) setTurretTargetTime(t Ticks) {
 	ext.time = t
 }
 

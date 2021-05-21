@@ -8,23 +8,23 @@ import (
 )
 
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
-// Its size is 56 bytes + 8 bytes for entityID in sectorEntity = 64 bytes for optimal efficiency.
+// Its size is 40 bytes + 16 bytes padding + 8 bytes for entityID in sectorEntity = 64 bytes for optimal efficiency.
 // Cannot modify EntityType directly.
 type Entity struct {
 	Transform
 	Guidance
 	EntityType
+	Lifespan Ticks
 	Damage   float32
-	Lifespan float32 // In seconds
 	Owner    *Player
 	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
-	_        [8]byte         // %5 faster to be power of 2 vs 12.5% smaller.
+	_        [16]byte        // remove when entity is 32 bytes
 }
 
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
 // by an amount of time. It only modifies itself so each one can be processed by a different goroutine.
 // seconds cannot be > 1.0.
-func (entity *Entity) Update(seconds float32, worldRadius float32, collider Collider) (die bool) {
+func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
 	data := entity.Data()
 
 	// Die
@@ -35,13 +35,14 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		return true
 	}
 
-	entity.Lifespan += seconds
+	entity.Lifespan += ticks
 	if data.Lifespan != 0 && entity.Lifespan > data.Lifespan {
 		return true
 	}
 
 	// The following movement-related code must match the client's code
 	maxSpeed := data.Speed
+	seconds := ticks.Float()
 
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
@@ -74,7 +75,10 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		entity.ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
-	turretsCopied := entity.updateTurretAim(seconds)
+	var turretsCopied bool
+	if data.Kind == EntityKindBoat {
+		turretsCopied = entity.updateTurretAim(seconds)
+	}
 
 	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
 		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
@@ -183,7 +187,7 @@ func (entity *Entity) RecentSpawnFactor() float32 {
 	}
 	const initial float32 = 0.75 // initial protection against damage, etc.
 	const seconds float32 = 15   // how long effect lasts
-	return min(1-initial+entity.Lifespan*(initial/seconds), 1)
+	return min(1-initial+entity.Lifespan.Float()*(initial/seconds), 1)
 }
 
 // Returns whether copied turret angles
@@ -192,12 +196,14 @@ func (entity *Entity) updateTurretAim(seconds float32) bool {
 
 	// Don't rotate turret if aim first is semi-fresh
 	turretTargetTime := entity.TurretTargetTime()
-	data := entity.Data()
-	if entity.Lifespan < turretTargetTime+1 || entity.Lifespan > turretTargetTime+5 {
+
+	if entity.Lifespan-turretTargetTime < 1*TicksPerSecond || entity.Lifespan-turretTargetTime > 5*TicksPerSecond {
+		data := entity.Data()
+
 		for i := range entity.TurretAngles() {
 			turretData := data.Turrets[i]
 			directionTarget := turretData.Angle
-			if entity.Lifespan < turretTargetTime+5 { // turret target lasts for 5 seconds
+			if entity.Lifespan < turretTargetTime+5*TicksPerSecond { // turret target lasts for 5 seconds
 				turretGlobalTransform := entity.Transform.Add(Transform{
 					Position: Vec2f{
 						X: turretData.PositionForward,

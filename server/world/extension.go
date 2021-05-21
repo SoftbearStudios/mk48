@@ -19,8 +19,8 @@ type extension interface {
 	turretTarget() Vec2f // Where turret want to point
 	setTurretTarget(target Vec2f)
 
-	turretTargetTime() float32 // Time in terms of lifespan when turret target was set
-	setTurretTargetTime(t float32)
+	turretTargetTime() Ticks // Time in terms of lifespan when turret target was set
+	setTurretTargetTime(t Ticks)
 
 	altitude() float32
 	setAltitude(float32)
@@ -75,10 +75,10 @@ func (entity *Entity) SetTurretTarget(target Vec2f) {
 	entity.ext.setTurretTarget(target)
 }
 
-func (entity *Entity) TurretTargetTime() float32 {
+func (entity *Entity) TurretTargetTime() Ticks {
 	return entity.ext.turretTargetTime()
 }
 
-func (entity *Entity) SetTurretTargetTime(t float32) {
+func (entity *Entity) SetTurretTargetTime(t Ticks) {
 	entity.ext.setTurretTargetTime(t)
 }

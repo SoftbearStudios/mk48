@@ -381,7 +381,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			}
 
 			// Start distance/lifespan at 0 seconds, with few exceptions
-			var lifespan float32
+			var lifespan world.Ticks
 
 			if armamentData.Airdrop {
 				const airdropRange = 500
@@ -395,7 +395,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				armamentGuidance.DirectionTarget = transform.Direction
 
 				// Start the distance/lifespan near expiry to make these torpedoes not last long
-				const maxLifespan = 10
+				const maxLifespan = 10 * world.TicksPerSecond
 				if armamentEntityData.Lifespan > maxLifespan {
 					lifespan = armamentEntityData.Lifespan - maxLifespan
 				}

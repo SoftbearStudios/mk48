@@ -47,12 +47,12 @@ type (
 		Kind      EntityKind    `json:"type"`
 		SubKind   EntitySubKind `json:"subtype"`
 		Level     uint8         `json:"level"`
+		Lifespan  Ticks         `json:"lifespan"`
+		Speed     Velocity      `json:"speed"`
 		Length    float32       `json:"length"`
 		Width     float32       `json:"width"`
 		Radius    float32       `json:"-"`
 		InvSize   float32       `json:"-"`
-		Lifespan  float32       `json:"lifespan"`
-		Speed     Velocity      `json:"speed"`
 		Reload    float32       `json:"reload"` // time to reload
 		Damage    float32       `json:"damage"`
 		Stealth   float32       `json:"stealth"`

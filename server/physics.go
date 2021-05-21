@@ -25,10 +25,10 @@ func logDeath(entity *world.Entity) {
 	}
 }
 
-func (h *Hub) Physics(timeDelta time.Duration) {
+func (h *Hub) Physics(ticks world.Ticks) {
 	defer h.timeFunction("physics", time.Now())
 
-	timeDeltaSeconds := min(float32(timeDelta.Seconds()), 1.0)
+	timeDeltaSeconds := min(ticks.Float(), 1.0)
 
 	{
 		terrain := world.Collider(h.terrain)
@@ -62,7 +62,7 @@ func (h *Hub) Physics(timeDelta time.Duration) {
 		// Update movement and record various outputs
 		h.world.SetParallel(true)
 		h.world.ForEntities(func(_ world.EntityID, e *world.Entity) (_, remove bool) {
-			remove = e.Update(timeDeltaSeconds, h.worldRadius, terrain)
+			remove = e.Update(ticks, h.worldRadius, terrain)
 			if e.Data().Kind == world.EntityKindBoat {
 				if remove {
 					boatOutput <- *e // Copy entity

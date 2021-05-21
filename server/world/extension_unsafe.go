@@ -19,7 +19,7 @@ type (
 		target    Vec2f
 		alt       float32
 		altTarget float32
-		time      float32
+		time      Ticks
 		first     [0]float32
 		// armaments [?]float32
 		// angles    [?]float32
@@ -134,13 +134,13 @@ func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
 	ext.data.target = target
 }
 
-func (ext *unsafeExtension) turretTargetTime() float32 {
+func (ext *unsafeExtension) turretTargetTime() Ticks {
 	if ext.data == nil {
 		return 0
 	}
 	return ext.data.time
 }
 
-func (ext *unsafeExtension) setTurretTargetTime(t float32) {
+func (ext *unsafeExtension) setTurretTargetTime(t Ticks) {
 	ext.data.time = t
 }
