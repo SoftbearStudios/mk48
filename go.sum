@@ -1,4 +1,6 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+github.com/13rac1/fastmath v1.0.0 h1:XwpBf4GWQVmuBAZqIn3S0TSJFNNeJ2VCz0Hzhg3cx2o=
+github.com/13rac1/fastmath v1.0.0/go.mod h1:k3NHN6mnipTLXHLGCM5/R5HcTwfIZTwWR9vrm/p2Fvc=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/aquilax/go-perlin v1.0.0 h1:7KBttX3KwqipwhmIVE/B2cEZVYiOZpoE/q8HsS6HBoQ=
 github.com/aquilax/go-perlin v1.0.0/go.mod h1:z9Rl7EM4BZY0Ikp2fEN1I5mKSOJ26HQpk0O2TBdN2HE=

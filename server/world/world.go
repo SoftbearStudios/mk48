@@ -168,7 +168,7 @@ func createTestWorld(world World, entityCount int, radius int) testWorld {
 			Transform: Transform{
 				Position:  pos,
 				Velocity:  rand.Float32() * entityType.Data().Speed,
-				Direction: Angle(rand.Float32() * math32.Pi * 2),
+				Direction: ToAngle(rand.Float32() * math32.Pi * 2),
 			},
 		}
 		entityIDs[i] = world.AddEntity(&entity)

@@ -47,10 +47,10 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
 
 		// See #45 - automatically slow down to turn faster
-		maxSpeed /= max(square(float32(deltaAngle.Abs())), 1)
+		maxSpeed /= max(square(deltaAngle.Abs()), 1)
 
-		turnRate := Angle(math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(maxSpeed+1)))
-		entity.Direction += deltaAngle.ClampMagnitude(Angle(seconds) * turnRate)
+		turnRate := math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity)/(maxSpeed+1))
+		entity.Direction += deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
 	}
 
 	if data.SubKind == EntitySubKindSubmarine {
@@ -160,13 +160,13 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	angle := diff.Angle()
 
 	angleTargetDiff := entity.DirectionTarget.Diff(angle).Abs()
-	if angleTargetDiff > Angle(math32.Pi/3) {
+	if angleTargetDiff > math32.Pi/3 {
 		// Should not go off target
 		return
 	}
 
 	angleDiff := entity.Direction.Diff(angle).Abs()
-	if angleDiff > Angle(math32.Pi/3) {
+	if angleDiff > math32.Pi/3 {
 		// Cannot sense beyond this angle
 		return
 	}
@@ -217,7 +217,7 @@ func (entity *Entity) updateTurretAim(seconds float32) bool {
 				directionTarget = globalDirection - entity.Direction
 			}
 			deltaAngle := directionTarget.Diff(entity.TurretAngles()[i])
-			angle := deltaAngle.ClampMagnitude(Angle(seconds))
+			angle := deltaAngle.ClampMagnitude(ToAngle(seconds))
 
 			if angle != 0 {
 				// Copy on write

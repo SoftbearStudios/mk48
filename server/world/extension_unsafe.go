@@ -28,8 +28,8 @@ type (
 
 var _ = extension(&unsafeExtension{})
 
-func unsafeDataLen(data *EntityTypeData) int {
-	return int(unsafe.Sizeof(unsafeData{})/unsafe.Sizeof(float32(0))) + len(data.Armaments) + len(data.Turrets)
+func unsafeDataSize(data *EntityTypeData) int {
+	return int(unsafe.Sizeof(unsafeData{}) + uintptr(len(data.Armaments))*unsafe.Sizeof(float32(0)) + uintptr(len(data.Turrets))*unsafe.Sizeof(Angle(0)))
 }
 
 // setEntityType initializes to a size defined by entityType
@@ -38,8 +38,8 @@ func (ext *unsafeExtension) setType(entityType EntityType) {
 	oldExt := ext.data
 
 	// Allocate enough space for target, time, armaments, and angles
-	size := unsafeDataLen(data)
-	ext.data = (*unsafeData)(unsafe.Pointer(&make([]float32, size)[0]))
+	size := unsafeDataSize(data)
+	ext.data = (*unsafeData)(unsafe.Pointer(&make([]byte, size)[0]))
 
 	// Only keep target and target time
 	if oldExt != nil {
@@ -61,15 +61,15 @@ func (ext *unsafeExtension) copiesAll() bool {
 // copy reallocates data of same size
 func (ext *unsafeExtension) copy(entityType EntityType) {
 	data := entityType.Data()
-	size := unsafeDataLen(data)
+	size := unsafeDataSize(data)
 
-	var src []float32
+	var src []byte
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&src))
 	header.Data = uintptr(unsafe.Pointer(ext.data))
 	header.Len = size
 	header.Cap = size
 
-	dst := make([]float32, len(src))
+	dst := make([]byte, len(src))
 	copy(dst, src)
 
 	ext.data = (*unsafeData)(unsafe.Pointer(&dst[0]))
