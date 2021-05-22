@@ -4,12 +4,12 @@
 package world
 
 type safeExtension struct {
-	armaments []float32 // consumption of each armament
-	angles    []Angle   // angle of each turret
-	target    Vec2f     // turret target position
-	alt       float32   // altitude (see entity.Altitude for meaning)
-	altTarget float32   // desired altitude
-	time      float32   // entity lifespan when last aimed turrets
+	armaments []Ticks // consumption of each armament
+	angles    []Angle // angle of each turret
+	target    Vec2f   // turret target position
+	alt       float32 // altitude (see entity.Altitude for meaning)
+	altTarget float32 // desired altitude
+	time      Ticks   // entity lifespan when last aimed turrets
 }
 
 var _ = extension(&safeExtension{})
@@ -21,7 +21,7 @@ func (ext *safeExtension) setType(entityType EntityType) {
 	*ext = safeExtension{target: ext.target, time: ext.time, altTarget: ext.altTarget}
 
 	// Replenish all
-	ext.armaments = make([]float32, len(data.Armaments))
+	ext.armaments = make([]Ticks, len(data.Armaments))
 
 	// Reset turrets to base positions
 	turrets := data.Turrets
@@ -36,12 +36,14 @@ func (ext *safeExtension) copiesAll() bool {
 	return false
 }
 
-func (ext *safeExtension) armamentConsumption(_ EntityType) []float32 {
+func (ext *safeExtension) armamentConsumption(_ EntityType) []Ticks {
 	return ext.armaments
 }
 
 func (ext *safeExtension) copyArmamentConsumption(_ EntityType) {
-	ext.armaments = copyFloats(ext.armaments)
+	a := make([]Ticks, len(ext.armaments))
+	copy(a, ext.armaments)
+	ext.armaments = a
 }
 
 func (ext *safeExtension) turretAngles(_ EntityType) []Angle {
@@ -58,14 +60,6 @@ func (ext *safeExtension) turretTarget() Vec2f {
 
 func (ext *safeExtension) setTurretTarget(target Vec2f) {
 	ext.target = target
-}
-
-func (ext *safeExtension) turretTargetTime() float32 {
-	return ext.time
-}
-
-func (ext *safeExtension) setTurretTargetTime(t float32) {
-	ext.time = t
 }
 
 func (ext *safeExtension) altitude() float32 {

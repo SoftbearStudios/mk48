@@ -52,7 +52,7 @@ type (
 	Manual struct {
 		world.Guidance
 		AltitudeTarget *float32       `json:"altitudeTarget"`
-		TurretTarget   *world.Vec2f   `json:"turretTarget"`
+		TurretTarget   world.Vec2f    `json:"turretTarget"`
 		EntityID       world.EntityID `json:"entityID"`
 	}
 
@@ -336,7 +336,6 @@ func (data AimTurrets) Inbound(h *Hub, _ Client, player *Player) {
 		}
 
 		entity.SetTurretTarget(data.Target)
-		entity.SetTurretTargetTime(entity.Lifespan)
 		return
 	})
 }
@@ -352,8 +351,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			return
 		}
 
-		// Do after bounds check to not use infinite memory
-		if !entity.HasArmament(data.Index) {
+		if entity.ArmamentConsumption()[data.Index] != 0 {
 			return
 		}
 
@@ -381,7 +379,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			}
 
 			// Start distance/lifespan at 0 seconds, with few exceptions
-			var lifespan float32
+			var lifespan world.Ticks
 
 			if armamentData.Airdrop {
 				const airdropRange = 500
@@ -395,7 +393,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				armamentGuidance.DirectionTarget = transform.Direction
 
 				// Start the distance/lifespan near expiry to make these torpedoes not last long
-				const maxLifespan = 10
+				const maxLifespan = 10 * world.TicksPerSecond
 				if armamentEntityData.Lifespan > maxLifespan {
 					lifespan = armamentEntityData.Lifespan - maxLifespan
 				}
@@ -438,10 +436,7 @@ func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
 			entity.SetAltitudeTarget(*data.AltitudeTarget)
 		}
 
-		if data.TurretTarget != nil {
-			entity.SetTurretTarget(*data.TurretTarget)
-			entity.SetTurretTargetTime(entity.Lifespan) // refresh expiration
-		}
+		entity.SetTurretTarget(data.TurretTarget)
 
 		return
 	})

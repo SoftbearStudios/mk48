@@ -26,11 +26,13 @@ var json = func() jsoniter.API {
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.TeamID(0)).String(), encodeTeamID, emptyTeamID)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Angle(0)).String(), encodeAngle, emptyAngle)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Velocity(0)).String(), encodeVelocity, emptyVelocity)
+	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Ticks(0)).String(), encodeTicks, emptyTicks)
 
 	// Decoders
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(Message{}).String(), decodeMessage)
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Angle(0)).String(), decodeAngle)
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Velocity(0)).String(), decodeVelocity)
+	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(world.Ticks(0)).String(), decodeTicks)
 
 	return jsoniter.Config{
 		IndentionStep:                 0,
@@ -144,6 +146,15 @@ func emptyPlayerID(ptr unsafe.Pointer) bool {
 	return *(*world.PlayerID)(ptr) == world.PlayerIDInvalid
 }
 
+func encodeTicks(ptr unsafe.Pointer, stream *jsoniter.Stream) {
+	ticks := *(*world.Ticks)(ptr)
+	stream.WriteFloat32Lossy(ticks.Float())
+}
+
+func emptyTicks(ptr unsafe.Pointer) bool {
+	return *(*world.Ticks)(ptr) == 0
+}
+
 func encodeTeamID(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	id := *(*world.TeamID)(ptr)
 	// Short string
@@ -166,6 +177,11 @@ func emptyVelocity(ptr unsafe.Pointer) bool {
 func decodeAngle(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
 	f := iter.ReadFloat32()
 	*(*world.Angle)(ptr) = world.ToAngle(f)
+}
+
+func decodeTicks(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
+	f := iter.ReadFloat32()
+	*(*world.Ticks)(ptr) = world.ToTicks(f)
 }
 
 func decodeVelocity(ptr unsafe.Pointer, iter *jsoniter.Iterator) {

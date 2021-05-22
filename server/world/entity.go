@@ -8,23 +8,23 @@ import (
 )
 
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
-// Its size is 56 bytes + 8 bytes for entityID in sectorEntity = 64 bytes for optimal efficiency.
+// Its size is 40 bytes + 16 bytes padding + 8 bytes for entityID in sectorEntity = 64 bytes for optimal efficiency.
 // Cannot modify EntityType directly.
 type Entity struct {
 	Transform
 	Guidance
 	EntityType
+	Lifespan Ticks
 	Damage   float32
-	Lifespan float32 // In seconds
 	Owner    *Player
 	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
-	_        [8]byte         // %5 faster to be power of 2 vs 12.5% smaller.
+	_        [16]byte        // remove when entity is 32 bytes
 }
 
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
 // by an amount of time. It only modifies itself so each one can be processed by a different goroutine.
 // seconds cannot be > 1.0.
-func (entity *Entity) Update(seconds float32, worldRadius float32, collider Collider) (die bool) {
+func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
 	data := entity.Data()
 
 	// Die
@@ -35,13 +35,14 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		return true
 	}
 
-	entity.Lifespan += seconds
+	entity.Lifespan += ticks
 	if data.Lifespan != 0 && entity.Lifespan > data.Lifespan {
 		return true
 	}
 
 	// The following movement-related code must match the client's code
 	maxSpeed := data.Speed
+	seconds := ticks.Float()
 
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
@@ -74,7 +75,10 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		entity.ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
-	turretsCopied := entity.updateTurretAim(seconds)
+	var turretsCopied bool
+	if data.Kind == EntityKindBoat {
+		turretsCopied = entity.updateTurretAim(seconds)
+	}
 
 	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
 		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
@@ -120,10 +124,10 @@ func (entity *Entity) Update(seconds float32, worldRadius float32, collider Coll
 		// If turrets were already copied and the extension
 		// copies everything armaments don't need to be copied
 		armamentsCopied := entity.ext.copiesAll() && turretsCopied
-		replenishAmount := seconds
+		replenishAmount := ticks
 		if underwater {
 			// Submerged submarines reload slower
-			replenishAmount *= 0.2
+			replenishAmount /= 4
 		}
 		entity.replenish(replenishAmount, armamentsCopied)
 	}
@@ -183,42 +187,39 @@ func (entity *Entity) RecentSpawnFactor() float32 {
 	}
 	const initial float32 = 0.75 // initial protection against damage, etc.
 	const seconds float32 = 15   // how long effect lasts
-	return min(1-initial+entity.Lifespan*(initial/seconds), 1)
+	return min(1-initial+entity.Lifespan.Float()*(initial/seconds), 1)
 }
 
 // Returns whether copied turret angles
 func (entity *Entity) updateTurretAim(seconds float32) bool {
 	turretsCopied := false
-
-	// Don't rotate turret if aim first is semi-fresh
-	turretTargetTime := entity.TurretTargetTime()
 	data := entity.Data()
-	if entity.Lifespan < turretTargetTime+1 || entity.Lifespan > turretTargetTime+5 {
-		for i := range entity.TurretAngles() {
-			turretData := data.Turrets[i]
-			directionTarget := turretData.Angle
-			if entity.Lifespan < turretTargetTime+5 { // turret target lasts for 5 seconds
-				turretGlobalTransform := entity.Transform.Add(Transform{
-					Position: Vec2f{
-						X: turretData.PositionForward,
-						Y: turretData.PositionSide,
-					},
-					Direction: entity.TurretAngles()[i],
-				})
-				globalDirection := entity.TurretTarget().Sub(turretGlobalTransform.Position).Angle()
-				directionTarget = globalDirection - entity.Direction
-			}
-			deltaAngle := directionTarget.Diff(entity.TurretAngles()[i])
-			angle := deltaAngle.ClampMagnitude(ToAngle(seconds))
+	angles := entity.TurretAngles()
 
-			if angle != 0 {
-				// Copy on write
-				if !turretsCopied {
-					turretsCopied = true
-					entity.ext.copyTurretAngles(entity.EntityType)
-				}
-				entity.TurretAngles()[i] += angle
+	for i := range angles {
+		turretData := data.Turrets[i]
+		directionTarget := turretData.Angle
+		if target := entity.TurretTarget(); target != (Vec2f{}) { // turret target lasts for 5 seconds
+			turretGlobalTransform := entity.Transform.Add(Transform{
+				Position: Vec2f{
+					X: turretData.PositionForward,
+					Y: turretData.PositionSide,
+				},
+				Direction: angles[i],
+			})
+			globalDirection := target.Sub(turretGlobalTransform.Position).Angle()
+			directionTarget = globalDirection - entity.Direction
+		}
+		deltaAngle := directionTarget.Diff(angles[i])
+		angle := deltaAngle.ClampMagnitude(ToAngle(seconds))
+
+		if angle != 0 {
+			// Copy on write
+			if !turretsCopied {
+				turretsCopied = true
+				entity.ext.copyTurretAngles(entity.EntityType)
 			}
+			entity.TurretAngles()[i] += angle
 		}
 	}
 
@@ -237,12 +238,12 @@ func (entity *Entity) Replenish(amount float32) {
 	if len(entity.ArmamentConsumption()) == 0 {
 		return // don't crash
 	}
-	entity.replenish(amount, false)
+	entity.replenish(ToTicks(amount), false)
 }
 
 // replenish is a helper to that can avoid copying turret angles and armaments for unsafeExtension.
 // It replenishes each range of Similar Armaments.
-func (entity *Entity) replenish(amount float32, copied bool) {
+func (entity *Entity) replenish(amount Ticks, copied bool) {
 	armaments := entity.Data().Armaments
 	current := &armaments[0]
 	start := 0
@@ -260,12 +261,12 @@ func (entity *Entity) replenish(amount float32, copied bool) {
 }
 
 // replenishRange replenishes a range of armaments and returns copied.
-func (entity *Entity) replenishRange(amount float32, start, end int, copied bool) bool {
-	for amount > 0 {
+func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) bool {
+	for amount != 0 {
 		i := -1
-		consumption := float32(math32.MaxFloat32)
+		consumption := TicksMax
 		for j, c := range entity.ArmamentConsumption()[start:end] {
-			if c > 0.0 && c < consumption {
+			if c != 0 && c < consumption {
 				i = j + start
 				consumption = c
 			}
@@ -279,8 +280,15 @@ func (entity *Entity) replenishRange(amount float32, start, end int, copied bool
 			entity.ext.copyArmamentConsumption(entity.EntityType)
 		}
 
-		entity.ArmamentConsumption()[i] = max(0, consumption-amount)
-		amount -= consumption
+		if consumption < amount {
+			consumption = 0
+			amount -= consumption
+		} else {
+			consumption -= amount
+			amount = 0
+		}
+
+		entity.ArmamentConsumption()[i] = consumption
 	}
 
 	return copied
@@ -308,10 +316,6 @@ func (entity *Entity) SetDamagePercent(percent float32) {
 // HealthPercent returns an Entity's health in the range [0, 1.0].
 func (entity *Entity) HealthPercent() float32 {
 	return 1 - entity.DamagePercent()
-}
-
-func (entity *Entity) HasArmament(index int) bool {
-	return HasArmament(entity.ArmamentConsumption(), index)
 }
 
 // ArmamentTransform returns the world transform of an Armament.
@@ -361,10 +365,6 @@ func (entity *Entity) Close() {
 	}
 }
 
-func HasArmament(consumption []float32, index int) bool {
-	return len(consumption) <= index || consumption[index] < 0.000001
-}
-
 func (entity *Entity) ConsumeArmament(index int) {
 	entity.ext.copyArmamentConsumption(entity.EntityType)
 	entity.ArmamentConsumption()[index] = entity.Data().Armaments[index].Reload()
@@ -372,14 +372,13 @@ func (entity *Entity) ConsumeArmament(index int) {
 
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
-	oldType := entity.EntityType
 	oldArmaments := entity.ArmamentConsumption()
 
 	entity.EntityType = entityType
 	entity.ext.setType(entity.EntityType)
 
 	// Keep similar consumption.
-	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldType, oldArmaments)
+	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldArmaments)
 
 	// Make sure all the new turrets are re-aimed to the old target.
 	entity.updateTurretAim(5)
@@ -395,35 +394,30 @@ func (entity *Entity) Initialize(entityType EntityType) {
 
 // upgradeArmaments attempts to keep a similar amount of consumption when upgrading.
 // See #32 for rationale.
-func upgradeArmaments(entityType EntityType, new []float32, oldEntityType EntityType, old []float32) {
+func upgradeArmaments(entityType EntityType, new []Ticks, old []Ticks) {
 	if len(new) == 0 || len(old) == 0 {
 		return
 	}
 
-	oldData := oldEntityType.Data()
-	sum := float32(0)
-
-	for i, c := range old {
-		reload := oldData.Armaments[i].Reload()
-
-		// Scale back to [0, 1].
-		sum += c / reload
+	// Use uint to prevent overflow.
+	var sum uint
+	for _, c := range old {
+		sum += uint(c)
 	}
 
-	// [0, 1]: 0 is none consumed and 1 is all consumed.
-	avg := sum / float32(len(old))
-	if avg == 0.0 {
+	if sum == 0 {
 		return
 	}
 
-	consumed := avg * float32(len(new))
-	data := entityType.Data()
-
-	// Set armaments to avg percent used.
+	// Use same armament consumption ticks.
+	armaments := entityType.Data().Armaments
 	for i := range new {
-		new[i] = data.Armaments[i].Reload() * min(consumed, 1.0)
-		consumed--
-		if consumed <= 0.0 {
+		reload := armaments[i].Reload()
+		if sum > uint(reload) {
+			new[i] = reload
+			sum -= uint(reload)
+		} else {
+			new[i] = Ticks(sum)
 			break
 		}
 	}

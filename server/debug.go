@@ -180,6 +180,9 @@ type funcBench struct {
 
 // reset resets the benchmark and returns the average duration
 func (bench *funcBench) reset() time.Duration {
+	if bench.runs == 0 {
+		return 0
+	}
 	average := bench.duration / time.Duration(bench.runs)
 	bench.duration = 0
 	bench.runs = 0

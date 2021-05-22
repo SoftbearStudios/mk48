@@ -201,8 +201,7 @@ func (bot *BotClient) Send(out outbound) {
 			manual.VelocityTarget = closestEnemy.Velocity + 10*world.MeterPerSecond
 			manual.DirectionTarget = closestEnemyAngle
 
-			manual.TurretTarget = new(world.Vec2f)
-			*manual.TurretTarget = closestEnemy.Position
+			manual.TurretTarget = closestEnemy.Position
 
 			// Attack based on aggression.
 			if prob(r, float64(bot.aggression)) {
@@ -221,7 +220,7 @@ func (bot *BotClient) Send(out outbound) {
 					}
 
 					if armamentType == world.EntityKindWeapon {
-						if world.HasArmament(ship.ArmamentConsumption, index) {
+						if ship.ArmamentConsumption[index] == 0 {
 							armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
 							diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
 							if diff < bestArmamentAngleDiff {

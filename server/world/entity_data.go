@@ -47,13 +47,13 @@ type (
 		Kind      EntityKind    `json:"type"`
 		SubKind   EntitySubKind `json:"subtype"`
 		Level     uint8         `json:"level"`
+		Lifespan  Ticks         `json:"lifespan"`
+		Reload    Ticks         `json:"reload"` // time to reload
+		Speed     Velocity      `json:"speed"`
 		Length    float32       `json:"length"`
 		Width     float32       `json:"width"`
 		Radius    float32       `json:"-"`
 		InvSize   float32       `json:"-"`
-		Lifespan  float32       `json:"lifespan"`
-		Speed     Velocity      `json:"speed"`
-		Reload    float32       `json:"reload"` // time to reload
 		Damage    float32       `json:"damage"`
 		Stealth   float32       `json:"stealth"`
 		Sensors   []Sensor      `json:"sensors"`
@@ -88,9 +88,10 @@ func (armament *Armament) TurretIndex() int {
 }
 
 // Reload returns the time it takes to reload an Armament in seconds.
-func (armament *Armament) Reload() float32 {
+func (armament *Armament) Reload() Ticks {
 	consumption := armament.Default.Data().Reload
 	if armament.Airdrop {
+		// Maybe should check for overflow.
 		consumption *= 4
 	}
 	return consumption

@@ -23,7 +23,7 @@ type (
 		world.Guidance
 		world.IDPlayerData
 		world.Transform
-		ArmamentConsumption []float32        `json:"armamentConsumption,omitempty"`
+		ArmamentConsumption []world.Ticks    `json:"armamentConsumption,omitempty"`
 		TurretAngles        []world.Angle    `json:"turretAngles,omitempty"`
 		Friendly            bool             `json:"friendly,omitempty"`
 		EntityType          world.EntityType `json:"type"`

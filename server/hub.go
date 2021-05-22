@@ -21,7 +21,7 @@ const (
 	debugPeriod       = time.Second * 5
 	leaderboardPeriod = time.Second
 	spawnPeriod       = leaderboardPeriod
-	updatePeriod      = time.Second / 10
+	updatePeriod      = world.TickPeriod
 
 	// encodeBotMessages makes BotClient.Send marshal json and check for errors.
 	// Only useful for testing/benchmarking (drops performance significantly).
@@ -59,8 +59,8 @@ type Hub struct {
 	// Timer based events
 	cloudTicker       *time.Ticker
 	updateTicker      *time.Ticker
+	skippedCounter    int
 	updateCounter     int
-	updateTime        time.Time
 	leaderboardTicker *time.Ticker
 	debugTicker       *time.Ticker
 	botsTicker        *time.Ticker
@@ -87,7 +87,6 @@ func newHub(minPlayers int, auth string) *Hub {
 		unregister:        make(chan Client, 16+minPlayers/128),
 		cloudTicker:       time.NewTicker(cloud.UpdatePeriod),
 		updateTicker:      time.NewTicker(updatePeriod),
-		updateTime:        time.Now(),
 		leaderboardTicker: time.NewTicker(leaderboardPeriod),
 		debugTicker:       time.NewTicker(debugPeriod),
 		botsTicker:        time.NewTicker(botPeriod),
@@ -148,12 +147,24 @@ func (h *Hub) run() {
 
 				in = <-h.inbound
 			}
-		case <-h.updateTicker.C:
+		case updateTime := <-h.updateTicker.C:
 			now := time.Now()
-			timeDelta := now.Sub(h.updateTime)
-			h.updateTime = now
+			if missed := now.Sub(updateTime) - updatePeriod/10; missed > 0 {
+				h.skippedCounter += int(missed/updatePeriod) + 1
+				break
+			}
 
-			h.Physics(timeDelta)
+			// Physics would start to break down after this.
+			const maxTicksPerUpdate = 4
+			if h.skippedCounter > maxTicksPerUpdate {
+				fmt.Println("server behind more than", maxTicksPerUpdate, "ticks:", h.skippedCounter)
+				h.skippedCounter = maxTicksPerUpdate
+			}
+
+			ticks := world.Ticks(h.skippedCounter) + 1
+			h.skippedCounter = 0
+
+			h.Physics(ticks)
 			h.Update()
 		case <-h.leaderboardTicker.C:
 			h.terrain.Repair()
