@@ -234,6 +234,7 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 
 // Repair regenerates the Entity's health by an amount.
 func (entity *Entity) Repair(amount float32) {
+	entity.mustBoat()
 	ext := &entity.Owner.ext
 	damage := ext.damage()
 	if amount >= damage {
@@ -374,8 +375,13 @@ func (entity *Entity) ConsumeArmament(index int) {
 
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
-	oldArmaments := entity.ArmamentConsumption()
-	oldDamage := entity.DamagePercent()
+	var oldArmaments []Ticks
+	var oldDamage float32
+	if entity.EntityType != EntityTypeInvalid {
+		oldArmaments = entity.ArmamentConsumption()
+		oldDamage = entity.DamagePercent()
+	}
+
 	ext := &entity.Owner.ext
 
 	entity.EntityType = entityType
