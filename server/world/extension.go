@@ -10,17 +10,14 @@ type extension interface {
 	setType(t EntityType)
 	copiesAll() bool // Copies everything when anything is copied
 
-	armamentConsumption(t EntityType) []float32 // Read only
-	copyArmamentConsumption(t EntityType)       // Copy for writes
+	armamentConsumption(t EntityType) []Ticks // Read only
+	copyArmamentConsumption(t EntityType)     // Copy for writes
 
 	turretAngles(t EntityType) []Angle // Read only
 	copyTurretAngles(t EntityType)     // Copy for writes
 
 	turretTarget() Vec2f // Where turret want to point
 	setTurretTarget(target Vec2f)
-
-	turretTargetTime() Ticks // Time in terms of lifespan when turret target was set
-	setTurretTargetTime(t Ticks)
 
 	altitude() float32
 	setAltitude(float32)
@@ -29,7 +26,7 @@ type extension interface {
 	setAltitudeTarget(float32)
 }
 
-func (entity *Entity) ArmamentConsumption() []float32 {
+func (entity *Entity) ArmamentConsumption() []Ticks {
 	return entity.ext.armamentConsumption(entity.EntityType)
 }
 
@@ -73,12 +70,4 @@ func (entity *Entity) TurretTarget() Vec2f {
 
 func (entity *Entity) SetTurretTarget(target Vec2f) {
 	entity.ext.setTurretTarget(target)
-}
-
-func (entity *Entity) TurretTargetTime() Ticks {
-	return entity.ext.turretTargetTime()
-}
-
-func (entity *Entity) SetTurretTargetTime(t Ticks) {
-	entity.ext.setTurretTargetTime(t)
 }

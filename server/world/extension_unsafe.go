@@ -19,17 +19,22 @@ type (
 		target    Vec2f
 		alt       float32
 		altTarget float32
-		time      Ticks
-		first     [0]float32
-		// armaments [?]float32
-		// angles    [?]float32
+		first     [0]uint16
+		// armaments [?]Ticks
+		// angles    [?]Angle
 	}
 )
 
 var _ = extension(&unsafeExtension{})
 
+func init() {
+	if unsafe.Sizeof(Angle(0)) != 2 || unsafe.Sizeof(Ticks(0)) != 2 {
+		panic("unsafe extension must be updated")
+	}
+}
+
 func unsafeDataSize(data *EntityTypeData) int {
-	return int(unsafe.Sizeof(unsafeData{}) + uintptr(len(data.Armaments))*unsafe.Sizeof(float32(0)) + uintptr(len(data.Turrets))*unsafe.Sizeof(Angle(0)))
+	return int(unsafe.Sizeof(unsafeData{}) + uintptr(len(data.Armaments))*unsafe.Sizeof(Ticks(0)) + uintptr(len(data.Turrets))*unsafe.Sizeof(Angle(0)))
 }
 
 // setEntityType initializes to a size defined by entityType
@@ -44,7 +49,6 @@ func (ext *unsafeExtension) setType(entityType EntityType) {
 	// Only keep target and target time
 	if oldExt != nil {
 		ext.data.target = oldExt.target
-		ext.data.time = oldExt.time
 		ext.data.altTarget = oldExt.altTarget
 	}
 
@@ -75,7 +79,7 @@ func (ext *unsafeExtension) copy(entityType EntityType) {
 	ext.data = (*unsafeData)(unsafe.Pointer(&dst[0]))
 }
 
-func (ext *unsafeExtension) armamentConsumption(entityType EntityType) (slice []float32) {
+func (ext *unsafeExtension) armamentConsumption(entityType EntityType) (slice []Ticks) {
 	if n := len(entityType.Data().Armaments); n != 0 {
 		header := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
 		header.Data = uintptr(unsafe.Pointer(&ext.data.first))
@@ -93,7 +97,7 @@ func (ext *unsafeExtension) turretAngles(entityType EntityType) (slice []Angle) 
 	data := entityType.Data()
 	if n := len(data.Turrets); n != 0 {
 		header := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-		header.Data = uintptr(unsafe.Pointer(&ext.data.first)) + uintptr(len(data.Armaments))*unsafe.Sizeof(float32(0))
+		header.Data = uintptr(unsafe.Pointer(&ext.data.first)) + uintptr(len(data.Armaments))*unsafe.Sizeof(Ticks(0))
 		header.Len = n
 		header.Cap = n
 	}
@@ -132,15 +136,4 @@ func (ext *unsafeExtension) turretTarget() Vec2f {
 
 func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
 	ext.data.target = target
-}
-
-func (ext *unsafeExtension) turretTargetTime() Ticks {
-	if ext.data == nil {
-		return 0
-	}
-	return ext.data.time
-}
-
-func (ext *unsafeExtension) setTurretTargetTime(t Ticks) {
-	ext.data.time = t
 }

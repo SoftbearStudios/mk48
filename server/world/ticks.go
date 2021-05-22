@@ -13,6 +13,7 @@ import (
 const (
 	TickPeriod     = time.Second / 10
 	TicksPerSecond = Ticks(time.Second / TickPeriod)
+	TicksMax       = Ticks(math32.MaxUint16)
 )
 
 // Ticks is a time measured in updates.
@@ -25,6 +26,10 @@ func ToTicks(seconds float32) Ticks {
 
 func (ticks Ticks) Float() float32 {
 	return float32(ticks) * float32(float64(TickPeriod)/float64(time.Second))
+}
+
+func (ticks *Ticks) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ticks.Float())
 }
 
 func (ticks *Ticks) UnmarshalJSON(b []byte) error {

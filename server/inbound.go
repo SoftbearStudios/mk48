@@ -52,7 +52,7 @@ type (
 	Manual struct {
 		world.Guidance
 		AltitudeTarget *float32       `json:"altitudeTarget"`
-		TurretTarget   *world.Vec2f   `json:"turretTarget"`
+		TurretTarget   world.Vec2f    `json:"turretTarget"`
 		EntityID       world.EntityID `json:"entityID"`
 	}
 
@@ -336,7 +336,6 @@ func (data AimTurrets) Inbound(h *Hub, _ Client, player *Player) {
 		}
 
 		entity.SetTurretTarget(data.Target)
-		entity.SetTurretTargetTime(entity.Lifespan)
 		return
 	})
 }
@@ -352,8 +351,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			return
 		}
 
-		// Do after bounds check to not use infinite memory
-		if !entity.HasArmament(data.Index) {
+		if entity.ArmamentConsumption()[data.Index] != 0 {
 			return
 		}
 
@@ -438,10 +436,7 @@ func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
 			entity.SetAltitudeTarget(*data.AltitudeTarget)
 		}
 
-		if data.TurretTarget != nil {
-			entity.SetTurretTarget(*data.TurretTarget)
-			entity.SetTurretTargetTime(entity.Lifespan) // refresh expiration
-		}
+		entity.SetTurretTarget(data.TurretTarget)
 
 		return
 	})

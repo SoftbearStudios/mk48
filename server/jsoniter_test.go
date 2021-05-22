@@ -26,7 +26,7 @@ func TestJsonIter(t *testing.T) {
 			Guidance:            world.Guidance{DirectionTarget: 0.0},
 			IDPlayerData:        world.IDPlayerData{PlayerID: testPlayerID, PlayerData: testPlayerData},
 			Transform:           world.Transform{Position: world.Vec2f{X: 1.0, Y: 0.5}, Velocity: world.ToVelocity(0.1875), Direction: world.ToAngle(0.25)},
-			ArmamentConsumption: []float32{0, 0.1, 0.2, 1.0},
+			ArmamentConsumption: []world.Ticks{0, world.TicksPerSecond / 10, world.TicksPerSecond / 5, world.TicksPerSecond},
 			Friendly:            false,
 			EntityType:          world.ParseEntityType("fairmileD"),
 			Uncertainty:         0.2,
