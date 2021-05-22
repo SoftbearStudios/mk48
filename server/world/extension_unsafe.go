@@ -19,6 +19,7 @@ type (
 		target    Vec2f
 		alt       float32
 		altTarget float32
+		damage    float32
 		first     [0]uint16
 		// armaments [?]Ticks
 		// angles    [?]Angle
@@ -136,4 +137,12 @@ func (ext *unsafeExtension) turretTarget() Vec2f {
 
 func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
 	ext.data.target = target
+}
+
+func (ext *unsafeExtension) damage() float32 {
+	return ext.data.damage
+}
+
+func (ext *unsafeExtension) setDamage(d float32) {
+	ext.data.damage = d
 }

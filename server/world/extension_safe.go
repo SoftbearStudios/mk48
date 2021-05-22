@@ -9,6 +9,7 @@ type safeExtension struct {
 	target    Vec2f   // turret target position
 	alt       float32 // altitude (see entity.Altitude for meaning)
 	altTarget float32 // desired altitude
+	dmg       float32 // damage taken
 	time      Ticks   // entity lifespan when last aimed turrets
 }
 
@@ -76,4 +77,12 @@ func (ext *safeExtension) altitudeTarget() float32 {
 
 func (ext *safeExtension) setAltitudeTarget(a float32) {
 	ext.altTarget = a
+}
+
+func (ext *safeExtension) damage() float32 {
+	return ext.dmg
+}
+
+func (ext *safeExtension) setDamage(d float32) {
+	ext.dmg = d
 }

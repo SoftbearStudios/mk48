@@ -321,10 +321,7 @@ func (data Upgrade) Inbound(h *Hub, _ Client, player *Player) {
 			return
 		}
 
-		newDamagePercent := oldShip.DamagePercent() * 0.5
 		oldShip.Initialize(newShipType)
-		oldShip.SetDamagePercent(newDamagePercent)
-
 		return
 	})
 }

@@ -222,9 +222,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			r2 := square(boat.Data().Radius)
 			damageMultiplier *= collisionMultiplier(dist2, r2)
 
-			boat.Damage += weapon.Data().Damage * damageMultiplier
-
-			if boat.Dead() {
+			if boat.Damage(weapon.Data().Damage * damageMultiplier) {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
 				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()))
 			}
@@ -285,9 +283,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 						damage *= ramDamage
 					}
 
-					b.Damage += damage
-
-					if b.Dead() {
+					if b.Damage(damage) {
 						verb := "Crashed into"
 						if isOtherRam {
 							verb = "Rammed by"
@@ -301,8 +297,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
 			boat.Velocity = boat.Velocity.AddClamped(6*posDiff.Dot(boat.Direction.Vec2f()), 30*world.MeterPerSecond)
-			boat.Damage += timeDeltaSeconds * boat.MaxHealth() * 0.15
-			if boat.Dead() {
+			if boat.Damage(timeDeltaSeconds * boat.MaxHealth() * 0.15) {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
 			}
 		case !(friendly || (boat != nil && decoy != nil)):

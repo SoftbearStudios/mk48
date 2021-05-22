@@ -15,7 +15,6 @@ type Entity struct {
 	Guidance
 	EntityType
 	Lifespan Ticks
-	Damage   float32
 	Owner    *Player
 	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
 	_        [16]byte        // remove when entity is 32 bytes
@@ -26,14 +25,6 @@ type Entity struct {
 // seconds cannot be > 1.0.
 func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
 	data := entity.Data()
-
-	// Die
-	if entity.Dead() {
-		if owner := entity.Owner; owner != nil && entity.Data().Kind == EntityKindBoat {
-			owner.DeathMessage = "You died!"
-		}
-		return true
-	}
 
 	entity.Lifespan += ticks
 	if data.Lifespan != 0 && entity.Lifespan > data.Lifespan {
@@ -77,7 +68,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 
 	var turretsCopied bool
 	if data.Kind == EntityKindBoat {
-		turretsCopied = entity.updateTurretAim(seconds)
+		turretsCopied = entity.updateTurretAim(ToAngle(seconds))
 	}
 
 	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
@@ -93,8 +84,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 			}
 			entity.Velocity = entity.Velocity.ClampMagnitude(5 * MeterPerSecond)
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
-				entity.Damage += seconds * entity.MaxHealth() * 0.25
-				if entity.Dead() {
+				if entity.Damage(seconds * entity.MaxHealth() * 0.25) {
 					if owner := entity.Owner; owner != nil {
 						owner.DeathMessage = "Crashed into the ground!"
 					}
@@ -107,12 +97,12 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	// Border (note: radius can shrink)
 	centerDist2 := entity.Position.LengthSquared()
 	if centerDist2 > square(worldRadius) {
-		entity.Damage += seconds * entity.MaxHealth() * 0.25
+		dead := entity.Damage(seconds * entity.MaxHealth())
 		entity.Velocity += ToVelocity(clampMagnitude(entity.Velocity.Float()-6*entity.Position.Dot(entity.Direction.Vec2f()), 15))
 		// Everything but boats is instantly killed by border
-		if data.Kind != EntityKindBoat || entity.Dead() || centerDist2 > square(worldRadius*RadiusClearance) {
+		if dead || data.Kind != EntityKindBoat || centerDist2 > square(worldRadius*RadiusClearance) {
 			if owner := entity.Owner; owner != nil && entity.Data().Kind == EntityKindBoat {
-				owner.DeathMessage = "Passed the border!"
+				owner.DeathMessage = "Crashed into the border!"
 			}
 			return true
 		}
@@ -132,7 +122,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		entity.replenish(replenishAmount, armamentsCopied)
 	}
 
-	if entity.Damage > 0 {
+	if data.Kind == EntityKindBoat && entity.ext.damage() > 0 {
 		repairAmount := seconds * (1.0 / 60.0)
 		if underwater {
 			repairAmount *= 0.5
@@ -141,6 +131,18 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	}
 
 	return false
+}
+
+// Damage damages an entity and returns if it died.
+func (entity *Entity) Damage(d float32) bool {
+	data := entity.Data()
+	if data.Kind != EntityKindBoat {
+		return d > 0.0
+	}
+
+	d += entity.ext.damage()
+	entity.ext.setDamage(d)
+	return d > entity.MaxHealth()
 }
 
 // UpdateSensor runs a simple AI for homing torpedoes/missiles.
@@ -191,7 +193,7 @@ func (entity *Entity) RecentSpawnFactor() float32 {
 }
 
 // Returns whether copied turret angles
-func (entity *Entity) updateTurretAim(seconds float32) bool {
+func (entity *Entity) updateTurretAim(amount Angle) bool {
 	turretsCopied := false
 	data := entity.Data()
 	angles := entity.TurretAngles()
@@ -211,15 +213,16 @@ func (entity *Entity) updateTurretAim(seconds float32) bool {
 			directionTarget = globalDirection - entity.Direction
 		}
 		deltaAngle := directionTarget.Diff(angles[i])
-		angle := deltaAngle.ClampMagnitude(ToAngle(seconds))
-
-		if angle != 0 {
+		if amount < Pi {
+			deltaAngle = deltaAngle.ClampMagnitude(amount)
+		}
+		if deltaAngle != 0 {
 			// Copy on write
 			if !turretsCopied {
 				turretsCopied = true
 				entity.ext.copyTurretAngles(entity.EntityType)
 			}
-			entity.TurretAngles()[i] += angle
+			entity.TurretAngles()[i] += deltaAngle
 		}
 	}
 
@@ -228,7 +231,12 @@ func (entity *Entity) updateTurretAim(seconds float32) bool {
 
 // Repair regenerates the Entity's health by an amount.
 func (entity *Entity) Repair(amount float32) {
-	entity.Damage -= min(amount, entity.Damage)
+	damage := entity.ext.damage()
+	if amount >= damage {
+		entity.ext.setDamage(0)
+	} else {
+		entity.ext.setDamage(damage - amount)
+	}
 }
 
 // Replenish replenishes the Entity's armaments by an amount.
@@ -294,23 +302,12 @@ func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) 
 	return copied
 }
 
-// Dead returns if an Entity's health is less than 0.
-func (entity *Entity) Dead() bool {
-	return entity.Damage > entity.MaxHealth()
-}
-
-// Health returns an Entity's health as an absolute.
-func (entity *Entity) Health() float32 {
-	return entity.MaxHealth() - entity.Damage
-}
-
 // DamagePercent returns an Entity's damage in the range [0, 1.0].
 func (entity *Entity) DamagePercent() float32 {
-	return entity.Damage / entity.MaxHealth()
-}
-
-func (entity *Entity) SetDamagePercent(percent float32) {
-	entity.Damage = percent * entity.MaxHealth()
+	if entity.Data().Kind == EntityKindBoat {
+		return entity.ext.damage() / entity.MaxHealth()
+	}
+	return 0
 }
 
 // HealthPercent returns an Entity's health in the range [0, 1.0].
@@ -373,15 +370,17 @@ func (entity *Entity) ConsumeArmament(index int) {
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
 	oldArmaments := entity.ArmamentConsumption()
+	oldDamage := entity.DamagePercent()
 
 	entity.EntityType = entityType
 	entity.ext.setType(entity.EntityType)
 
 	// Keep similar consumption.
 	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldArmaments)
+	entity.ext.setDamage(oldDamage * 0.5 * entity.MaxHealth())
 
 	// Make sure all the new turrets are re-aimed to the old target.
-	entity.updateTurretAim(5)
+	entity.updateTurretAim(Pi)
 
 	// Starting depth
 	switch entityType.Data().SubKind {
