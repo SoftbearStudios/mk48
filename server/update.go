@@ -91,7 +91,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 		radarRangeInv := invSquare(radarRange)
 		sonarRangeInv := invSquare(sonarRange)
 
-		h.world.ForEntitiesInRadius(position, maxRange, func(distanceSquared float32, entityID world.EntityID, entity *world.Entity) (_ bool) {
+		h.world.ForEntitiesInRadius(position, maxRange, func(distanceSquared float32, entity *world.Entity) (_ bool) {
 			known := distanceSquared < 800*800 && entity.Owner.Friendly(player)
 			alt := entity.Altitude()
 
@@ -143,16 +143,18 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 
 			c.Uncertainty = uncertainty
 			c.Transform = entity.Transform
-			c.EntityID = entityID
+			c.EntityID = entity.EntityID
 			c.EntityType = entity.EntityType
 			c.Altitude = alt
 
 			if known || visible {
-				// Both slices are copy on write so don't have to copy on read
-				c.ArmamentConsumption = entity.ArmamentConsumption()
-				c.TurretAngles = entity.TurretAngles()
+				if entity.Data().Kind == world.EntityKindBoat {
+					// Both slices are copy on write so don't have to copy on read
+					c.ArmamentConsumption = entity.ArmamentConsumption()
+					c.TurretAngles = entity.TurretAngles()
 
-				c.Damage = entity.DamagePercent()
+					c.Damage = entity.DamagePercent()
+				}
 
 				// You only know the Guidance of allies
 				if known {

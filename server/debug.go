@@ -92,7 +92,7 @@ func (h *Hub) Debug() {
 
 	// Count entities
 	entityTypeCounts := make([]int, world.EntityTypeCount)
-	h.world.ForEntities(func(entityID world.EntityID, entity *world.Entity) (_, _ bool) {
+	h.world.ForEntities(func(entity *world.Entity) (_, _ bool) {
 		entityTypeCounts[entity.EntityType]++
 		return
 	})

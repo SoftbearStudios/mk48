@@ -23,13 +23,12 @@ func (w *World) Count() int {
 	return len(w.entities)
 }
 
-func (w *World) AddEntity(entity *world.Entity) world.EntityID {
-	entityID := world.AllocateEntityID(func(id world.EntityID) bool {
+func (w *World) AddEntity(entity *world.Entity) {
+	entity.EntityID = world.AllocateEntityID(func(id world.EntityID) bool {
 		_, ok := w.entities[id]
 		return ok
 	})
-	w.entities[entityID] = entity
-	return entityID
+	w.entities[entity.EntityID] = entity
 }
 
 func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.Entity) (remove bool)) {
@@ -39,9 +38,9 @@ func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.
 	}
 }
 
-func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world.Entity) (stop, remove bool)) bool {
+func (w *World) ForEntities(callback func(entity *world.Entity) (stop, remove bool)) bool {
 	for entityID, entity := range w.entities {
-		stop, remove := callback(entityID, entity)
+		stop, remove := callback(entity)
 		if remove {
 			w.removeEntity(entityID, entity)
 		}
@@ -52,25 +51,25 @@ func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world
 	return false
 }
 
-func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(radius float32, entityID world.EntityID, entity *world.Entity) (stop bool)) bool {
+func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(radius float32, entity *world.Entity) (stop bool)) bool {
 	r2 := radius * radius
-	for entityID, entity := range w.entities {
+	for _, entity := range w.entities {
 		r := position.DistanceSquared(entity.Position)
 		if r > r2 {
 			continue
 		}
-		if callback(r, entityID, entity) {
+		if callback(r, entity) {
 			return true
 		}
 	}
 	return false
 }
 
-func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID, entity *world.Entity) (stop bool, radius float32),
+func (w *World) ForEntitiesAndOthers(entityCallback func(entity *world.Entity) (stop bool, radius float32),
 	otherCallback func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, otherEntity *world.Entity) (stop, remove, removeOther bool)) bool {
 
 	for entityID, entity := range w.entities {
-		stop, radius := entityCallback(entityID, entity)
+		stop, radius := entityCallback(entity)
 		if stop {
 			return true
 		}

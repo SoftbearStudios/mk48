@@ -30,14 +30,14 @@ type extension interface {
 }
 
 func (entity *Entity) ArmamentConsumption() []Ticks {
-	return entity.ext.armamentConsumption(entity.EntityType)
+	return entity.Owner.ext.armamentConsumption(entity.EntityType)
 }
 
 // -1 = deep, 0 = surface, 1 = high in the air
 func (entity *Entity) Altitude() float32 {
 	switch entity.EntityType.Data().Kind {
 	case EntityKindBoat:
-		return entity.ext.altitude()
+		return entity.Owner.ext.altitude()
 	case EntityKindDecoy:
 		switch entity.EntityType.Data().SubKind {
 		case EntitySubKindSonar:
@@ -60,17 +60,17 @@ func (entity *Entity) Altitude() float32 {
 }
 
 func (entity *Entity) SetAltitudeTarget(altitudeTarget float32) {
-	entity.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))
+	entity.Owner.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))
 }
 
 func (entity *Entity) TurretAngles() []Angle {
-	return entity.ext.turretAngles(entity.EntityType)
+	return entity.Owner.ext.turretAngles(entity.EntityType)
 }
 
 func (entity *Entity) TurretTarget() Vec2f {
-	return entity.ext.turretTarget()
+	return entity.Owner.ext.turretTarget()
 }
 
 func (entity *Entity) SetTurretTarget(target Vec2f) {
-	entity.ext.setTurretTarget(target)
+	entity.Owner.ext.setTurretTarget(target)
 }

@@ -8,16 +8,15 @@ import (
 )
 
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
-// Its size is 40 bytes + 16 bytes padding + 8 bytes for entityID in sectorEntity = 64 bytes for optimal efficiency.
+// Its size is 32 bytes for optimal efficiency.
 // Cannot modify EntityType directly.
 type Entity struct {
 	Transform
 	Guidance
+	Owner *Player
 	EntityType
 	Lifespan Ticks
-	Owner    *Player
-	ext      unsafeExtension // Can be substituted for safeExtension with no other changes
-	_        [16]byte        // remove when entity is 32 bytes
+	EntityID EntityID
 }
 
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
@@ -56,14 +55,15 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 			}
 		}
 
-		targetAltitude := clamp(entity.ext.altitudeTarget(), -1, 0)
+		ext := &entity.Owner.ext
+		targetAltitude := clamp(ext.altitudeTarget(), -1, 0)
 		altitudeSpeed := float32(0.2)
 		if surfacing {
 			targetAltitude = 0
 			altitudeSpeed = 0.75
 		}
 		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
-		entity.ext.setAltitude(entity.Altitude() + altitudeChange)
+		ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
 	var turretsCopied bool
@@ -108,26 +108,28 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		}
 	}
 
-	underwater := entity.Altitude() < 0
+	if data.Kind == EntityKindBoat {
+		underwater := entity.Altitude() < 0
 
-	if len(entity.ArmamentConsumption()) > 0 {
-		// If turrets were already copied and the extension
-		// copies everything armaments don't need to be copied
-		armamentsCopied := entity.ext.copiesAll() && turretsCopied
-		replenishAmount := ticks
-		if underwater {
-			// Submerged submarines reload slower
-			replenishAmount /= 4
+		if len(entity.ArmamentConsumption()) > 0 {
+			// If turrets were already copied and the extension
+			// copies everything armaments don't need to be copied
+			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
+			replenishAmount := ticks
+			if underwater {
+				// Submerged submarines reload slower
+				replenishAmount /= 4
+			}
+			entity.replenish(replenishAmount, armamentsCopied)
 		}
-		entity.replenish(replenishAmount, armamentsCopied)
-	}
 
-	if data.Kind == EntityKindBoat && entity.ext.damage() > 0 {
-		repairAmount := seconds * (1.0 / 60.0)
-		if underwater {
-			repairAmount *= 0.5
+		if entity.Owner.ext.damage() > 0 {
+			repairAmount := seconds * (1.0 / 60.0)
+			if underwater {
+				repairAmount *= 0.5
+			}
+			entity.Repair(repairAmount)
 		}
-		entity.Repair(repairAmount)
 	}
 
 	return false
@@ -140,8 +142,9 @@ func (entity *Entity) Damage(d float32) bool {
 		return d > 0.0
 	}
 
-	d += entity.ext.damage()
-	entity.ext.setDamage(d)
+	ext := &entity.Owner.ext
+	d += ext.damage()
+	ext.setDamage(d)
 	return d > entity.MaxHealth()
 }
 
@@ -220,7 +223,7 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 			// Copy on write
 			if !turretsCopied {
 				turretsCopied = true
-				entity.ext.copyTurretAngles(entity.EntityType)
+				entity.Owner.ext.copyTurretAngles(entity.EntityType)
 			}
 			entity.TurretAngles()[i] += deltaAngle
 		}
@@ -231,11 +234,12 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 
 // Repair regenerates the Entity's health by an amount.
 func (entity *Entity) Repair(amount float32) {
-	damage := entity.ext.damage()
+	ext := &entity.Owner.ext
+	damage := ext.damage()
 	if amount >= damage {
-		entity.ext.setDamage(0)
+		ext.setDamage(0)
 	} else {
-		entity.ext.setDamage(damage - amount)
+		ext.setDamage(damage - amount)
 	}
 }
 
@@ -285,7 +289,7 @@ func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) 
 			break
 		} else if !copied {
 			copied = true
-			entity.ext.copyArmamentConsumption(entity.EntityType)
+			entity.Owner.ext.copyArmamentConsumption(entity.EntityType)
 		}
 
 		if consumption < amount {
@@ -305,7 +309,7 @@ func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) 
 // DamagePercent returns an Entity's damage in the range [0, 1.0].
 func (entity *Entity) DamagePercent() float32 {
 	if entity.Data().Kind == EntityKindBoat {
-		return entity.ext.damage() / entity.MaxHealth()
+		return entity.Owner.ext.damage() / entity.MaxHealth()
 	}
 	return 0
 }
@@ -359,11 +363,12 @@ func (entity *Entity) Close() {
 		}
 		entity.Owner.Died(entity)
 		entity.Owner.EntityID = EntityIDInvalid
+		entity.Owner.ext = unsafeExtension{}
 	}
 }
 
 func (entity *Entity) ConsumeArmament(index int) {
-	entity.ext.copyArmamentConsumption(entity.EntityType)
+	entity.Owner.ext.copyArmamentConsumption(entity.EntityType)
 	entity.ArmamentConsumption()[index] = entity.Data().Armaments[index].Reload()
 }
 
@@ -371,13 +376,14 @@ func (entity *Entity) ConsumeArmament(index int) {
 func (entity *Entity) Initialize(entityType EntityType) {
 	oldArmaments := entity.ArmamentConsumption()
 	oldDamage := entity.DamagePercent()
+	ext := &entity.Owner.ext
 
 	entity.EntityType = entityType
-	entity.ext.setType(entity.EntityType)
+	ext.setType(entity.EntityType)
 
 	// Keep similar consumption.
 	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldArmaments)
-	entity.ext.setDamage(oldDamage * 0.5 * entity.MaxHealth())
+	ext.setDamage(oldDamage * 0.5 * entity.MaxHealth())
 
 	// Make sure all the new turrets are re-aimed to the old target.
 	entity.updateTurretAim(Pi)
@@ -385,9 +391,9 @@ func (entity *Entity) Initialize(entityType EntityType) {
 	// Starting depth
 	switch entityType.Data().SubKind {
 	case EntitySubKindSubmarine:
-		entity.ext.setAltitude(-0.5)
+		ext.setAltitude(-0.5)
 	default:
-		entity.ext.setAltitude(0)
+		ext.setAltitude(0)
 	}
 }
 

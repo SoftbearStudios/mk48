@@ -16,7 +16,7 @@ func (h *Hub) Despawn() {
 
 	// Parallelize for lower latency.
 	h.world.SetParallel(true)
-	h.world.ForEntities(func(_ world.EntityID, entity *world.Entity) (_, remove bool) {
+	h.world.ForEntities(func(entity *world.Entity) (_, remove bool) {
 		_, remove = removals[entity.Owner]
 		return
 	})

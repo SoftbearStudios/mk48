@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world.Entity) (stop, remove bool)) bool {
+func (w *World) ForEntities(callback func(entity *world.Entity) (stop, remove bool)) bool {
 	if cpus := runtime.NumCPU(); cpus > 1 && w.parallel {
 		return w.forEntitiesParallel(callback, cpus)
 	}
@@ -33,7 +33,7 @@ func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world
 			entity := &s.entities[i]
 			oldPos := entity.Position
 
-			stop, remove := callback(entity.EntityID, &entity.Entity)
+			stop, remove := callback(entity)
 
 			var move bool
 			if entity.Position != oldPos {
@@ -65,7 +65,7 @@ func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world
 	return false
 }
 
-func (w *World) forEntitiesParallel(callback func(entityID world.EntityID, entity *world.Entity) (stop, remove bool), cpus int) bool {
+func (w *World) forEntitiesParallel(callback func(entity *world.Entity) (stop, remove bool), cpus int) bool {
 	type removal struct {
 		world.EntityID
 		move bool
@@ -116,7 +116,7 @@ func (w *World) forEntitiesParallel(callback func(entityID world.EntityID, entit
 						// alias Vec2f as a uint64 to avoid FP instructions ~10% faster
 						oldPos := *(*uint64)(unsafe.Pointer(&entity.Position))
 
-						stop, remove := callback(entity.EntityID, &entity.Entity)
+						stop, remove := callback(entity)
 						if stop {
 							panic("cannot stop during parallel")
 						}

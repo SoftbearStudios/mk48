@@ -23,7 +23,7 @@ type (
 	// World is an implementation of world.World which divides entities into sectors
 	World struct {
 		sectors     []sector                       // sectors stores the entities in spatial partitions
-		buffered    []sectorEntity                 // buffered is entities added during a read
+		buffered    []world.Entity                 // buffered is entities added during a read
 		entityIDs   map[world.EntityID]sectorIndex // entityIDs stores where to find the entities
 		entityCount int                            // cached number of entities
 		width       uint16                         // width is cross section in sector space
@@ -34,13 +34,7 @@ type (
 
 	// sector is one bucket of the World
 	sector struct {
-		entities []sectorEntity
-	}
-
-	// sectorEntity stores its id as opposed to it being stored in map[world.EntityID]*world.Entity
-	sectorEntity struct {
-		world.Entity
-		world.EntityID
+		entities []world.Entity
 	}
 )
 
@@ -48,7 +42,7 @@ type (
 func New(radius float32) *World {
 	w := &World{
 		entityIDs: make(map[world.EntityID]sectorIndex),
-		buffered:  make([]sectorEntity, 0, 16),
+		buffered:  make([]world.Entity, 0, 16),
 	}
 
 	// Resize allocates World.sectors
@@ -63,24 +57,24 @@ func (w *World) Count() int {
 
 // AddEntity adds an entity to the world
 // Cannot add during parallel execution
-func (w *World) AddEntity(entity *world.Entity) world.EntityID {
+func (w *World) AddEntity(entity *world.Entity) {
 	if w.parallel {
 		panic("cannot write")
 	}
-	e := &sectorEntity{Entity: *entity, EntityID: world.AllocateEntityID(func(id world.EntityID) bool {
+
+	entity.EntityID = world.AllocateEntityID(func(id world.EntityID) bool {
 		_, ok := w.entityIDs[id]
 		return ok
-	})}
+	})
 	w.entityCount++
 
 	if w.depth > 0 {
 		// Mark used so don't reuse entityID in buffer
-		w.entityIDs[e.EntityID] = bufferSectorIndex
-		w.buffered = append(w.buffered, *e)
+		w.entityIDs[entity.EntityID] = bufferSectorIndex
+		w.buffered = append(w.buffered, *entity)
 	} else {
-		w.setEntity(e)
+		w.setEntity(entity)
 	}
-	return e.EntityID
 }
 
 // Debug output
@@ -100,7 +94,7 @@ func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.
 	s := w.sector(fullID.sectorID)
 
 	w.addDepth(1)
-	remove := callback(&s.entities[fullID.index].Entity)
+	remove := callback(&s.entities[fullID.index])
 	w.addDepth(-1)
 
 	if remove {
@@ -165,7 +159,7 @@ func (w *World) addBuffered() {
 		w.setEntity(&w.buffered[i])
 
 		// Clear pointer
-		w.buffered[i] = sectorEntity{}
+		w.buffered[i] = world.Entity{}
 	}
 
 	// Clear for next use
@@ -218,7 +212,7 @@ func (w *World) remove(id sectorID, s *sector, index int, move bool) int {
 	}
 
 	// Clear pointer
-	s.entities[end] = sectorEntity{}
+	s.entities[end] = world.Entity{}
 	s.entities = s.entities[:end]
 
 	if len(s.entities) == 0 {
@@ -226,7 +220,7 @@ func (w *World) remove(id sectorID, s *sector, index int, move bool) int {
 		w.sectors[id.sliceIndex(w.width)].entities = nil
 	} else if c := cap(s.entities) / 2; len(s.entities)+minSectorCap/2 < c {
 		// Shrink to use less memory
-		entities := make([]sectorEntity, len(s.entities), c)
+		entities := make([]world.Entity, len(s.entities), c)
 		copy(entities, s.entities)
 		s.entities = entities
 	}
@@ -235,7 +229,7 @@ func (w *World) remove(id sectorID, s *sector, index int, move bool) int {
 }
 
 // setEntity adds an existing entity to its sector and changes its sectorIndex pointer
-func (w *World) setEntity(e *sectorEntity) {
+func (w *World) setEntity(e *world.Entity) {
 	id := vec2fSectorID(e.Position)
 	s := w.sector(id)
 

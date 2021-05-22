@@ -6,8 +6,8 @@ package sector
 import "mk48/server/world"
 
 // ForEntitiesAndOthers TODO support multi-threading
-func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID, entity *world.Entity) (stop bool, radius float32),
-	otherCallback func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, otherEntity *world.Entity) (stop, remove, removeOther bool)) bool {
+func (w *World) ForEntitiesAndOthers(entityCallback func(entity *world.Entity) (stop bool, radius float32),
+	otherCallback func(entity *world.Entity, otherEntity *world.Entity) (stop, remove, removeOther bool)) bool {
 
 	canWrite := w.depth == 0 && !w.parallel
 	w.addDepth(1)
@@ -27,7 +27,7 @@ func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID
 			e := &s.entities[i]
 
 			// Position must not be modified
-			stopSector, radius := entityCallback(e.EntityID, &e.Entity)
+			stopSector, radius := entityCallback(e)
 
 			if canWrite && len(w.buffered) > 0 {
 				w.addBuffered()
@@ -60,7 +60,7 @@ func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID
 
 					var remove, removeOther bool
 					// Position must not be modified
-					stop, remove, removeOther = otherCallback(entity.EntityID, &entity.Entity, other.EntityID, &other.Entity)
+					stop, remove, removeOther = otherCallback(entity, other)
 
 					if removeOther {
 						if !canWrite {

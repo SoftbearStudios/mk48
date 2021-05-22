@@ -20,12 +20,7 @@ type (
 	treeNode struct {
 		world.AABB
 		children [4]*treeNode
-		entities []treeEntity
-	}
-
-	treeEntity struct {
-		world.Entity
-		world.EntityID
+		entities []world.Entity
 	}
 )
 
@@ -39,17 +34,17 @@ func (w *World) Count() (count int) {
 	return w.root.count()
 }
 
-func (w *World) AddEntity(entity *world.Entity) world.EntityID {
-	entityID := world.AllocateEntityID(func(id world.EntityID) bool {
+func (w *World) AddEntity(entity *world.Entity) {
+	entity.EntityID = world.AllocateEntityID(func(id world.EntityID) bool {
 		return false // TODO
 	})
-	w.root.add(&treeEntity{Entity: *entity, EntityID: entityID})
-	return entityID
+
+	w.root.add(entity)
 }
 
 func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.Entity) (remove bool)) {
-	w.root.iterate(func(id world.EntityID, entity *world.Entity) (stop, remove bool) {
-		if entityID == id {
+	w.root.iterate(func(entity *world.Entity) (stop, remove bool) {
+		if entityID == entity.EntityID {
 			remove = callback(entity)
 			stop = true
 		}
@@ -57,23 +52,23 @@ func (w *World) EntityByID(entityID world.EntityID, callback func(entity *world.
 	})
 }
 
-func (w *World) ForEntities(callback func(entityID world.EntityID, entity *world.Entity) (stop, remove bool)) bool {
+func (w *World) ForEntities(callback func(entity *world.Entity) (stop, remove bool)) bool {
 	return w.root.iterate(callback)
 }
 
-func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(r float32, entityID world.EntityID, entity *world.Entity) (stop bool)) bool {
+func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(r float32, entity *world.Entity) (stop bool)) bool {
 	aabb := radiusAABB(position, radius)
-	return w.root.iterateAABB(aabb, func(id world.EntityID, entity *world.Entity) (stop, remove bool) {
-		return callback(position.DistanceSquared(entity.Position), id, entity), false
+	return w.root.iterateAABB(aabb, func(entity *world.Entity) (stop, remove bool) {
+		return callback(position.DistanceSquared(entity.Position), entity), false
 	})
 }
 
-func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID, entity *world.Entity) (stop bool, radius float32),
-	otherCallback func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, otherEntity *world.Entity) (stop, remove, removeOther bool)) bool {
+func (w *World) ForEntitiesAndOthers(entityCallback func(entity *world.Entity) (stop bool, radius float32),
+	otherCallback func(entity *world.Entity, otherEntity *world.Entity) (stop, remove, removeOther bool)) bool {
 
-	return w.root.iterate(func(entityID world.EntityID, entity *world.Entity) (stopFirst, _ bool) {
+	return w.root.iterate(func(entity *world.Entity) (stopFirst, _ bool) {
 		var radius float32
-		stopFirst, radius = entityCallback(entityID, entity)
+		stopFirst, radius = entityCallback(entity)
 
 		if radius <= 0.0 {
 			return
@@ -87,12 +82,12 @@ func (w *World) ForEntitiesAndOthers(entityCallback func(entityID world.EntityID
 		r2 := radius * radius
 
 		// 'i' can change if entities are removed so lookup with 'i' each time to get entity
-		w.root.iterateAABB(aabb, func(otherID world.EntityID, other *world.Entity) (stop, _ bool) {
+		w.root.iterateAABB(aabb, func(other *world.Entity) (stop, _ bool) {
 			if entity == other || entity.Position.DistanceSquared(other.Position) > r2 {
 				return
 			}
 
-			stop, _, _ = otherCallback(entityID, entity, otherID, other)
+			stop, _, _ = otherCallback(entity, other)
 
 			if stop {
 				stopFirst = true
@@ -152,10 +147,10 @@ func (node *treeNode) nodeCount() (count int) {
 	return
 }
 
-func (node *treeNode) iterate(callback func(id world.EntityID, entity *world.Entity) (stop, remove bool)) bool {
+func (node *treeNode) iterate(callback func(entity *world.Entity) (stop, remove bool)) bool {
 	for i := range node.entities {
 		entity := &node.entities[i]
-		stop, remove := callback(entity.EntityID, &entity.Entity)
+		stop, remove := callback(entity)
 
 		if remove {
 			i = node.remove(i)
@@ -178,13 +173,13 @@ func (node *treeNode) iterate(callback func(id world.EntityID, entity *world.Ent
 	return false
 }
 
-func (node *treeNode) iterateAABB(aabb world.AABB, callback func(id world.EntityID, entity *world.Entity) (stop, remove bool)) bool {
+func (node *treeNode) iterateAABB(aabb world.AABB, callback func(entity *world.Entity) (stop, remove bool)) bool {
 	for i := range node.entities {
 		entity := &node.entities[i]
-		if !entityAABB(&entity.Entity).Intersects(aabb) {
+		if !entityAABB(entity).Intersects(aabb) {
 			continue
 		}
-		stop, remove := callback(entity.EntityID, &entity.Entity)
+		stop, remove := callback(entity)
 
 		if remove {
 			i = node.remove(i)
@@ -211,7 +206,7 @@ func (node *treeNode) iterateAABB(aabb world.AABB, callback func(id world.Entity
 	return false
 }
 
-func (node *treeNode) add(entity *treeEntity) {
+func (node *treeNode) add(entity *world.Entity) {
 	node.entities = append(node.entities, *entity)
 	if len(node.entities) > treeNodeMaxEntities {
 		start := 0
@@ -231,7 +226,7 @@ func (node *treeNode) subdivide(start int) {
 	j := start
 	for i := j; i < len(node.entities); i++ {
 		entity := &node.entities[i]
-		aabb := entityAABB(&entity.Entity)
+		aabb := entityAABB(entity)
 
 		removed := false
 		for k, quad := range quadrants {
@@ -260,7 +255,7 @@ func (node *treeNode) subdivide(start int) {
 func (node *treeNode) remove(index int) int {
 	end := len(node.entities) - 1
 	node.entities[index] = node.entities[end]
-	node.entities[end] = treeEntity{} // Clear pointers
+	node.entities[end] = world.Entity{} // Clear pointers
 	node.shrink(end)
 	return index - 1
 }
@@ -269,7 +264,7 @@ func (node *treeNode) remove(index int) int {
 func (node *treeNode) shrink(n int) {
 	node.entities = node.entities[:n]
 	if len(node.entities) <= cap(node.entities)/3 {
-		smallerEntities := make([]treeEntity, len(node.entities))
+		smallerEntities := make([]world.Entity, len(node.entities))
 		copy(smallerEntities, node.entities)
 		node.entities = smallerEntities
 	}
