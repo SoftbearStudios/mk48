@@ -13,18 +13,6 @@ import (
 	"time"
 )
 
-// must have owner
-func logDeath(entity *world.Entity) {
-	if true {
-		_ = AppendLog("/tmp/mk48-death.log", []interface{}{
-			unixMillis(),
-			entity.Owner.Name,
-			entity.Owner.DeathMessage,
-			entity.HealthPercent(),
-		})
-	}
-}
-
 func (h *Hub) Physics(ticks world.Ticks) {
 	defer h.timeFunction("physics", time.Now())
 
@@ -61,7 +49,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 		// Update movement and record various outputs
 		h.world.SetParallel(true)
-		h.world.ForEntities(func(_ world.EntityID, e *world.Entity) (_, remove bool) {
+		h.world.ForEntities(func(e *world.Entity) (_, remove bool) {
 			remove = e.Update(ticks, h.worldRadius, terrain)
 			if e.Data().Kind == world.EntityKindBoat {
 				if remove {
@@ -89,7 +77,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 	}
 
 	// Update entity to entity things such as collisions
-	h.world.ForEntitiesAndOthers(func(_ world.EntityID, entity *world.Entity) (stop bool, radius float32) {
+	h.world.ForEntitiesAndOthers(func(entity *world.Entity) (stop bool, radius float32) {
 		// Collectibles don't collide with each other
 		if entity.Data().Kind == world.EntityKindCollectible {
 			return
@@ -106,7 +94,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		}
 
 		return
-	}, func(entityID world.EntityID, entity *world.Entity, otherEntityID world.EntityID, other *world.Entity) (stop, remove, removeOther bool) {
+	}, func(entity *world.Entity, other *world.Entity) (stop, remove, removeOther bool) {
 		// Don't do friendly check, to allow team members to collide (See #27)
 		if entity.Owner == other.Owner || !entity.AltitudeOverlap(other) {
 			return
@@ -324,7 +312,6 @@ func (h *Hub) boatDied(e *world.Entity) {
 	}
 
 	data := e.Data()
-	logDeath(e)
 
 	// Loot is based on the length of the boat
 	loot := data.Length * 0.25 * (rand.Float32()*0.1 + 0.9)

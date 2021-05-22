@@ -27,7 +27,7 @@ const (
 type World interface {
 	// AddEntity Adds a new entity to its sector
 	// Cannot hold pointer after call is finished
-	AddEntity(entity *Entity) EntityID
+	AddEntity(entity *Entity)
 
 	// Count returns number of entities in the world
 	// Cannot be called concurrently with writes
@@ -45,12 +45,12 @@ type World interface {
 	// ForEntities Iterates all the entities and returns if stopped early
 	// For reading and writing
 	// Cannot hold pointer after call is finished
-	ForEntities(callback func(entityID EntityID, entity *Entity) (stop, remove bool)) bool
+	ForEntities(callback func(entity *Entity) (stop, remove bool)) bool
 
 	// ForEntitiesInRadius Iterates all the entities in a radius and returns if stopped early
 	// Only for reading so no adding or modifying entities
 	// Cannot hold pointer after call is finished
-	ForEntitiesInRadius(position Vec2f, radius float32, callback func(r float32, entityID EntityID, entity *Entity) (stop bool)) bool
+	ForEntitiesInRadius(position Vec2f, radius float32, callback func(r float32, entity *Entity) (stop bool)) bool
 
 	// ForEntitiesAndOthers Iterates all the entities and other entities in a radius and returns if stopped early
 	// For reading and writing
@@ -59,8 +59,8 @@ type World interface {
 	// If entities are added during iteration may not iterate them
 	// Skips radii that are <= 0
 	// Radii that are too big cause all sectors to be iterated
-	ForEntitiesAndOthers(entityCallback func(entityID EntityID, entity *Entity) (stop bool, radius float32),
-		otherCallback func(entityID EntityID, entity *Entity, otherEntityID EntityID, otherEntity *Entity) (stop, remove, removeOther bool)) bool
+	ForEntitiesAndOthers(entityCallback func(entity *Entity) (stop bool, radius float32),
+		otherCallback func(entity *Entity, otherEntity *Entity) (stop, remove, removeOther bool)) bool
 
 	// Resize sets the max size of the World.
 	// It may or may not reallocate parts of the World depending on the difference in radius.
@@ -171,7 +171,8 @@ func createTestWorld(world World, entityCount int, radius int) testWorld {
 				Direction: ToAngle(rand.Float32() * math32.Pi * 2),
 			},
 		}
-		entityIDs[i] = world.AddEntity(&entity)
+		world.AddEntity(&entity)
+		entityIDs[i] = entity.EntityID
 	}
 
 	return testWorld{
@@ -211,13 +212,13 @@ func testWorldInRadius(world testWorld, times int) int {
 	var entity *Entity
 	i := 0
 
-	callback2 := func(_ float32, _ EntityID, otherEntity *Entity) (_ bool) {
+	callback2 := func(_ float32, otherEntity *Entity) (_ bool) {
 		entityTypeCounts[int(entity.EntityType)]++
 		entityTypeCounts[int(otherEntity.EntityType)]++
 		return
 	}
 
-	callback1 := func(_ EntityID, e *Entity) (stop, _ bool) {
+	callback1 := func(e *Entity) (stop, _ bool) {
 		i++
 		if stop = i >= times; stop {
 			return
@@ -246,7 +247,7 @@ func testWorldIterate(world testWorld, times int) int {
 	entityTypeCounts := make([]int, EntityTypeCount)
 
 	for i := 0; i < times; {
-		world.world.ForEntities(func(entityID EntityID, entity *Entity) (stop, _ bool) {
+		world.world.ForEntities(func(entity *Entity) (stop, _ bool) {
 			entityTypeCounts[int(entity.EntityType)]++
 			i++
 			stop = i >= times
@@ -270,7 +271,7 @@ func testWorldIterateParallel(world testWorld, times int) int {
 	count := world.world.Count()
 
 	for i := 0; i < times; i += count {
-		world.world.ForEntities(func(entityID EntityID, entity *Entity) (_, _ bool) {
+		world.world.ForEntities(func(entity *Entity) (_, _ bool) {
 			entityType := entity.EntityType
 			if entityType == 0 {
 				panic("invalid entity type")
@@ -292,13 +293,13 @@ func testWorldIterateRadius(world testWorld, times int) int {
 	entityTypeCounts := make([]int, EntityTypeCount)
 
 	for i := 0; i < times; {
-		world.world.ForEntitiesAndOthers(func(entityID EntityID, entity *Entity) (stop bool, radius float32) {
+		world.world.ForEntitiesAndOthers(func(entity *Entity) (stop bool, radius float32) {
 			i++
 			stop = i >= times
 			radius = entity.Data().Radius * 2
 
 			return
-		}, func(entityID EntityID, entity *Entity, otherEntityID EntityID, otherEntity *Entity) (_, _, _ bool) {
+		}, func(entity *Entity, otherEntity *Entity) (_, _, _ bool) {
 			entityTypeCounts[int(entity.EntityType)]++
 			entityTypeCounts[int(otherEntity.EntityType)]++
 			return

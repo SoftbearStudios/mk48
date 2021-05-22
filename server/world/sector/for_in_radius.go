@@ -45,7 +45,7 @@ func (w *World) forSectorsInRadius(position world.Vec2f, radius float32, callbac
 
 // ForEntitiesInRadius implements world.World.ForEntitiesInRadius
 // For reading only
-func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(r float32, entityID world.EntityID, entity *world.Entity) (stop bool)) bool {
+func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callback func(r float32, entity *world.Entity) (stop bool)) bool {
 	w.addDepth(1)
 
 	r2 := radius * radius
@@ -61,7 +61,7 @@ func (w *World) ForEntitiesInRadius(position world.Vec2f, radius float32, callba
 				continue
 			}
 
-			if callback(r, entity.EntityID, &entity.Entity) {
+			if callback(r, entity) {
 				return true
 			}
 		}

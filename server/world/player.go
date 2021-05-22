@@ -22,12 +22,13 @@ const (
 type (
 	// Player owns entities and has score
 	Player struct {
+		ext unsafeExtension // extension for EntityID
 		PlayerData
-		EntityID     EntityID
-		DeathVisual  float32
+		DeathMessage string
 		DeathPos     Vec2f
 		DeathTime    int64
-		DeathMessage string
+		DeathVisual  float32
+		EntityID     EntityID
 	}
 
 	// PlayerID is the unique id of a Player

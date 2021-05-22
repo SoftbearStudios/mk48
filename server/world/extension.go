@@ -30,14 +30,15 @@ type extension interface {
 }
 
 func (entity *Entity) ArmamentConsumption() []Ticks {
-	return entity.ext.armamentConsumption(entity.EntityType)
+	entity.mustBoat()
+	return entity.Owner.ext.armamentConsumption(entity.EntityType)
 }
 
 // -1 = deep, 0 = surface, 1 = high in the air
 func (entity *Entity) Altitude() float32 {
 	switch entity.EntityType.Data().Kind {
 	case EntityKindBoat:
-		return entity.ext.altitude()
+		return entity.Owner.ext.altitude()
 	case EntityKindDecoy:
 		switch entity.EntityType.Data().SubKind {
 		case EntitySubKindSonar:
@@ -60,17 +61,29 @@ func (entity *Entity) Altitude() float32 {
 }
 
 func (entity *Entity) SetAltitudeTarget(altitudeTarget float32) {
-	entity.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))
+	entity.mustBoat()
+	entity.Owner.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))
 }
 
 func (entity *Entity) TurretAngles() []Angle {
-	return entity.ext.turretAngles(entity.EntityType)
+	entity.mustBoat()
+	return entity.Owner.ext.turretAngles(entity.EntityType)
 }
 
 func (entity *Entity) TurretTarget() Vec2f {
-	return entity.ext.turretTarget()
+	entity.mustBoat()
+	return entity.Owner.ext.turretTarget()
 }
 
 func (entity *Entity) SetTurretTarget(target Vec2f) {
-	entity.ext.setTurretTarget(target)
+	entity.mustBoat()
+	entity.Owner.ext.setTurretTarget(target)
+}
+
+// Call when accessing entity.Owner.ext, which is ONLY valid
+// on the owner's boat entity
+func (entity *Entity) mustBoat() {
+	if entity.Data().Kind != EntityKindBoat {
+		panic("access extension of non-boat")
+	}
 }

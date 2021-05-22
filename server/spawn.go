@@ -46,7 +46,7 @@ func (h *Hub) Spawn() {
 	currentOilPlatformCount := int64(0)
 
 	h.world.SetParallel(true)
-	h.world.ForEntities(func(entityID world.EntityID, entity *world.Entity) (stop, remove bool) {
+	h.world.ForEntities(func(entity *world.Entity) (stop, remove bool) {
 		switch entity.Data().Kind {
 		case world.EntityKindCollectible:
 			atomic.AddInt64(&currentCrateCount, 1)
@@ -56,7 +56,7 @@ func (h *Hub) Spawn() {
 				barrelCount := 0
 
 				// Count current barrels
-				h.world.ForEntitiesInRadius(pos, barrelRadius, func(_ float32, _ world.EntityID, entity *world.Entity) (_ bool) {
+				h.world.ForEntitiesInRadius(pos, barrelRadius, func(_ float32, entity *world.Entity) (_ bool) {
 					barrelCount++
 					return
 				})
@@ -138,7 +138,8 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		return world.EntityIDInvalid
 	}
 
-	entityID := h.world.AddEntity(entity)
+	h.world.AddEntity(entity)
+	entityID := entity.EntityID
 	if entity.Owner != nil && entity.Data().Kind == world.EntityKindBoat {
 		if entity.Owner.EntityID != world.EntityIDInvalid {
 			panic("owner already has EntityID")
@@ -158,7 +159,7 @@ func (h *Hub) nearAny(entity *world.Entity, threshold float32) bool {
 	radius := entity.Data().Radius
 	maxT := (radius + world.EntityRadiusMax) * threshold
 
-	return h.terrain.Collides(entity, 1) || h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, _ world.EntityID, otherEntity *world.Entity) (stop bool) {
+	return h.terrain.Collides(entity, 1) || h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
 		t := (radius + otherEntity.Data().Radius) * threshold
 		return r < t*t
 	})
