@@ -378,6 +378,122 @@
 			}
 		]
 	},
+	"essex": {
+		"label": "Essex",
+		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
+		"type": "boat",
+		"subtype": "carrier",
+		"level": 6,
+		"length": 265.8,
+		"width": 42.5695,
+		"speed": 16.83333,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 1297.4
+			},
+			{
+				"type": "radar",
+				"range": 1531.6
+			}
+		],
+		"armaments": [
+			{
+				"default": "avenger",
+				"positionForward": 16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": 0,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -32,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -48,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -64,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark12",
+				"positionForward": 46.25,
+				"positionSide": 12.75,
+				"angle": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": 38,
+				"positionSide": 12.75,
+				"angle": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": -23.5,
+				"positionSide": 12.75,
+				"angle": 3.141592653589793
+			},
+			{
+				"type": "mark12",
+				"positionForward": -31.5,
+				"positionSide": 12.75,
+				"angle": 3.141592653589793
+			}
+		]
+	},
 	"fairmileD": {
 		"label": "Fairmile D",
 		"link": "https://en.wikipedia.org/wiki/Fairmile_D_motor_torpedo_boat",
@@ -2741,6 +2857,26 @@
 		],
 		"turrets": [],
 		"sensors": []
+	},
+	"avenger": {
+		"label": "TBF Avenger",
+		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 12.45,
+		"width": 16.5143,
+		"speed": 96.1136,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 537.35
+			}
+		],
+		"lifespan": 15.606532270146992,
+		"reload": 8,
+		"armaments": [],
+		"turrets": []
 	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",

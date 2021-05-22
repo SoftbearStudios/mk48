@@ -204,6 +204,86 @@
 			}
 		]
 	},
+	"essex": {
+		"label": "Essex",
+		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
+		"type": "boat",
+		"subtype": "carrier",
+		"level": 6,
+		"length": 265.8,
+		"width": 42.5695,
+		"speed": 16.83333,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "avenger",
+				"positionForward": 16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": 0,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -32,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -48,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -64,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark12",
+				"positionForward": 46.25,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12",
+				"positionForward": 38,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12",
+				"positionForward": -23.5,
+				"positionSide": 12.75,
+				"angle": 180
+			},
+			{
+				"type": "mark12",
+				"positionForward": -31.5,
+				"positionSide": 12.75,
+				"angle": 180
+			}
+		]
+	},
 	"fairmileD": {
 		"label": "Fairmile D",
 		"link": "https://en.wikipedia.org/wiki/Fairmile_D_motor_torpedo_boat",
@@ -1554,6 +1634,22 @@
 				"positionForward": 0.5,
 				"external": false,
 				"hidden": true
+			}
+		]
+	},
+	"avenger": {
+		"label": "TBF Avenger",
+		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 12.45,
+		"width": 16.5143,
+		"speed": 96.1136,
+		"range": 1456000,
+		"sensors": [
+			{
+				"type": "visual"
 			}
 		]
 	},
