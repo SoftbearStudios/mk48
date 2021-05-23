@@ -3,6 +3,7 @@ Android
 Baymax
 Bender
 Bixby
+BMO
 Bot
 Burn-E
 C-3PO

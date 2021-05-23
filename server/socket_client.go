@@ -26,7 +26,7 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 4096
 
-	debugSocket = false
+	debugSocket = true
 )
 
 var upgrader = websocket.Upgrader{
@@ -88,6 +88,9 @@ func (client *SocketClient) Send(message outbound) {
 	case client.send <- message:
 	default:
 		// Not responsive
+		if debugSocket {
+			fmt.Println("SocketClient is not responsive")
+		}
 		client.Destroy()
 	}
 }
@@ -148,7 +151,7 @@ func (client *SocketClient) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				_ = client.conn.WriteMessage(websocket.CloseMessage, nil)
-				return
+				panic("hub closed channel")
 			}
 
 			w, err := client.conn.NextWriter(websocket.TextMessage)
@@ -158,7 +161,6 @@ func (client *SocketClient) writePump() {
 
 			// Wrap with Message to marshal type
 			if err = json.NewEncoder(w).Encode(Message{Data: out}); err != nil {
-				log.Println("encoding error:", err)
 				panic(err)
 			}
 

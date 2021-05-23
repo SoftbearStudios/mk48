@@ -174,7 +174,7 @@ func (bot *BotClient) Send(out outbound) {
 
 		// Pick a random destination to wander to.
 		if (bot.destination == world.Vec2f{}) || ship.Position.DistanceSquared(bot.destination) < 100*100 {
-			bot.destination = world.Angle(r.Float32() * math32.Pi * 2).Vec2f().Mul(update.WorldRadius * 0.9)
+			bot.destination = world.ToAngle(r.Float32() * math32.Pi * 2).Vec2f().Mul(update.WorldRadius * 0.9)
 		}
 
 		manual := Manual{
