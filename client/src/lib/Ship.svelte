@@ -32,13 +32,17 @@
 
 			let group = groups[type];
 			if (!group) {
-				group = {type: armament.default, airdrop: armament.airdrop, ready: 0, total: 0, reload: 0};
+				group = {type: armament.default, airdrop: armament.airdrop, ready: 0, deployed: 0, total: 0, reload: 0};
 				groups[type] = group;
 			}
 			group.total++;
-			group.reload += armamentConsumption(consumptions, i);
 
-			if (hasArmament(consumptions, i)) {
+			let consumption = armamentConsumption(consumptions, i);
+			if (consumption >= 6553) {
+				group.deployed++;
+			} else if (consumption > 0) {
+				group.reload += consumption;
+			} else {
 				group.ready++;
 			}
 		}
@@ -101,7 +105,7 @@
 		{#each groupArmaments(armaments, consumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
 				<img title={entityData[group.type].label + (group.airdrop ? ` (Airdropped ${summarizeType(group.type)})` : ` (${summarizeType(group.type)})`)} class:consumed={group.ready === 0} src={`/sprites/${group.type}.png`}/>
-				<span class='consumption' title={group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`}>{group.ready}/{group.total}</span>
+				<span class='consumption' title={(group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`) + (group.deployed === 0 ? '' : ` (${group.deployed} still deployed)`)}>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
 		{#if entityData[type].subtype === 'ram'}

@@ -261,23 +261,23 @@
 		],
 		"turrets": [
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": 46.25,
 				"positionSide": 12.75
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": 38,
 				"positionSide": 12.75
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": -23.5,
 				"positionSide": 12.75,
 				"angle": 180
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": -31.5,
 				"positionSide": 12.75,
 				"angle": 180
@@ -1797,6 +1797,26 @@
 				"angle": 0,
 				"positionForward": 2,
 				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"mark12x2": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.6,
+		"positionForward": 1,
+		"width": 4.39375,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"symmetrical": true,
 				"external": false,
 				"hidden": false
 			}

@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	EntityLevelMax   uint8
-	EntityRadiusMax  float32
-	EntityTypeCount  int
-	SpawnEntityTypes []EntityType
+	EntityLevelMax         uint8
+	EntityRadiusMax        float32
+	EntityTypeCount        int
+	BoatEntityTypesByLevel [][]EntityType
 )
 
 type (

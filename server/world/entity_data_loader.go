@@ -182,8 +182,11 @@ func init() {
 
 	// Spawn entities are boats that are level 1
 	for i, data := range entityTypeData {
-		if data.Kind == EntityKindBoat && data.Level == 1 {
-			SpawnEntityTypes = append(SpawnEntityTypes, EntityType(i))
+		if data.Kind == EntityKindBoat {
+			for len(BoatEntityTypesByLevel) <= int(data.Level) {
+				BoatEntityTypesByLevel = append(BoatEntityTypesByLevel, []EntityType{})
+			}
+			BoatEntityTypesByLevel[data.Level] = append(BoatEntityTypesByLevel[data.Level], EntityType(i))
 		}
 	}
 }

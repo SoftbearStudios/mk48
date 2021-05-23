@@ -32,12 +32,14 @@ func (h *Hub) serveWs(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var (
-		auth    string
-		port    int
-		players int
+		auth             string
+		botMaxSpawnLevel int
+		port             int
+		players          int
 	)
 
 	flag.StringVar(&auth, "auth", "", "admin auth code")
+	flag.IntVar(&botMaxSpawnLevel, "bot-max-spawn-level", 1, "maximum level for bots to spawn as")
 	flag.IntVar(&port, "port", 8192, "http service port")
 	flag.IntVar(&players, "players", 40, "minimum number of players")
 	flag.Parse()
@@ -46,7 +48,7 @@ func main() {
 		log.Fatal("invalid argument players: ", players)
 	}
 
-	hub := newHub(players, auth)
+	hub := newHub(players, botMaxSpawnLevel, auth)
 	go hub.run()
 
 	if port < 0 {
