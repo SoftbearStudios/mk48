@@ -16,7 +16,7 @@ Droid
 Drone
 EDI
 Eve
-GladOS
+GLaDOS
 Hal9000
 Herobrine
 IG99
