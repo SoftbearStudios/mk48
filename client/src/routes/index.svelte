@@ -623,7 +623,7 @@
 							const armamentEntityData = entityData[armament.default];
 
 							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
-							if (armament.airdrop || armament.vertical || ['depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
+							if (armament.airdrop || armament.vertical || ['aircraft', 'depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
 								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
 							}
