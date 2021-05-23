@@ -896,7 +896,7 @@
 					if (recording) {
 						stopRecording();
 						recording = false;
-					} else {
+					} else if (event.shiftKey) { // See #80
 						startRecording(canvas);
 						recording = true;
 					}
