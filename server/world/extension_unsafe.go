@@ -40,9 +40,10 @@ func (ext *unsafeExtension) setType(entityType EntityType) {
 	// Allocate enough space for armaments, and turret angles
 	size := unsafeDataLen(data)
 	if size == 0 {
-		return
+		ext.data = nil
+	} else {
+		ext.data = &make([]uint16, size)[0]
 	}
-	ext.data = &make([]uint16, size)[0]
 
 	ext.typ = entityType
 	angles := ext.turretAngles()
