@@ -390,7 +390,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 					return
 				}
 				// Drop the torpedo a bit away, pointed towards the target
-				transform.Direction = world.Angle(rand.Float32() * math32.Pi * 2)
+				transform.Direction = world.ToAngle(rand.Float32() * math32.Pi * 2)
 				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
 				armamentGuidance.DirectionTarget = transform.Direction
 
