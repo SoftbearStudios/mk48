@@ -44,22 +44,23 @@ type (
 	// EntityTypeData is the description of an EntityType.
 	EntityTypeData struct {
 		// All units are SI (meters, seconds, etc.)
-		Kind      EntityKind    `json:"type"`
-		SubKind   EntitySubKind `json:"subtype"`
-		Level     uint8         `json:"level"`
-		Lifespan  Ticks         `json:"lifespan"`
-		Reload    Ticks         `json:"reload"` // time to reload
-		Speed     Velocity      `json:"speed"`
-		Length    float32       `json:"length"`
-		Width     float32       `json:"width"`
-		Radius    float32       `json:"-"`
-		InvSize   float32       `json:"-"`
-		Damage    float32       `json:"damage"`
-		Stealth   float32       `json:"stealth"`
-		Sensors   []Sensor      `json:"sensors"`
-		Armaments []Armament    `json:"armaments"`
-		Turrets   []Turret      `json:"turrets"`
-		Label     string        `json:"label"`
+		Kind         EntityKind    `json:"type"`
+		SubKind      EntitySubKind `json:"subtype"`
+		Level        uint8         `json:"level"`
+		Lifespan     Ticks         `json:"lifespan"`
+		Reload       Ticks         `json:"reload"` // time to reload
+		Speed        Velocity      `json:"speed"`
+		Length       float32       `json:"length"`
+		Width        float32       `json:"width"`
+		Radius       float32       `json:"-"`
+		InvSize      float32       `json:"-"`
+		Damage       float32       `json:"damage"`
+		AntiAircraft float32       `json:"antiAircraft"` // chance aircraft is shot down per second
+		Stealth      float32       `json:"stealth"`
+		Sensors      []Sensor      `json:"sensors"`
+		Armaments    []Armament    `json:"armaments"`
+		Turrets      []Turret      `json:"turrets"`
+		Label        string        `json:"label"`
 	}
 
 	// Sensor the description of a sensor in an EntityType.
@@ -109,6 +110,16 @@ func (entityType EntityType) Data() *EntityTypeData {
 // MaxHealth is the maximum health of an EntityType as an absolute
 func (entityType EntityType) MaxHealth() float32 {
 	return max(1, entityType.Data().Length*(1.0/32.0))
+}
+
+// Returns a lifespan to start an entity's life at, so as to make it expire
+// in desiredLifespan ticks
+func (entityType EntityType) ReducedLifespan(desiredLifespan Ticks) Ticks {
+	data := entityType.Data()
+	if data.Lifespan > desiredLifespan {
+		return data.Lifespan - desiredLifespan
+	}
+	return data.Lifespan
 }
 
 func (entityType EntityType) UpgradePaths(score int) (upgradePaths []EntityType) {

@@ -389,12 +389,9 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
 				armamentGuidance.DirectionTarget = transform.Direction
 
-				// Start the distance/lifespan near expiry to make these torpedoes not last long
+				// Start the lifespan near expiry to make these torpedoes not last long
 				const maxLifespan = 10 * world.TicksPerSecond
-				if armamentEntityData.Lifespan > maxLifespan {
-					lifespan = armamentEntityData.Lifespan - maxLifespan
-				}
-
+				lifespan = armamentData.Default.ReducedLifespan(maxLifespan)
 			} else if armamentData.Vertical {
 				// Vertically-launched armaments can be launched in any horizontal direction
 				transform.Direction = armamentGuidance.DirectionTarget

@@ -366,15 +366,15 @@
 				}
 
 				if (entity.altitude != undefined) {
-					sprite.alpha = Math.min(entity.altitude + 1, 1);
+					sprite.alpha = clamp(entity.altitude + 1, 0.25, 1);
 				}
 
 				// Selective snapping
-				if (isNew || dist(sprite.position, entity.position) > 10) {
+				if (isNew || dist(sprite.position, entity.position) > 15) {
 					sprite.position.set(entity.position.x, entity.position.y);
 				}
 				sprite.velocity = entity.velocity;
-				if (isNew || Math.abs(angleDiff(sprite.rotation, entity.direction)) > Math.PI / 6) {
+				if (isNew || Math.abs(angleDiff(sprite.rotation, entity.direction)) > Math.PI / 4) {
 					sprite.rotation = entity.direction;
 				}
 

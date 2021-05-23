@@ -37,7 +37,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	if data.SubKind == EntitySubKindAircraft {
 		posTarget := entity.OwnerBoatTurretTarget()
 		posDiff := posTarget.Sub(entity.Position)
-		entity.DirectionTarget = posDiff.Angle()
+		entity.DirectionTarget = posDiff.Angle() + ToAngle(math32.Sin(entity.Lifespan.Float()) * 0.25)
 	}
 
 	// Shells that have been added so far can't turn

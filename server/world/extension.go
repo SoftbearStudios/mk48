@@ -79,6 +79,15 @@ func (entity *Entity) TurretTarget() Vec2f {
 
 // When a weapon wants the turret target of the owner's ship
 func (entity *Entity) OwnerBoatTurretTarget() Vec2f {
+	if entity.Owner == nil {
+		return Vec2f{}
+	}
+	// Determine the type of entity.ext without it being a runtime interface
+	var iface interface{}
+	iface = entity.Owner.ext
+	if unsafeExt, ok := iface.(unsafeExtension); ok && unsafeExt.data == nil {
+		return Vec2f{}
+	}
 	return entity.Owner.ext.turretTarget()
 }
 

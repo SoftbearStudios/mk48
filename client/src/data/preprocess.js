@@ -53,6 +53,17 @@ for (const entityType of Object.keys(entityDatas)) {
 		delete(entityData.range);
 	}
 
+	if (entityData.type === 'boat') {
+		// Anti-aircraft power
+		switch (entityData.subtype) {
+			case 'dredger':
+			case 'submarine':
+				break;
+			default:
+				entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
+		}
+	}
+
 	if (entityData.type === 'weapon' && entityData.damage == undefined) {
 		switch (entityData.subtype) {
 			case 'torpedo':

@@ -224,7 +224,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.126
 	},
 	"bismarck": {
 		"label": "Bismarck",
@@ -376,7 +377,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.2
 	},
 	"essex": {
 		"label": "Essex",
@@ -492,7 +494,8 @@
 				"positionSide": 12.75,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.221
 	},
 	"fairmileD": {
 		"label": "Fairmile D",
@@ -596,7 +599,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.024
 	},
 	"fletcher": {
 		"label": "Fletcher",
@@ -832,7 +836,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.092
 	},
 	"g5": {
 		"label": "G-5",
@@ -871,6 +876,7 @@
 				"external": true
 			}
 		],
+		"antiAircraft": 0.011,
 		"turrets": []
 	},
 	"golf": {
@@ -1107,7 +1113,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.133
 	},
 	"komar": {
 		"label": "Komar",
@@ -1215,7 +1222,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.016
 	},
 	"leander": {
 		"label": "Leander",
@@ -1441,7 +1449,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.138
 	},
 	"lublin": {
 		"label": "Lublin",
@@ -1529,6 +1538,7 @@
 				"angle": null
 			}
 		],
+		"antiAircraft": 0.076,
 		"turrets": []
 	},
 	"momi": {
@@ -1685,7 +1695,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.067
 	},
 	"montana": {
 		"label": "Montana",
@@ -1873,7 +1884,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.234
 	},
 	"ohio": {
 		"label": "Ohio",
@@ -2024,6 +2036,7 @@
 				"range": 610.7
 			}
 		],
+		"antiAircraft": 0.026,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2117,7 +2130,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.027
 	},
 	"pt34": {
 		"label": "PT-34",
@@ -2176,6 +2190,7 @@
 				"external": true
 			}
 		],
+		"antiAircraft": 0.014,
 		"turrets": []
 	},
 	"skipjack": {
@@ -2570,7 +2585,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.056
 	},
 	"zubr": {
 		"label": "Zubr",
@@ -2717,7 +2733,8 @@
 				"positionSide": -6.25,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.043
 	},
 	"2m3m": {
 		"label": "2M-3M",
