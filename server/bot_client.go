@@ -279,8 +279,10 @@ func (bot *BotClient) spawn(r *rand.Rand) {
 		name = randomBotName(r)
 	}
 
+	var level = r.Intn(int(bot.Hub.botMaxSpawnLevel)) + 1
+
 	bot.receiveAsync(Spawn{
-		Type: randomType(r, world.SpawnEntityTypes),
+		Type: randomType(r, world.BoatEntityTypesByLevel[level]),
 		Name: name,
 	})
 }

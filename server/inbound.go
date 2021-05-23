@@ -228,8 +228,14 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 		}
 
 		authed := h.auth != "" && data.Auth == h.auth
+		_, bot := client.(*BotClient)
 
-		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || (d.Level != 1 && !authed) {
+		maxLevel := uint8(1)
+		if bot {
+			maxLevel = h.botMaxSpawnLevel
+		}
+
+		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || (d.Level > maxLevel && !authed) {
 			return
 		}
 
@@ -299,7 +305,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 
 		h.spawnEntity(entity, spawnRadius)
 
-		if _, bot := client.(*BotClient); !bot {
+		if !bot {
 			h.cloud.IncrementPlaysStatistic()
 			if data.New {
 				h.cloud.IncrementNewPlayerStatistic()
