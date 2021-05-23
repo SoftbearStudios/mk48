@@ -29,7 +29,7 @@
 
 	let newTeamName = '';
 
-	const minNameLength = 3;
+	const minNameLength = 2;
 	const maxNameLength = 6;
 
 	function createTeam() {

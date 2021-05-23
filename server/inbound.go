@@ -364,12 +364,12 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 		transform := entity.ArmamentTransform(data.Index)
 
 		failed := false
-		if armamentEntityData.SubKind == world.EntitySubKindDredger {
+		if armamentEntityData.SubKind == world.EntitySubKindDepositor {
 			// TODO find another way to calculate this
-			if data.PositionTarget.DistanceSquared(transform.Position) > 60 {
+			if data.PositionTarget.DistanceSquared(transform.Position) > 60*60 {
 				return
 			}
-			h.terrain.Sculpt(data.PositionTarget, 40)
+			h.terrain.Sculpt(data.PositionTarget, 60)
 		} else {
 			armamentGuidance := data.Guidance
 

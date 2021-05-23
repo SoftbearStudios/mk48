@@ -153,13 +153,22 @@
 	"sourceSize": {"w":64,"h":64},
 	"anchor": {"x":0,"y":0}
 },
-"dredger":
+"depositor":
 {
 	"frame": {"x":0,"y":1566,"w":256,"h":60},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":60},
 	"sourceSize": {"w":256,"h":60},
+	"anchor": {"x":0,"y":0}
+},
+"dredger":
+{
+	"frame": {"x":0,"y":0,"w":1024,"h":169},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":1024,"h":169},
+	"sourceSize": {"w":1024,"h":169},
 	"anchor": {"x":0,"y":0}
 },
 "essex":
@@ -477,15 +486,6 @@
 	"sourceSize": {"w":128,"h":19},
 	"anchor": {"x":0,"y":0}
 },
-"tshd":
-{
-	"frame": {"x":0,"y":0,"w":1024,"h":169},
-	"rotated": false,
-	"trimmed": false,
-	"spriteSourceSize": {"x":0,"y":0,"w":1024,"h":169},
-	"sourceSize": {"w":1024,"h":169},
-	"anchor": {"x":0,"y":0}
-},
 "type53":
 {
 	"frame": {"x":520,"y":1357,"w":254,"h":24},
@@ -538,6 +538,6 @@
 	"format": "RGBA8888",
 	"size": {"w":2048,"h":1626},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e4a4e5a234ba6980d6819c3fd54befce:090c02ca62a502b17d714fcbac5da81c:729adc6043343cfda41c447ce8f464d6$"
+	"smartupdate": "$TexturePacker:SmartUpdate:0ee2ce672952c417d87a14e9ad87106f:5702632fa3fed41f1a683f549f26e7ed:729adc6043343cfda41c447ce8f464d6$"
 }
 }

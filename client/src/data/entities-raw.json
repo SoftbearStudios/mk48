@@ -204,6 +204,35 @@
 			}
 		]
 	},
+	"dredger": {
+		"label": "Dredger",
+		"link": "https://en.wikipedia.org/wiki/Trailing_suction_hopper_dredger",
+		"type": "boat",
+		"subtype": "dredger",
+		"level": 4,
+		"length": 99,
+		"width": 16.5,
+		"speed": 8,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "depositor",
+				"positionForward": 7,
+				"turret": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": 43.75,
+				"positionSide": 0
+			}
+		]
+	},
 	"essex": {
 		"label": "Essex",
 		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
@@ -1277,35 +1306,6 @@
 			}
 		]
 	},
-	"tshd": {
-		"label": "TSHD",
-		"link": "https://en.wikipedia.org/wiki/Trailing_suction_hopper_dredger",
-		"type": "boat",
-		"subtype": "dredger",
-		"level": 4,
-		"length": 99,
-		"width": 16.5,
-		"speed": 8,
-		"sensors": [
-			{
-				"type": "visual"
-			}
-		],
-		"armaments": [
-			{
-				"default": "dredger",
-				"positionForward": 7,
-				"turret": 0,
-				"external": true
-			}
-		],
-		"turrets": [
-			{
-				"positionForward": 43.75,
-				"positionSide": 0
-			}
-		]
-	},
 	"typeVIIC": {
 		"label": "Type VII C",
 		"link": "https://en.wikipedia.org/wiki/Type_VII_submarine",
@@ -1710,10 +1710,10 @@
 			}
 		]
 	},
-	"dredger": {
-		"label": "Dredger",
+	"depositor": {
+		"label": "Depositor",
 		"type": "weapon",
-		"subtype": "dredger",
+		"subtype": "depositor",
 		"length": 21.9,
 		"width": 5.1328,
 		"range": 60

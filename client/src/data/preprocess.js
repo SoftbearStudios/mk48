@@ -29,7 +29,7 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
-	if (entityData.range && entityType !== 'dredger') {
+	if (entityData.range && entityType !== 'depositor') {
 		let maxRange = 1500;
 		if (entityData.type === 'weapon') {
 			switch (entityData.subtype) {
@@ -98,7 +98,7 @@ for (const entityType of Object.keys(entityDatas)) {
 					case 'aircraft':
 						entityData.reload = 5;
 						break;
-					case 'dredger':
+					case 'depositor':
 						entityData.reload = 1;
 						break;
 					case 'rocket':
