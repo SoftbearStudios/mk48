@@ -40,6 +40,9 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'missile':
 					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
 					break;
+				case 'aircraft':
+					maxRange = 5000;
+					break;
 			}
 		}
 		entityData.range = Math.min(entityData.range, maxRange);
@@ -81,6 +84,9 @@ for (const entityType of Object.keys(entityDatas)) {
 		switch (entityData.type) {
 			case 'weapon':
 				switch (entityData.subtype) {
+					case 'aircraft':
+						entityData.reload = 12;
+						break;
 					case 'dredger':
 						entityData.reload = 1;
 						break;
