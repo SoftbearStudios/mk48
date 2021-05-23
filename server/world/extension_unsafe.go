@@ -9,20 +9,15 @@ import (
 )
 
 type (
-	unsafeExtension struct {
-		data *unsafeData
-	}
-
 	// unsafeData is allocated with extra space for armaments and angles
 	// basics documented in extension_safe
-	unsafeData struct {
+	unsafeExtension struct {
+		data      *uint16
 		target    Vec2f
 		alt       float32
 		altTarget float32
-		damage    float32
-		first     [0]uint16
-		// armaments [?]Ticks
-		// angles    [?]Angle
+		dmg       float32
+		typ       EntityType
 	}
 )
 
@@ -34,26 +29,23 @@ func init() {
 	}
 }
 
-func unsafeDataSize(data *EntityTypeData) int {
-	return int(unsafe.Sizeof(unsafeData{}) + uintptr(len(data.Armaments))*unsafe.Sizeof(Ticks(0)) + uintptr(len(data.Turrets))*unsafe.Sizeof(Angle(0)))
+func unsafeDataLen(data *EntityTypeData) int {
+	return len(data.Armaments) + len(data.Turrets)
 }
 
 // setEntityType initializes to a size defined by entityType
 func (ext *unsafeExtension) setType(entityType EntityType) {
 	data := entityType.Data()
-	oldExt := ext.data
 
-	// Allocate enough space for target, time, armaments, and angles
-	size := unsafeDataSize(data)
-	ext.data = (*unsafeData)(unsafe.Pointer(&make([]byte, size)[0]))
-
-	// Only keep target and target time
-	if oldExt != nil {
-		ext.data.target = oldExt.target
-		ext.data.altTarget = oldExt.altTarget
+	// Allocate enough space for armaments, and turret angles
+	size := unsafeDataLen(data)
+	if size == 0 {
+		return
 	}
+	ext.data = &make([]uint16, size)[0]
 
-	angles := ext.turretAngles(entityType)
+	ext.typ = entityType
+	angles := ext.turretAngles()
 	for i, turret := range data.Turrets {
 		angles[i] = turret.Angle
 	}
@@ -64,85 +56,79 @@ func (ext *unsafeExtension) copiesAll() bool {
 }
 
 // copy reallocates data of same size
-func (ext *unsafeExtension) copy(entityType EntityType) {
-	data := entityType.Data()
-	size := unsafeDataSize(data)
+func (ext *unsafeExtension) copy() {
+	data := ext.typ.Data()
+	size := unsafeDataLen(data)
 
-	var src []byte
+	var src []uint16
 	header := (*reflect.SliceHeader)(unsafe.Pointer(&src))
 	header.Data = uintptr(unsafe.Pointer(ext.data))
 	header.Len = size
 	header.Cap = size
 
-	dst := make([]byte, len(src))
+	dst := make([]uint16, len(src))
 	copy(dst, src)
 
-	ext.data = (*unsafeData)(unsafe.Pointer(&dst[0]))
+	ext.data = &dst[0]
 }
 
-func (ext *unsafeExtension) armamentConsumption(entityType EntityType) (slice []Ticks) {
-	if n := len(entityType.Data().Armaments); n != 0 {
+func (ext *unsafeExtension) armamentConsumption() (slice []Ticks) {
+	if n := len(ext.typ.Data().Armaments); n != 0 {
 		header := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-		header.Data = uintptr(unsafe.Pointer(&ext.data.first))
+		header.Data = uintptr(unsafe.Pointer(ext.data))
 		header.Len = n
 		header.Cap = n
 	}
 	return
 }
 
-func (ext *unsafeExtension) copyArmamentConsumption(entityType EntityType) {
-	ext.copy(entityType)
+func (ext *unsafeExtension) copyArmamentConsumption() {
+	ext.copy()
 }
 
-func (ext *unsafeExtension) turretAngles(entityType EntityType) (slice []Angle) {
-	data := entityType.Data()
+func (ext *unsafeExtension) turretAngles() (slice []Angle) {
+	data := ext.typ.Data()
 	if n := len(data.Turrets); n != 0 {
 		header := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-		header.Data = uintptr(unsafe.Pointer(&ext.data.first)) + uintptr(len(data.Armaments))*unsafe.Sizeof(Ticks(0))
+		header.Data = uintptr(unsafe.Pointer(ext.data)) + uintptr(len(data.Armaments))*unsafe.Sizeof(Ticks(0))
 		header.Len = n
 		header.Cap = n
 	}
 	return
 }
 
-func (ext *unsafeExtension) copyTurretAngles(entityType EntityType) {
-	ext.copy(entityType)
+func (ext *unsafeExtension) copyTurretAngles() {
+	ext.copy()
 }
 
 func (ext *unsafeExtension) altitude() float32 {
-	if ext.data == nil {
-		return 0
-	}
-	return ext.data.alt
+	return ext.alt
 }
 
 func (ext *unsafeExtension) setAltitude(a float32) {
-	ext.data.alt = a
+	ext.alt = a
 }
 
 func (ext *unsafeExtension) altitudeTarget() float32 {
-	if ext.data == nil {
-		return 0
-	}
-	return ext.data.altTarget
+	return ext.altTarget
 }
 
 func (ext *unsafeExtension) setAltitudeTarget(a float32) {
-	ext.data.altTarget = a
+	ext.altTarget = a
 }
 
 func (ext *unsafeExtension) turretTarget() Vec2f {
-	return ext.data.target
+	return ext.target
 }
 
 func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
-	ext.data.target = target
+	ext.target = target
 }
 
 func (ext *unsafeExtension) damage() float32 {
-	return ext.data.damage
+	return ext.dmg
 }
 
 func (ext *unsafeExtension) setDamage(d float32) {
-	ext.data.damage = d
+	ext.dmg = d
 }

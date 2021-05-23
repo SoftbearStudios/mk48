@@ -180,8 +180,10 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					// Aircraft (simulate weapons and anti-aircraft)
 					if entityData.SubKind == world.EntitySubKindAircraft && otherData.Kind == world.EntityKindBoat {
 						// Small window of opportunity to fire
-						if !entity.Collides(other, 2.6) && entity.Collides(other, 3) {
-							torpedoType := world.ParseEntityType("mark18")
+						// Uses lifespan as torpedo consumption
+						if entity.Lifespan > world.TicksPerSecond*3 && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
+							entity.Lifespan = 0
+							torpedoType := world.EntityTypeMark18
 
 							torpedo := &world.Entity{
 								EntityType: torpedoType,
@@ -197,9 +199,17 @@ func (h *Hub) Physics(ticks world.Ticks) {
 							h.spawnEntity(torpedo, 0)
 						}
 
-						dist2 := entity.Position.DistanceSquared(other.Position)
-						if dist2 < 250*250 && rand.Float32() < otherData.AntiAircraft*timeDeltaSeconds {
-							removeEntity(entity, "shot down")
+						if otherData.AntiAircraft != 0 {
+							d2 := entity.Position.DistanceSquared(other.Position)
+							r2 := square(otherData.Radius * 1.5)
+
+							// In range of aa
+							if d2 < r2 {
+								chance := (1.0 - d2/r2*0.75) * otherData.AntiAircraft
+								if chance*timeDeltaSeconds > rand.Float32() {
+									removeEntity(entity, "shot down")
+								}
+							}
 						}
 					}
 				}

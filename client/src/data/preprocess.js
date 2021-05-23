@@ -96,16 +96,13 @@ for (const entityType of Object.keys(entityDatas)) {
 			case 'weapon':
 				switch (entityData.subtype) {
 					case 'aircraft':
-						entityData.reload = 12;
+						entityData.reload = 5;
 						break;
 					case 'dredger':
 						entityData.reload = 1;
 						break;
 					case 'rocket':
 						entityData.reload = 2.5;
-						break;
-					case 'mine':
-						entityData.reload = 30;
 						break;
 					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);

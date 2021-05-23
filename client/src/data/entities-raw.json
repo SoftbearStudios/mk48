@@ -1651,7 +1651,8 @@
 			{
 				"type": "visual"
 			}
-		]
+		],
+		"limited": true
 	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
@@ -2062,6 +2063,7 @@
 		"level":3,
 		"length": 1.0725,
 		"width": 1.32,
-		"lifespan": 900
+		"lifespan": 900,
+		"limited": true
 	}
 }

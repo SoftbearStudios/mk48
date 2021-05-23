@@ -357,6 +357,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 
 		transform := entity.ArmamentTransform(data.Index)
 
+		failed := false
 		if armamentEntityData.SubKind == world.EntitySubKindDredger {
 			// TODO find another way to calculate this
 			if data.PositionTarget.DistanceSquared(transform.Position) > 60 {
@@ -409,10 +410,14 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Lifespan:   lifespan,
 			}
 
-			h.spawnEntity(armamentEntity, 0)
+			if h.spawnEntity(armamentEntity, 0) == world.EntityIDInvalid {
+				failed = true
+			}
 		}
 
-		entity.ConsumeArmament(data.Index)
+		if !failed {
+			entity.ConsumeArmament(data.Index)
+		}
 
 		return
 	})

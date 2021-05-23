@@ -173,6 +173,7 @@ func init() {
 	EntityTypeBarrel = ParseEntityType("barrel")
 	EntityTypeCount = len(entityTypeEnum.strings)
 	EntityTypeCrate = ParseEntityType("crate")
+	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
 
 	SensorTypeRadar = ParseSensorType("radar")
@@ -210,8 +211,9 @@ var (
 	EntitySubKindSubmarine   EntitySubKind
 	EntitySubKindTorpedo     EntitySubKind
 
-	EntityTypeCrate       EntityType
 	EntityTypeBarrel      EntityType
+	EntityTypeCrate       EntityType
+	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
 
 	SensorTypeRadar  SensorType

@@ -37,21 +37,21 @@ func (ext *safeExtension) copiesAll() bool {
 	return false
 }
 
-func (ext *safeExtension) armamentConsumption(_ EntityType) []Ticks {
+func (ext *safeExtension) armamentConsumption() []Ticks {
 	return ext.armaments
 }
 
-func (ext *safeExtension) copyArmamentConsumption(_ EntityType) {
+func (ext *safeExtension) copyArmamentConsumption() {
 	a := make([]Ticks, len(ext.armaments))
 	copy(a, ext.armaments)
 	ext.armaments = a
 }
 
-func (ext *safeExtension) turretAngles(_ EntityType) []Angle {
+func (ext *safeExtension) turretAngles() []Angle {
 	return ext.angles
 }
 
-func (ext *safeExtension) copyTurretAngles(_ EntityType) {
+func (ext *safeExtension) copyTurretAngles() {
 	ext.angles = copyAngles(ext.angles)
 }
 

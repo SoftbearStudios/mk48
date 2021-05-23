@@ -2890,8 +2890,9 @@
 				"range": 537.35
 			}
 		],
+		"limited": true,
 		"lifespan": 52.02177423382331,
-		"reload": 12,
+		"reload": 5,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3449,8 +3450,9 @@
 		"length": 1.0725,
 		"width": 1.32,
 		"lifespan": 900,
+		"limited": true,
 		"damage": 1.5,
-		"reload": 30,
+		"reload": 8,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
