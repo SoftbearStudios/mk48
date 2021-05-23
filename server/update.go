@@ -92,7 +92,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 		sonarRangeInv := invSquare(sonarRange)
 
 		h.world.ForEntitiesInRadius(position, maxRange, func(distanceSquared float32, entity *world.Entity) (_ bool) {
-			known := (distanceSquared < 800*800 || (entity.Data().SubKind == world.EntitySubKindAircraft && distanceSquared < 1600*1600)) && entity.Owner.Friendly(player)
+			known := entity.Owner == player || (distanceSquared < 800*800 && entity.Owner.Friendly(player))
 			alt := entity.Altitude()
 
 			// visible means contact's EntityType, HealthPercent, ArmamentConsumption, and TurretAngles are known

@@ -31,6 +31,7 @@ for (const entityType of Object.keys(entityDatas)) {
 
 	if (entityData.range && entityType !== 'depositor') {
 		let maxRange = 1500;
+		let avgSpeed = entityData.speed
 		if (entityData.type === 'weapon') {
 			switch (entityData.subtype) {
 				case 'shell':
@@ -39,6 +40,10 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'rocket':
 				case 'missile':
 					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
+					// TODO calculate time taken to go range
+					if (entityData.speed > 500) {
+						avgSpeed = Math.min(entityData.speed, 200)
+					}
 					break;
 				case 'aircraft':
 					maxRange = 5000;
@@ -46,7 +51,7 @@ for (const entityType of Object.keys(entityDatas)) {
 			}
 		}
 		entityData.range = Math.min(entityData.range, maxRange);
-		let rangeLifespan = Math.max(entityData.range / entityData.speed, 0.1);
+		let rangeLifespan = Math.max(entityData.range / avgSpeed, 0.1);
 		if (!entityData.lifespan || rangeLifespan < entityData.lifespan) {
 			entityData.lifespan = rangeLifespan;
 		}
