@@ -189,7 +189,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 								Lifespan:   torpedoType.ReducedLifespan(10 * world.TicksPerSecond),
 								Transform:  entity.Transform,
 								Guidance: world.Guidance{
-									DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32() - 0.5) * 0.1),
+									DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
 									VelocityTarget:  torpedoType.Data().Speed,
 								},
 							}
