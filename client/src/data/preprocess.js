@@ -101,7 +101,7 @@ for (const entityType of Object.keys(entityDatas)) {
 			case 'weapon':
 				switch (entityData.subtype) {
 					case 'aircraft':
-						entityData.reload = 5;
+						entityData.reload = 10;
 						break;
 					case 'depositor':
 						entityData.reload = 1;
