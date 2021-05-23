@@ -205,7 +205,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 							// In range of aa
 							if d2 < r2 {
-								chance := (1.0 - d2/r2*0.75) * otherData.AntiAircraft
+								chance := (1.5 - d2/r2) * otherData.AntiAircraft
 								if chance*timeDeltaSeconds > rand.Float32() {
 									removeEntity(entity, "shot down")
 								}

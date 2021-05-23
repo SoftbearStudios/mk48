@@ -3,6 +3,8 @@
 
 package world
 
+import "github.com/chewxy/math32"
+
 // extension is the extra fields required by boat entities
 // EntityType in method signatures is required to not change without a call to setEntityType
 // NOTE: This interface is NOT used at runtime; for efficiency, a concrete type is
@@ -87,6 +89,18 @@ func (entity *Entity) OwnerBoatTurretTarget() Vec2f {
 
 func (entity *Entity) SetTurretTarget(target Vec2f) {
 	entity.mustBoat()
+
+	// Clamp to within visual radius.
+	_, visual, _, _ := entity.Camera()
+	r2 := visual * visual
+
+	diff := target.Sub(entity.Position)
+	if d2 := diff.LengthSquared(); d2 > r2 {
+		distance := math32.Sqrt(d2)
+		normal := diff.Div(distance)
+		target = target.AddScaled(normal, visual-distance)
+	}
+
 	entity.Owner.ext.setTurretTarget(target)
 }
 
