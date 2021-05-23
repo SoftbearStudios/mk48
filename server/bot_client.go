@@ -233,7 +233,7 @@ func (bot *BotClient) Send(out outbound) {
 
 				if bestArmamentIndex != -1 && closestEnemy.distanceSquared < square(4*shipData.Length) && bestArmamentAngleDiff < math32.Pi/3 {
 					bot.receiveAsync(Fire{
-						Index: bestArmamentIndex,
+						Index:          bestArmamentIndex,
 						PositionTarget: closestEnemy.Position,
 					})
 				}

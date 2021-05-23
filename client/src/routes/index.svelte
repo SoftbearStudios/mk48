@@ -366,7 +366,7 @@
 				}
 
 				if (entity.altitude != undefined) {
-					sprite.alpha = clamp(1 - Math.abs(entity.altitude), 0.25, 1);
+					sprite.alpha = Math.min(entity.altitude + 1, 1);
 				}
 
 				// Selective snapping

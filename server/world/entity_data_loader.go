@@ -156,6 +156,7 @@ func init() {
 	EntityKindObstacle = ParseEntityKind("obstacle")
 	EntityKindWeapon = ParseEntityKind("weapon")
 
+	EntitySubKindAircraft = ParseEntitySubKind("aircraft")
 	EntitySubKindBattleship = ParseEntitySubKind("battleship")
 	EntitySubKindDepthCharge = ParseEntitySubKind("depthCharge")
 	EntitySubKindDredger = ParseEntitySubKind("dredger")
@@ -195,6 +196,7 @@ var (
 	EntityKindObstacle    EntityKind
 	EntityKindWeapon      EntityKind
 
+	EntitySubKindAircraft    EntitySubKind
 	EntitySubKindBattleship  EntitySubKind
 	EntitySubKindDepthCharge EntitySubKind
 	EntitySubKindDredger     EntitySubKind
