@@ -56,7 +56,7 @@ func (entity *Entity) Altitude() float32 {
 		// hit surface ships, but not much underwater things
 		return 0.9 * AltitudeCollisionThreshold
 	case EntitySubKindAircraft:
-		return 1
+		return 1.8 * AltitudeCollisionThreshold
 	default:
 		return 0
 	}

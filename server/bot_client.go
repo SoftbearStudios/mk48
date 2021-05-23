@@ -195,7 +195,7 @@ func (bot *BotClient) Send(out outbound) {
 			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
 		}
 
-		if closestEnemy.Found() && closestEnemy.distanceSquared < 2*closestCollectible.distanceSquared {
+		if closestEnemy.Found() && closestEnemy.distanceSquared < 4*closestCollectible.distanceSquared {
 			closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 
 			manual.VelocityTarget = closestEnemy.Velocity + 10*world.MeterPerSecond
@@ -223,6 +223,9 @@ func (bot *BotClient) Send(out outbound) {
 						if ship.ArmamentConsumption[index] == 0 {
 							armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
 							diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
+							if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
+								diff = 0
+							}
 							if diff < bestArmamentAngleDiff {
 								bestArmamentIndex = index
 								bestArmamentAngleDiff = diff
