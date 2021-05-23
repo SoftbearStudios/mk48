@@ -375,11 +375,9 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			// Calculate angle on server, since Transform math is present
 			armamentGuidance.DirectionTarget = data.PositionTarget.Sub(transform.Position).Angle()
 
-			if armamentGuidance.VelocityTarget == 0 || armamentData.Subtype == world.EntitySubKindShell ||
-				armamentData.Subtype == world.EntitySubKindMissile {
-
-				armamentGuidance.VelocityTarget = armamentEntityData.Speed
-			}
+			// Force target to be max speed to prevent any exploits
+			// (NOTE: change this if client ever legitimately sends something else)
+			armamentGuidance.VelocityTarget = armamentEntityData.Speed
 
 			// Start distance/lifespan at 0 seconds, with few exceptions
 			var lifespan world.Ticks
