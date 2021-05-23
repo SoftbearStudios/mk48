@@ -34,14 +34,25 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	maxSpeed := data.Speed
 	seconds := ticks.Float()
 
+	if data.SubKind == EntitySubKindAircraft {
+		posTarget := entity.OwnerBoatTurretTarget()
+		posDiff := posTarget.Sub(entity.Position)
+		entity.DirectionTarget = posDiff.Angle()
+	}
+
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
 
 		// See #45 - automatically slow down to turn faster
-		maxSpeed = ToVelocity(maxSpeed.Float() / max(square(deltaAngle.Abs()), 1))
+		maxSpeedF := maxSpeed.Float()
+		turnRate := math32.Pi / 4
 
-		turnRate := math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
+		if data.SubKind != EntitySubKindAircraft {
+			maxSpeedF /= max(square(deltaAngle.Abs()), 1)
+			turnRate *= max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
+		}
+		maxSpeed = ToVelocity(maxSpeedF)
 		entity.Direction += deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
 	}
 

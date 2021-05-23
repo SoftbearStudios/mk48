@@ -77,6 +77,11 @@ func (entity *Entity) TurretTarget() Vec2f {
 	return entity.Owner.ext.turretTarget()
 }
 
+// When a weapon wants the turret target of the owner's ship
+func (entity *Entity) OwnerBoatTurretTarget() Vec2f {
+	return entity.Owner.ext.turretTarget()
+}
+
 func (entity *Entity) SetTurretTarget(target Vec2f) {
 	entity.mustBoat()
 	entity.Owner.ext.setTurretTarget(target)
