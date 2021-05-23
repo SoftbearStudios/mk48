@@ -440,6 +440,7 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"positionSide": 0.727,
 				"external": false,
 				"hidden": false,
 				"turret": 0
@@ -448,6 +449,16 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
 				"external": false,
 				"hidden": false,
 				"turret": 1
@@ -456,6 +467,16 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
 				"external": false,
 				"hidden": false,
 				"turret": 2
@@ -464,6 +485,25 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
 				"external": false,
 				"hidden": false,
 				"turret": 3
@@ -471,25 +511,25 @@
 		],
 		"turrets": [
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": 46.25,
 				"positionSide": 12.75,
 				"angle": 0
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": 38,
 				"positionSide": 12.75,
 				"angle": 0
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": -23.5,
 				"positionSide": 12.75,
 				"angle": 3.141592653589793
 			},
 			{
-				"type": "mark12",
+				"type": "mark12x2",
 				"positionForward": -31.5,
 				"positionSide": 12.75,
 				"angle": 3.141592653589793
@@ -3082,6 +3122,35 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"turrets": [],
+		"sensors": []
+	},
+	"mark12x2": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.6,
+		"positionForward": 1,
+		"width": 4.39375,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
 				"external": false,
 				"hidden": false
 			}
