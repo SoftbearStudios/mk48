@@ -34,14 +34,36 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	maxSpeed := data.Speed
 	seconds := ticks.Float()
 
+	if data.Limited && entity.Owner.DeathTime != 0 {
+		return true
+	}
+
+	if data.SubKind == EntitySubKindAircraft {
+		posTarget := entity.OwnerBoatTurretTarget()
+		posDiff := posTarget.Sub(entity.Position)
+
+		// Vary angle based on entity hash so aircraft doesn't clump as much.
+		entity.DirectionTarget = posDiff.Angle() + ToAngle(entity.Hash()*math32.Pi/4) - Pi/8
+
+		// Let other aircraft catch up
+		if posDiff.LengthSquared() < 75*75 || entity.Direction.Diff(entity.DirectionTarget).Abs() > math32.Pi/3 {
+			maxSpeed -= 30 * MeterPerSecond
+		}
+	}
+
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
 
 		// See #45 - automatically slow down to turn faster
-		maxSpeed = ToVelocity(maxSpeed.Float() / max(square(deltaAngle.Abs()), 1))
+		maxSpeedF := maxSpeed.Float()
+		turnRate := math32.Pi / 4
 
-		turnRate := math32.Pi / 4 * max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
+		if data.SubKind != EntitySubKindAircraft {
+			maxSpeedF /= max(square(deltaAngle.Abs()), 1)
+			turnRate *= max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
+		}
+		maxSpeed = ToVelocity(maxSpeedF)
 		entity.Direction += deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
 	}
 
@@ -182,6 +204,12 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 
+// Returns a float in range [0, 1) based on the entity's id.
+func (entity *Entity) Hash() float32 {
+	const hashSize = 64
+	return float32(entity.EntityID&(hashSize-1)) * (1.0 / hashSize)
+}
+
 // Returns value in the range [0,1] as time since spawn increases
 // Intended to be multiplied by, for example, damage, to decrease damage taken
 // while having been spawned recently
@@ -223,7 +251,7 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 			// Copy on write
 			if !turretsCopied {
 				turretsCopied = true
-				entity.Owner.ext.copyTurretAngles(entity.EntityType)
+				entity.Owner.ext.copyTurretAngles()
 			}
 			entity.TurretAngles()[i] += deltaAngle
 		}
@@ -263,8 +291,8 @@ func (entity *Entity) replenish(amount Ticks, copied bool) {
 
 	for end := range armaments {
 		if next := &armaments[end]; !next.Similar(current) {
-			current = next
 			copied = entity.replenishRange(amount, start, end, copied)
+			current = next
 			start = end
 		}
 	}
@@ -277,6 +305,7 @@ func (entity *Entity) replenish(amount Ticks, copied bool) {
 func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) bool {
 	for amount != 0 {
 		i := -1
+		// Limited are ticks max and won't be counted
 		consumption := TicksMax
 		for j, c := range entity.ArmamentConsumption()[start:end] {
 			if c != 0 && c < consumption {
@@ -290,7 +319,7 @@ func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) 
 			break
 		} else if !copied {
 			copied = true
-			entity.Owner.ext.copyArmamentConsumption(entity.EntityType)
+			entity.Owner.ext.copyArmamentConsumption()
 		}
 
 		if consumption < amount {
@@ -358,19 +387,43 @@ func (entity *Entity) ArmamentTransform(index int) Transform {
 
 // Close is called when an Entity is removed from a World.
 func (entity *Entity) Close() {
-	if entity.Data().Kind == EntityKindBoat && entity.Owner != nil {
+	data := entity.Data()
+	if data.Kind == EntityKindBoat && entity.Owner != nil {
 		if entity.Owner.EntityID == EntityIDInvalid {
 			panic("not player's entity")
 		}
 		entity.Owner.Died(entity)
 		entity.Owner.EntityID = EntityIDInvalid
 		entity.Owner.ext = unsafeExtension{}
+	} else if data.Kind == EntityKindWeapon {
+		// Regen limited armament
+		if data.Limited && entity.Owner != nil {
+			consumption := entity.Owner.ext.armamentConsumption()
+			armaments := entity.Owner.ext.typ.Data().Armaments
+
+			// Reload 1 limited armament of its type.
+			for i := range armaments {
+				a := &armaments[i]
+				if a.Default == entity.EntityType && consumption[i] == TicksMax {
+					consumption[i] = a.Reload()
+					return
+				}
+			}
+		}
 	}
 }
 
 func (entity *Entity) ConsumeArmament(index int) {
-	entity.Owner.ext.copyArmamentConsumption(entity.EntityType)
-	entity.ArmamentConsumption()[index] = entity.Data().Armaments[index].Reload()
+	entity.Owner.ext.copyArmamentConsumption()
+	a := &entity.Data().Armaments[index]
+
+	// Limited armaments start their timer when they die.
+	reload := TicksMax
+	if !a.Default.Data().Limited {
+		reload = a.Reload()
+	}
+
+	entity.ArmamentConsumption()[index] = reload
 }
 
 // Initialize is called whenever a boat's type is set/changed.
@@ -413,7 +466,10 @@ func upgradeArmaments(entityType EntityType, new []Ticks, old []Ticks) {
 	// Use uint to prevent overflow.
 	var sum uint
 	for _, c := range old {
-		sum += uint(c)
+		// Not limited
+		if c != TicksMax {
+			sum += uint(c)
+		}
 	}
 
 	if sum == 0 {

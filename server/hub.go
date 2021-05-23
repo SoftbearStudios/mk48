@@ -39,8 +39,9 @@ type Hub struct {
 	teams       map[world.TeamID]*Team
 
 	// Flags
-	minPlayers int
-	auth       string
+	minPlayers       int
+	botMaxSpawnLevel uint8
+	auth             string
 
 	// Cloud (and things that are served atomically by HTTP)
 	cloud      *cloud.Cloud
@@ -66,12 +67,16 @@ type Hub struct {
 	botsTicker        *time.Ticker
 }
 
-func newHub(minPlayers int, auth string) *Hub {
+func newHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	c, err := cloud.New()
 	if err != nil {
 		fmt.Println("Cloud error:", err)
 	}
 	fmt.Println(c)
+
+	if botMaxSpawnLevel > int(world.EntityLevelMax) {
+		botMaxSpawnLevel = int(world.EntityLevelMax)
+	}
 
 	radius := max(world.MinRadius, world.RadiusOf(minPlayers))
 	return &Hub{
@@ -81,6 +86,7 @@ func newHub(minPlayers int, auth string) *Hub {
 		worldRadius:       radius,
 		teams:             make(map[world.TeamID]*Team),
 		minPlayers:        minPlayers,
+		botMaxSpawnLevel:  uint8(botMaxSpawnLevel),
 		auth:              auth,
 		inbound:           make(chan SignedInbound, 16+minPlayers*2),
 		register:          make(chan Client, 8+minPlayers/256),

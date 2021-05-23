@@ -132,6 +132,8 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	switch data.SubKind {
 	case world.EntitySubKindMissile, world.EntitySubKindRocket, world.EntitySubKindShell:
 		threshold = terrain.SandLevel
+	case world.EntitySubKindAircraft:
+		threshold = terrain.GrassLevel
 	}
 
 	// Kludge offset

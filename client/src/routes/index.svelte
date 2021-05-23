@@ -366,15 +366,15 @@
 				}
 
 				if (entity.altitude != undefined) {
-					sprite.alpha = clamp(1 - Math.abs(entity.altitude), 0.25, 1);
+					sprite.alpha = clamp(entity.altitude + 1, 0.25, 1);
 				}
 
 				// Selective snapping
-				if (isNew || dist(sprite.position, entity.position) > 10) {
+				if (isNew || dist(sprite.position, entity.position) > 15) {
 					sprite.position.set(entity.position.x, entity.position.y);
 				}
 				sprite.velocity = entity.velocity;
-				if (isNew || Math.abs(angleDiff(sprite.rotation, entity.direction)) > Math.PI / 6) {
+				if (isNew || Math.abs(angleDiff(sprite.rotation, entity.direction)) > Math.PI / 4) {
 					sprite.rotation = entity.direction;
 				}
 
@@ -623,7 +623,7 @@
 							const armamentEntityData = entityData[armament.default];
 
 							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
-							if (armament.airdrop || armament.vertical || ['depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
+							if (armament.airdrop || armament.vertical || ['aircraft', 'depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
 								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
 							}

@@ -228,8 +228,14 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 		}
 
 		authed := h.auth != "" && data.Auth == h.auth
+		_, bot := client.(*BotClient)
 
-		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || (d.Level != 1 && !authed) {
+		maxLevel := uint8(1)
+		if bot {
+			maxLevel = h.botMaxSpawnLevel
+		}
+
+		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || (d.Level > maxLevel && !authed) {
 			return
 		}
 
@@ -299,7 +305,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 
 		h.spawnEntity(entity, spawnRadius)
 
-		if _, bot := client.(*BotClient); !bot {
+		if !bot {
 			h.cloud.IncrementPlaysStatistic()
 			if data.New {
 				h.cloud.IncrementNewPlayerStatistic()
@@ -357,6 +363,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 
 		transform := entity.ArmamentTransform(data.Index)
 
+		failed := false
 		if armamentEntityData.SubKind == world.EntitySubKindDredger {
 			// TODO find another way to calculate this
 			if data.PositionTarget.DistanceSquared(transform.Position) > 60 {
@@ -369,11 +376,9 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			// Calculate angle on server, since Transform math is present
 			armamentGuidance.DirectionTarget = data.PositionTarget.Sub(transform.Position).Angle()
 
-			if armamentGuidance.VelocityTarget == 0 || armamentData.Subtype == world.EntitySubKindShell ||
-				armamentData.Subtype == world.EntitySubKindMissile {
-
-				armamentGuidance.VelocityTarget = armamentEntityData.Speed
-			}
+			// Force target to be max speed to prevent any exploits
+			// (NOTE: change this if client ever legitimately sends something else)
+			armamentGuidance.VelocityTarget = armamentEntityData.Speed
 
 			// Start distance/lifespan at 0 seconds, with few exceptions
 			var lifespan world.Ticks
@@ -389,12 +394,9 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
 				armamentGuidance.DirectionTarget = transform.Direction
 
-				// Start the distance/lifespan near expiry to make these torpedoes not last long
+				// Start the lifespan near expiry to make these torpedoes not last long
 				const maxLifespan = 10 * world.TicksPerSecond
-				if armamentEntityData.Lifespan > maxLifespan {
-					lifespan = armamentEntityData.Lifespan - maxLifespan
-				}
-
+				lifespan = armamentData.Default.ReducedLifespan(maxLifespan)
 			} else if armamentData.Vertical {
 				// Vertically-launched armaments can be launched in any horizontal direction
 				transform.Direction = armamentGuidance.DirectionTarget
@@ -412,10 +414,14 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Lifespan:   lifespan,
 			}
 
-			h.spawnEntity(armamentEntity, 0)
+			if h.spawnEntity(armamentEntity, 0) == world.EntityIDInvalid {
+				failed = true
+			}
 		}
 
-		entity.ConsumeArmament(data.Index)
+		if !failed {
+			entity.ConsumeArmament(data.Index)
+		}
 
 		return
 	})

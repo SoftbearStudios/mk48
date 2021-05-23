@@ -10,13 +10,13 @@ type extension interface {
 	setType(t EntityType)
 	copiesAll() bool // Copies everything when anything is copied
 
-	armamentConsumption(t EntityType) []Ticks // Read only
-	copyArmamentConsumption(t EntityType)     // Copy for writes
+	armamentConsumption() []Ticks // Read only
+	copyArmamentConsumption()     // Copy for writes
 
-	turretAngles(t EntityType) []Angle // Read only
-	copyTurretAngles(t EntityType)     // Copy for writes
+	turretAngles() []Angle // Read only
+	copyTurretAngles()     // Copy for writes
 
-	turretTarget() Vec2f // Where turret want to point
+	turretTarget() Vec2f // Where turret wants to point
 	setTurretTarget(target Vec2f)
 
 	altitude() float32
@@ -31,7 +31,7 @@ type extension interface {
 
 func (entity *Entity) ArmamentConsumption() []Ticks {
 	entity.mustBoat()
-	return entity.Owner.ext.armamentConsumption(entity.EntityType)
+	return entity.Owner.ext.armamentConsumption()
 }
 
 // -1 = deep, 0 = surface, 1 = high in the air
@@ -55,6 +55,8 @@ func (entity *Entity) Altitude() float32 {
 		// By multiplying by almost one, these entities are allowed to
 		// hit surface ships, but not much underwater things
 		return 0.9 * AltitudeCollisionThreshold
+	case EntitySubKindAircraft:
+		return 1.8 * AltitudeCollisionThreshold
 	default:
 		return 0
 	}
@@ -67,11 +69,19 @@ func (entity *Entity) SetAltitudeTarget(altitudeTarget float32) {
 
 func (entity *Entity) TurretAngles() []Angle {
 	entity.mustBoat()
-	return entity.Owner.ext.turretAngles(entity.EntityType)
+	return entity.Owner.ext.turretAngles()
 }
 
 func (entity *Entity) TurretTarget() Vec2f {
 	entity.mustBoat()
+	return entity.Owner.ext.turretTarget()
+}
+
+// When a weapon wants the turret target of the owner's ship
+func (entity *Entity) OwnerBoatTurretTarget() Vec2f {
+	if entity.Owner == nil {
+		return Vec2f{}
+	}
 	return entity.Owner.ext.turretTarget()
 }
 

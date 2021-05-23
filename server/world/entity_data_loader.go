@@ -156,6 +156,7 @@ func init() {
 	EntityKindObstacle = ParseEntityKind("obstacle")
 	EntityKindWeapon = ParseEntityKind("weapon")
 
+	EntitySubKindAircraft = ParseEntitySubKind("aircraft")
 	EntitySubKindBattleship = ParseEntitySubKind("battleship")
 	EntitySubKindDepthCharge = ParseEntitySubKind("depthCharge")
 	EntitySubKindDredger = ParseEntitySubKind("dredger")
@@ -172,6 +173,7 @@ func init() {
 	EntityTypeBarrel = ParseEntityType("barrel")
 	EntityTypeCount = len(entityTypeEnum.strings)
 	EntityTypeCrate = ParseEntityType("crate")
+	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
 
 	SensorTypeRadar = ParseSensorType("radar")
@@ -180,8 +182,11 @@ func init() {
 
 	// Spawn entities are boats that are level 1
 	for i, data := range entityTypeData {
-		if data.Kind == EntityKindBoat && data.Level == 1 {
-			SpawnEntityTypes = append(SpawnEntityTypes, EntityType(i))
+		if data.Kind == EntityKindBoat {
+			for len(BoatEntityTypesByLevel) <= int(data.Level) {
+				BoatEntityTypesByLevel = append(BoatEntityTypesByLevel, []EntityType{})
+			}
+			BoatEntityTypesByLevel[data.Level] = append(BoatEntityTypesByLevel[data.Level], EntityType(i))
 		}
 	}
 }
@@ -195,6 +200,7 @@ var (
 	EntityKindObstacle    EntityKind
 	EntityKindWeapon      EntityKind
 
+	EntitySubKindAircraft    EntitySubKind
 	EntitySubKindBattleship  EntitySubKind
 	EntitySubKindDepthCharge EntitySubKind
 	EntitySubKindDredger     EntitySubKind
@@ -208,8 +214,9 @@ var (
 	EntitySubKindSubmarine   EntitySubKind
 	EntitySubKindTorpedo     EntitySubKind
 
-	EntityTypeCrate       EntityType
 	EntityTypeBarrel      EntityType
+	EntityTypeCrate       EntityType
+	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
 
 	SensorTypeRadar  SensorType

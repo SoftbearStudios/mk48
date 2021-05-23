@@ -96,12 +96,13 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		return
 	}, func(entity *world.Entity, other *world.Entity) (stop, remove, removeOther bool) {
 		// Don't do friendly check, to allow team members to collide (See #27)
-		if entity.Owner == other.Owner || !entity.AltitudeOverlap(other) {
+		if entity.Owner == other.Owner {
 			return
 		}
 		entityData := entity.Data()
 		otherData := other.Data()
 		friendly := entity.Owner.Friendly(other.Owner)
+		altitudeOverlap := entity.AltitudeOverlap(other)
 
 		// Only do collision once when concurrent
 		//if entityData.Radius < otherData.Radius || (entityData.Radius == otherData.Radius && entityID > otherEntityID) {
@@ -133,48 +134,6 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			collectible = other
 		}
 
-		if !entity.Collides(other, timeDeltaSeconds) {
-			// Collectibles gravitate towards players
-			if boat != nil && collectible != nil {
-				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
-				collectible.Velocity = 20 * world.MeterPerSecond
-			}
-
-			if !friendly {
-				// Mines do too
-				if boat != nil && weapon != nil && weapon.Data().SubKind == world.EntitySubKindMine {
-					const attractDist = 40
-					normal := boat.Direction.Vec2f()
-					tangent := normal.Rot90()
-					normalDistance := math32.Abs(normal.Dot(boat.Position) - normal.Dot(weapon.Position))
-					tangentDistance := math32.Abs(tangent.Dot(boat.Position) - tangent.Dot(weapon.Position))
-					if normalDistance < attractDist+boat.Data().Length*0.5 && tangentDistance < attractDist+boat.Data().Width*0.5 {
-						weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
-						weapon.Velocity = 5 * world.MeterPerSecond
-					}
-				}
-
-				// Home towards target/decoy
-				if entityData.Kind == world.EntityKindWeapon && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
-					entity.UpdateSensor(other)
-				}
-			}
-
-			return
-		}
-
-		if entityData.Kind == world.EntityKindDecoy {
-			decoy = entity
-		} else if otherData.Kind == world.EntityKindDecoy {
-			decoy = other
-		}
-
-		if entityData.Kind == world.EntityKindObstacle {
-			obstacle = entity
-		} else if otherData.Kind == world.EntityKindObstacle {
-			obstacle = other
-		}
-
 		// e must be either entity or other
 		removeEntity := func(e *world.Entity, reason string) {
 			data := e.Data()
@@ -189,6 +148,90 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			} else {
 				removeOther = true
 			}
+		}
+
+		if !entity.Collides(other, timeDeltaSeconds) {
+			// Collectibles gravitate towards players
+			if boat != nil && collectible != nil && altitudeOverlap {
+				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
+				collectible.Velocity = 20 * world.MeterPerSecond
+			}
+
+			if !friendly {
+				// Mines do too
+				if boat != nil && weapon != nil && altitudeOverlap && weapon.Data().SubKind == world.EntitySubKindMine {
+					const attractDist = 40
+					normal := boat.Direction.Vec2f()
+					tangent := normal.Rot90()
+					normalDistance := math32.Abs(normal.Dot(boat.Position) - normal.Dot(weapon.Position))
+					tangentDistance := math32.Abs(tangent.Dot(boat.Position) - tangent.Dot(weapon.Position))
+					if normalDistance < attractDist+boat.Data().Length*0.5 && tangentDistance < attractDist+boat.Data().Width*0.5 {
+						weapon.Direction = weapon.Direction.Lerp(boat.Position.Sub(weapon.Position).Angle(), timeDeltaSeconds*5)
+						weapon.Velocity = 5 * world.MeterPerSecond
+					}
+				}
+
+				if entityData.Kind == world.EntityKindWeapon {
+					// Home towards target/decoy
+					if altitudeOverlap && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
+						entity.UpdateSensor(other)
+					}
+
+					// Aircraft (simulate weapons and anti-aircraft)
+					if entityData.SubKind == world.EntitySubKindAircraft && otherData.Kind == world.EntityKindBoat {
+						// Small window of opportunity to fire
+						// Uses lifespan as torpedo consumption
+						if entity.Lifespan > world.TicksPerSecond*3 && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
+							entity.Lifespan = 0
+							torpedoType := world.EntityTypeMark18
+
+							torpedo := &world.Entity{
+								EntityType: torpedoType,
+								Owner:      entity.Owner,
+								Lifespan:   torpedoType.ReducedLifespan(10 * world.TicksPerSecond),
+								Transform:  entity.Transform,
+								Guidance: world.Guidance{
+									DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
+									VelocityTarget:  torpedoType.Data().Speed,
+								},
+							}
+
+							h.spawnEntity(torpedo, 0)
+						}
+
+						if otherData.AntiAircraft != 0 {
+							d2 := entity.Position.DistanceSquared(other.Position)
+							r2 := square(otherData.Radius * 1.5)
+
+							// In range of aa
+							if d2 < r2 {
+								chance := (1.0 - d2/r2*0.75) * otherData.AntiAircraft
+								if chance*timeDeltaSeconds > rand.Float32() {
+									removeEntity(entity, "shot down")
+								}
+							}
+						}
+					}
+				}
+			}
+
+			return
+		}
+
+		if !altitudeOverlap {
+			return
+		}
+
+		if entityData.Kind == world.EntityKindDecoy {
+			decoy = entity
+		} else if otherData.Kind == world.EntityKindDecoy {
+			decoy = other
+		}
+
+		if entityData.Kind == world.EntityKindObstacle {
+			obstacle = entity
+		} else if otherData.Kind == world.EntityKindObstacle {
+			obstacle = other
 		}
 
 		switch {
@@ -221,7 +264,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				Goals:
 				- (Cancelled) At least one boat is guaranteed to receive fatal damage
 				- Ships with near equal max health and near equal health
-				  percentage both die (no seemingly arbitrary survivor) hence 110%
+				  percentage both die (no seemingly arbitrary survivor)
 				- Low health boats still do damage, hence scale health percent
 			*/
 

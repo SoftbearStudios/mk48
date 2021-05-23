@@ -204,6 +204,86 @@
 			}
 		]
 	},
+	"essex": {
+		"label": "Essex",
+		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
+		"type": "boat",
+		"subtype": "carrier",
+		"level": 6,
+		"length": 265.8,
+		"width": 42.5695,
+		"speed": 16.83333,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "avenger",
+				"positionForward": 16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": 0,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -32,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -48,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -64,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark12x2",
+				"positionForward": 46.25,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": 38,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -23.5,
+				"positionSide": 12.75,
+				"angle": 180
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -31.5,
+				"positionSide": 12.75,
+				"angle": 180
+			}
+		]
+	},
 	"fairmileD": {
 		"label": "Fairmile D",
 		"link": "https://en.wikipedia.org/wiki/Fairmile_D_motor_torpedo_boat",
@@ -1557,6 +1637,23 @@
 			}
 		]
 	},
+	"avenger": {
+		"label": "TBF Avenger",
+		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 12.45,
+		"width": 16.5143,
+		"speed": 96.1136,
+		"range": 1456000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"limited": true
+	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
 		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
@@ -1700,6 +1797,26 @@
 				"angle": 0,
 				"positionForward": 2,
 				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"mark12x2": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.6,
+		"positionForward": 1,
+		"width": 4.39375,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"symmetrical": true,
 				"external": false,
 				"hidden": false
 			}
@@ -1966,6 +2083,7 @@
 		"level":3,
 		"length": 1.0725,
 		"width": 1.32,
-		"lifespan": 900
+		"lifespan": 900,
+		"limited": true
 	}
 }

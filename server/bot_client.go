@@ -195,7 +195,7 @@ func (bot *BotClient) Send(out outbound) {
 			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
 		}
 
-		if closestEnemy.Found() && closestEnemy.distanceSquared < 2*closestCollectible.distanceSquared {
+		if closestEnemy.Found() && closestEnemy.distanceSquared < 4*closestCollectible.distanceSquared {
 			closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 
 			manual.VelocityTarget = closestEnemy.Velocity + 10*world.MeterPerSecond
@@ -223,6 +223,9 @@ func (bot *BotClient) Send(out outbound) {
 						if ship.ArmamentConsumption[index] == 0 {
 							armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
 							diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
+							if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
+								diff = 0
+							}
 							if diff < bestArmamentAngleDiff {
 								bestArmamentIndex = index
 								bestArmamentAngleDiff = diff
@@ -233,10 +236,8 @@ func (bot *BotClient) Send(out outbound) {
 
 				if bestArmamentIndex != -1 && closestEnemy.distanceSquared < square(4*shipData.Length) && bestArmamentAngleDiff < math32.Pi/3 {
 					bot.receiveAsync(Fire{
-						Index: bestArmamentIndex,
-						Guidance: world.Guidance{
-							DirectionTarget: closestEnemyAngle + world.ToAngle(0.25*(r.Float32()-0.5)),
-						},
+						Index:          bestArmamentIndex,
+						PositionTarget: closestEnemy.Position,
 					})
 				}
 			}
@@ -278,8 +279,10 @@ func (bot *BotClient) spawn(r *rand.Rand) {
 		name = randomBotName(r)
 	}
 
+	var level = r.Intn(int(bot.Hub.botMaxSpawnLevel)) + 1
+
 	bot.receiveAsync(Spawn{
-		Type: randomType(r, world.SpawnEntityTypes),
+		Type: randomType(r, world.BoatEntityTypesByLevel[level]),
 		Name: name,
 	})
 }

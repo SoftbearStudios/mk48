@@ -224,7 +224,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.126
 	},
 	"bismarck": {
 		"label": "Bismarck",
@@ -376,7 +377,165 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.2
+	},
+	"essex": {
+		"label": "Essex",
+		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
+		"type": "boat",
+		"subtype": "carrier",
+		"level": 6,
+		"length": 265.8,
+		"width": 42.5695,
+		"speed": 16.83333,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 1297.4
+			},
+			{
+				"type": "radar",
+				"range": 1531.6
+			}
+		],
+		"armaments": [
+			{
+				"default": "avenger",
+				"positionForward": 16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": 0,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -32,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -48,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -64,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark12x2",
+				"positionForward": 46.25,
+				"positionSide": 12.75,
+				"angle": 0
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": 38,
+				"positionSide": 12.75,
+				"angle": 0
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -23.5,
+				"positionSide": 12.75,
+				"angle": 3.141592653589793
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -31.5,
+				"positionSide": 12.75,
+				"angle": 3.141592653589793
+			}
+		],
+		"antiAircraft": 0.221
 	},
 	"fairmileD": {
 		"label": "Fairmile D",
@@ -480,7 +639,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.024
 	},
 	"fletcher": {
 		"label": "Fletcher",
@@ -716,7 +876,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.092
 	},
 	"g5": {
 		"label": "G-5",
@@ -755,6 +916,7 @@
 				"external": true
 			}
 		],
+		"antiAircraft": 0.011,
 		"turrets": []
 	},
 	"golf": {
@@ -991,7 +1153,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.133
 	},
 	"komar": {
 		"label": "Komar",
@@ -1099,7 +1262,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.016
 	},
 	"leander": {
 		"label": "Leander",
@@ -1325,7 +1489,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.138
 	},
 	"lublin": {
 		"label": "Lublin",
@@ -1413,6 +1578,7 @@
 				"angle": null
 			}
 		],
+		"antiAircraft": 0.076,
 		"turrets": []
 	},
 	"momi": {
@@ -1569,7 +1735,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.067
 	},
 	"montana": {
 		"label": "Montana",
@@ -1757,7 +1924,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.234
 	},
 	"ohio": {
 		"label": "Ohio",
@@ -1908,6 +2076,7 @@
 				"range": 610.7
 			}
 		],
+		"antiAircraft": 0.026,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2001,7 +2170,8 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793
 			}
-		]
+		],
+		"antiAircraft": 0.027
 	},
 	"pt34": {
 		"label": "PT-34",
@@ -2060,6 +2230,7 @@
 				"external": true
 			}
 		],
+		"antiAircraft": 0.014,
 		"turrets": []
 	},
 	"skipjack": {
@@ -2454,7 +2625,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.056
 	},
 	"zubr": {
 		"label": "Zubr",
@@ -2601,7 +2773,8 @@
 				"positionSide": -6.25,
 				"angle": 0
 			}
-		]
+		],
+		"antiAircraft": 0.043
 	},
 	"2m3m": {
 		"label": "2M-3M",
@@ -2741,6 +2914,27 @@
 		],
 		"turrets": [],
 		"sensors": []
+	},
+	"avenger": {
+		"label": "TBF Avenger",
+		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 12.45,
+		"width": 16.5143,
+		"speed": 96.1136,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 537.35
+			}
+		],
+		"limited": true,
+		"lifespan": 52.02177423382331,
+		"reload": 5,
+		"armaments": [],
+		"turrets": []
 	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
@@ -2929,6 +3123,35 @@
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"turrets": [],
+		"sensors": []
+	},
+	"mark12x2": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.6,
+		"positionForward": 1,
+		"width": 4.39375,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
 				"external": false,
 				"hidden": false
 			}
@@ -3296,8 +3519,9 @@
 		"length": 1.0725,
 		"width": 1.32,
 		"lifespan": 900,
+		"limited": true,
 		"damage": 1.5,
-		"reload": 30,
+		"reload": 8,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []

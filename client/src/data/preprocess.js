@@ -40,6 +40,9 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'missile':
 					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
 					break;
+				case 'aircraft':
+					maxRange = 5000;
+					break;
 			}
 		}
 		entityData.range = Math.min(entityData.range, maxRange);
@@ -48,6 +51,17 @@ for (const entityType of Object.keys(entityDatas)) {
 			entityData.lifespan = rangeLifespan;
 		}
 		delete(entityData.range);
+	}
+
+	if (entityData.type === 'boat') {
+		// Anti-aircraft power
+		switch (entityData.subtype) {
+			case 'dredger':
+			case 'submarine':
+				break;
+			default:
+				entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
+		}
 	}
 
 	if (entityData.type === 'weapon' && entityData.damage == undefined) {
@@ -81,14 +95,14 @@ for (const entityType of Object.keys(entityDatas)) {
 		switch (entityData.type) {
 			case 'weapon':
 				switch (entityData.subtype) {
+					case 'aircraft':
+						entityData.reload = 5;
+						break;
 					case 'dredger':
 						entityData.reload = 1;
 						break;
 					case 'rocket':
 						entityData.reload = 2.5;
-						break;
-					case 'mine':
-						entityData.reload = 30;
 						break;
 					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
