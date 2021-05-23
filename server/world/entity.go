@@ -131,23 +131,16 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	}
 
 	if data.Kind == EntityKindBoat {
-		underwater := entity.Altitude() < 0
-
 		if len(entity.ArmamentConsumption()) > 0 {
 			// If turrets were already copied and the extension
 			// copies everything armaments don't need to be copied
 			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
-			replenishAmount := ticks
-			if underwater {
-				// Submerged submarines reload slower
-				replenishAmount /= 4
-			}
-			entity.replenish(replenishAmount, armamentsCopied)
+			entity.replenish(ticks, armamentsCopied)
 		}
 
-		if entity.Owner.ext.damage() > 0 {
+		if ext := &entity.Owner.ext; ext.damage() > 0 {
 			repairAmount := seconds * (1.0 / 60.0)
-			if underwater {
+			if ext.alt < 0 {
 				repairAmount *= 0.5
 			}
 			entity.Repair(repairAmount)
@@ -421,6 +414,11 @@ func (entity *Entity) ConsumeArmament(index int) {
 	reload := TicksMax
 	if !a.Default.Data().Limited {
 		reload = a.Reload()
+
+		// Submerged submarines reload slower
+		if entity.Owner.ext.altitude() < 0 {
+			reload *= 2
+		}
 	}
 
 	entity.ArmamentConsumption()[index] = reload
