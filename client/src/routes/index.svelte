@@ -553,7 +553,7 @@
 							}
 
 							// Straighten out (and damp oscillation by using the entity ground truth)
-							newTarget = (localSprite.rotation + localEntity.direction) / 2;
+							newTarget = localEntity.direction;
 						}
 
 						const turnSpeed = 80 / (100 + localEntityData.length);
