@@ -42,7 +42,7 @@
 </script>
 
 <div>
-	<Section name={myTeamID || 'Team'} open={false}>
+	<Section name={myTeamID || 'Fleet'} open={false}>
 		{#if myTeamID}
 			<table>
 				{#if $teamMembers}
@@ -77,7 +77,7 @@
 					</tr>
 				{/each}
 				<tr>
-					<td class='name'><input type='text' placeholder='Team name' maxLength={maxNameLength} bind:value={newTeamName}/></td>
+					<td class='name'><input type='text' placeholder='Fleet name' maxLength={maxNameLength} bind:value={newTeamName}/></td>
 					<td><button disabled={newTeamName.length < minNameLength || newTeamName.length > maxNameLength} on:click={createTeam}>Create</button></td>
 				</tr>
 			</table>

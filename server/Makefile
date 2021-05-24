@@ -23,6 +23,9 @@ server_arm: *.go world/*.go world/*/*.go ../client/src/data/entities.json
 run: server
 	./server $(s)
 
+run-single-core: server
+	GOMAXPROCS=1 ./server $(s)
+
 upload_server: server
 	aws s3 cp ./server s3://mk48-prod-static/server --profile mk48 --cache-control "no-cache"
 

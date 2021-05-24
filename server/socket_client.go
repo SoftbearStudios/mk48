@@ -23,6 +23,15 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 8) / 10
 
+	// If more than this many messages are queued for sending, the
+	// socket is congested and messages may be dropped
+	socketCongestionThreshold = 5
+
+	// Allows ~1 second of messages to backup before close
+	// (although the sending may be throttled to slow down
+	// hitting this limit)
+	socketBufferSize = 16
+
 	// Maximum message size allowed from peer.
 	maxMessageSize = 4096
 
@@ -40,16 +49,17 @@ var upgrader = websocket.Upgrader{
 // SocketClient is a middleman between the websocket connection and the hub.
 type SocketClient struct {
 	ClientData
-	conn *websocket.Conn
-	send chan outbound
-	once sync.Once
+	conn    *websocket.Conn
+	send    chan outbound
+	once    sync.Once
+	counter int // counts up every send
 }
 
 // Create a SocketClient from a connection
 func NewSocketClient(conn *websocket.Conn) *SocketClient {
 	return &SocketClient{
 		conn: conn,
-		send: make(chan outbound, 16), // Allows ~1.5 seconds of messages to backup before close
+		send: make(chan outbound, socketBufferSize),
 	}
 }
 
@@ -84,6 +94,21 @@ func (client *SocketClient) Init() {
 }
 
 func (client *SocketClient) Send(message outbound) {
+	// How many messages there are in excess of a reasonable amount
+	congestion := len(client.send) - socketCongestionThreshold
+
+	// The closer the buffer is to being full, the more messages
+	// we drop on the floor (to give the socket a chance to
+	// catch up)
+	if congestion > 1 && client.counter%congestion != 0 {
+		// Drop the message on the floor
+		// The only long-term data loss will be from event-based things
+		// like chat messages
+		fmt.Println("SocketClient dropping message due to congestion")
+		return
+	}
+	client.counter++
+
 	select {
 	case client.send <- message:
 	default:
