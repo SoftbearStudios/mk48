@@ -133,6 +133,10 @@ func (team *Team) Owner() *Player {
 	return nil
 }
 
+func (team *Team) Full() bool {
+	return len(team.Members) >= TeamMembersMax
+}
+
 // TeamCode helpers
 
 func (code TeamCode) String() string {

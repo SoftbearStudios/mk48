@@ -94,6 +94,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 		h.world.ForEntitiesInRadius(position, maxRange, func(distanceSquared float32, entity *world.Entity) (_ bool) {
 			known := entity.Owner == player || (distanceSquared < 800*800 && entity.Owner.Friendly(player))
 			alt := entity.Altitude()
+			data := entity.Data()
 
 			// visible means contact's EntityType, HealthPercent, ArmamentConsumption, and TurretAngles are known
 			var visible bool
@@ -101,8 +102,6 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 			var uncertainty float32
 
 			if !known {
-				data := entity.Data()
-
 				invSize := data.InvSize // cached 1.0 / min(1, data.Radius*(1.0/50.0)*(1-data.Stealth))
 				defaultRatio := distanceSquared * invSize
 				uncertainty = 1.0
@@ -164,7 +163,13 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 
 			if c.Uncertainty < 0.75 && entity.Owner != nil {
 				c.Friendly = entity.Owner.Friendly(player)
-				c.IDPlayerData = entity.Owner.IDPlayerData()
+				if data.Kind == world.EntityKindBoat {
+					c.IDPlayerData = entity.Owner.IDPlayerData()
+					team := h.teams[entity.Owner.TeamID]
+					if team != nil {
+						c.TeamFull = team.Full()
+					}
+				}
 			}
 
 			return

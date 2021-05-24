@@ -138,7 +138,7 @@ func (data AddToTeam) Inbound(h *Hub, _ Client, player *Player) {
 	// Owner moves people from JoinRequests to Members
 	// Everyone else can add themself to JoinRequests
 	if team.Owner() == &player.Player {
-		if len(team.Members) >= world.TeamMembersMax {
+		if team.Full() {
 			return // Team is full
 		}
 
@@ -261,7 +261,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 		if code := data.Code; code != world.TeamCodeInvalid && player.TeamID == world.TeamIDInvalid {
 			for teamID, team := range h.teams {
 				if team.Code == code {
-					if len(team.Members) < world.TeamMembersMax {
+					if !team.Full() {
 						h.clearTeamRequests(&player.Player)
 						team.Members.Add(&player.Player)
 						player.TeamID = teamID

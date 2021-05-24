@@ -11,11 +11,11 @@
 	function getTeams(contacts) {
 		const teams = {};
 		for (const contact of Object.values(contacts)) {
-			if (contact.team) {
+			if (contact.team && !contact.teamFull) {
 				teams[contact.team] = true;
 			}
 		}
-		return Object.keys(teams).slice(0, 5);
+		return Object.keys(teams).slice(0, 5).sort();
 	}
 
 	async function copyInvite() {
@@ -37,7 +37,9 @@
 		newTeamName = '';
 	}
 
-	$: myTeamID = contacts[$entityID] ? contacts[$entityID].team : null;
+	$: me = contacts[$entityID];
+	$: myTeamID = me ? me.team : null;
+	$: myTeamFull = me ? me.teamFull : false;
 	$: isOwner = $teamMembers && $teamMembers[0] && $socketPlayerID == $teamMembers[0].playerID;
 </script>
 
@@ -65,7 +67,7 @@
 				{/if}
 			</table>
 			{#if $teamInvite}
-				<button on:click={copyInvite}>Copy Invite</button>
+				<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>Copy Invite</button>
 			{/if}
 			<button on:click={() => send('removeFromTeam')}>Leave</button>
 		{:else}
