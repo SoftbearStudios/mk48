@@ -23,6 +23,10 @@ const (
 	spawnPeriod       = leaderboardPeriod
 	updatePeriod      = world.TickPeriod
 
+	// Must spawn atleast this many bots per real player,
+	// to give low-level ships some easier targets
+	minBotRatio = 0.5
+
 	// encodeBotMessages makes BotClient.Send marshal json and check for errors.
 	// Only useful for testing/benchmarking (drops performance significantly).
 	encodeBotMessages = false
@@ -184,10 +188,25 @@ func (h *Hub) run() {
 			h.Debug()
 			h.SnapshotTerrain()
 		case <-h.botsTicker.C:
+			// There are two reasons to add bots:
+			// - When minPlayers is not met by bots + clients
+			// - When minBotRatio is not met by bots / clients
+			playerCount := 0
+			for client := h.clients.First; client != nil; client = client.Data().Next {
+				if _, bot := client.(*BotClient); !bot {
+					playerCount++
+				}
+			}
+
+			botCount := h.clients.Len - playerCount
+			minBots := int(float32(playerCount) * minBotRatio)
+			totalClients := h.clients.Len + len(h.register) - len(h.unregister)
+
 			// Add as many as fit in the channel but don't block because it would deadlock
-			for i := h.clients.Len + len(h.register) - len(h.unregister); i < h.minPlayers; i++ {
+			for i := totalClients; i < h.minPlayers || botCount < minBots; i++ {
 				select {
 				case h.register <- &BotClient{}:
+					botCount++
 				default:
 					break
 				}
