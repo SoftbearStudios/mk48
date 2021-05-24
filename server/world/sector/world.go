@@ -10,11 +10,9 @@ import (
 	"mk48/server/world"
 )
 
-const (
-	size         = 500       // Meters
-	maxLength    = 1<<15 - 1 // size units
-	minSectorCap = 4         // Capacity to start sectors with
-)
+// size is the width of each sector in meters.
+// A size makes iteration faster and smaller size can make radius search faster.
+const size = 500
 
 // bufferSectorIndex is a sentinel value to mark that entity is in buffer.
 var bufferSectorIndex = sectorIndex{sectorID: sectorID{x: math.MinInt16, y: math.MinInt16}, index: -1}
@@ -218,7 +216,7 @@ func (w *World) remove(id sectorID, s *sector, index int, move bool) int {
 	if len(s.entities) == 0 {
 		// Delete slice if no more entities
 		w.sectors[id.sliceIndex(w.width)].entities = nil
-	} else if c := cap(s.entities) / 2; len(s.entities)+minSectorCap/2 < c {
+	} else if c := cap(s.entities) / 2; len(s.entities)+2 < c {
 		// Shrink to use less memory
 		entities := make([]world.Entity, len(s.entities), c)
 		copy(entities, s.entities)
