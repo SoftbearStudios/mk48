@@ -100,7 +100,7 @@ func (client *SocketClient) Send(message outbound) {
 	// The closer the buffer is to being full, the more messages
 	// we drop on the floor (to give the socket a chance to
 	// catch up)
-	if congestion > 1 && client.counter % congestion != 0 {
+	if congestion > 1 && client.counter%congestion != 0 {
 		// Drop the message on the floor
 		// The only long-term data loss will be from event-based things
 		// like chat messages
