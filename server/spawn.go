@@ -116,6 +116,7 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		threshold := float32(5.0)
 
 		// Always randomize on first iteration
+		governor := 0
 		for entity.Position == center || (entity.Data().Kind != world.EntityKindCollectible &&
 			entity.Data().Kind != world.EntityKindWeapon && h.nearAny(entity, threshold)) {
 
@@ -128,6 +129,13 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 
 			radius = min(radius*1.1, h.worldRadius)
 			threshold = 0.25 + threshold*0.75 // Approaches 1.0
+
+			governor++
+			if governor > 128 {
+				// Don't take down the server just because cannnot
+				// spawn an entity
+				return world.EntityIDInvalid
+			}
 		}
 
 		entity.DirectionTarget = entity.Direction

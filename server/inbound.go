@@ -276,7 +276,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 		}
 
 		entity.Initialize(data.Type)
-		spawnRadius := h.worldRadius * 0.6
+		spawnRadius := h.worldRadius * 0.75
 
 		if team := h.teams[player.TeamID]; team != nil {
 			// Spawn near the first other team member with a ship
@@ -303,7 +303,10 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 			}
 		}
 
-		h.spawnEntity(entity, spawnRadius)
+		if h.spawnEntity(entity, spawnRadius) == world.EntityIDInvalid {
+			// Spawn failed
+			return
+		}
 
 		if !bot {
 			h.cloud.IncrementPlaysStatistic()
