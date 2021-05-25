@@ -26,6 +26,52 @@
 		"length": 90,
 		"width": 90
 	},
+	"akula": {
+		"label": "Akula",
+		"link": "https://en.wikipedia.org/wiki/Akula-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 5,
+		"length": 113.3,
+		"width": 20.137,
+		"speed": 18.00556,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 50.5,
+				"positionSide": 1.5,
+				"angle": 0,
+				"count": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 51,
+				"positionSide": 0.6,
+				"angle": 0,
+				"count": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": 52,
+				"positionSide": 0.5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
 	"arleighBurke": {
 		"label": "Arleigh Burke",
 		"link": "https://en.wikipedia.org/wiki/Arleigh_Burke-class_destroyer",
@@ -1057,7 +1103,7 @@
 		"link": "https://en.wikipedia.org/wiki/Ohio-class_submarine",
 		"type": "boat",
 		"subtype": "submarine",
-		"level": 5,
+		"level": 6,
 		"length": 170,
 		"width": 13,
 		"speed": 12.8611,
@@ -1709,6 +1755,17 @@
 				"type": "radar"
 			}
 		]
+	},
+	"brosok": {
+		"label": "Brosok",
+		"link": "http://cmano-db.com/weapon/2176/",
+		"type": "decoy",
+		"subtype": "sonar",
+		"level": 4,
+		"length": 1.5,
+		"width": 0.28125,
+		"speed": 12,
+		"lifespan": 15
 	},
 	"depositor": {
 		"label": "Depositor",
