@@ -22,7 +22,7 @@
 		<li><b>Right click</b> (and optionally hold) outside your ship's inner
 		ring <i>(this is the recommended way to move)</i></li>
 		<li><b>Tap and hold</b> (on touch screen) outside your ship's inner ring</li>
-		<li>Use the <b>WASD</b> or <b>arrow</b> keys.</li>
+		<li>Use the <b>WASD</b> or <b>arrow</b> keys to move, and 'x' key to stop</li>
 	</ol>
 
 	<p>Once your ship is moving in a direction, it will keep moving, to let you
@@ -57,7 +57,7 @@
 		by driving over it.</li>
 		<li><b>Minelayers</b> dispense long lasting mines that can help guard a
 		small area.</li>
-		<li><b>Aircraft carriers</b> are coming soon!</li>
+		<li><b>Aircraft carriers</b> command a squadron of planes to bomb enemy ships! Planes will follow your mouse cursor.</li>
 	</ol>
 
 	<p>Once you earn enough points, you are able to <b>upgrade</b> your ship to the
@@ -89,12 +89,18 @@
 		<li><b>Depth charges</b> are stationary weapons that can be deployed
 		against persuing ships or submerged submarines.</li>
 
-		<li><b>Dredger</b>. It creates new land. We'll let you figure out if this
+		<li><b>Mines</b> are like depth charges but last much longer and are
+		more powerful.</li>
+
+		<li><b>Aircraft</b> fly towards your mouse cursor, and may carry weapons of their own.</li>
+
+		<li><b>Depositor</b> creates new land. We'll let you figure out if this
 		can be used as a weapon.</li>
 	</ol>
 
 	<p>Once fired, all weapons take some time to <b>reload</b>. Each type of weapon
-	and each turret reload independently. Consuming crates speeds up reloading.</p>
+	and each turret reload independently. Consuming crates speeds up reloading,
+	while using weapons underwater slows it down.</p>
 
 	<p>Some battleships have the ability to <b>airdrop</b> torpedoes. These torpedoes
 	will enter the water near the target and approach it from all angles.</p>
