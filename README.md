@@ -1,6 +1,12 @@
 # Mk48.io Game
 
 [![Go](https://github.com/SoftbearStudios/mk48/actions/workflows/go.yml/badge.svg)](https://github.com/SoftbearStudios/mk48/actions/workflows/go.yml)
+<a href='https://discord.gg/YMheuFQWTX'>
+  <img src='https://img.shields.io/badge/Mk48.io-%23announcements-blue.svg' alt='Mk48.io Discord' />
+</a>
+<a href='https://discord.gg/UQmcwM9NGr'>
+  <img src='https://img.shields.io/badge/Discord%20Gophers-%23mk48io-blue.svg' alt='Discord Gophers' />
+</a>
 
 ![Logo](/client/static/logo-712.png)
 
