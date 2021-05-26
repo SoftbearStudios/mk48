@@ -29,5 +29,14 @@
 2. `make`
 3. Profile with `make pprof` and optionally specify `seconds=<number>` and/or `profile=heap`
 
+### Docker
+
+Docker infrastructure is also available, that runs the client and server.
+
+0. Install `docker` and `docker-compose`
+1. `docker-compose build`
+2. `docker-compose up`
+3. Navigate to http://localhost:3000
+
 ## Contributing
 See [Contributing](https://github.com/SoftbearStudios/mk48/wiki/Contributing) Wiki page.

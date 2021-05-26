@@ -39,6 +39,8 @@
 
 	<p>To learn more about the game, visit the <a href='/help'>Help page</a>.
 
+	<p>You can also <Link href='https://discord.gg/YMheuFQWTX'>join the Discord server!</Link>
+
 	<h2>Technical details</h2>
 
 	<p>The game's source code and assets are <Link href="https://github.com/SoftbearStudios/mk48">open source</Link>.</p>
