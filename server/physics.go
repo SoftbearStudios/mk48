@@ -368,7 +368,13 @@ func (h *Hub) boatDied(e *world.Entity) {
 			Transform:  e.Transform,
 		}
 
-		h.spawnEntity(crate, data.Radius*0.5)
+		// Make loot roughly conform to rectangle of ship
+		normal := e.Direction.Vec2f()
+		tangent := normal.Rot90()
+		crate.Position = crate.Position.AddScaled(normal, (rand.Float32()-0.5)*data.Length)
+		crate.Position = crate.Position.AddScaled(tangent, (rand.Float32()-0.5)*data.Width)
+
+		h.spawnEntity(crate, data.Radius*0.15)
 	}
 }
 
