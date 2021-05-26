@@ -39,7 +39,7 @@
 
 	<p>To learn more about the game, visit the <a href='/help'>Help page</a>.
 
-	<p>You can also <Link href='https://discord.gg/YMheuFQWTX'>join the Discord server!</Link>
+	<p>You can also <Link href='https://discord.gg/YMheuFQWTX'>join the Discord server</Link>!</p>
 
 	<h2>Technical details</h2>
 

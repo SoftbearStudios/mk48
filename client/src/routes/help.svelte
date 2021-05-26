@@ -3,6 +3,10 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+<script>
+	import Link from '../lib/Link.svelte';
+</script>
+
 <div>
 	<h1>Mk48.io Help Guide</h1>
 
@@ -12,6 +16,9 @@
 	and consume <b>crates</b> to increase your score (to level up your ship). While a
 	small amount of crates spawn naturally, sinking other ships directly
 	increases your score and spawns many more crates.</p>
+
+	<p>You can <Link href='https://discord.gg/YMheuFQWTX'>join the Discord server</Link> to
+	get help from the community!</p>
 
 	<h2>Movement</h2>
 
