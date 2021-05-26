@@ -236,14 +236,9 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 		switch {
 		case boat != nil && collectible != nil:
-			// All collectibles have these benefits
 			boat.Repair(0.05)
-			if collectible.EntityType == world.EntityTypeCrate {
-				// Prevent oil platforms from allowing infinite ammo
-				boat.Replenish(1)
-			}
-
-			boat.Owner.Score += 1
+			boat.Replenish(collectible.Data().Reload)
+			boat.Owner.Score += int(collectible.Data().Level)
 
 			removeEntity(collectible, "collected")
 		case boat != nil && weapon != nil && !friendly:
@@ -362,9 +357,14 @@ func (h *Hub) boatDied(e *world.Entity) {
 	// Makes spawn killing less profitable
 	loot *= e.RecentSpawnFactor()
 
+	lootType := world.EntityTypeScrap
+	if data.SubKind == world.EntitySubKindPirate {
+		lootType = world.EntityTypeCoin
+	}
+
 	for i := 0; i < int(loot); i++ {
 		crate := &world.Entity{
-			EntityType: world.EntityTypeCrate,
+			EntityType: lootType,
 			Transform:  e.Transform,
 		}
 

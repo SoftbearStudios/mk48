@@ -48,6 +48,7 @@ type (
 		SubKind      EntitySubKind `json:"subtype"`
 		Level        uint8         `json:"level"`
 		Limited      bool          `json:"limited"`
+		NPC          bool          `json:"npc"` // only bots can use
 		Lifespan     Ticks         `json:"lifespan"`
 		Reload       Ticks         `json:"reload"` // time to reload
 		Speed        Velocity      `json:"speed"`

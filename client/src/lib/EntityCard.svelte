@@ -56,6 +56,9 @@
 				{#if entityData.stealth}
 					<li>Stealth: {Math.round(entityData.stealth * 100)}%</li>
 				{/if}
+				{#if entityData.npc}
+					<li>NPC only</li>
+				{/if}
 			</ul>
 		<td/>
 	</tr>

@@ -4,20 +4,44 @@
 		"type": "collectible",
 		"subtype": "score",
 		"level": 1,
+		"reload": 0,
 		"length": 2.72,
 		"lifespan": 60,
 		"width": 1.785,
 		"speed": 20
+	},
+	"coin": {
+		"label": "Coin",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 10,
+		"reload": 0,
+		"length": 3,
+		"lifespan": 120,
+		"width": 3,
+		"speed": 15
 	},
 	"crate": {
 		"label": "Crate",
 		"type": "collectible",
 		"subtype": "score",
 		"level": 1,
+		"reload": 2,
 		"length": 2,
 		"lifespan": 60,
 		"width": 2,
 		"speed": 20
+	},
+	"scrap": {
+		"label": "Scrap",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 2,
+		"reload": 1,
+		"length": 3,
+		"lifespan": 80,
+		"width": 3,
+		"speed": 15
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",
@@ -662,6 +686,63 @@
 				"angle": 0,
 				"symmetrical": true,
 				"external": false
+			}
+		]
+	},
+	"indiaman": {
+		"label": "East Indiaman",
+		"link": "https://en.wikipedia.org/wiki/East_Indiaman",
+		"type": "boat",
+		"subtype": "pirate",
+		"level": 3,
+		"length": 52.8143,
+		"width": 13.6162,
+		"speed": 4,
+		"armaments": [
+			{
+				"default": "cannonBall",
+				"positionForward": 2.72433,
+				"positionSide": 4.48329,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 7.0183,
+				"positionSide": 4.53272,
+				"angle": 89,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -1.48315,
+				"positionSide": 4.31076,
+				"angle": 91,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 11.0811,
+				"positionSide": 4.33021,
+				"angle": 88,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -9.85305,
+				"positionSide": 4.31076,
+				"angle": 92,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"sensors": [
+			{
+				"type": "visual"
 			}
 		]
 	},
@@ -1597,13 +1678,10 @@
 		"label": "25 x 129 mmR",
 		"type": "weapon",
 		"subtype": "shell",
-		"angle": 0,
 		"width": 0.0254,
 		"length": 0.1295,
 		"speed": 900,
-		"range": 10000,
-		"symmetrical": false,
-		"external": true
+		"range": 10000
 	},
 	"38cmSKC34": {
 		"label": "38 cm SK C/34",
@@ -1766,6 +1844,15 @@
 		"width": 0.28125,
 		"speed": 12,
 		"lifespan": 15
+	},
+	"cannonBall": {
+		"label": "Cannon Ball",
+		"type": "weapon",
+		"subtype": "shell",
+		"width": 0.091,
+		"length": 0.091,
+		"speed": 438.912,
+		"range": 1000
 	},
 	"depositor": {
 		"label": "Depositor",

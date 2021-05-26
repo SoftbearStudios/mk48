@@ -25,7 +25,7 @@
 		const list = [];
 		for (const entityType of Object.keys(entityData)) {
 			const data = entityData[entityType];
-			if (data.type === 'boat' && data.level === nextLevel) {
+			if (data.type === 'boat' && data.level === nextLevel && !data.npc) {
 				list.push(entityType);
 			}
 		}

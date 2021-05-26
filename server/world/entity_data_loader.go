@@ -164,6 +164,7 @@ func init() {
 	EntitySubKindHovercraft = ParseEntitySubKind("hovercraft")
 	EntitySubKindMine = ParseEntitySubKind("mine")
 	EntitySubKindMissile = ParseEntitySubKind("missile")
+	EntitySubKindPirate = ParseEntitySubKind("pirate")
 	EntitySubKindTorpedo = ParseEntitySubKind("torpedo")
 	EntitySubKindRam = ParseEntitySubKind("ram")
 	EntitySubKindRocket = ParseEntitySubKind("rocket")
@@ -172,10 +173,12 @@ func init() {
 	EntitySubKindSubmarine = ParseEntitySubKind("submarine")
 
 	EntityTypeBarrel = ParseEntityType("barrel")
+	EntityTypeCoin = ParseEntityType("coin")
 	EntityTypeCount = len(entityTypeEnum.strings)
 	EntityTypeCrate = ParseEntityType("crate")
 	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
+	EntityTypeScrap = ParseEntityType("scrap")
 
 	SensorTypeRadar = ParseSensorType("radar")
 	SensorTypeSonar = ParseSensorType("sonar")
@@ -207,6 +210,7 @@ var (
 	EntitySubKindDepthCharge EntitySubKind
 	EntitySubKindDredger     EntitySubKind
 	EntitySubKindHovercraft  EntitySubKind
+	EntitySubKindPirate      EntitySubKind
 	EntitySubKindMine        EntitySubKind
 	EntitySubKindMissile     EntitySubKind
 	EntitySubKindRam         EntitySubKind
@@ -217,9 +221,11 @@ var (
 	EntitySubKindTorpedo     EntitySubKind
 
 	EntityTypeBarrel      EntityType
+	EntityTypeCoin        EntityType
 	EntityTypeCrate       EntityType
 	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
+	EntityTypeScrap       EntityType
 
 	SensorTypeRadar  SensorType
 	SensorTypeSonar  SensorType

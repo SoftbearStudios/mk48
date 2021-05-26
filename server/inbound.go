@@ -235,7 +235,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 			maxLevel = h.botMaxSpawnLevel
 		}
 
-		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || (d.Level > maxLevel && !authed) {
+		if d := data.Type.Data(); d.Kind != world.EntityKindBoat || ((d.Level > maxLevel || (d.NPC && !bot)) && !authed) {
 			return
 		}
 

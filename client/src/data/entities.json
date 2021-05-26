@@ -4,10 +4,25 @@
 		"type": "collectible",
 		"subtype": "score",
 		"level": 1,
+		"reload": 0,
 		"length": 2.72,
 		"lifespan": 60,
 		"width": 1.785,
 		"speed": 20,
+		"armaments": [],
+		"turrets": [],
+		"sensors": []
+	},
+	"coin": {
+		"label": "Coin",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 10,
+		"reload": 0,
+		"length": 3,
+		"lifespan": 120,
+		"width": 3,
+		"speed": 15,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -17,10 +32,25 @@
 		"type": "collectible",
 		"subtype": "score",
 		"level": 1,
+		"reload": 2,
 		"length": 2,
 		"lifespan": 60,
 		"width": 2,
 		"speed": 20,
+		"armaments": [],
+		"turrets": [],
+		"sensors": []
+	},
+	"scrap": {
+		"label": "Scrap",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 2,
+		"reload": 1,
+		"length": 3,
+		"lifespan": 80,
+		"width": 3,
+		"speed": 15,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []
@@ -1124,6 +1154,97 @@
 				"external": false
 			}
 		],
+		"turrets": []
+	},
+	"indiaman": {
+		"label": "East Indiaman",
+		"link": "https://en.wikipedia.org/wiki/East_Indiaman",
+		"type": "boat",
+		"subtype": "pirate",
+		"level": 3,
+		"length": 52.8143,
+		"width": 13.6162,
+		"speed": 4,
+		"armaments": [
+			{
+				"default": "cannonBall",
+				"positionForward": 2.72433,
+				"positionSide": 4.48329,
+				"angle": 1.5707963267948966,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 2.72433,
+				"positionSide": -4.48329,
+				"angle": -1.5707963267948966,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 7.0183,
+				"positionSide": 4.53272,
+				"angle": 1.5533430342749532,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 7.0183,
+				"positionSide": -4.53272,
+				"angle": -1.5533430342749532,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -1.48315,
+				"positionSide": 4.31076,
+				"angle": 1.5882496193148399,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -1.48315,
+				"positionSide": -4.31076,
+				"angle": -1.5882496193148399,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 11.0811,
+				"positionSide": 4.33021,
+				"angle": 1.53588974175501,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 11.0811,
+				"positionSide": -4.33021,
+				"angle": -1.53588974175501,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -9.85305,
+				"positionSide": 4.31076,
+				"angle": 1.6057029118347832,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -9.85305,
+				"positionSide": -4.31076,
+				"angle": -1.6057029118347832,
+				"external": true
+			}
+		],
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 658.4429
+			}
+		],
+		"antiAircraft": 0.039,
+		"npc": true,
 		"turrets": []
 	},
 	"kolkata": {
@@ -2893,12 +3014,9 @@
 		"label": "25 x 129 mmR",
 		"type": "weapon",
 		"subtype": "shell",
-		"angle": 0,
 		"width": 0.0254,
 		"length": 0.1295,
 		"speed": 675,
-		"symmetrical": false,
-		"external": true,
 		"lifespan": 0.37037037037037035,
 		"damage": 0.4,
 		"reload": 8,
@@ -3113,6 +3231,20 @@
 		"speed": 12,
 		"lifespan": 15,
 		"reload": 20,
+		"armaments": [],
+		"turrets": [],
+		"sensors": []
+	},
+	"cannonBall": {
+		"label": "Cannon Ball",
+		"type": "weapon",
+		"subtype": "shell",
+		"width": 0.091,
+		"length": 0.091,
+		"speed": 329.18399999999997,
+		"lifespan": 0.759453679401186,
+		"damage": 0.4,
+		"reload": 8,
 		"armaments": [],
 		"turrets": [],
 		"sensors": []

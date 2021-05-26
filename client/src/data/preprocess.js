@@ -67,6 +67,12 @@ for (const entityType of Object.keys(entityDatas)) {
 			default:
 				entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
 		}
+
+		switch (entityData.subtype) {
+			case 'pirate':
+				entityData.npc = true;
+				break;
+		}
 	}
 
 	if (entityData.type === 'weapon' && entityData.damage == undefined) {

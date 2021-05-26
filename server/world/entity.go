@@ -268,11 +268,11 @@ func (entity *Entity) Repair(amount float32) {
 // Replenish replenishes the Entity's armaments by an amount.
 // It starts with the ones that have the least time left.
 // O(n^2) worst case if amount is very high.
-func (entity *Entity) Replenish(amount float32) {
+func (entity *Entity) Replenish(amount Ticks) {
 	if len(entity.ArmamentConsumption()) == 0 {
 		return // don't crash
 	}
-	entity.replenish(ToTicks(amount), false)
+	entity.replenish(amount, false)
 }
 
 // replenish is a helper to that can avoid copying turret angles and armaments for unsafeExtension.
