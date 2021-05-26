@@ -17,7 +17,7 @@
 		"label": "Coin",
 		"type": "collectible",
 		"subtype": "score",
-		"level": 10,
+		"level": 5,
 		"reload": 0,
 		"length": 3,
 		"lifespan": 120,
