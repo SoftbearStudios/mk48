@@ -198,7 +198,8 @@ func (bot *BotClient) Send(out outbound) {
 		if closestEnemy.Found() && closestEnemy.distanceSquared < 4*closestCollectible.distanceSquared {
 			closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 
-			manual.VelocityTarget = closestEnemy.Velocity + 10*world.MeterPerSecond
+			// Make velocity target dependent on aggresssion due to #87
+			manual.VelocityTarget = closestEnemy.Velocity + world.Velocity(5+bot.aggression*10)*world.MeterPerSecond
 			manual.DirectionTarget = closestEnemyAngle
 
 			manual.TurretTarget = closestEnemy.Position
