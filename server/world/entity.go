@@ -182,7 +182,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	switch data.SubKind {
 	case EntitySubKindSAM:
 		baseHomingStrength = 10000
-		relevant = otherData.SubKind == EntitySubKindAircraft || otherData.SubKind == EntitySubKindMissile
+		relevant = otherData.SubKind == EntitySubKindAircraft || otherData.SubKind == EntitySubKindMissile || otherData.SubKind == EntitySubKindRocket
 	default:
 		relevant = otherData.Kind == EntityKindBoat || otherData.Kind == EntityKindDecoy
 	}

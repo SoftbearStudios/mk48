@@ -90,6 +90,8 @@
 
 		<li><b>Rockets</b> are like missiles but lack guidance.</li>
 
+		<li><b>SAMs</b> (surface-to-air missiles) can shoot down aircraft and missiles.</li>
+
 		<li><b>Gun turrets</b> shoot very fast shells that do moderate
 		damage. Once fired, a shell is without guidance.</li>
 
