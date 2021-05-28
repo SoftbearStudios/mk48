@@ -220,17 +220,23 @@ func (bot *BotClient) Send(out outbound) {
 						armamentSubtype = armament.Default.Data().SubKind
 					}
 
-					if armamentType == world.EntityKindWeapon {
-						if ship.ArmamentConsumption[index] == 0 {
-							armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
-							diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
-							if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
-								diff = 0
-							}
-							if diff < bestArmamentAngleDiff {
-								bestArmamentIndex = index
-								bestArmamentAngleDiff = diff
-							}
+					if armamentType != world.EntityKindWeapon {
+						continue
+					}
+					if armamentSubtype == world.EntitySubKindSAM {
+						// TODO: Teach bots how to use SAMs
+						continue
+					}
+
+					if ship.ArmamentConsumption[index] == 0 {
+						armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
+						diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
+						if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
+							diff = 0
+						}
+						if diff < bestArmamentAngleDiff {
+							bestArmamentIndex = index
+							bestArmamentAngleDiff = diff
 						}
 					}
 				}

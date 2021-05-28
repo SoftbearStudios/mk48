@@ -172,6 +172,25 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		// Sensor not active yet
 		return
 	}
+
+	data := entity.Data()
+	otherData := otherEntity.Data()
+
+	var relevant bool
+	var baseHomingStrength float32 = 600
+
+	switch data.SubKind {
+	case EntitySubKindSAM:
+		baseHomingStrength = 10000
+		relevant = otherData.SubKind == EntitySubKindAircraft || otherData.SubKind == EntitySubKindMissile
+	default:
+		relevant = otherData.Kind == EntityKindBoat || otherData.Kind == EntityKindDecoy
+	}
+
+	if !relevant {
+		return
+	}
+
 	diff := otherEntity.Position.Sub(entity.Position)
 	angle := diff.Angle()
 
@@ -187,13 +206,13 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		return
 	}
 
-	size := otherEntity.Data().Radius
-	if otherEntity.Data().Kind == EntityKindDecoy {
+	size := otherData.Radius
+	if otherData.Kind == EntityKindDecoy {
 		// Decoys appear very large to weapons
 		size = 100
 	}
-	homingStrength := size * 600 / (1 + diff.LengthSquared() + 20000*square(angleDiff))
 
+	homingStrength := size * baseHomingStrength / (1 + diff.LengthSquared() + 20000*square(angleDiff))
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 

@@ -128,14 +128,11 @@ func (t *Terrain) Repair() {
 // Collides returns if an entity collides with the terrain given a time step in seconds.
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
-	threshold := byte(terrain.OceanLevel)
-	switch data.SubKind {
-	case world.EntitySubKindAircraft, world.EntitySubKindMissile, world.EntitySubKindRocket, world.EntitySubKindShell:
+	// -6 is ludge offset to make math line up with client
+	threshold := byte(terrain.OceanLevel) - 6
+	if entity.Altitude() > 0 {
 		threshold = terrain.SandLevel
 	}
-
-	// Kludge offset
-	threshold -= 6
 
 	sweep := seconds * entity.Velocity.Float()
 	const graceMargin = 0.9

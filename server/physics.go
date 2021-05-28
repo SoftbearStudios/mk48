@@ -173,7 +173,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 				if entityData.Kind == world.EntityKindWeapon {
 					// Home towards target/decoy
-					if altitudeOverlap && len(entityData.Sensors) > 0 && (otherData.Kind == world.EntityKindBoat || otherData.Kind == world.EntityKindDecoy) {
+					if altitudeOverlap && len(entityData.Sensors) > 0 {
 						entity.UpdateSensor(other)
 					}
 

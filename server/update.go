@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/chewxy/math32"
 	"mk48/server/world"
 	"runtime"
 	"sync"
@@ -108,6 +109,10 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 
 				if radarRangeInv != 0 && alt >= -0.1 {
 					radarRatio := defaultRatio * radarRangeInv
+
+					// Radar can see moving targets easier
+					radarRatio *= 32 / (32 + math32.Abs(entity.Velocity.Float()))
+
 					uncertainty = min(uncertainty, radarRatio*2)
 				}
 

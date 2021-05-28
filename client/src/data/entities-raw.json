@@ -205,6 +205,13 @@
 				"angle": 90,
 				"symmetrical": true,
 				"external": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true,
+				"count": 8
 			}
 		],
 		"turrets": [
@@ -793,6 +800,22 @@
 				"positionForward": 44,
 				"positionSide": 1.5,
 				"count": 4,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"count": 2,
 				"symmetrical": true,
 				"vertical": true
 			}
@@ -1778,6 +1801,22 @@
 		],
 		"limited": true
 	},
+	"barak8": {
+		"label": "Barak 8",
+		"link": "https://en.wikipedia.org/wiki/Barak_8",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 4.5,
+		"width": 0.703,
+		"speed": 1325.2,
+		"range": 50000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
 		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
@@ -1861,6 +1900,22 @@
 		"length": 21.9,
 		"width": 5.1328,
 		"range": 60
+	},
+	"essm": {
+		"label": "ESSM",
+		"link": "https://en.wikipedia.org/wiki/RIM-162_ESSM",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 3.66,
+		"width": 0.4575,
+		"speed": 1325.2,
+		"range": 50000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
 	},
 	"harpoon": {
 		"label": "Harpoon",

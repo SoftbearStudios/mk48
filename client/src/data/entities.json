@@ -322,6 +322,54 @@
 				"external": true
 			},
 			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
@@ -1368,6 +1416,58 @@
 				"subtype": "missile",
 				"default": "brahmos",
 				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": -2,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": -2,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": -1.5,
+				"vertical": true,
+				"angle": null
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
 				"positionSide": -1.5,
 				"vertical": true,
 				"angle": null
@@ -3147,6 +3247,27 @@
 		"armaments": [],
 		"turrets": []
 	},
+	"barak8": {
+		"label": "Barak 8",
+		"link": "https://en.wikipedia.org/wiki/Barak_8",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 4.5,
+		"width": 0.703,
+		"speed": 1000,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1009
+			}
+		],
+		"lifespan": 5.33234126984127,
+		"damage": 0.605,
+		"reload": 12.399999999999999,
+		"armaments": [],
+		"turrets": []
+	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
 		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
@@ -3214,7 +3335,7 @@
 				"range": 1016.8
 			}
 		],
-		"lifespan": 7.055555555555555,
+		"lifespan": 5.87962962962963,
 		"damage": 0.8,
 		"reload": 16,
 		"armaments": [],
@@ -3261,6 +3382,27 @@
 		"turrets": [],
 		"sensors": []
 	},
+	"essm": {
+		"label": "ESSM",
+		"link": "https://en.wikipedia.org/wiki/RIM-162_ESSM",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 3.66,
+		"width": 0.4575,
+		"speed": 1000,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1007.32
+			}
+		],
+		"lifespan": 5.217171717171717,
+		"damage": 0.4958,
+		"reload": 10.384,
+		"armaments": [],
+		"turrets": []
+	},
 	"harpoon": {
 		"label": "Harpoon",
 		"link": "https://en.wikipedia.org/wiki/Harpoon_(missile)",
@@ -3276,7 +3418,7 @@
 				"range": 1007.6
 			}
 		],
-		"lifespan": 4.814814814814815,
+		"lifespan": 6.383588077356009,
 		"damage": 0.514,
 		"reload": 10.719999999999999,
 		"armaments": [],
@@ -3587,7 +3729,7 @@
 		"length": 1.125,
 		"width": 0.29883,
 		"speed": 200,
-		"lifespan": 5.034722222222222,
+		"lifespan": 6.389421830599486,
 		"damage": 0.16625,
 		"reload": 2.5,
 		"armaments": [],
@@ -3644,7 +3786,7 @@
 				"range": 1011.6
 			}
 		],
-		"lifespan": 3.887269193391642,
+		"lifespan": 5.960783604641308,
 		"damage": 0.774,
 		"reload": 15.52,
 		"armaments": [],
@@ -3665,7 +3807,7 @@
 				"range": 1008.66
 			}
 		],
-		"lifespan": 3.95,
+		"lifespan": 5.880103913159243,
 		"damage": 0.5829000000000001,
 		"reload": 11.992,
 		"armaments": [],
@@ -3707,7 +3849,7 @@
 				"range": 1011.12
 			}
 		],
-		"lifespan": 5.097503307954273,
+		"lifespan": 6.706488672497006,
 		"damage": 0.7428,
 		"reload": 14.943999999999999,
 		"armaments": [],

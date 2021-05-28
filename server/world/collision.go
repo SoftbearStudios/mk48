@@ -63,6 +63,11 @@ func (entity *Entity) Collides(otherEntity *Entity, seconds float32) bool {
 		return false
 	}
 
+	// SAMs collide if within radius, simulating their blast-fragmentation warheads
+	if data.SubKind == EntitySubKindSAM || otherData.SubKind == EntitySubKindSAM {
+		return true
+	}
+
 	dimensions := Vec2f{X: data.Length + sweep, Y: data.Width}
 	otherDimensions := Vec2f{X: otherData.Length + otherSweep, Y: otherData.Width}
 

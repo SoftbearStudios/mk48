@@ -27,6 +27,8 @@ for (const entityType of Object.keys(entityDatas)) {
 						break;
 				}
 		}
+
+		entityData.speed = Math.min(entityData.speed, 1000);
 	}
 
 	if (entityData.range && entityType !== 'depositor') {
@@ -38,12 +40,23 @@ for (const entityType of Object.keys(entityDatas)) {
 					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
 					break;
 				case 'rocket':
+				case 'sam':
 				case 'missile':
 					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
-					// TODO calculate time taken to go range
-					if (entityData.speed > 500) {
-						avgSpeed = Math.min(entityData.speed, 200)
+
+					avgSpeed = 0;
+					let count = 0;
+					let speed = 0;
+					const seconds = 0.1;
+					for (let d = 0; d < maxRange; d += speed * seconds) {
+						let delta = entityData.speed - speed;
+						speed += Math.min(delta, 800 * seconds) * seconds;
+						avgSpeed += speed;
+						count++;
 					}
+
+					avgSpeed /= count;
+					//console.log(`${entityType}: ${entityData.speed} -> ${avgSpeed}`);
 					break;
 				case 'aircraft':
 					maxRange = 5000;
@@ -90,6 +103,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.damage = 1.5;
 				break;
 			case 'rocket':
+			case 'sam':
 			case 'missile':
 				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
 				break;
@@ -116,6 +130,7 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 2.5;
 						break;
 					case 'missile':
+					case 'sam':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
 						break;
 					case 'shell':
