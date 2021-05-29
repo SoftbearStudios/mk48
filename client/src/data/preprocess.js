@@ -42,7 +42,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'rocket':
 				case 'sam':
 				case 'missile':
-					maxRange = mapRanges(entityData.length, 1, 10, 1000, maxRange, true);
+					maxRange = mapRanges(entityData.length, 1, 10, 500, 1200, true);
 
 					avgSpeed = 0;
 					let count = 0;
