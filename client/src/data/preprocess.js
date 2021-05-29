@@ -129,6 +129,9 @@ for (const entityType of Object.keys(entityDatas)) {
 					case 'rocket':
 						entityData.reload = 2.5;
 						break;
+					case 'mine':
+						entityData.reload = 30;
+						break;
 					case 'missile':
 					case 'sam':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
