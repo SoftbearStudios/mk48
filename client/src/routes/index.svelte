@@ -543,8 +543,9 @@
 
 					if (keyEvent) {
 						let newTarget = localSprite.directionTarget;
+						let forwardBackward = keyboard.forward || keyboard.backward;
 
-						if (keyboard.forward || keyboard.backward) {
+						if (forwardBackward) {
 							if (keyboard.forward) {
 								localSprite.velocityTarget += 50 * seconds;
 							}
@@ -556,8 +557,16 @@
 							newTarget = localEntity.direction;
 						}
 
-						const turnSpeed = 80 / (100 + localEntityData.length);
+						let turnSpeed = 100 / (100 + localEntityData.length);
 						const sign = 1; // localSprite.velocity >= -0.1 ? 1 : -1;
+
+						if (forwardBackward) {
+							// This turn will be added to the current course,
+							// not the current desired course.
+							// If too low, relative to tick rate, oscillations
+							// will occur.
+							turnSpeed *= 5;
+						}
 
 						if (keyboard.right) {
 							newTarget += turnSpeed * sign * Math.PI * seconds;
