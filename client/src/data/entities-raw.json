@@ -43,6 +43,13 @@
 		"width": 3,
 		"speed": 15
 	},
+	"hq": {
+		"label": "HQ",
+		"type": "obstacle",
+		"subtype": "structure",
+		"length": 90,
+		"width": 90
+	},
 	"oilPlatform": {
 		"label": "Oil Platform",
 		"type": "obstacle",

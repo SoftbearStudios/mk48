@@ -78,8 +78,8 @@ func newHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	}
 	fmt.Println(c)
 
-	if botMaxSpawnLevel > int(world.EntityLevelMax) {
-		botMaxSpawnLevel = int(world.EntityLevelMax)
+	if botMaxSpawnLevel > int(world.BoatLevelMax) {
+		botMaxSpawnLevel = int(world.BoatLevelMax)
 	}
 
 	radius := max(world.MinRadius, world.RadiusOf(minPlayers))

@@ -55,6 +55,16 @@
 		"turrets": [],
 		"sensors": []
 	},
+	"hq": {
+		"label": "HQ",
+		"type": "obstacle",
+		"subtype": "structure",
+		"length": 90,
+		"width": 90,
+		"armaments": [],
+		"turrets": [],
+		"sensors": []
+	},
 	"oilPlatform": {
 		"label": "Oil Platform",
 		"type": "obstacle",

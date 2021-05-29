@@ -16,13 +16,15 @@ import (
 const (
 	// barrelRadius is the radius around an oil platform that barrels are counted.
 	barrelRadius = 125
-	// targetBarrelCount is max amount of barrels around an oil platform.
-	targetBarrelCount = 20
-	// barrelSpawnRate is average seconds per barrel spawn.
+	// max amount of barrels around an oil platform
+	platformBarrelCount = 12
+	// platformBarrelSpawnRate is average seconds per barrel spawn.
 	// Cant be less than spawnPeriod.
-	barrelSpawnRate = time.Second * 2
-	// barrelSpawnProb is the probably that a barrel will spawn around an oil platform.
-	barrelSpawnProb = float64(spawnPeriod) / float64(barrelSpawnRate)
+	platformBarrelSpawnRate = time.Second * 3
+	// barreplatformBarrelSpawnProblSpawnProb is the probably that a barrel will spawn around an oil platform.
+	platformBarrelSpawnProb = float64(spawnPeriod) / float64(platformBarrelSpawnRate)
+	// hq is this many times better than platform
+	hqFactor = 2
 )
 
 // Spawn spawns non-boat/weapon entities such as collectibles and obstacles.
@@ -30,20 +32,20 @@ func (h *Hub) Spawn() {
 	defer h.timeFunction("spawn", time.Now())
 
 	// Outputs platforms that should spawn 1 barrel
-	platformOutput := make(chan world.Vec2f, runtime.NumCPU()*2)
-	platformPositions := make([]world.Vec2f, 0, 16)
+	barrelSpawnerOutput := make(chan world.Vec2f, runtime.NumCPU()*2)
+	barrelSpawnerPositions := make([]world.Vec2f, 0, 16)
 	var wait sync.WaitGroup
 	wait.Add(1)
 	go func() {
-		for position := range platformOutput {
-			platformPositions = append(platformPositions, position)
+		for position := range barrelSpawnerOutput {
+			barrelSpawnerPositions = append(barrelSpawnerPositions, position)
 		}
 		wait.Done()
 	}()
 
 	// Use int64s for atomic ops
 	currentCrateCount := int64(0)
-	currentOilPlatformCount := int64(0)
+	currentBarrelSpawnerCount := int64(0)
 
 	h.world.SetParallel(true)
 	h.world.ForEntities(func(entity *world.Entity) (stop, remove bool) {
@@ -51,7 +53,17 @@ func (h *Hub) Spawn() {
 		case world.EntityKindCollectible:
 			atomic.AddInt64(&currentCrateCount, 1)
 		case world.EntityKindObstacle:
-			if entity.EntityType == world.EntityTypeOilPlatform && rand.Float64() < barrelSpawnProb {
+			maxBarrels := 0
+			spawnProb := 0.0
+			switch entity.EntityType {
+			case world.EntityTypeHQ:
+				maxBarrels = platformBarrelCount * hqFactor
+				spawnProb = platformBarrelSpawnProb * hqFactor
+			case world.EntityTypeOilPlatform:
+				maxBarrels = platformBarrelCount
+				spawnProb = platformBarrelSpawnProb
+			}
+			if maxBarrels > 0 && rand.Float64() < spawnProb {
 				pos := entity.Position
 				barrelCount := 0
 
@@ -61,21 +73,22 @@ func (h *Hub) Spawn() {
 					return
 				})
 
-				if barrelCount < targetBarrelCount {
-					platformOutput <- pos
+				if barrelCount < maxBarrels {
+					barrelSpawnerOutput <- pos
 				}
+
+				atomic.AddInt64(&currentBarrelSpawnerCount, 1)
 			}
-			atomic.AddInt64(&currentOilPlatformCount, 1)
 		}
 		return
 	})
 	h.world.SetParallel(false)
 
-	close(platformOutput)
+	close(barrelSpawnerOutput)
 	wait.Wait()
 
 	// Spawn barrels
-	for _, data := range platformPositions {
+	for _, data := range barrelSpawnerPositions {
 		barrelEntity := &world.Entity{
 			Transform: world.Transform{
 				Position:  data,
@@ -100,7 +113,7 @@ func (h *Hub) Spawn() {
 
 	// Spawn oil platforms
 	targetObstacleCount := world.ObstacleCountOf(h.clients.Len)
-	for i := int(currentOilPlatformCount); i < targetObstacleCount; i++ {
+	for i := int(currentBarrelSpawnerCount); i < targetObstacleCount; i++ {
 		entity := &world.Entity{EntityType: world.EntityTypeOilPlatform}
 		h.spawnEntity(entity, h.worldRadius)
 	}

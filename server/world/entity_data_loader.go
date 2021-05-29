@@ -143,9 +143,6 @@ func init() {
 		data.Radius = Vec2f{X: data.Width, Y: data.Length}.Mul(0.5).Length()
 
 		EntityRadiusMax = max(data.Radius, EntityRadiusMax)
-		if data.Level > EntityLevelMax {
-			EntityLevelMax = data.Level
-		}
 
 		data.InvSize = 1.0 / min(1, data.Radius*(1.0/30.0)*(1.0-data.Stealth))
 	}
@@ -177,6 +174,7 @@ func init() {
 	EntityTypeCoin = ParseEntityType("coin")
 	EntityTypeCount = len(entityTypeEnum.strings)
 	EntityTypeCrate = ParseEntityType("crate")
+	EntityTypeHQ = ParseEntityType("hq")
 	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
 	EntityTypeScrap = ParseEntityType("scrap")
@@ -190,6 +188,9 @@ func init() {
 		if data.Kind == EntityKindBoat {
 			for len(BoatEntityTypesByLevel) <= int(data.Level) {
 				BoatEntityTypesByLevel = append(BoatEntityTypesByLevel, []EntityType{})
+			}
+			if data.Level > BoatLevelMax {
+				BoatLevelMax = data.Level
 			}
 			BoatEntityTypesByLevel[data.Level] = append(BoatEntityTypesByLevel[data.Level], EntityType(i))
 		}
@@ -225,6 +226,7 @@ var (
 	EntityTypeBarrel      EntityType
 	EntityTypeCoin        EntityType
 	EntityTypeCrate       EntityType
+	EntityTypeHQ          EntityType
 	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
 	EntityTypeScrap       EntityType

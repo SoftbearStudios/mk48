@@ -251,7 +251,10 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 			return
 		}
 
-		if !authed {
+		if authed {
+			player.Score += 1000
+		} else {
+			// Moderate name
 			lower := strings.ToLower(name)
 			for _, reservedName := range reservedNames {
 				if lower == reservedName {

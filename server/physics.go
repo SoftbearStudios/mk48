@@ -127,6 +127,12 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			weapon = other
 		}
 
+		if entityData.Kind == world.EntityKindObstacle {
+			obstacle = entity
+		} else if otherData.Kind == world.EntityKindObstacle {
+			obstacle = other
+		}
+
 		if otherData.Kind == world.EntityKindCollectible {
 			collectible = other
 		}
@@ -148,10 +154,18 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		}
 
 		if !entity.Collides(other, timeDeltaSeconds) {
-			// Collectibles gravitate towards players (excpet if they player paid them)
-			if boat != nil && collectible != nil && boat.Owner != collectible.Owner && altitudeOverlap {
-				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
-				collectible.Velocity = 20 * world.MeterPerSecond
+			if collectible != nil && altitudeOverlap {
+				// Collectibles gravitate towards players (except if they player paid them)
+				if boat != nil && (boat.Owner != collectible.Owner || collectible.Lifespan > 5 * world.TicksPerSecond) {
+					collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
+					collectible.Velocity = 20 * world.MeterPerSecond
+				}
+
+				// Payment gravitates towards oil rigs
+				if obstacle != nil && obstacle.EntityType == world.EntityTypeOilPlatform && collectible.Owner != nil {
+					collectible.Direction = collectible.Direction.Lerp(obstacle.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds)
+					collectible.Velocity = 10 * world.MeterPerSecond
+				}
 			}
 
 			if !friendly {
@@ -225,18 +239,23 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			decoy = other
 		}
 
-		if entityData.Kind == world.EntityKindObstacle {
-			obstacle = entity
-		} else if otherData.Kind == world.EntityKindObstacle {
-			obstacle = other
-		}
-
 		switch {
 		case boat != nil && collectible != nil:
-			// Players can collect the collectibles they paid
-			boat.Repair(0.05)
-			boat.Replenish(collectible.Data().Reload)
+			// Players can collect the collectibles they paid...
 			boat.Owner.Score += int(collectible.Data().Level)
+
+			if boat.Owner != collectible.Owner {
+				// ...but it doesn't repair or replenish them to avoid abuse
+				boat.Repair(0.05)
+				boat.Replenish(collectible.Data().Reload)
+			}
+
+			removeEntity(collectible, "collected")
+		case collectible != nil && collectible.Owner != nil && obstacle != nil && obstacle.EntityType == world.EntityTypeOilPlatform:
+			// Payment upgrades oil rigs to HQs
+			if rand.Float64() < 0.1 {
+				obstacle.EntityType = world.EntityTypeHQ
+			}
 
 			removeEntity(collectible, "collected")
 		case boat != nil && weapon != nil && !friendly:
@@ -355,12 +374,12 @@ func (h *Hub) boatDied(e *world.Entity) {
 	// Makes spawn killing less profitable
 	loot *= e.RecentSpawnFactor()
 
-	lootType := world.EntityTypeScrap
-	if data.SubKind == world.EntitySubKindPirate {
-		lootType = world.EntityTypeCoin
-	}
-
 	for i := 0; i < int(loot); i++ {
+		lootType := world.EntityTypeScrap
+		if data.SubKind == world.EntitySubKindPirate && rand.Float32() < 0.5 {
+			lootType = world.EntityTypeCoin
+		}
+
 		crate := &world.Entity{
 			EntityType: lootType,
 			Transform:  e.Transform,

@@ -59,7 +59,7 @@ func (bot *BotClient) Init() {
 	defer poolRand(r)
 
 	bot.aggression = square(r.Float32())
-	bot.levelAmbition = uint8(r.Intn(int(world.EntityLevelMax)) + 1)
+	bot.levelAmbition = uint8(r.Intn(int(world.BoatLevelMax)) + 1)
 	bot.spawn(r)
 }
 
