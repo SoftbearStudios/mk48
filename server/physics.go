@@ -96,9 +96,6 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		return
 	}, func(entity *world.Entity, other *world.Entity) (stop, remove, removeOther bool) {
 		// Don't do friendly check, to allow team members to collide (See #27)
-		if entity.Owner == other.Owner {
-			return
-		}
 		entityData := entity.Data()
 		otherData := other.Data()
 		friendly := entity.Owner.Friendly(other.Owner)
@@ -151,8 +148,8 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		}
 
 		if !entity.Collides(other, timeDeltaSeconds) {
-			// Collectibles gravitate towards players
-			if boat != nil && collectible != nil && altitudeOverlap {
+			// Collectibles gravitate towards players (excpet if they player paid them)
+			if boat != nil && collectible != nil && boat.Owner != collectible.Owner && altitudeOverlap {
 				collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
 				collectible.Velocity = 20 * world.MeterPerSecond
 			}
@@ -236,6 +233,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 		switch {
 		case boat != nil && collectible != nil:
+			// Players can collect the collectibles they paid
 			boat.Repair(0.05)
 			boat.Replenish(collectible.Data().Reload)
 			boat.Owner.Score += int(collectible.Data().Level)

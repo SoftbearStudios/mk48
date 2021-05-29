@@ -522,7 +522,7 @@
 
 			if (localEntity && localSprite) {
 				const mousePositionScreen = app.renderer.plugins.interaction.mouse.global;
-				const mousePosition = viewport.toWorld(mouse); //mousePositionScreen);
+				const mousePosition = viewport.toWorld(mouse);
 				const mouseDistance = dist(mousePosition, localSprite.position);
 				const mouseAngle = Math.atan2(mousePosition.y - localSprite.position.y, mousePosition.x - localSprite.position.x);
 
@@ -676,7 +676,13 @@
 						});
 					}
 
-					// Reset clicks
+					// Reset input
+					if (keyboard.pay) {
+						send('pay', {
+							position: mousePosition
+						});
+						keyboard.pay = false;
+					}
 					mouse.click = false;
 				}
 
@@ -899,6 +905,9 @@
 		if (down !== undefined) {
 			const keys = {
 				32: 'shoot', // space
+				67: () => {
+					keyboard.pay = true; // only once per keypress
+				}, // c (coin)
 				69: 'shoot', // e
 				88: 'stop', // x
 				86: () => {

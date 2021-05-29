@@ -56,6 +56,11 @@ type (
 		EntityID       world.EntityID `json:"entityID"`
 	}
 
+	// Drop gold coins to transfer score (within limits)
+	Pay struct {
+		Position world.Vec2f `json:"position"`
+	}
+
 	// RemoveFromTeam either kicks someone from your team if you are Owner or leaves your team.
 	RemoveFromTeam struct {
 		PlayerID world.PlayerID `json:"playerID"`
@@ -94,6 +99,7 @@ func init() {
 		CreateTeam{},
 		Fire{},
 		Manual{},
+		Pay{},
 		RemoveFromTeam{},
 		SendChat{},
 		Spawn{},
@@ -443,6 +449,45 @@ func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
 		}
 
 		entity.SetTurretTarget(data.TurretTarget)
+
+		return
+	})
+}
+
+func (data Pay) Inbound(h *Hub, _ Client, player *Player) {
+	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
+		if entity == nil || entity.Owner != &player.Player {
+			return
+		}
+
+		entityData := entity.Data()
+
+		if data.Position.DistanceSquared(entity.Position) > square(entityData.Radius*2) {
+			// Out of range to pay
+			return
+		}
+
+		// Ammount being paid and amount being withdrawn
+		pay := int(world.EntityTypeCoin.Data().Level)
+		withdraw := pay * 2 // 50% of value lost during payment
+
+		if player.Score-withdraw < world.LevelToScore(entityData.Level) {
+			// Insufficient funds
+			return
+		}
+
+		paymentEntity := &world.Entity{
+			EntityType: world.EntityTypeCoin,
+			Owner:      &player.Player,
+			Transform: world.Transform{
+				Position: data.Position,
+			},
+		}
+
+		if h.spawnEntity(paymentEntity, 1) != world.EntityIDInvalid {
+			// Payment successful, subtract funds
+			player.Score -= withdraw
+		}
 
 		return
 	})

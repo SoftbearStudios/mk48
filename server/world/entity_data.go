@@ -125,7 +125,7 @@ func (entityType EntityType) ReducedLifespan(desiredLifespan Ticks) Ticks {
 }
 
 func (entityType EntityType) UpgradePaths(score int) (upgradePaths []EntityType) {
-	if levelToScore(entityType.Data().Level+1) > score {
+	if LevelToScore(entityType.Data().Level+1) > score {
 		return
 	}
 
@@ -145,7 +145,7 @@ func (entityType EntityType) UpgradesTo(nextEntityType EntityType, score int) bo
 	data := entityType.Data()
 	nextData := nextEntityType.Data()
 
-	return nextData.Level > data.Level && nextData.Kind == data.Kind && score >= levelToScore(nextEntityType.Data().Level)
+	return nextData.Level > data.Level && nextData.Kind == data.Kind && score >= LevelToScore(nextEntityType.Data().Level)
 }
 
 // depthCharge -> depth charge
@@ -164,7 +164,7 @@ func (entitySubKind EntitySubKind) Label() string {
 // levelToScore converts a boat level to a score required to upgrade
 // score = (level^2 - 1) * 10
 // js must have same function
-func levelToScore(level uint8) int {
+func LevelToScore(level uint8) int {
 	l := int(level)
 	return (l*l - 1) * 10
 }

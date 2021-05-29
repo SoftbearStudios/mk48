@@ -245,6 +245,15 @@ func (bot *BotClient) Send(out outbound) {
 			manual.VelocityTarget = 10 * world.MeterPerSecond
 		}
 
+		// Upgrade up to level ambition if available.
+		if shipData.Level < bot.levelAmbition {
+			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
+				bot.receiveAsync(Upgrade{
+					Type: randomType(r, upgradePaths),
+				})
+			}
+		}
+
 		// Attack with weapons (regardless of pathfinding)
 		if closestEnemy.Found() {
 			// Aim
@@ -294,13 +303,6 @@ func (bot *BotClient) Send(out outbound) {
 						PositionTarget: closestEnemy.Position,
 					})
 				}
-			}
-		} else if shipData.Level < bot.levelAmbition {
-			// Upgrade up to level ambition if available.
-			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
-				bot.receiveAsync(Upgrade{
-					Type: randomType(r, upgradePaths),
-				})
 			}
 		}
 
