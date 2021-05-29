@@ -10,6 +10,15 @@
 
 	<h2>2021</h2>
 
+	<h3>5/29/2021</h3>
+
+	<ul>
+		<li>Add ability to drop coins with 'c' key</li>
+		<li>Add ability to [REDACTED] oil platforms with [REDACTED]</li>
+		<li>Mines reload even before they detonate, and do not disappear when player dies</li>
+		<li>Make bots smarter</li>
+	</ul>
+
 	<h3>5/28/2021</h3>
 
 	<ul>
