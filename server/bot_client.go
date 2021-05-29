@@ -83,6 +83,7 @@ func (bot *BotClient) Send(out outbound) {
 
 	switch update := out.(type) {
 	case *Update:
+		// Checks if bot ship does not exist
 		if update.EntityID == world.EntityIDInvalid {
 			// When bot dies it either quits, leaves its team, or does nothing.
 			if prob(r, 0.25) {
@@ -96,12 +97,13 @@ func (bot *BotClient) Send(out outbound) {
 			return
 		}
 
-		// Get contact with linear search once.
+		// Get contact of bot's own ship with linear search once.
 		// Map has higher overhead so we use a slice.
 		var ship Contact
 		for i := range update.Contacts {
 			if update.Contacts[i].EntityID == update.EntityID {
 				ship = update.Contacts[i].Contact
+				break
 			}
 		}
 
@@ -118,7 +120,7 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
-		// Accept new members
+		// Accept new team members
 		// TODO(caibear) deny members
 		for _, request := range update.TeamRequests {
 			diff := float64(ship.Score - request.Score)
@@ -136,27 +138,38 @@ func (bot *BotClient) Send(out outbound) {
 		requesting := now-bot.request > int64(time.Second*5/time.Millisecond) // in milliseconds
 
 		// Find enemies, collectibles, and hazards.
-		var closestEnemy, closestCollectible, closestHazard Target
+		var closestEnemy, closestFriendly, closestCollectible, closestHazard Target
 		shipData := ship.EntityType.Data()
 
+		// Scan sensor contacts
 		for i := range update.Contacts {
-			contact := &update.Contacts[i].Contact
-			if contact.Friendly {
+			if update.Contacts[i].EntityID == update.EntityID {
+				// Ignore self
 				continue
 			}
 
+			contact := &update.Contacts[i].Contact
 			distanceSquared := ship.Position.DistanceSquared(contact.Position)
 			contactData := contact.EntityType.Data()
 
-			if contactData.Kind == world.EntityKindBoat {
-				closestEnemy.Closest(contact, distanceSquared)
-			}
-
 			if contactData.Kind == world.EntityKindCollectible {
 				closestCollectible.Closest(contact, distanceSquared)
-			} else if !(contactData.Kind == world.EntityKindBoat && shipData.SubKind == world.EntitySubKindRam) {
-				// Rams don't regard boats as hazards
+			} else if (!contact.Friendly || contactData.Kind == world.EntityKindBoat) && !(!contact.Friendly && contactData.Kind == world.EntityKindBoat && shipData.SubKind == world.EntitySubKindRam) {
+				// Rams don't regard unfriendly boats as hazards
 				closestHazard.Closest(contact, distanceSquared)
+			}
+
+			if contactData.Kind == world.EntityKindBoat {
+				if contact.Friendly {
+					friendDistance := distanceSquared
+					if len(update.TeamMembers) > 0 && contact.Name == update.TeamMembers[0].Name {
+						// Prioritize team leader
+						friendDistance = 0
+					}
+					closestFriendly.Closest(contact, friendDistance)
+				} else {
+					closestEnemy.Closest(contact, distanceSquared)
+				}
 			}
 
 			// Favor joining teams that have more score for protection.
@@ -172,40 +185,74 @@ func (bot *BotClient) Send(out outbound) {
 			}
 		}
 
-		// Pick a random destination to wander to.
-		if (bot.destination == world.Vec2f{}) || ship.Position.DistanceSquared(bot.destination) < 100*100 {
-			bot.destination = world.ToAngle(r.Float32() * math32.Pi * 2).Vec2f().Mul(update.WorldRadius * 0.9)
-		}
-
+		// Prepare a manual steering command to send
 		manual := Manual{
 			EntityID: update.EntityID,
-			Guidance: world.Guidance{
-				VelocityTarget:  10 * world.MeterPerSecond,
-				DirectionTarget: bot.destination.Sub(ship.Position).Angle(),
-			},
 		}
 
 		if shipData.SubKind == world.EntitySubKindSubmarine {
+			// Stay submerged (TODO: This allocates on the heap)
 			altitudeTarget := float32(-1)
 			manual.AltitudeTarget = &altitudeTarget
 		}
 
-		if closestCollectible.Found() {
-			manual.VelocityTarget = 20 * world.MeterPerSecond
-			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
-		}
+		// The purpose of this switch is to assign a value to
+		//  - manual.VelocityTarget
+		//  - manual.DirectionTarget
+		switch {
+		case bot.isLandInMultiDirection(ship.Position, shipData.Length, ship.Direction):
+			// Avoid terrain by turning slowly.
+			manual.VelocityTarget = 5 * world.MeterPerSecond
+			manual.DirectionTarget = ship.Direction + world.Pi/2
+		case closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2):
+			// Avoid collisions by turning away
+			awayDirection := closestHazard.Position.Sub(ship.Position).Angle().Inv()
 
-		if closestEnemy.Found() && closestEnemy.distanceSquared < 4*closestCollectible.distanceSquared {
+			if closestHazard.Friendly && closestHazard.EntityType.Data().Kind == world.EntityKindBoat {
+				// Don't turn completely away
+				manual.DirectionTarget = closestHazard.Direction.Lerp(awayDirection, 0.15)
+				manual.VelocityTarget = closestHazard.Velocity
+			} else {
+				manual.DirectionTarget = awayDirection
+				manual.VelocityTarget = 10 * world.MeterPerSecond
+			}
+		case closestFriendly.Found():
+			// Wander towards closest friendly ship
+			manual.DirectionTarget = closestFriendly.Position.Sub(ship.Position).Angle()
+			manual.VelocityTarget = closestFriendly.Velocity + 5*world.MeterPerSecond
+		case closestEnemy.Found():
 			closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 
+			if closestEnemy.Velocity > 0 {
+				// Prevent negative velocities from preventing chase
+				manual.VelocityTarget = closestEnemy.Velocity
+			}
 			// Make velocity target dependent on aggresssion due to #87
-			manual.VelocityTarget = closestEnemy.Velocity + world.Velocity(5+bot.aggression*10)*world.MeterPerSecond
+			manual.VelocityTarget += world.ToVelocity(5 + bot.aggression*10)
 			manual.DirectionTarget = closestEnemyAngle
+		case closestCollectible.Found():
+			manual.VelocityTarget = 20 * world.MeterPerSecond
+			manual.DirectionTarget = closestCollectible.Position.Sub(ship.Position).Angle()
+		default:
+			// Wander to a random destination
+			// Reset destination when it is reached
+			if (bot.destination == world.Vec2f{}) || ship.Position.DistanceSquared(bot.destination) < 100*100 {
+				// Pick a random destination to wander to.
+				bot.destination = world.ToAngle(r.Float32() * math32.Pi * 2).Vec2f().Mul(update.WorldRadius * 0.9)
+			}
 
+			manual.DirectionTarget = bot.destination.Sub(ship.Position).Angle()
+			manual.VelocityTarget = 10 * world.MeterPerSecond
+		}
+
+		// Attack with weapons (regardless of pathfinding)
+		if closestEnemy.Found() {
+			// Aim
 			manual.TurretTarget = closestEnemy.Position
 
-			// Attack based on aggression.
+			// Fire
 			if prob(r, float64(bot.aggression)) {
+				closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 				bestArmamentIndex := -1
 				bestArmamentAngleDiff := float32(math32.MaxFloat32)
 
@@ -248,16 +295,6 @@ func (bot *BotClient) Send(out outbound) {
 					})
 				}
 			}
-		}
-
-		if inFront := ship.Position.AddScaled(ship.Direction.Vec2f(), shipData.Length*2); bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6 {
-			// Avoid terrain by turning slowly.
-			manual.VelocityTarget = 5 * world.MeterPerSecond
-			manual.DirectionTarget = ship.Direction + world.Pi/2
-		} else if closestHazard.Found() && closestHazard.distanceSquared < square(closestHazard.EntityType.Data().Length+shipData.Length*2) {
-			// Try to turn away from threats.
-			manual.VelocityTarget = 10 * world.MeterPerSecond
-			manual.DirectionTarget = closestHazard.Position.Sub(ship.Position).Angle().Inv()
 		} else if shipData.Level < bot.levelAmbition {
 			// Upgrade up to level ambition if available.
 			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
@@ -292,6 +329,28 @@ func (bot *BotClient) spawn(r *rand.Rand) {
 		Type: randomType(r, world.BoatEntityTypesByLevel[level]),
 		Name: name,
 	})
+}
+
+// Multiple checks of a range of angles
+func (bot *BotClient) isLandInMultiDirection(pos world.Vec2f, length float32, angle world.Angle) bool {
+	for i := float32(-0.5); i < 0.5; i += 0.1 {
+		if bot.isLandInDirection(pos, length, angle+world.ToAngle(i)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (bot *BotClient) isLandInDirection(pos world.Vec2f, length float32, angle world.Angle) bool {
+	inFront := pos.AddScaled(angle.Vec2f(), length*2)
+
+	// Regard world border as land for the purpose of bots
+	if inFront.LengthSquared() > square(bot.Hub.worldRadius) {
+		return true
+	}
+
+	// -6 is a kludge factor to make terrain math line up with client
+	return bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6
 }
 
 func randomType(r *rand.Rand, entityTypes []world.EntityType) world.EntityType {
