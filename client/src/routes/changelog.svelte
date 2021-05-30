@@ -18,6 +18,7 @@
 		<li>Mines reload even before they detonate, and do not disappear when player dies</li>
 		<li>Some torpedoes can damage land</li>
 		<li>Make bots smarter</li>
+		<li>Published daily/weekly leaderboards</li>
 	</ul>
 
 	<h3>5/28/2021</h3>
