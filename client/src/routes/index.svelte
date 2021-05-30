@@ -40,7 +40,7 @@
 	let perf = 0.5; // performance level in interval [0,1]
 
 	// Global leaderboard
-	let globalLeaderboard;
+	let globalLeaderboard = null;
 
 	// Tutorial status
 	let timesMoved = 0;
@@ -981,7 +981,9 @@
 		on:mousedown={handleMouseButton} on:mouseup={handleMouseButton} on:mousemove={handleMouseMove}
 		on:touchstart={handleTouch} on:touchend={handleTouch} on:touchmove={handleMouseMove}></canvas>
 	{#if $leaderboard}
-		<Leaderboard leaderboard={$leaderboard}/>
+		<div class='leaderboard'>
+			<Leaderboard leaderboard={$leaderboard}/>
+		</div>
 	{/if}
 	{#if localEntityID && contacts[localEntityID]}
 		<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
@@ -996,8 +998,18 @@
 		<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
 	{:else}
 		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
-		{#if globalLeaderboard && globalLeaderboard['single/all']}
-			<Leaderboard label='All-time Leaderboard' leftSide={true} leaderboard={globalLeaderboard['single/all']}/>
+		{#if globalLeaderboard}
+			<div class='globalLeaderboard'>
+				{#if globalLeaderboard['single/all']}
+					<Leaderboard label='All-time Leaderboard' leaderboard={globalLeaderboard['single/all']}/>
+				{/if}
+				{#if globalLeaderboard['single/week']}
+					<Leaderboard label='Weekly Leaderboard' open={false} leaderboard={globalLeaderboard['single/week']}/>
+				{/if}
+				{#if globalLeaderboard['single/day']}
+					<Leaderboard label='Daily Leaderboard' open={false} leaderboard={globalLeaderboard['single/day']}/>
+				{/if}
+			</div>
 		{/if}
 	{/if}
 </main>
@@ -1014,6 +1026,18 @@
 		height: 100%;
 		margin: 0;
 		width: 100%;
+	}
+
+	div.leaderboard {
+		position: absolute;
+		right: 0;
+		top: 0;
+	}
+
+	div.globalLeaderboard {
+		position: absolute;
+		left: 0;
+		top: 0;
 	}
 
 	main {

@@ -8,11 +8,11 @@
 
 	export let leaderboard;
 	export let label = 'Leaderboard';
-	export let leftSide = false;
+	export let open = true;
 </script>
 
-<div style={leftSide ? 'left: 0;' : 'right: 0;'}>
-	<Section name={label}>
+<div>
+	<Section name={label} {open}>
 		<table>
 			{#each leaderboard as {name, team, score}}
 				<tr>
@@ -29,8 +29,6 @@
 		background-color: #00000040;
 		margin: 10px;
 		padding: 10px;
-		position: absolute;
-		top: 0;
 	}
 
 	h2 {
