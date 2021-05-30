@@ -60,10 +60,16 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			if remove {
 				if data.Kind == world.EntityKindBoat {
 					boatOutput <- *e // Copy entity
-				} else if data.Kind == world.EntityKindWeapon {
-					// This weapon died of "natural" causes, affect the
+				} else if data.Kind == world.EntityKindWeapon && data.SubKind == world.EntitySubKindTorpedo {
+					// This torpedo died of "natural" causes, affect the
 					// terrain (see #49)
 					if rand.Float32()*2 < data.Damage {
+						// conserve land by adding some further along the path
+						sculptOutput <- sculpt{
+							position: e.Position.AddScaled(e.Direction.Vec2f(), 20),
+							delta:    32 * data.Damage,
+						}
+
 						sculptOutput <- sculpt{
 							position: e.Position,
 							delta:    -8 * data.Damage,

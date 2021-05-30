@@ -16,7 +16,7 @@
 		<li>Add ability to drop coins with 'c' key</li>
 		<li>Add ability to [REDACTED] oil platforms with [REDACTED]</li>
 		<li>Mines reload even before they detonate, and do not disappear when player dies</li>
-		<li>Heavy weapons can damage land</li>
+		<li>Some torpedoes can damage land</li>
 		<li>Make bots smarter</li>
 	</ul>
 
