@@ -1686,6 +1686,79 @@
 			}
 		]
 	},
+	"zumwalt": {
+		"label": "Zumwalt",
+		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 6,
+		"length": 190,
+		"width": 24.6,
+		"speed": 15.43333,
+		"stealth": 0.75,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "tomahawk",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": -50,
+				"positionSide": 9,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": -50,
+				"positionSide": 9,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -65,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark51",
+				"positionForward": 49.5963,
+				"positionSide": 0
+			},
+			{
+				"type": "mark51",
+				"positionForward": 25.2885,
+				"positionSide": 0
+			}
+		]
+	},
 	"2m3m": {
 		"label": "2M-3M",
 		"link": "http://www.navweaps.com/Weapons/WNRussian_25mm-79_2m-3.php",
@@ -2065,6 +2138,31 @@
 			}
 		]
 	},
+	"mark51": {
+		"label": "Mark 51",
+		"link": "https://en.wikipedia.org/wiki/Advanced_Gun_System",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 11.45,
+		"positionForward": 2.0724,
+		"width": 6.35,
+		"armaments": [
+			{
+				"default": "lrlap",
+				"angle": 0
+			}
+		]
+	},
+	"lrlap": {
+		"label": "LRLAP",
+		"type": "weapon",
+		"subtype": "shell",
+		"length": 2.3,
+		"width": 0.2875,
+		"speed": 825,
+		"range": 140000,
+		"reload": 6
+	},
 	"mark54": {
 		"label": "Mark 54",
 		"link": "https://en.wikipedia.org/wiki/Mark_54_Lightweight_Torpedo",
@@ -2080,6 +2178,23 @@
 				"type": "sonar"
 			}
 		]
+	},
+	"seahawk": {
+		"label": "Seahawk",
+		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 19.6,
+		"width": 16.078,
+		"speed": 75.1089,
+		"range": 5000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"limited": true
 	},
 	"mk70": {
 		"label": "MOSS",

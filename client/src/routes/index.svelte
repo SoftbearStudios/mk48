@@ -710,6 +710,7 @@
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
 				const sprite = entitySprites[entityID];
+				const spriteData = entityData[entity.type];
 
 				if (!entity) {
 					console.warn('no entity for sprite', sprite);
@@ -724,7 +725,7 @@
 					const maxTurnSpeed = Math.PI / 4; // per second
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
-					const maxSpeed = (entityData[entity.type].speed || 20) / Math.max(Math.pow(Math.abs(angleDifference), 2), 1);
+					const maxSpeed = (spriteData.speed || 20) / Math.max(Math.pow(Math.abs(angleDifference), 2), 1);
 					sprite.rotation += clampMagnitude(angleDifference, seconds * maxTurnSpeed * Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1)));
 
 					angleDifference = angleDiff(entity.direction, entity.directionTarget || 0);
@@ -740,10 +741,13 @@
 				const spriteDistance = dist(sprite.position, viewport.center);
 
 				if (spriteDistance <= visualRange) {
-					const amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
+					let amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
+					let wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
+					if (spriteData.subtype === 'aircraft') {
+						amount *= 0.25;
+						wakeAngle *= 0.2;
+					}
 					for (let i = 0; i < amount; i++) {
-						const wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
-
 						let wakeParticle = recycleParticle(wakeParticles);
 						if (!wakeParticle) {
 							wakeParticle = new PIXI.Sprite(textures['particleWake']);
