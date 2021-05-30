@@ -28,8 +28,13 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		deadBoats := make([]world.Entity, 0, 4)
 
 		// For sculpting do on hub goroutine.
-		sculptOutput := make(chan world.Vec2f, runtime.NumCPU())
-		sculptPositions := make([]world.Vec2f, 0, 8)
+		type sculpt struct {
+			position world.Vec2f // where to sculpt
+			delta    float32     // how much land to add/remove
+		}
+
+		sculptOutput := make(chan sculpt, runtime.NumCPU())
+		sculptPositions := make([]sculpt, 0, 8)
 
 		outputWait.Add(1)
 		go func() {
@@ -51,11 +56,24 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		h.world.SetParallel(true)
 		h.world.ForEntities(func(e *world.Entity) (_, remove bool) {
 			remove = e.Update(ticks, h.worldRadius, terrain)
-			if e.Data().Kind == world.EntityKindBoat {
-				if remove {
+			data := e.Data()
+			if remove {
+				if data.Kind == world.EntityKindBoat {
 					boatOutput <- *e // Copy entity
-				} else if e.Data().SubKind == world.EntitySubKindDredger {
-					sculptOutput <- e.Position
+				} else if data.Kind == world.EntityKindWeapon {
+					// This weapon died of "natural" causes, affect the
+					// terrain (see #49)
+					if rand.Float32()*2 < data.Damage {
+						sculptOutput <- sculpt{
+							position: e.Position,
+							delta:    -8 * data.Damage,
+						}
+					}
+				}
+			} else if data.SubKind == world.EntitySubKindDredger {
+				sculptOutput <- sculpt{
+					position: e.Position,
+					delta:    -5,
 				}
 			}
 			return
@@ -71,8 +89,8 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			h.boatDied(&deadBoats[i])
 		}
 
-		for _, pos := range sculptPositions {
-			h.terrain.Sculpt(pos, -5)
+		for _, s := range sculptPositions {
+			h.terrain.Sculpt(s.position, s.delta)
 		}
 	}
 
@@ -156,7 +174,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		if !entity.Collides(other, timeDeltaSeconds) {
 			if collectible != nil && altitudeOverlap {
 				// Collectibles gravitate towards players (except if they player paid them)
-				if boat != nil && (boat.Owner != collectible.Owner || collectible.Lifespan > 5 * world.TicksPerSecond) {
+				if boat != nil && (boat.Owner != collectible.Owner || collectible.Lifespan > 5*world.TicksPerSecond) {
 					collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
 					collectible.Velocity = 20 * world.MeterPerSecond
 				}

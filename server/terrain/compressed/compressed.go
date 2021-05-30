@@ -230,10 +230,10 @@ func (t *Terrain) Sculpt(pos world.Vec2f, amount float32) {
 	// Set 2x2 grid
 	// 00 10
 	// 01 11
-	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy))+amount*(2-delta.X-delta.Y)))
-	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy))+amount*(1+delta.X-delta.Y)))
-	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy))+amount*(1-delta.X+delta.Y)))
-	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy))+amount*(delta.X+delta.Y)))
+	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy)+0b0011)+amount*(2-delta.X-delta.Y)))
+	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy)+0b0011)+amount*(1+delta.X-delta.Y)))
+	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy)+0b0011)+amount*(1-delta.X+delta.Y)))
+	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy)+0b0011)+amount*(delta.X+delta.Y)))
 }
 
 // at gets the height of the terrain given x and y unsigned terrain coords.
