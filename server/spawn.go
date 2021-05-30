@@ -63,18 +63,20 @@ func (h *Hub) Spawn() {
 				maxBarrels = platformBarrelCount
 				spawnProb = platformBarrelSpawnProb
 			}
-			if maxBarrels > 0 && rand.Float64() < spawnProb {
-				pos := entity.Position
-				barrelCount := 0
+			if maxBarrels > 0 {
+				if rand.Float64() < spawnProb {
+					pos := entity.Position
+					barrelCount := 0
 
-				// Count current barrels
-				h.world.ForEntitiesInRadius(pos, barrelRadius, func(_ float32, entity *world.Entity) (_ bool) {
-					barrelCount++
-					return
-				})
+					// Count current barrels
+					h.world.ForEntitiesInRadius(pos, barrelRadius, func(_ float32, entity *world.Entity) (_ bool) {
+						barrelCount++
+						return
+					})
 
-				if barrelCount < maxBarrels {
-					barrelSpawnerOutput <- pos
+					if barrelCount < maxBarrels {
+						barrelSpawnerOutput <- pos
+					}
 				}
 
 				atomic.AddInt64(&currentBarrelSpawnerCount, 1)
