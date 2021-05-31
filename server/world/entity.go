@@ -74,22 +74,9 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	}
 
 	if data.SubKind == EntitySubKindSubmarine {
-		surfacing := false
-		for i, consumption := range entity.ArmamentConsumption() {
-			armamentEntityData := data.Armaments[i].Default.Data()
-			if !(armamentEntityData.Kind == EntityKindDecoy || armamentEntityData.SubKind == EntitySubKindTorpedo) && consumption > 0 {
-				surfacing = true
-				break
-			}
-		}
-
 		ext := &entity.Owner.ext
 		targetAltitude := clamp(ext.altitudeTarget(), -1, 0)
-		altitudeSpeed := float32(0.2)
-		if surfacing {
-			targetAltitude = 0
-			altitudeSpeed = 0.75
-		}
+		altitudeSpeed := float32(0.25)
 		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
 		ext.setAltitude(entity.Altitude() + altitudeChange)
 	}

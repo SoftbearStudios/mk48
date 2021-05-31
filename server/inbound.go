@@ -373,6 +373,13 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 		armamentData := shipData.Armaments[data.Index]
 		armamentEntityData := armamentData.Default.Data()
 
+		if shipData.SubKind == world.EntitySubKindSubmarine && entity.Altitude() < 0 {
+			// Submerged submarine
+			if armamentEntityData.SubKind == world.EntitySubKindShell {
+				return
+			}
+		}
+
 		transform := entity.ArmamentTransform(data.Index)
 
 		failed := false

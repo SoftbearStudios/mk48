@@ -14,6 +14,7 @@
 
 	<ul>
 		<li>Add "Zumwalt" destroyer, including associated weapons and aircraft</li>
+		<li>Submarines no longer have to surface to fire missiles</li>
 		<li>Change terrain seed</li>
 	</ul>
 
