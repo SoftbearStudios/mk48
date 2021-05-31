@@ -14,6 +14,7 @@ func AppendLog(filename string, fields []interface{}) (err error) {
 	if err != nil {
 		return
 	}
+	defer f.Close()
 
 	w := csv.NewWriter(f)
 
@@ -43,7 +44,5 @@ func AppendLog(filename string, fields []interface{}) (err error) {
 	if err != nil {
 		return
 	}
-
-	err = f.Close()
 	return
 }

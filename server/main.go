@@ -6,7 +6,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"golang.org/x/net/netutil"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 )
@@ -62,5 +64,15 @@ func main() {
 
 	http.HandleFunc("/", hub.serveIndex)
 	http.HandleFunc("/ws", hub.serveWs)
-	log.Fatal("ListenAndServe: ", http.ListenAndServe(fmt.Sprint(":", port), nil))
+
+	l, err := net.Listen("tcp", fmt.Sprint(":", port))
+
+	if err != nil {
+		log.Fatalf("Listen: %v", err)
+	}
+	defer l.Close()
+
+	l = netutil.LimitListener(l, 256)
+
+	log.Fatal("ListenAndServe: ", http.Serve(l, nil))
 }

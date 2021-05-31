@@ -10,4 +10,5 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/guregu/dynamo v1.10.4
 	github.com/json-iterator/go v1.1.11
+	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 )
