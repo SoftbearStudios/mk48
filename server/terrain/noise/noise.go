@@ -30,7 +30,7 @@ func New(seed int64, offsetX, offsetY float32) *Generator {
 	return &Generator{
 		small:  perlin.NewPerlin(1.5, 2.0, 4, seed),
 		large:  perlin.NewPerlin(2.5, 3.0, 4, seed+1),
-		offset: world.Vec2f{X: offsetY, Y: offsetX}.Mul(1.0 / terrain.Scale), // Scale to terrain space
+		offset: world.Vec2f{X: offsetX, Y: offsetY}.Mul(1.0 / terrain.Scale), // Scale to terrain space
 	}
 }
 

@@ -182,7 +182,14 @@ func (h *Hub) nearAny(entity *world.Entity, threshold float32) bool {
 	radius := entity.Data().Radius
 	maxT := (radius + world.EntityRadiusMax) * threshold
 
-	return h.terrain.Collides(entity, 1) || h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
+	// Pretend the entity is moving fast to sweep over a large terrain area
+	// This helps to not spawn in tight spaces
+	vel := entity.Velocity
+	entity.Velocity = 200 * world.MeterPerSecond
+	collides := h.terrain.Collides(entity, 1)
+	entity.Velocity = vel
+
+	return collides || h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
 		t := (radius + otherEntity.Data().Radius) * threshold
 		return r < t*t
 	})

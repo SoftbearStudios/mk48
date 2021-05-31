@@ -8,13 +8,21 @@ import (
 	"sync"
 )
 
+/*
+	List of curated seeds/offsets:
+		1, 256, 256
+		46, 0, 128
+		48, 0, 64
+		56, -128, -128
+*/
+
 const (
 	// Seed default seed.
-	Seed = int64(1)
+	Seed = int64(56)
 	// OffsetX the default x offset from the origin in world space.
-	OffsetX = 256 * Scale
+	OffsetX = -128 * Scale
 	// OffsetY the default y offset from the origin in world space.
-	OffsetY = 256 * Scale
+	OffsetY = -128 * Scale
 )
 
 // Scale pixel width/height in meters.

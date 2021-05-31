@@ -5,6 +5,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"image/png"
 	"log"
 	terrain "mk48/server/terrain"
@@ -35,16 +36,18 @@ func main() {
 }
 
 func run() {
-	t := compressed.New(noise.NewDefault())
-	img := terrain.Render(t, compressed.Size)
+	for i := int64(50); i < 200; i++ {
+		t := compressed.New(noise.New(i, 0, 0))
+		img := terrain.Render(t, compressed.Size)
 
-	file, err := os.Create("out.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+		file, err := os.Create(fmt.Sprintf("out-%d.png", i))
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
 
-	if err = png.Encode(file, img); err != nil {
-		log.Fatal(err)
+		if err = png.Encode(file, img); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
