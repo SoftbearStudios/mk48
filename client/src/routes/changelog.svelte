@@ -13,7 +13,8 @@
 	<h3>5/30/2021</h3>
 
 	<ul>
-		<li>Add "Zumwalt" destroyer</li>
+		<li>Add "Zumwalt" destroyer, including associated weapons and aircraft</li>
+		<li>Change terrain seed</li>
 	</ul>
 
 	<h3>5/29/2021</h3>
