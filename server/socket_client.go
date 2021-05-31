@@ -43,8 +43,8 @@ var upgrader = websocket.Upgrader{
 		return true // TODO: Read domain env var and actually enforce similarity
 	},
 	HandshakeTimeout: time.Second,
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	ReadBufferSize:   1024,
+	WriteBufferSize:  1024,
 }
 
 // SocketClient is a middleman between the websocket connection and the hub.
