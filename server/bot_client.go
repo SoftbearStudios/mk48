@@ -260,7 +260,7 @@ func (bot *BotClient) Send(out outbound) {
 			manual.TurretTarget = closestEnemy.Position
 
 			// Fire
-			if prob(r, float64(bot.aggression)) {
+			if prob(r, float64(bot.aggression*0.1)) {
 				closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 				bestArmamentIndex := -1
 				bestArmamentAngleDiff := float32(math32.MaxFloat32)
