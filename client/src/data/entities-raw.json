@@ -48,7 +48,8 @@
 		"type": "obstacle",
 		"subtype": "structure",
 		"length": 90,
-		"width": 90
+		"width": 90,
+		"lifespan": 3600
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",

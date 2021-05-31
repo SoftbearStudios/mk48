@@ -279,6 +279,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			// Payment upgrades oil rigs to HQs
 			if rand.Float64() < 0.1 {
 				obstacle.EntityType = world.EntityTypeHQ
+				obstacle.Lifespan = 0 // reset expiry
 			}
 
 			removeEntity(collectible, "collected")

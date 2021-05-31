@@ -27,7 +27,13 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 
 	entity.Lifespan += ticks
 	if data.Lifespan != 0 && entity.Lifespan > data.Lifespan {
-		return true
+		if entity.EntityType == EntityTypeHQ {
+			// Downgrade
+			entity.EntityType = EntityTypeOilPlatform
+		} else {
+			// Die
+			return true
+		}
 	}
 
 	// The following movement-related code must match the client's code
