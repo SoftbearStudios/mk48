@@ -33,7 +33,7 @@ const (
 	socketBufferSize = 16
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 4096
+	maxMessageSize = 512
 
 	debugSocket = true
 )
@@ -42,6 +42,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // TODO: Read domain env var and actually enforce similarity
 	},
+	HandshakeTimeout: time.Second,
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
@@ -100,6 +101,7 @@ func (client *SocketClient) Send(message outbound) {
 	// The closer the buffer is to being full, the more messages
 	// we drop on the floor (to give the socket a chance to
 	// catch up)
+	client.counter++
 	if congestion > 1 && client.counter%congestion != 0 {
 		// Drop the message on the floor
 		// The only long-term data loss will be from event-based things
@@ -107,7 +109,6 @@ func (client *SocketClient) Send(message outbound) {
 		fmt.Println("SocketClient dropping message due to congestion")
 		return
 	}
-	client.counter++
 
 	select {
 	case client.send <- message:
