@@ -269,8 +269,8 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			boat.Owner.Score += int(collectible.Data().Level)
 
 			if boat.Owner != collectible.Owner {
-				// ...but it doesn't repair or replenish them to avoid abuse
-				boat.Repair(3)
+				// ...but they don't repair or replenish them to avoid abuse
+				boat.Repair(world.TicksPerSecond * 3 / 10)
 				boat.Replenish(collectible.Data().Reload)
 			}
 

@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	TicksPerDamage = Ticks(600)
 	TickPeriod     = time.Second / 10
 	TicksPerSecond = Ticks(time.Second / TickPeriod)
+	TicksPerDamage = 60 * TicksPerSecond // i.e. one damage takes one minute to regen
 	TicksMax       = Ticks(math32.MaxUint16)
 )
 
