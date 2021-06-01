@@ -33,3 +33,14 @@ export function mapRanges(number, oldMin, oldMax, newMin, newMax, clampToRange =
 	}
 	return mapped;
 }
+
+// Analogous to Transform.Add but only for position
+export function addTransforms(parentPosX, parentPosY, childPosX, childPosY, childAngle) {
+	const sin = Math.sin(childAngle);
+	const cos = Math.cos(childAngle);
+
+	return {
+		x: parentPosX + childPosX*cos - childPosY*sin,
+		y: parentPosY + childPosX*sin + childPosY*cos
+	};
+}

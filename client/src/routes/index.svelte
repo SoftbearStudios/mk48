@@ -5,7 +5,7 @@
 
 <script>
 	import {hasWebP, getMouseButton, isMobile} from '../util/compatibility.js';
-	import {angleDiff, clamp, clampMagnitude, dist, mapRanges} from '../util/math.js';
+	import {addTransforms, angleDiff, clamp, clampMagnitude, dist, mapRanges} from '../util/math.js';
 	import Ship, {getArmamentType} from '../lib/Ship.svelte';
 	import Chat from '../lib/Chat.svelte';
 	import Instructions from '../lib/Instructions.svelte';
@@ -625,14 +625,36 @@
 							}
 
 							let armamentAngle = armament.angle || 0;
+							let armamentPosX = armament.positionForward || 0;
+							let armamentPosY = armament.positionSide || 0;
 
 							if (armament.turret != null) {
-								armamentAngle += (localEntity.turretAngles[armament.turret] || localEntityData.turrets[armament.turret].angle);
+								const turretData = localEntityData.turrets[armament.turret];
+								const turretAngle = (localEntity.turretAngles[armament.turret] || turretData.angle);
+								armamentAngle += turretAngle;
+
+								const newArmamentPos = addTransforms(turretData.positionForward || 0, turretData.positionSide || 0, armamentPosX, armamentPosY, turretAngle);
+								armamentPosX = newArmamentPos.x;
+								armamentPosY = newArmamentPos.y;
 							}
 
 							const armamentEntityData = entityData[armament.default];
 
-							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, directionTarget));
+							const newArmamentPos = addTransforms(localSprite.position.x, localSprite.position.y, armamentPosX, armamentPosY, localSprite.rotation);
+							armamentPosX = newArmamentPos.x;
+							armamentPosY = newArmamentPos.y;
+
+							// Each armament has a slightly different angle to the target
+							// and this must be taken into acount for large ships
+							// with spaced-out armaments
+							let armamentDirectionTarget = Math.atan2(mousePosition.y - armamentPosY, mousePosition.x - armamentPosX);
+							if (keyboard.shoot) {
+								// Unless the direction came from keyboard
+								armamentDirectionTarget = directionTarget;
+							}
+
+							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, armamentDirectionTarget));
+
 							if (armament.airdrop || armament.vertical || ['aircraft', 'depositor', 'depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
 								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
