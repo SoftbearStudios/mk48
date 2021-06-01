@@ -1880,6 +1880,11 @@
 				"type": "visual"
 			}
 		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
 		"limited": true
 	},
 	"barak8": {
@@ -2193,6 +2198,13 @@
 		"sensors": [
 			{
 				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark54",
+				"positionSide": 1,
+				"symmetrical": true
 			}
 		],
 		"limited": true

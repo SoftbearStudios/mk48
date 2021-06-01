@@ -1377,8 +1377,7 @@
 				"default": "brahmos",
 				"positionForward": 44,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"type": "weapon",
@@ -1394,8 +1393,7 @@
 				"default": "brahmos",
 				"positionForward": 44,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"type": "weapon",
@@ -1411,8 +1409,7 @@
 				"default": "brahmos",
 				"positionForward": 44,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"type": "weapon",
@@ -1428,8 +1425,7 @@
 				"default": "brahmos",
 				"positionForward": 44,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "barak8",
@@ -1441,8 +1437,7 @@
 				"default": "barak8",
 				"positionForward": 38,
 				"positionSide": -2,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "barak8",
@@ -1454,8 +1449,7 @@
 				"default": "barak8",
 				"positionForward": 38,
 				"positionSide": -2,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "barak8",
@@ -1467,8 +1461,7 @@
 				"default": "barak8",
 				"positionForward": -36,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "barak8",
@@ -1480,8 +1473,7 @@
 				"default": "barak8",
 				"positionForward": -36,
 				"positionSide": -1.5,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "76x636mmR",
@@ -1878,8 +1870,7 @@
 				"default": "wz08_39",
 				"positionForward": -38,
 				"positionSide": -1.75,
-				"external": true,
-				"angle": null
+				"external": true
 			},
 			{
 				"default": "wz08_39",
@@ -1891,8 +1882,7 @@
 				"default": "wz08_39",
 				"positionForward": -39,
 				"positionSide": -1.75,
-				"external": true,
-				"angle": null
+				"external": true
 			},
 			{
 				"default": "wz08_39",
@@ -1904,8 +1894,7 @@
 				"default": "wz08_39",
 				"positionForward": -40,
 				"positionSide": -1.75,
-				"external": true,
-				"angle": null
+				"external": true
 			},
 			{
 				"default": "wz08_39",
@@ -1917,8 +1906,7 @@
 				"default": "wz08_39",
 				"positionForward": -41,
 				"positionSide": -1.75,
-				"external": true,
-				"angle": null
+				"external": true
 			},
 			{
 				"default": "wz08_39",
@@ -1930,8 +1918,7 @@
 				"default": "wz08_39",
 				"positionForward": -42,
 				"positionSide": -1.75,
-				"external": true,
-				"angle": null
+				"external": true
 			}
 		],
 		"antiAircraft": 0.076,
@@ -3136,8 +3123,7 @@
 				"default": "tomahawk",
 				"positionForward": 40,
 				"positionSide": -7,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "tomahawk",
@@ -3149,8 +3135,7 @@
 				"default": "tomahawk",
 				"positionForward": 40,
 				"positionSide": -7,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "tomahawk",
@@ -3162,8 +3147,7 @@
 				"default": "tomahawk",
 				"positionForward": -50,
 				"positionSide": -9,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "tomahawk",
@@ -3175,8 +3159,7 @@
 				"default": "tomahawk",
 				"positionForward": -50,
 				"positionSide": -9,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "essm",
@@ -3188,8 +3171,7 @@
 				"default": "essm",
 				"positionForward": 40,
 				"positionSide": -7,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "essm",
@@ -3201,8 +3183,7 @@
 				"default": "essm",
 				"positionForward": 40,
 				"positionSide": -7,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "essm",
@@ -3214,8 +3195,7 @@
 				"default": "essm",
 				"positionForward": -50,
 				"positionSide": -9,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "essm",
@@ -3227,8 +3207,7 @@
 				"default": "essm",
 				"positionForward": -50,
 				"positionSide": -9,
-				"vertical": true,
-				"angle": null
+				"vertical": true
 			},
 			{
 				"default": "seahawk",
@@ -3413,10 +3392,14 @@
 				"range": 537.35
 			}
 		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
 		"limited": true,
 		"lifespan": 52.02177423382331,
 		"reload": 10,
-		"armaments": [],
 		"turrets": []
 	},
 	"barak8": {
@@ -3832,10 +3815,19 @@
 				"range": 558.8
 			}
 		],
+		"armaments": [
+			{
+				"default": "mark54",
+				"positionSide": 1
+			},
+			{
+				"default": "mark54",
+				"positionSide": -1
+			}
+		],
 		"limited": true,
 		"lifespan": 66.57000701647874,
 		"reload": 10,
-		"armaments": [],
 		"turrets": []
 	},
 	"mk70": {

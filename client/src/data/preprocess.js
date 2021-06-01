@@ -195,7 +195,10 @@ for (const entityType of Object.keys(entityDatas)) {
 			for (let i = 0; i < (armament.count || 1); i++) {
 				entityData.armaments.push({...armament, count: undefined});
 				if (sym) {
-					const copy = {...armament, angle: -armament.angle, positionSide: -armament.positionSide, count: undefined};
+					const copy = {...armament, positionSide: -armament.positionSide, count: undefined};
+					if (armament.angle != undefined) {
+						copy.angle = -armament.angle;
+					}
 					entityData.armaments.push(copy);
 				}
 			}
