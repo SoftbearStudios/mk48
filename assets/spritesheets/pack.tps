@@ -903,6 +903,21 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
+            <key type="filename">../../client/static/sprites/seahawk.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>64,53,128,105</rect>
+                <key>scale9Paddings</key>
+                <rect>64,53,128,105</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">../../client/static/sprites/set65.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
