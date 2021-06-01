@@ -4,7 +4,6 @@
 package main
 
 import (
-	"github.com/chewxy/math32"
 	"github.com/finnbear/moderation"
 	"math/rand"
 	"mk48/server/world"
@@ -399,24 +398,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 			// (NOTE: change this if client ever legitimately sends something else)
 			armamentGuidance.VelocityTarget = armamentEntityData.Speed
 
-			// Start distance/lifespan at 0 seconds, with few exceptions
-			var lifespan world.Ticks
-
-			if armamentData.Airdrop {
-				const airdropRange = 500
-				if data.PositionTarget.DistanceSquared(entity.Position) > airdropRange*airdropRange {
-					// Exceeded max range
-					return
-				}
-				// Drop the torpedo a bit away, pointed towards the target
-				transform.Direction = world.ToAngle(rand.Float32() * math32.Pi * 2)
-				transform.Position = entity.TurretTarget().AddScaled(transform.Direction.Vec2f(), -float32(50+rand.Intn(50)))
-				armamentGuidance.DirectionTarget = transform.Direction
-
-				// Start the lifespan near expiry to make these torpedoes not last long
-				const maxLifespan = 10 * world.TicksPerSecond
-				lifespan = armamentData.Default.ReducedLifespan(maxLifespan)
-			} else if armamentData.Vertical {
+			if armamentData.Vertical {
 				// Vertically-launched armaments can be launched in any horizontal direction
 				transform.Direction = armamentGuidance.DirectionTarget
 			}
@@ -430,7 +412,6 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Owner:      &player.Player,
 				Transform:  transform,
 				Guidance:   armamentGuidance,
-				Ticks:      lifespan,
 			}
 
 			if h.spawnEntity(armamentEntity, 0) == world.EntityIDInvalid {

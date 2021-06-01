@@ -333,60 +333,60 @@
 				"external": true
 			},
 			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
 				"external": false,
 				"hidden": false,
 				"turret": 2
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true
 			}
 		],
 		"turrets": [
@@ -510,28 +510,16 @@
 				"turret": 3
 			},
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark18",
-				"airdrop": true
+				"default": "kingfisher",
+				"positionForward": -8.75,
+				"positionSide": 5,
+				"angle": 1.5707963267948966
 			},
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark18",
-				"airdrop": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark18",
-				"airdrop": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark18",
-				"airdrop": true
+				"default": "kingfisher",
+				"positionForward": -8.75,
+				"positionSide": -5,
+				"angle": -1.5707963267948966
 			}
 		],
 		"turrets": [
@@ -614,6 +602,78 @@
 		],
 		"armaments": [
 			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
 				"default": "avenger",
 				"positionForward": 16,
 				"positionSide": 0,
@@ -648,78 +708,6 @@
 				"positionForward": -64,
 				"positionSide": 0,
 				"external": true
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 0
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 0
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 1
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 1
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 3
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 3
 			}
 		],
 		"turrets": [
@@ -787,6 +775,22 @@
 				"external": true
 			},
 			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 0.5,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 0.5,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
 				"type": "weapon",
 				"subtype": "depthCharge",
 				"default": "mark9",
@@ -821,22 +825,6 @@
 				"positionSide": -2.55,
 				"angle": -3.2114058236695664,
 				"external": true
-			},
-			{
-				"default": "57x441mmR",
-				"angle": 0,
-				"positionForward": 0.5,
-				"external": false,
-				"hidden": true,
-				"turret": 0
-			},
-			{
-				"default": "57x441mmR",
-				"angle": 0,
-				"positionForward": 0.5,
-				"external": false,
-				"hidden": true,
-				"turret": 1
 			}
 		],
 		"turrets": [
@@ -986,6 +974,38 @@
 				"external": true
 			},
 			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 4
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 5
+			},
+			{
 				"type": "weapon",
 				"subtype": "depthCharge",
 				"default": "mark9",
@@ -1020,38 +1040,6 @@
 				"positionSide": 1,
 				"angle": 3.141592653589793,
 				"external": true
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"external": false,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"external": false,
-				"hidden": false,
-				"turret": 3
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"external": false,
-				"hidden": false,
-				"turret": 4
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"external": false,
-				"hidden": false,
-				"turret": 5
 			}
 		],
 		"turrets": [
@@ -1428,60 +1416,60 @@
 				"vertical": true
 			},
 			{
-				"default": "barak8",
-				"positionForward": 38,
-				"positionSide": 2,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": 38,
-				"positionSide": -2,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": 38,
-				"positionSide": 2,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": 38,
-				"positionSide": -2,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": 1.5,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": -1.5,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": 1.5,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": -1.5,
-				"vertical": true
-			},
-			{
 				"default": "76x636mmR",
 				"angle": 0,
 				"positionForward": 2,
 				"external": false,
 				"hidden": false,
 				"turret": 2
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": -1.5,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": -1.5,
+				"vertical": true
 			}
 		],
 		"turrets": [
@@ -1545,42 +1533,6 @@
 				"external": true
 			},
 			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -11.5,
-				"positionSide": 1.2,
-				"angle": 3.1764992386296798,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -11.5,
-				"positionSide": -1.2,
-				"angle": -3.1764992386296798,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -12,
-				"positionSide": 1.2,
-				"angle": 3.1764992386296798,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -12,
-				"positionSide": -1.2,
-				"angle": -3.1764992386296798,
-				"external": true
-			},
-			{
 				"default": "25x129mmR",
 				"positionForward": 0.5,
 				"positionSide": 0,
@@ -1595,6 +1547,42 @@
 				"angle": 0,
 				"external": true,
 				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -11.5,
+				"positionSide": 1.2,
+				"angle": 3.1764992386296798,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -11.5,
+				"positionSide": -1.2,
+				"angle": -3.1764992386296798,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -12,
+				"positionSide": 1.2,
+				"angle": 3.1764992386296798,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -12,
+				"positionSide": -1.2,
+				"angle": -3.1764992386296798,
+				"external": true
 			}
 		],
 		"turrets": [
@@ -1635,6 +1623,86 @@
 		"armaments": [
 			{
 				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"external": true,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": -2,
+				"external": true,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"external": true,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": -2,
+				"external": true,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"external": true,
+				"hidden": false,
+				"turret": 4
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": -2,
+				"external": true,
+				"hidden": false,
+				"turret": 4
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"external": true,
+				"hidden": false,
+				"turret": 5
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": -2,
+				"external": true,
+				"hidden": false,
+				"turret": 5
+			},
+			{
+				"type": "weapon",
 				"subtype": "torpedo",
 				"default": "mark18",
 				"width": 0.533,
@@ -1720,86 +1788,6 @@
 				"turret": 1,
 				"angle": 0,
 				"external": true
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": 2,
-				"external": true,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": -2,
-				"external": true,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": 2,
-				"external": true,
-				"hidden": false,
-				"turret": 3
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": -2,
-				"external": true,
-				"hidden": false,
-				"turret": 3
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": 2,
-				"external": true,
-				"hidden": false,
-				"turret": 4
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": -2,
-				"external": true,
-				"hidden": false,
-				"turret": 4
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": 2,
-				"external": true,
-				"hidden": false,
-				"turret": 5
-			},
-			{
-				"type": "weapon",
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 1,
-				"positionSide": -2,
-				"external": true,
-				"hidden": false,
-				"turret": 5
 			}
 		],
 		"turrets": [
@@ -1989,42 +1977,6 @@
 				"external": true
 			},
 			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -42,
-				"positionSide": 1.4,
-				"angle": 3.141592653589793,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -42,
-				"positionSide": -1.4,
-				"angle": -3.141592653589793,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -41.5,
-				"positionSide": 1.4,
-				"angle": 3.141592653589793,
-				"external": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "depthCharge",
-				"default": "mark9",
-				"positionForward": -41.5,
-				"positionSide": -1.4,
-				"angle": -3.141592653589793,
-				"external": true
-			},
-			{
 				"default": "127x680mmR",
 				"angle": 0,
 				"positionForward": 2,
@@ -2047,6 +1999,42 @@
 				"external": false,
 				"hidden": false,
 				"turret": 4
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -42,
+				"positionSide": 1.4,
+				"angle": 3.141592653589793,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -42,
+				"positionSide": -1.4,
+				"angle": -3.141592653589793,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -41.5,
+				"positionSide": 1.4,
+				"angle": 3.141592653589793,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -41.5,
+				"positionSide": -1.4,
+				"angle": -3.141592653589793,
+				"external": true
 			}
 		],
 		"turrets": [
@@ -2218,28 +2206,16 @@
 				"turret": 3
 			},
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark54",
-				"airdrop": true
+				"default": "kingfisher",
+				"positionForward": -122,
+				"positionSide": 8.5,
+				"angle": 0.30543261909900765
 			},
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark54",
-				"airdrop": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark54",
-				"airdrop": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark54",
-				"airdrop": true
+				"default": "kingfisher",
+				"positionForward": -122,
+				"positionSide": -8.5,
+				"angle": -0.30543261909900765
 			}
 		],
 		"turrets": [
@@ -2331,75 +2307,75 @@
 				"external": false
 			},
 			{
+				"default": "tomahawk",
+				"positionForward": 32,
+				"positionSide": 2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 32,
+				"positionSide": -2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 24,
+				"positionSide": 2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 24,
+				"positionSide": -2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 16,
+				"positionSide": 2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 16,
+				"positionSide": -2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 8,
+				"positionSide": 2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 8,
+				"positionSide": -2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
 				"default": "mk70",
 				"positionForward": 72,
 				"positionSide": 5,
 				"angle": 0,
 				"external": false
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 32,
-				"positionSide": 2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 32,
-				"positionSide": -2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 24,
-				"positionSide": 2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 24,
-				"positionSide": -2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 16,
-				"positionSide": 2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 16,
-				"positionSide": -2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 8,
-				"positionSide": 2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
-			},
-			{
-				"default": "tomahawk",
-				"positionForward": 8,
-				"positionSide": -2,
-				"angle": 0,
-				"external": false,
-				"vertical": true
 			}
 		],
 		"turrets": []
@@ -2637,23 +2613,23 @@
 				"external": false
 			},
 			{
+				"default": "harpoon",
+				"positionForward": 34,
+				"positionSide": 0,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "harpoon",
+				"positionForward": 34,
+				"positionSide": 0,
+				"angle": 0,
+				"external": false
+			},
+			{
 				"default": "mk70",
 				"positionForward": 33.75,
 				"positionSide": 0.7,
-				"angle": 0,
-				"external": false
-			},
-			{
-				"default": "harpoon",
-				"positionForward": 34,
-				"positionSide": 0,
-				"angle": 0,
-				"external": false
-			},
-			{
-				"default": "harpoon",
-				"positionForward": 34,
-				"positionSide": 0,
 				"angle": 0,
 				"external": false
 			}
@@ -3162,6 +3138,16 @@
 				"vertical": true
 			},
 			{
+				"default": "lrlap",
+				"angle": 0,
+				"turret": 0
+			},
+			{
+				"default": "lrlap",
+				"angle": 0,
+				"turret": 1
+			},
+			{
 				"default": "essm",
 				"positionForward": 40,
 				"positionSide": 7,
@@ -3213,16 +3199,6 @@
 				"default": "seahawk",
 				"positionForward": -65,
 				"positionSide": 0
-			},
-			{
-				"default": "lrlap",
-				"angle": 0,
-				"turret": 0
-			},
-			{
-				"default": "lrlap",
-				"angle": 0,
-				"turret": 1
 			}
 		],
 		"turrets": [
@@ -3577,6 +3553,31 @@
 		"damage": 0.514,
 		"reload": 10.719999999999999,
 		"armaments": [],
+		"turrets": []
+	},
+	"kingfisher": {
+		"label": "Kingfisher",
+		"link": "https://en.wikipedia.org/wiki/Vought_OS2U_Kingfisher",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 10.0853,
+		"width": 10.94,
+		"speed": 67.9067,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 530.2559
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
+		"limited": true,
+		"lifespan": 73.63043705554827,
+		"reload": 10,
 		"turrets": []
 	},
 	"mark7": {

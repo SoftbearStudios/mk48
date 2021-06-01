@@ -257,11 +257,11 @@
 		],
 		"armaments": [
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark18",
-				"airdrop": true,
-				"count": 4
+				"default": "kingfisher",
+				"positionForward": -8.75,
+				"positionSide": 5,
+				"angle": 90,
+				"symmetrical": true
 			}
 		],
 		"turrets": [
@@ -1178,11 +1178,11 @@
 		],
 		"armaments": [
 			{
-				"type": "weapon",
-				"subtype": "torpedo",
-				"default": "mark54",
-				"airdrop": true,
-				"count": 4
+				"default": "kingfisher",
+				"positionForward": -122,
+				"positionSide": 8.5,
+				"angle": 17.5,
+				"symmetrical": true
 			}
 		],
 		"turrets": [
@@ -2018,6 +2018,28 @@
 				"type": "radar"
 			}
 		]
+	},
+	"kingfisher": {
+		"label": "Kingfisher",
+		"link": "https://en.wikipedia.org/wiki/Vought_OS2U_Kingfisher",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 10.0853,
+		"width": 10.940,
+		"speed": 67.9067,
+		"range": 1461000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
+		"limited": true
 	},
 	"mark7": {
 		"label": "Mark 7",

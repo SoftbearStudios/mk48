@@ -205,16 +205,6 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
-	entityData.armaments.sort((first, second) => {
-		if (first.airdrop) {
-			return 1;
-		}
-		if (second.airdrop) {
-			return -1;
-		}
-		return 0;
-	})
-
 	const sensors = entityData.sensors;
 	entityData.sensors = [];
 
@@ -244,6 +234,30 @@ for (const entityType of Object.keys(entityDatas)) {
 			entityData.sensors.push(sensor);
 		}
 	}
+}
+
+// Sort armaments
+for (const entityType of Object.keys(entityDatas)) {
+	const entityData = entityDatas[entityType];
+
+	function rankArmament(armament) {
+		const armamentEntityData = entityDatas[armament.default];
+		// Positive means closer to beginning
+		const typeRanks = {
+			'torpedo': 10,
+			'missile': 9,
+			'rocket': 8,
+			'shell': ['battleship', 'cruiser'].includes(entityData.subtype) ? 12 : 5,
+			'sam': -5,
+			'decoy': -8,
+			'aircraft': entityData.type == 'carrier' ? 12 : -10,
+		}
+		return typeRanks[armamentEntityData.subtype] || 0;
+	}
+
+	entityData.armaments.sort((first, second) => {
+		return rankArmament(second) - rankArmament(first);
+	});
 }
 
 fs.writeFileSync('./entities.json', JSON.stringify(entityDatas, null, '\t'));

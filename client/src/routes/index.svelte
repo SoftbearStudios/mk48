@@ -31,6 +31,7 @@
 
 	let mouse = {x: 0, y: 0, touch: false, leftDown: 0, rightDown: false, click: false};
 	let keyboard = {shoot: false, forward: false, backward: false, right: false, left: false, stop: false}; // what keys are down
+	let keyEvent = false;
 	let overlay = {};
 	let viewportPositionCache = {x: 0, y: 0};
 	let armamentSelection;
@@ -526,7 +527,7 @@
 				const mouseDistance = dist(mousePosition, localSprite.position);
 				const mouseAngle = Math.atan2(mousePosition.y - localSprite.position.y, mousePosition.x - localSprite.position.x);
 
-				const keyEvent = keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
+				keyEvent |= keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
 				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
 					if (mouseDownNotClick()) {
 						localSprite.directionTarget = mouseAngle;
@@ -684,6 +685,7 @@
 						keyboard.pay = false;
 					}
 					mouse.click = false;
+					keyEvent = false;
 				}
 
 				drawHud(hud, localEntity, localSprite, contacts);

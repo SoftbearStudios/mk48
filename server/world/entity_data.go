@@ -22,7 +22,6 @@ type (
 		Type            EntityKind    `json:"type"`
 		Subtype         EntitySubKind `json:"subtype"`
 		Default         EntityType    `json:"default"`
-		Airdrop         bool          `json:"airdrop"`
 		Vertical        bool          `json:"vertical"`
 		Length          float32       `json:"length"`
 		Width           float32       `json:"width"`
@@ -92,12 +91,7 @@ func (armament *Armament) TurretIndex() int {
 
 // Reload returns the time it takes to reload an Armament in seconds.
 func (armament *Armament) Reload() Ticks {
-	consumption := armament.Default.Data().Reload
-	if armament.Airdrop {
-		// Maybe should check for overflow.
-		consumption *= 4
-	}
-	return consumption
+	return armament.Default.Data().Reload
 }
 
 // Similar returns if the Armament is on the same turret and the same type as other.
