@@ -10,6 +10,7 @@
 	const _RIGHT_ARROW = '\u25BA';
 
 	export let name = '';
+	export let emblem = null;
 
 	export let open = true;
 
@@ -21,6 +22,9 @@
 <div class=container>
 	<h2 on:click={toggleOpen}>
 		<span>{open ? _DOWN_ARROW : _RIGHT_ARROW}</span>
+		{#if !open && emblem}
+			<div class='emblem'>{emblem}</div>
+		{/if}
 		{name}
 	</h2>
 	{#if open}
@@ -35,7 +39,21 @@
 		cursor: pointer;
 		font-weight: bold;
 		margin: 0px;
+		margin-right: 1em;
 		user-select: none;
+	}
+
+	div.emblem {
+		position: absolute;
+		right: -0.4em;
+		top: -0.4em;
+		background-color: #00bfff;
+		border-radius: 50%;
+		width: 1.15em;
+		font-size: 1.25em;
+		font-weight: bold;
+		height: 1.15em;
+		text-align: center;
 	}
 
 	span {

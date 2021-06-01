@@ -44,7 +44,7 @@
 </script>
 
 <div>
-	<Section name={myTeamID || 'Fleet'} open={false}>
+	<Section name={myTeamID || 'Fleet'} emblem={$teamJoinRequests ? ($teamJoinRequests).length : null} open={false}>
 		{#if myTeamID}
 			<table>
 				{#if $teamMembers}
@@ -93,7 +93,6 @@
 		background-color: #00000040;
 		left: 0;
 		margin: 10px;
-		min-width: 150px;
 		padding: 10px;
 		position: absolute;
 	}

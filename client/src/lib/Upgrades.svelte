@@ -21,7 +21,7 @@
 	$: progress = clamp(((score || 0) - levelToScore(level)) / (levelToScore(nextLevel) - levelToScore(level)), 0, 1);
 	$: ready = progress === 1;
 
-	function upgrades(nextLevel) {
+	function getUpgrades(nextLevel) {
 		const list = [];
 		for (const entityType of Object.keys(entityData)) {
 			const data = entityData[entityType];
@@ -31,18 +31,20 @@
 		}
 		return list;
 	}
+
+	$: upgrades = getUpgrades(nextLevel);
 </script>
 
-<div>
-	<Section name={`${Math.round(progress * 100)}% to level ${nextLevel}`}>
-		{#each upgrades(nextLevel) as upgradeType}
-			<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/sprites/${upgradeType}.png`}/>
-			<br/>
-		{:else}
-			<p>Maximum ship level reached</p>
-		{/each}
-	</Section>
-</div>
+{#if upgrades && upgrades.length > 0}
+	<div>
+		<Section name={`${Math.round(progress * 100)}% to level ${nextLevel}`}>
+			{#each upgrades as upgradeType}
+				<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/sprites/${upgradeType}.png`}/>
+				<br/>
+			{/each}
+		</Section>
+	</div>
+{/if}
 
 <style>
 	div {
