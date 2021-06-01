@@ -177,10 +177,10 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			}
 		}
 
-		if !entity.Collides(other, timeDeltaSeconds) {
+		if !entity.Collides(other, timeDeltaSeconds) || !altitudeOverlap {
 			if collectible != nil && altitudeOverlap {
 				// Collectibles gravitate towards players (except if they player paid them)
-				if boat != nil && (boat.Owner != collectible.Owner || collectible.Lifespan > 5*world.TicksPerSecond) {
+				if boat != nil && (boat.Owner != collectible.Owner || collectible.Ticks > 5*world.TicksPerSecond) {
 					collectible.Direction = collectible.Direction.Lerp(boat.Position.Sub(collectible.Position).Angle(), timeDeltaSeconds*5)
 					collectible.Velocity = 20 * world.MeterPerSecond
 				}
@@ -216,22 +216,26 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					if entityData.SubKind == world.EntitySubKindAircraft && otherData.Kind == world.EntityKindBoat {
 						// Small window of opportunity to fire
 						// Uses lifespan as torpedo consumption
-						if entity.Lifespan > world.TicksPerSecond*3 && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
-							entity.Lifespan = 0
-							torpedoType := world.EntityTypeMark18
+						if entity.Ticks > world.TicksPerSecond*3 && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
+							entity.Ticks = 0
 
-							torpedo := &world.Entity{
-								EntityType: torpedoType,
-								Owner:      entity.Owner,
-								Lifespan:   torpedoType.ReducedLifespan(10 * world.TicksPerSecond),
-								Transform:  entity.Transform,
-								Guidance: world.Guidance{
-									DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
-									VelocityTarget:  torpedoType.Data().Speed,
-								},
+							armaments := entityData.Armaments
+							for i := range armaments {
+								armamentData := &armaments[i]
+
+								armament := &world.Entity{
+									EntityType: armamentData.Default,
+									Owner:      entity.Owner,
+									Ticks:      armamentData.Default.ReducedLifespan(10 * world.TicksPerSecond),
+									Transform:  entity.ArmamentTransform(i),
+									Guidance: world.Guidance{
+										DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
+										VelocityTarget:  armamentData.Default.Data().Speed,
+									},
+								}
+
+								h.spawnEntity(armament, 0)
 							}
-
-							h.spawnEntity(torpedo, 0)
 						}
 
 						if otherData.AntiAircraft != 0 {
@@ -240,7 +244,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 							// In range of aa
 							if d2 < r2 {
-								chance := (1.5 - d2/r2) * otherData.AntiAircraft
+								chance := (1.0 - d2/r2) * otherData.AntiAircraft
 								if chance*timeDeltaSeconds > rand.Float32() {
 									removeEntity(entity, "shot down")
 								}
@@ -250,10 +254,6 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				}
 			}
 
-			return
-		}
-
-		if !altitudeOverlap {
 			return
 		}
 
@@ -270,7 +270,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 			if boat.Owner != collectible.Owner {
 				// ...but it doesn't repair or replenish them to avoid abuse
-				boat.Repair(0.05)
+				boat.Repair(3)
 				boat.Replenish(collectible.Data().Reload)
 			}
 
@@ -279,18 +279,15 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			// Payment upgrades oil rigs to HQs
 			if rand.Float64() < 0.1 {
 				obstacle.EntityType = world.EntityTypeHQ
-				obstacle.Lifespan = 0 // reset expiry
+				obstacle.Ticks = 0 // reset expiry
 			}
 
 			removeEntity(collectible, "collected")
 		case boat != nil && weapon != nil && !friendly:
-			damageMultiplier := boat.RecentSpawnFactor()
-
 			dist2 := entity.Position.DistanceSquared(other.Position)
 			r2 := square(boat.Data().Radius)
-			damageMultiplier *= collisionMultiplier(dist2, r2)
 
-			if boat.Damage(weapon.Data().Damage * damageMultiplier) {
+			if boat.Damage(world.DamageToTicks(weapon.Data().Damage * collisionMultiplier(dist2, r2))) {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
 				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()))
 			}
@@ -305,9 +302,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				- Low health boats still do damage, hence scale health percent
 			*/
 
-			baseDamage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth())
-
-			baseDamage *= boat.RecentSpawnFactor() * otherBoat.RecentSpawnFactor()
+			baseDamage := timeDeltaSeconds * 1.1 * min((boat.HealthPercent()*0.5+0.5)*boat.MaxHealth().Damage(), (otherBoat.HealthPercent()*0.5+0.5)*otherBoat.MaxHealth().Damage())
 
 			if friendly {
 				baseDamage = 0
@@ -351,7 +346,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 						damage *= ramDamage
 					}
 
-					if b.Damage(damage) {
+					if b.Damage(world.DamageToTicks(damage)) {
 						verb := "Crashed into"
 						if isOtherRam {
 							verb = "Rammed by"
@@ -365,7 +360,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		case boat != nil && obstacle != nil:
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
 			boat.Velocity = boat.Velocity.AddClamped(6*posDiff.Dot(boat.Direction.Vec2f()), 30*world.MeterPerSecond)
-			if boat.Damage(timeDeltaSeconds * boat.MaxHealth() * 0.15) {
+			if boat.KillIn(ticks, 6*world.TicksPerSecond) {
 				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
 			}
 		case !(friendly || (boat != nil && decoy != nil)):
@@ -395,9 +390,6 @@ func (h *Hub) boatDied(e *world.Entity) {
 
 	// Loot is based on the length of the boat
 	loot := data.Length * 0.25 * (rand.Float32()*0.1 + 0.9)
-
-	// Makes spawn killing less profitable
-	loot *= e.RecentSpawnFactor()
 
 	for i := 0; i < int(loot); i++ {
 		lootType := world.EntityTypeScrap

@@ -41,6 +41,17 @@ func (vel Velocity) ClampMagnitude(mag Velocity) Velocity {
 	return vel
 }
 
+func (vel Velocity) ClampMin(min Velocity) Velocity {
+	if vel < 0 {
+		if vel > -min {
+			return -min
+		}
+	} else if vel < min {
+		return min
+	}
+	return vel
+}
+
 // AddClamped adds a float to a Velocity and clamps it to mag.
 func (vel Velocity) AddClamped(amount float32, mag Velocity) Velocity {
 	// Use int64 to prevent overflow

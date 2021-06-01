@@ -16,7 +16,6 @@ type (
 		target    Vec2f
 		alt       float32
 		altTarget float32
-		dmg       float32
 		typ       EntityType
 	}
 )
@@ -124,12 +123,4 @@ func (ext *unsafeExtension) turretTarget() Vec2f {
 
 func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
 	ext.target = target
-}
-
-func (ext *unsafeExtension) damage() float32 {
-	return ext.dmg
-}
-
-func (ext *unsafeExtension) setDamage(d float32) {
-	ext.dmg = d
 }

@@ -109,9 +109,13 @@ func (entityType EntityType) Data() *EntityTypeData {
 	return &entityTypeData[entityType]
 }
 
-// MaxHealth is the maximum health of an EntityType as an absolute
-func (entityType EntityType) MaxHealth() float32 {
-	return max(1, entityType.Data().Length*(1.0/32.0))
+// MaxHealth is the maximum health of an EntityType as Ticks.
+func (entityType EntityType) MaxHealth() Ticks {
+	health := Ticks(entityType.Data().Length * 20)
+	if health < 20 {
+		health = 20
+	}
+	return health
 }
 
 // Returns a lifespan to start an entity's life at, so as to make it expire

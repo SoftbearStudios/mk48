@@ -178,6 +178,7 @@ func init() {
 	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
 	EntityTypeScrap = ParseEntityType("scrap")
+	EntityTypeSeahawk = ParseEntityType("seahawk")
 
 	SensorTypeRadar = ParseSensorType("radar")
 	SensorTypeSonar = ParseSensorType("sonar")
@@ -230,6 +231,7 @@ var (
 	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
 	EntityTypeScrap       EntityType
+	EntityTypeSeahawk     EntityType
 
 	SensorTypeRadar  SensorType
 	SensorTypeSonar  SensorType

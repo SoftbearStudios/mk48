@@ -722,14 +722,21 @@
 
 				// Direction target of 0 may be invalid
 				if (entity.friendly || entity.directionTarget) {
-					const maxTurnSpeed = Math.PI / 4; // per second
+					let maxTurnSpeed = Math.PI / 4; // per second
+					if (entity.type === 'seahawk') {
+						maxTurnSpeed = Math.PI / 2;
+					}
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
-					const maxSpeed = (spriteData.speed || 20) / Math.max(Math.pow(Math.abs(angleDifference), 2), 1);
-					sprite.rotation += clampMagnitude(angleDifference, seconds * maxTurnSpeed * Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1)));
+					let maxSpeed = (spriteData.speed || 20)
+					if (spriteData.subtype !== 'aircraft') {
+						maxSpeed /= Math.max(Math.pow(angleDifference, 2), 1);
+						maxTurnSpeed *= Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1));
+					}
+					sprite.rotation += clampMagnitude(angleDifference, seconds * maxTurnSpeed);
 
 					angleDifference = angleDiff(entity.direction, entity.directionTarget || 0);
-					entity.direction += clampMagnitude(angleDifference, seconds * maxTurnSpeed * Math.max(0.25, 1 - Math.abs(entity.velocity || 0) / (maxSpeed + 1)));
+					entity.direction += clampMagnitude(angleDifference, seconds * maxTurnSpeed);
 				}
 
 				sprite.position.x = mapRanges(seconds, 0, 0.25, sprite.position.x, entity.position.x, true);

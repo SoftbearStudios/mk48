@@ -26,9 +26,6 @@ type extension interface {
 
 	altitudeTarget() float32
 	setAltitudeTarget(float32)
-
-	damage() float32
-	setDamage(float32)
 }
 
 func (entity *Entity) ArmamentConsumption() []Ticks {

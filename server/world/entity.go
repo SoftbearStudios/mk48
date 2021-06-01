@@ -10,12 +10,14 @@ import (
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
 // Its size is 32 bytes for optimal efficiency.
 // Cannot modify EntityType directly.
+// Entity.Ticks is either damage or lifespan depending on the entity's type.
+// Cannot modify EntityID except in World.
 type Entity struct {
 	Transform
 	Guidance
 	Owner *Player
 	EntityType
-	Lifespan Ticks
+	Ticks    Ticks
 	EntityID EntityID
 }
 
@@ -25,24 +27,27 @@ type Entity struct {
 func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
 	data := entity.Data()
 
-	entity.Lifespan += ticks
-	if data.Lifespan != 0 && entity.Lifespan > data.Lifespan {
-		if entity.EntityType == EntityTypeHQ {
-			// Downgrade
-			entity.EntityType = EntityTypeOilPlatform
-		} else {
-			// Die
-			return true
+	if lifespan := data.Lifespan; lifespan != 0 {
+		entity.Ticks += ticks
+
+		// Downgrade or die when expired.
+		if entity.Ticks > lifespan {
+			if entity.EntityType == EntityTypeHQ {
+				entity.EntityType = EntityTypeOilPlatform
+			} else {
+				return true
+			}
 		}
+	}
+
+	// Limited entities die when their owner does.
+	if data.Limited && entity.Owner.DeathTime != 0 {
+		return true
 	}
 
 	// The following movement-related code must match the client's code
 	maxSpeed := data.Speed
 	seconds := ticks.Float()
-
-	if data.Limited && entity.Owner.DeathTime != 0 {
-		return true
-	}
 
 	if data.SubKind == EntitySubKindAircraft {
 		posTarget := entity.OwnerBoatTurretTarget()
@@ -50,30 +55,20 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 
 		// Vary angle based on entity hash so aircraft doesn't clump as much.
 		entity.DirectionTarget = posDiff.Angle() + ToAngle(entity.Hash()*math32.Pi/4) - Pi/8
+		distance := posDiff.LengthSquared()
 
-		// Let other aircraft catch up
-		if posDiff.LengthSquared() < 75*75 || entity.Direction.Diff(entity.DirectionTarget).Abs() > math32.Pi/3 {
-			maxSpeed -= 30 * MeterPerSecond
+		// Probably will have heli sub-kind in future.
+		if entity.EntityType == EntityTypeSeahawk {
+			if distance < 35*35 {
+				maxSpeed = 0
+			}
+		} else {
+			// Let other aircraft catch up
+			if distance < 75*75 || entity.Direction.Diff(entity.DirectionTarget).Abs() > math32.Pi/3 {
+				maxSpeed -= 30 * MeterPerSecond
+			}
 		}
-	}
-
-	// Shells that have been added so far can't turn
-	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
-		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
-
-		// See #45 - automatically slow down to turn faster
-		maxSpeedF := maxSpeed.Float()
-		turnRate := math32.Pi / 4
-
-		if data.SubKind != EntitySubKindAircraft {
-			maxSpeedF /= max(square(deltaAngle.Abs()), 1)
-			turnRate *= max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
-		}
-		maxSpeed = ToVelocity(maxSpeedF)
-		entity.Direction += deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
-	}
-
-	if data.SubKind == EntitySubKindSubmarine {
+	} else if data.SubKind == EntitySubKindSubmarine {
 		ext := &entity.Owner.ext
 		targetAltitude := clamp(ext.altitudeTarget(), -1, 0)
 		altitudeSpeed := float32(0.25)
@@ -81,15 +76,43 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
-	var turretsCopied bool
-	if data.Kind == EntityKindBoat {
-		turretsCopied = entity.updateTurretAim(ToAngle(seconds))
+	boat := data.Kind == EntityKindBoat
+	if boat {
+		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
+		if len(entity.ArmamentConsumption()) > 0 {
+			// If turrets were already copied and the extension
+			// copies everything armaments don't need to be copied
+			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
+			entity.replenish(ticks, armamentsCopied)
+		}
+
+		entity.Repair(ticks)
 	}
 
-	if entity.VelocityTarget != 0 || entity.Velocity != 0 {
+	// Shells that have been added so far can't turn
+	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
+		// See #45 - automatically slow down to turn faster
+		turnRate := math32.Pi / 4
+		if entity.EntityType == EntityTypeSeahawk {
+			turnRate = math32.Pi / 2
+		}
+		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
+
+		if data.SubKind != EntitySubKindAircraft {
+			maxSpeed = ToVelocity(maxSpeed.Float() / max(square(deltaAngle.Float()), 1))
+			turnRate *= max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
+		}
+
+		deltaAngle = deltaAngle.ClampMagnitude(ToAngle(seconds * turnRate))
+		entity.Direction += deltaAngle
+	}
+
+	if entity.VelocityTarget != 0 || entity.Velocity != 0 || boat {
 		deltaVelocity := entity.VelocityTarget.ClampMagnitude(maxSpeed) - entity.Velocity
-		deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800 * seconds)) // max acceleration
-		entity.Velocity += ToVelocity(seconds * deltaVelocity.Float())
+		if deltaVelocity != 0 {
+			deltaVelocity = deltaVelocity.ClampMagnitude(ToVelocity(800 * seconds)) // Max acceleration
+			entity.Velocity += ToVelocity(seconds * deltaVelocity.Float()).ClampMin(1)
+		}
 		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
 		// Test collisions with stationary objects
@@ -99,7 +122,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 			}
 			entity.Velocity = entity.Velocity.ClampMagnitude(5 * MeterPerSecond)
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
-				if entity.Damage(seconds * entity.MaxHealth() * 0.25) {
+				if entity.KillIn(ticks, 4*TicksPerSecond) {
 					if owner := entity.Owner; owner != nil {
 						owner.DeathMessage = "Crashed into the ground!"
 					}
@@ -112,7 +135,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	// Border (note: radius can shrink)
 	centerDist2 := entity.Position.LengthSquared()
 	if centerDist2 > square(worldRadius) {
-		dead := entity.Damage(seconds * entity.MaxHealth())
+		dead := entity.KillIn(ticks, 1*TicksPerSecond)
 		entity.Velocity += ToVelocity(clampMagnitude(entity.Velocity.Float()-6*entity.Position.Dot(entity.Direction.Vec2f()), 15))
 		// Everything but boats is instantly killed by border
 		if dead || data.Kind != EntityKindBoat || centerDist2 > square(worldRadius*RadiusClearance) {
@@ -123,37 +146,28 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		}
 	}
 
-	if data.Kind == EntityKindBoat {
-		if len(entity.ArmamentConsumption()) > 0 {
-			// If turrets were already copied and the extension
-			// copies everything armaments don't need to be copied
-			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
-			entity.replenish(ticks, armamentsCopied)
-		}
-
-		if ext := &entity.Owner.ext; ext.damage() > 0 {
-			repairAmount := seconds * (1.0 / 60.0)
-			if ext.alt < 0 {
-				repairAmount *= 0.5
-			}
-			entity.Repair(repairAmount)
-		}
-	}
-
 	return false
 }
 
 // Damage damages an entity and returns if it died.
-func (entity *Entity) Damage(d float32) bool {
-	data := entity.Data()
-	if data.Kind != EntityKindBoat {
-		return d > 0.0
+func (entity *Entity) Damage(damage Ticks) bool {
+	// Ticks is lifespan for non-boats.
+	if entity.Data().Kind != EntityKindBoat {
+		return damage != 0
 	}
 
-	ext := &entity.Owner.ext
-	d += ext.damage()
-	ext.setDamage(d)
-	return d > entity.MaxHealth()
+	// Don't overflow
+	if int(entity.Ticks)+int(damage) > int(entity.MaxHealth()) {
+		return true
+	}
+
+	entity.Ticks += damage
+	return false
+}
+
+// KillIn damages an entity enough to kill it in killTime Ticks.
+func (entity *Entity) KillIn(ticks, killTime Ticks) bool {
+	return entity.Damage(ticks * (entity.MaxHealth() / killTime).ClampMin(1))
 }
 
 // UpdateSensor runs a simple AI for homing torpedoes/missiles.
@@ -161,8 +175,9 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	if entity.Owner.Friendly(otherEntity.Owner) {
 		return
 	}
-	if entity.Lifespan < 1 {
-		// Sensor not active yet
+
+	// Sensor activates after 1 second.
+	if entity.Ticks < TicksPerSecond {
 		return
 	}
 
@@ -215,19 +230,6 @@ func (entity *Entity) Hash() float32 {
 	return float32(entity.EntityID&(hashSize-1)) * (1.0 / hashSize)
 }
 
-// Returns value in the range [0,1] as time since spawn increases
-// Intended to be multiplied by, for example, damage, to decrease damage taken
-// while having been spawned recently
-func (entity *Entity) RecentSpawnFactor() float32 {
-	// Upgrading invalidates spawn protection
-	if entity.Data().Level > 1 {
-		return 1
-	}
-	const initial float32 = 0.75 // initial protection against damage, etc.
-	const seconds float32 = 15   // how long effect lasts
-	return min(1-initial+entity.Lifespan.Float()*(initial/seconds), 1)
-}
-
 // Returns whether copied turret angles
 func (entity *Entity) updateTurretAim(amount Angle) bool {
 	turretsCopied := false
@@ -265,15 +267,12 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 	return turretsCopied
 }
 
-// Repair regenerates the Entity's health by an amount.
-func (entity *Entity) Repair(amount float32) {
-	entity.mustBoat()
-	ext := &entity.Owner.ext
-	damage := ext.damage()
-	if amount >= damage {
-		ext.setDamage(0)
+// Repair regenerates the Entity's health by an amount of Ticks.
+func (entity *Entity) Repair(ticks Ticks) {
+	if entity.Ticks > ticks {
+		entity.Ticks -= ticks
 	} else {
-		ext.setDamage(damage - amount)
+		entity.Ticks = 0
 	}
 }
 
@@ -344,7 +343,7 @@ func (entity *Entity) replenishRange(amount Ticks, start, end int, copied bool) 
 // DamagePercent returns an Entity's damage in the range [0, 1.0].
 func (entity *Entity) DamagePercent() float32 {
 	if entity.Data().Kind == EntityKindBoat {
-		return entity.Owner.ext.damage() / entity.MaxHealth()
+		return float32(entity.Ticks) / float32(entity.MaxHealth())
 	}
 	return 0
 }
@@ -387,7 +386,11 @@ func ArmamentTransform(entityType EntityType, entityTransform Transform, turretA
 
 // ArmamentTransform Returns world transform
 func (entity *Entity) ArmamentTransform(index int) Transform {
-	return ArmamentTransform(entity.EntityType, entity.Transform, entity.TurretAngles(), index)
+	var angles []Angle
+	if entity.Data().Kind == EntityKindBoat {
+		angles = entity.TurretAngles()
+	}
+	return ArmamentTransform(entity.EntityType, entity.Transform, angles, index)
 }
 
 // Close is called when an Entity is removed from a World.
@@ -439,10 +442,8 @@ func (entity *Entity) ConsumeArmament(index int) {
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
 	var oldArmaments []Ticks
-	var oldDamage float32
 	if entity.EntityType != EntityTypeInvalid {
 		oldArmaments = entity.ArmamentConsumption()
-		oldDamage = entity.DamagePercent()
 	}
 
 	ext := &entity.Owner.ext
@@ -452,7 +453,7 @@ func (entity *Entity) Initialize(entityType EntityType) {
 
 	// Keep similar consumption.
 	upgradeArmaments(entityType, entity.ArmamentConsumption(), oldArmaments)
-	ext.setDamage(oldDamage * 0.5 * entity.MaxHealth())
+	entity.Ticks /= 2
 
 	// Make sure all the new turrets are re-aimed to the old target.
 	entity.updateTurretAim(Pi)

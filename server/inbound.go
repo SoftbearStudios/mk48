@@ -430,7 +430,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 				Owner:      &player.Player,
 				Transform:  transform,
 				Guidance:   armamentGuidance,
-				Lifespan:   lifespan,
+				Ticks:      lifespan,
 			}
 
 			if h.spawnEntity(armamentEntity, 0) == world.EntityIDInvalid {
