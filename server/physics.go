@@ -213,10 +213,10 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					}
 
 					// Aircraft (simulate weapons and anti-aircraft)
-					if entityData.SubKind == world.EntitySubKindAircraft && otherData.Kind == world.EntityKindBoat {
+					if (entityData.SubKind == world.EntitySubKindAircraft || entity.EntityType == world.EntityTypeASROC) && otherData.Kind == world.EntityKindBoat {
 						// Small window of opportunity to fire
 						// Uses lifespan as torpedo consumption
-						if entity.Ticks > world.TicksPerSecond*3 && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
+						if (entity.Ticks > world.TicksPerSecond*3 || entity.EntityType == world.EntityTypeASROC) && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
 							entity.Ticks = 0
 
 							armaments := entityData.Armaments
@@ -234,11 +234,21 @@ func (h *Hub) Physics(ticks world.Ticks) {
 									},
 								}
 
+								const maxDropVelocity = 40 * world.MeterPerSecond
+								if armament.Velocity > maxDropVelocity {
+									armament.Velocity = maxDropVelocity
+								}
+
 								h.spawnEntity(armament, 0)
+							}
+
+							if entity.EntityType == world.EntityTypeASROC {
+								// ASROC expires when dropping torpedo
+								removeEntity(entity, "done")
 							}
 						}
 
-						if otherData.AntiAircraft != 0 {
+						if otherData.AntiAircraft != 0 && entityData.SubKind == world.EntitySubKindAircraft {
 							d2 := entity.Position.DistanceSquared(other.Position)
 							r2 := square(otherData.Radius * 1.5)
 

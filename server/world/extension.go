@@ -51,9 +51,12 @@ func (entity *Entity) Altitude() float32 {
 		// hit surface ships, but not much airborne things
 		return -0.9 * AltitudeCollisionThreshold
 	case EntitySubKindShell, EntitySubKindMissile, EntitySubKindRocket:
-		// By multiplying by almost one, these entities are allowed to
-		// hit surface ships, but not much underwater things
-		return 0.9 * AltitudeCollisionThreshold
+		if entity.EntityType != EntityTypeASROC {
+			// By multiplying by almost one, these entities are allowed to
+			// hit surface ships, but not much underwater things
+			return 0.9 * AltitudeCollisionThreshold
+		}
+		fallthrough
 	case EntitySubKindAircraft, EntitySubKindSAM:
 		return 1.8 * AltitudeCollisionThreshold
 	default:

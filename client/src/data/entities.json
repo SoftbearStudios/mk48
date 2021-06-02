@@ -3138,6 +3138,30 @@
 				"vertical": true
 			},
 			{
+				"default": "asroc",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true
+			},
+			{
+				"default": "asroc",
+				"positionForward": 40,
+				"positionSide": -7,
+				"vertical": true
+			},
+			{
+				"default": "asroc",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true
+			},
+			{
+				"default": "asroc",
+				"positionForward": 40,
+				"positionSide": -7,
+				"vertical": true
+			},
+			{
 				"default": "lrlap",
 				"angle": 0,
 				"turret": 0
@@ -3376,6 +3400,32 @@
 		"limited": true,
 		"lifespan": 52.02177423382331,
 		"reload": 10,
+		"turrets": []
+	},
+	"asroc": {
+		"label": "ASROC",
+		"link": "https://en.wikipedia.org/wiki/RUR-5_ASROC",
+		"type": "weapon",
+		"subtype": "rocket",
+		"level": 5,
+		"length": 4.5,
+		"width": 0.80859,
+		"speed": 200,
+		"damage": 0,
+		"reload": 12,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1009
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark54"
+			}
+		],
+		"limited": true,
+		"lifespan": 5.211645949126277,
 		"turrets": []
 	},
 	"barak8": {
