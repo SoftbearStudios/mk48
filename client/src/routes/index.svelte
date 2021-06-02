@@ -18,11 +18,15 @@
 	import {recycleParticle, updateParticles} from '../lib/particles.js';
 	import {applyVelocity} from '../lib/physics.js';
 	import {connect, connected, disconnect, send, contacts as socketContacts, entityID as socketEntityID, terrain, leaderboard, worldRadius} from '../lib/socket.js';
-	import {linearSpritesheet} from '../lib/textures.js';
-	import spritesheetData from '../data/spritesheet.json';
 	import backgroundShader from '../lib/background.js';
 	import {startRecording, stopRecording} from '../lib/recording.js';
 	import {onMount} from 'svelte'
+
+	// Spritesheet data
+	import entitiesTPS from '../data/entities.tps.json';
+	import extrasTPS from '../data/extras.tps.json';
+
+	// Entity Data
 	import entityData from '../data/entities.json';
 
 	let canvas, chatRef, shipRef, heightFract, widthFract;
@@ -112,27 +116,46 @@
 			viewport.off('zoomed', zoomHandler);
 		});
 
-		const spritesheetTexture = PIXI.Texture.from(`/spritesheet.${hasWebP() ? 'webp' : 'png'}`);
-		const spritesheet = new PIXI.Spritesheet(spritesheetTexture, spritesheetData);
-		spritesheet.parse(() => {});
+		// Load spritesheets (synchronously)
+		const spritesheetExt = hasWebP() ? 'webp' : 'png';
+		const entitiesTexture = PIXI.Texture.from(`/entities.${spritesheetExt}`);
+		const extrasTexture = PIXI.Texture.from(`/extras.${spritesheetExt}`);
+		const entitiesSpritesheet = new PIXI.Spritesheet(entitiesTexture, entitiesTPS);
+		const extrasSpritesheet = new PIXI.Spritesheet(extrasTexture, extrasTPS);
+		entitiesSpritesheet.parse(() => {});
+		extrasSpritesheet.parse(() => {});
 
-		const textures = {};
-
-		function loadTexture(name) {
-			textures[name] = PIXI.Texture.from(`/${name}.png`);
-		}
-
-		loadTexture('particleWake');
-		loadTexture('triangle');
-
-		const explosionBaseTexture = PIXI.Texture.from('/explosion.png');
-		const explosionFrames = linearSpritesheet(PIXI, explosionBaseTexture, 64, 40);
-
+		// Background (water + land)
 		const background = new PIXI.Filter(null, backgroundShader);
 		const backgroundContainer = new PIXI.Container();
 		viewport.addChild(backgroundContainer);
 		backgroundContainer.filterArea = app.screen;
 		backgroundContainer.filters = [background];
+		const unsubscribeWorldRadius = worldRadius.subscribe(newRadius => {
+			background.uniforms.iBorderRange = newRadius;
+		});
+
+		// For unknown reasons, PIXI.js does not render things in the order
+		// they were added to viewport. Some things must be added in reverse.
+		const smokeParticles = new PIXI.ParticleContainer(16384, {
+			scale: true,
+			position: true,
+			alpha: true,
+			autoResize: true
+		});
+		viewport.addChild(smokeParticles);
+
+		const explosions = new PIXI.Container();
+		viewport.addChild(explosions);
+
+		const hud = new PIXI.Graphics();
+		viewport.addChild(hud);
+
+		const entityContainer = new PIXI.Container();
+		viewport.addChild(entityContainer);
+
+		const splashes = new PIXI.Container();
+		viewport.addChild(splashes);
 
 		const wakeParticles = new PIXI.ParticleContainer(16384, {
 			scale: true,
@@ -142,30 +165,13 @@
 		});
 		viewport.addChild(wakeParticles);
 
-		const explosions = new PIXI.Container();
-		viewport.addChild(explosions);
-
-		const hud = new PIXI.Graphics();
-		viewport.addChild(hud);
-
-		const unsubscribeWorldRadius = worldRadius.subscribe(newRadius => {
-			background.uniforms.iBorderRange = newRadius;
-		});
-
-		const entityContainer = new PIXI.Container();
-		viewport.addChild(entityContainer);
-
-		const smokeParticles = new PIXI.ParticleContainer(16384, {
-			scale: true,
-			position: true,
-			alpha: true,
-			autoResize: true
-		});
-		viewport.addChild(smokeParticles);
-
+		// Keep a map of entityID to sprite
 		const entitySprites = {};
 
+		// Removes an entity sprite, destroying its children where applicable
 		function removeSprite(entityID, sprite) {
+			// The commented lines were observed to cause issues in the past
+
 			if (sprite.nameText) {
 				viewport.removeChild(sprite.nameText);
 				//sprite.nameText.destroy();
@@ -203,7 +209,7 @@
 						removeSprite(entityID, sprite);
 					}
 
-					sprite = PIXI.Sprite.from(spritesheet.textures[entity.type]);
+					sprite = PIXI.Sprite.from(entitiesSpritesheet.textures[entity.type]);
 					entitySprites[entityID] = sprite;
 
 					sprite.type = entity.type;
@@ -223,7 +229,7 @@
 
 							let turretContainer;
 							if (turret.type) {
-								turretContainer = PIXI.Sprite.from(spritesheet.textures[turret.type]);
+								turretContainer = PIXI.Sprite.from(entitiesSpritesheet.textures[turret.type]);
 								//turretContainer.anchor.set(entityData[turret.type].positionForward / entityData[turret.type].width, 0.5);
 								turretContainer.height = entityData[turret.type].width / sprite.scale.y;
 								turretContainer.width = entityData[turret.type].length / sprite.scale.x;
@@ -249,11 +255,11 @@
 
 							// For now, vertically-launched armaments are hidden
 							// TODO: Create top-down sprites
-							if (armament.hidden || armament.airdrop || armament.vertical || !(entity.external || entity.friendly)) {
+							if (armament.hidden || armament.vertical || !(entity.external || entity.friendly)) {
 								continue;
 							}
 
-							const armamentSprite = PIXI.Sprite.from(spritesheet.textures[armament.default]);
+							const armamentSprite = PIXI.Sprite.from(entitiesSpritesheet.textures[armament.default]);
 							armamentSprite.position.set((armament.positionForward || 0) / sprite.scale.x, (armament.positionSide || 0) / sprite.scale.y);
 							armamentSprite.anchor.set(0.5);
 							armamentSprite.rotation = armament.angle || 0;
@@ -283,7 +289,7 @@
 
 					if (newColor !== oldColor) {
 						if (!sprite.triangle) {
-							sprite.triangle = new PIXI.Sprite(textures['triangle']);
+							sprite.triangle = new PIXI.Sprite(extrasSpritesheet.textures.triangle);
 							sprite.triangle.anchor.set(0.5);
 							viewport.addChild(sprite.triangle);
 						}
@@ -402,25 +408,41 @@
 				const sprite = entitySprites[entityID];
 
 				if (!entity || !entity.type) {
-					// Spawn explosion
-					if (!entity && entityData[sprite.type] && entityData[sprite.type].type !== 'collectible') {
-						const explosion = new PIXI.AnimatedSprite(explosionFrames);
-						explosion.position.set(sprite.position.x, sprite.position.y);
-						explosion.anchor.set(0.5);
-						explosion.rotation = Math.random() * Math.PI * 2;
+					const spriteData = entityData[sprite.type];
 
-						const size = clamp(sprite.width * 2, 5, 15);
-						explosion.width = size;
-						explosion.height = size;
-						explosion.loop = false;
-						explosion.animationSpeed = 0.5;
-						explosions.addChild(explosion);
+					// Spawn destruction effect
+					if (!entity && spriteData && spriteData.type !== 'collectible') {
+						let animation;
+						let group;
+						let spriteSize;
 
-						explosion.gotoAndPlay(0);
+						if (['sam', 'shell', 'rocket', 'missile'].includes(spriteData.subtype)) {
+							animation = extrasSpritesheet.animations.explosion;
+							group = splashes;
+							spriteSize = 5;
+						} else {
+							animation = extrasSpritesheet.animations.splash;
+							group = explosions;
+							spriteSize = 2;
+						}
 
-						explosion.onComplete = () => {
-							explosions.removeChild(explosion);
-							explosion.destroy();
+						const destruction = new PIXI.AnimatedSprite(animation);
+						destruction.position.set(sprite.position.x, sprite.position.y);
+						destruction.anchor.set(0.5);
+						destruction.rotation = Math.random() * Math.PI * 2;
+
+						const size = clamp(sprite.width * spriteSize, 5, 15);
+						destruction.width = size;
+						destruction.height = size;
+						destruction.loop = false;
+						destruction.animationSpeed = 0.5;
+						group.addChild(destruction);
+
+						destruction.gotoAndPlay(0);
+
+						destruction.onComplete = () => {
+							group.removeChild(destruction);
+							destruction.destroy();
 						}
 					}
 
@@ -781,7 +803,7 @@
 					for (let i = 0; i < amount; i++) {
 						let wakeParticle = recycleParticle(wakeParticles);
 						if (!wakeParticle) {
-							wakeParticle = new PIXI.Sprite(textures['particleWake']);
+							wakeParticle = new PIXI.Sprite(extrasSpritesheet.textures.wake);
 							wakeParticle.anchor.set(0.5);
 							wakeParticles.addChild(wakeParticle);
 						}

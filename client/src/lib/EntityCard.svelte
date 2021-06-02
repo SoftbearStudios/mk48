@@ -64,7 +64,7 @@
 	</tr>
 	<tr>
 		<td>
-			<img class:ship={entityData.type === 'boat'} class:small={depth > 0} title={entityData.label} alt={type} src={`/sprites/${type}.png`}/>
+			<img class:ship={entityData.type === 'boat'} class:small={depth > 0} title={entityData.label} alt={type} src={`/entities/${type}.png`}/>
 		</td>
 	</tr>
 	{#each groupArmaments(entityData.armaments, []) as [type, group]}

@@ -1,2 +1,6 @@
 *.blend1
 explosion.blend
+*_cache/*
+config
+data
+blendcache*

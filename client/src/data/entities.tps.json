@@ -666,13 +666,16 @@
 	"sourceSize": {"w":1024,"h":134},
 	"anchor": {"x":0,"y":0}
 }},
+"animations": {
+	"mark": ["mark7","mark8","mark9","mark12","mark18","mark48","mark51","mark54"]
+},
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",
 	"version": "1.0",
-	"image": "spritesheet.png",
+	"image": "/entities.png",
 	"format": "RGBA8888",
 	"size": {"w":1676,"h":1771},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:335b5219b2e5778f16b8d1ccd01eb0c0:94ef93c87a11ab2232dda17eb228c93b:729adc6043343cfda41c447ce8f464d6$"
+	"smartupdate": "$TexturePacker:SmartUpdate:c15557d67064364a5162d7b46b493071:94ef93c87a11ab2232dda17eb228c93b:cfaa7ad3941a4856d1b92e5a4fa54ebc$"
 }
 }

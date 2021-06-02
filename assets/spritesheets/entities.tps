@@ -34,7 +34,7 @@
         <key>dataFormat</key>
         <string>pixijs4</string>
         <key>textureFileName</key>
-        <filename>../../client/static/spritesheet.webp</filename>
+        <filename>../../client/static/entities.webp</filename>
         <key>flipPVR</key>
         <false/>
         <key>pvrCompressionQuality</key>
@@ -78,7 +78,7 @@
         <key>webpQualityLevel</key>
         <uint>95</uint>
         <key>textureSubPath</key>
-        <string></string>
+        <string>/</string>
         <key>atfFormats</key>
         <string></string>
         <key>textureFormat</key>
@@ -132,7 +132,7 @@
             <key>data</key>
             <struct type="DataFile">
                 <key>name</key>
-                <filename>../../client/src/data/spritesheet.json</filename>
+                <filename>../../client/src/data/entities.tps.json</filename>
             </struct>
         </map>
         <key>multiPack</key>
@@ -155,7 +155,7 @@
         <key>prependSmartFolderName</key>
         <false/>
         <key>autodetectAnimations</key>
-        <false/>
+        <true/>
         <key>globalSpriteSettings</key>
         <struct type="SpriteSettings">
             <key>scale</key>
@@ -181,13 +181,13 @@
         </struct>
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap">
-            <key type="filename">../../client/static/sprites/127x680mmR.png</key>
-            <key type="filename">../../client/static/sprites/25x129mmR.png</key>
-            <key type="filename">../../client/static/sprites/380x1700mmR.png</key>
-            <key type="filename">../../client/static/sprites/57x441mmR.png</key>
-            <key type="filename">../../client/static/sprites/76x636mmR.png</key>
-            <key type="filename">../../client/static/sprites/mark8.png</key>
-            <key type="filename">../../client/static/sprites/of45.png</key>
+            <key type="filename">../../client/static/entities/127x680mmR.png</key>
+            <key type="filename">../../client/static/entities/25x129mmR.png</key>
+            <key type="filename">../../client/static/entities/380x1700mmR.png</key>
+            <key type="filename">../../client/static/entities/57x441mmR.png</key>
+            <key type="filename">../../client/static/entities/76x636mmR.png</key>
+            <key type="filename">../../client/static/entities/mark8.png</key>
+            <key type="filename">../../client/static/entities/of45.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -202,7 +202,8 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/2m3m.png</key>
+            <key type="filename">../../client/static/entities/2m3m.png</key>
+            <key type="filename">../../client/static/entities/mark12x2.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -217,7 +218,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/38cmSKC34.png</key>
+            <key type="filename">../../client/static/entities/38cmSKC34.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -232,7 +233,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/6pounder.png</key>
+            <key type="filename">../../client/static/entities/6pounder.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -247,7 +248,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/8_8cmSKC35.png</key>
+            <key type="filename">../../client/static/entities/8_8cmSKC35.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -262,7 +263,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/akula.png</key>
+            <key type="filename">../../client/static/entities/akula.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -277,7 +278,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/arleighBurke.png</key>
+            <key type="filename">../../client/static/entities/arleighBurke.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -292,7 +293,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/avenger.png</key>
+            <key type="filename">../../client/static/entities/asroc.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -301,15 +302,30 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>48,64,97,128</rect>
+                <rect>32,6,64,11</rect>
                 <key>scale9Paddings</key>
-                <rect>48,64,97,128</rect>
+                <rect>32,6,64,11</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/barak8.png</key>
-            <key type="filename">../../client/static/sprites/harpoon.png</key>
-            <key type="filename">../../client/static/sprites/mark54.png</key>
+            <key type="filename">../../client/static/entities/avenger.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>24,32,49,64</rect>
+                <key>scale9Paddings</key>
+                <rect>24,32,49,64</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/barak8.png</key>
+            <key type="filename">../../client/static/entities/harpoon.png</key>
+            <key type="filename">../../client/static/entities/mark54.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -324,7 +340,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/barrel.png</key>
+            <key type="filename">../../client/static/entities/barrel.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -339,7 +355,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/bismarck.png</key>
+            <key type="filename">../../client/static/entities/bismarck.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -354,7 +370,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/bl6MkXXIII.png</key>
+            <key type="filename">../../client/static/entities/bl6MkXXIII.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -363,13 +379,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,31,128,61</rect>
+                <rect>32,15,64,31</rect>
                 <key>scale9Paddings</key>
-                <rect>64,31,128,61</rect>
+                <rect>32,15,64,31</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/bofors57mmMK3.png</key>
+            <key type="filename">../../client/static/entities/bofors57mmMK3.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -378,13 +394,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,39,128,78</rect>
+                <rect>32,20,64,39</rect>
                 <key>scale9Paddings</key>
-                <rect>64,39,128,78</rect>
+                <rect>32,20,64,39</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/brahmos.png</key>
+            <key type="filename">../../client/static/entities/brahmos.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -393,13 +409,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,7,128,15</rect>
+                <rect>32,4,64,7</rect>
                 <key>scale9Paddings</key>
-                <rect>64,7,128,15</rect>
+                <rect>32,4,64,7</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/brosok.png</key>
+            <key type="filename">../../client/static/entities/brosok.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -414,7 +430,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/cannonBall.png</key>
+            <key type="filename">../../client/static/entities/cannonBall.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -429,9 +445,10 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/coin.png</key>
-            <key type="filename">../../client/static/sprites/crate.png</key>
-            <key type="filename">../../client/static/sprites/scrap.png</key>
+            <key type="filename">../../client/static/entities/coin.png</key>
+            <key type="filename">../../client/static/entities/crate.png</key>
+            <key type="filename">../../client/static/entities/ogon.png</key>
+            <key type="filename">../../client/static/entities/scrap.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -446,8 +463,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/depositor.png</key>
-            <key type="filename">../../client/static/sprites/dredger.png</key>
+            <key type="filename">../../client/static/entities/depositor.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -456,13 +472,28 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,15,128,30</rect>
+                <rect>32,8,64,15</rect>
                 <key>scale9Paddings</key>
-                <rect>64,15,128,30</rect>
+                <rect>32,8,64,15</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/essex.png</key>
+            <key type="filename">../../client/static/entities/dredger.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>128,21,256,43</rect>
+                <key>scale9Paddings</key>
+                <rect>128,21,256,43</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/essex.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -477,8 +508,8 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/essm.png</key>
-            <key type="filename">../../client/static/sprites/lrlap.png</key>
+            <key type="filename">../../client/static/entities/essm.png</key>
+            <key type="filename">../../client/static/entities/lrlap.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -493,7 +524,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/fairmileD.png</key>
+            <key type="filename">../../client/static/entities/fairmileD.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -508,8 +539,8 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/fletcher.png</key>
-            <key type="filename">../../client/static/sprites/kolkata.png</key>
+            <key type="filename">../../client/static/entities/fletcher.png</key>
+            <key type="filename">../../client/static/entities/kolkata.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -524,7 +555,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/g5.png</key>
+            <key type="filename">../../client/static/entities/g5.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -533,13 +564,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>128,26,256,51</rect>
+                <rect>64,13,128,25</rect>
                 <key>scale9Paddings</key>
-                <rect>128,26,256,51</rect>
+                <rect>64,13,128,25</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/golf.png</key>
+            <key type="filename">../../client/static/entities/golf.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -554,8 +585,8 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/hq.png</key>
-            <key type="filename">../../client/static/sprites/oilPlatform.png</key>
+            <key type="filename">../../client/static/entities/hq.png</key>
+            <key type="filename">../../client/static/entities/oilPlatform.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -570,7 +601,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/indiaman.png</key>
+            <key type="filename">../../client/static/entities/indiaman.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -585,7 +616,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/komar.png</key>
+            <key type="filename">../../client/static/entities/kingfisher.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -594,13 +625,28 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>128,31,256,63</rect>
+                <rect>30,32,59,64</rect>
                 <key>scale9Paddings</key>
-                <rect>128,31,256,63</rect>
+                <rect>30,32,59,64</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/leander.png</key>
+            <key type="filename">../../client/static/entities/komar.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>64,16,128,31</rect>
+                <key>scale9Paddings</key>
+                <rect>64,16,128,31</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/leander.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -615,7 +661,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/lublin.png</key>
+            <key type="filename">../../client/static/entities/lublin.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -624,226 +670,14 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>256,29,512,59</rect>
+                <rect>128,15,256,29</rect>
                 <key>scale9Paddings</key>
-                <rect>256,29,512,59</rect>
+                <rect>128,15,256,29</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/mark12.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,27,128,53</rect>
-                <key>scale9Paddings</key>
-                <rect>64,27,128,53</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark12x2.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,37,128,74</rect>
-                <key>scale9Paddings</key>
-                <rect>64,37,128,74</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark18.png</key>
-            <key type="filename">../../client/static/sprites/type53.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,6,128,12</rect>
-                <key>scale9Paddings</key>
-                <rect>64,6,128,12</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark48.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,6,128,13</rect>
-                <key>scale9Paddings</key>
-                <rect>64,6,128,13</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark51.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,36,128,71</rect>
-                <key>scale9Paddings</key>
-                <rect>64,36,128,71</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark7.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>64,33,128,65</rect>
-                <key>scale9Paddings</key>
-                <rect>64,33,128,65</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mark9.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>21,32,42,64</rect>
-                <key>scale9Paddings</key>
-                <rect>21,32,42,64</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/mk70.png</key>
-            <key type="filename">../../client/static/sprites/torped45.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>32,5,64,9</rect>
-                <key>scale9Paddings</key>
-                <rect>32,5,64,9</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/momi.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>256,23,512,46</rect>
-                <key>scale9Paddings</key>
-                <rect>256,23,512,46</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/montana.png</key>
-            <key type="filename">../../client/static/sprites/zumwalt.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>256,34,512,67</rect>
-                <key>scale9Paddings</key>
-                <rect>256,34,512,67</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/ogon.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>32,32,64,64</rect>
-                <key>scale9Paddings</key>
-                <rect>32,32,64,64</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/ohio.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>256,19,512,38</rect>
-                <key>scale9Paddings</key>
-                <rect>256,19,512,38</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/olympias.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>128,20,256,39</rect>
-                <key>scale9Paddings</key>
-                <rect>128,20,256,39</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/osa.png</key>
-            <struct type="IndividualSpriteSettings">
-                <key>pivotPoint</key>
-                <point_f>0,0</point_f>
-                <key>spriteScale</key>
-                <double>1</double>
-                <key>scale9Enabled</key>
-                <false/>
-                <key>scale9Borders</key>
-                <rect>128,25,256,50</rect>
-                <key>scale9Paddings</key>
-                <rect>128,25,256,50</rect>
-                <key>scale9FromFile</key>
-                <false/>
-            </struct>
-            <key type="filename">../../client/static/sprites/otoMelara76mm.png</key>
+            <key type="filename">../../client/static/entities/mark12.png</key>
+            <key type="filename">../../client/static/entities/otoMelara76mm.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -858,7 +692,8 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/p15.png</key>
+            <key type="filename">../../client/static/entities/mark18.png</key>
+            <key type="filename">../../client/static/entities/type53.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -867,13 +702,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,23,128,46</rect>
+                <rect>32,3,64,6</rect>
                 <key>scale9Paddings</key>
-                <rect>64,23,128,46</rect>
+                <rect>32,3,64,6</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/pt34.png</key>
+            <key type="filename">../../client/static/entities/mark48.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -882,13 +717,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>128,36,256,71</rect>
+                <rect>32,3,64,7</rect>
                 <key>scale9Paddings</key>
-                <rect>128,36,256,71</rect>
+                <rect>32,3,64,7</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/rbs15.png</key>
+            <key type="filename">../../client/static/entities/mark51.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -897,13 +732,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,19,128,37</rect>
+                <rect>32,18,64,35</rect>
                 <key>scale9Paddings</key>
-                <rect>64,19,128,37</rect>
+                <rect>32,18,64,35</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/seahawk.png</key>
+            <key type="filename">../../client/static/entities/mark7.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -912,13 +747,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,53,128,105</rect>
+                <rect>64,33,128,65</rect>
                 <key>scale9Paddings</key>
-                <rect>64,53,128,105</rect>
+                <rect>64,33,128,65</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/set65.png</key>
+            <key type="filename">../../client/static/entities/mark9.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -927,13 +762,14 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,5,128,10</rect>
+                <rect>11,16,21,32</rect>
                 <key>scale9Paddings</key>
-                <rect>64,5,128,10</rect>
+                <rect>11,16,21,32</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/skipjack.png</key>
+            <key type="filename">../../client/static/entities/mk70.png</key>
+            <key type="filename">../../client/static/entities/torped45.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -942,13 +778,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>256,40,512,79</rect>
+                <rect>32,5,64,9</rect>
                 <key>scale9Paddings</key>
-                <rect>256,40,512,79</rect>
+                <rect>32,5,64,9</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/tomahawk.png</key>
+            <key type="filename">../../client/static/entities/momi.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -957,13 +793,14 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>64,30,128,60</rect>
+                <rect>128,12,256,23</rect>
                 <key>scale9Paddings</key>
-                <rect>64,30,128,60</rect>
+                <rect>128,12,256,23</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/typeVIIC.png</key>
+            <key type="filename">../../client/static/entities/montana.png</key>
+            <key type="filename">../../client/static/entities/zumwalt.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -972,13 +809,13 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>256,25,512,49</rect>
+                <rect>256,34,512,67</rect>
                 <key>scale9Paddings</key>
-                <rect>256,25,512,49</rect>
+                <rect>256,34,512,67</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/visby.png</key>
+            <key type="filename">../../client/static/entities/ohio.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -987,13 +824,164 @@
                 <key>scale9Enabled</key>
                 <false/>
                 <key>scale9Borders</key>
-                <rect>256,37,512,74</rect>
+                <rect>256,19,512,38</rect>
                 <key>scale9Paddings</key>
-                <rect>256,37,512,74</rect>
+                <rect>256,19,512,38</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/wz08_39.png</key>
+            <key type="filename">../../client/static/entities/olympias.png</key>
+            <key type="filename">../../client/static/entities/skipjack.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>128,20,256,39</rect>
+                <key>scale9Paddings</key>
+                <rect>128,20,256,39</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/osa.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>128,25,256,50</rect>
+                <key>scale9Paddings</key>
+                <rect>128,25,256,50</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/p15.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,12,64,23</rect>
+                <key>scale9Paddings</key>
+                <rect>32,12,64,23</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/pt34.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>64,18,128,35</rect>
+                <key>scale9Paddings</key>
+                <rect>64,18,128,35</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/rbs15.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,9,64,19</rect>
+                <key>scale9Paddings</key>
+                <rect>32,9,64,19</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/seahawk.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,26,64,53</rect>
+                <key>scale9Paddings</key>
+                <rect>32,26,64,53</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/set65.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,3,64,5</rect>
+                <key>scale9Paddings</key>
+                <rect>32,3,64,5</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/tomahawk.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,15,64,30</rect>
+                <key>scale9Paddings</key>
+                <rect>32,15,64,30</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/typeVIIC.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>128,12,256,25</rect>
+                <key>scale9Paddings</key>
+                <rect>128,12,256,25</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/visby.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>128,19,256,37</rect>
+                <key>scale9Paddings</key>
+                <rect>128,19,256,37</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/wz08_39.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -1008,7 +996,7 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
-            <key type="filename">../../client/static/sprites/zubr.png</key>
+            <key type="filename">../../client/static/entities/zubr.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -1026,7 +1014,7 @@
         </map>
         <key>fileList</key>
         <array>
-            <filename>../../client/static/sprites</filename>
+            <filename>../../client/static/entities</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>

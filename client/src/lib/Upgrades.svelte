@@ -39,7 +39,7 @@
 	<div>
 		<Section name={`${Math.round(progress * 100)}% to level ${nextLevel}`}>
 			{#each upgrades as upgradeType}
-				<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/sprites/${upgradeType}.png`}/>
+				<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
 				<br/>
 			{/each}
 		</Section>
