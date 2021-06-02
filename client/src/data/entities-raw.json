@@ -220,6 +220,11 @@
 				"positionSide": 0,
 				"vertical": true,
 				"count": 8
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -62,
+				"positionSide": 0
 			}
 		],
 		"turrets": [
@@ -1634,6 +1639,11 @@
 				"angle": 90,
 				"symmetrical": true,
 				"external": true
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -23,
+				"positionSide": 0
 			}
 		],
 		"turrets": [

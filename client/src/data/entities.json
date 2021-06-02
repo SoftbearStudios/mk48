@@ -387,6 +387,11 @@
 				"positionForward": 40,
 				"positionSide": 0,
 				"vertical": true
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -62,
+				"positionSide": 0
 			}
 		],
 		"turrets": [
@@ -2894,6 +2899,11 @@
 				"external": false,
 				"hidden": true,
 				"turret": 2
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -23,
+				"positionSide": 0
 			}
 		],
 		"turrets": [
