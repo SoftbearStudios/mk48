@@ -5,12 +5,12 @@ package server
 
 import (
 	"fmt"
-	"github.com/SoftbearStudios/mk48/server/cloud"
 	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
 	"github.com/SoftbearStudios/mk48/server/terrain/noise"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/SoftbearStudios/mk48/server/world/sector"
+	"github.com/SoftbearStudios/mk48/server_main/cloud"
 	"os"
 	"sync/atomic"
 	"time"
@@ -71,13 +71,8 @@ type Hub struct {
 	botsTicker        *time.Ticker
 }
 
-func NewHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
-	c, err := cloud.New()
-	if err != nil {
-		fmt.Println("Cloud error:", err)
-	}
-	fmt.Println(c)
-
+// c can be nil
+func NewHub(c *cloud.Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	if botMaxSpawnLevel > int(world.BoatLevelMax) {
 		botMaxSpawnLevel = int(world.BoatLevelMax)
 	}
@@ -101,6 +96,14 @@ func NewHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 		debugTicker:       time.NewTicker(debugPeriod),
 		botsTicker:        time.NewTicker(botPeriod),
 	}
+}
+
+func (h *Hub) Register(client Client) {
+	h.register <- client
+}
+
+func (h *Hub) Unregister(client Client) {
+	h.unregister <- client
 }
 
 func (h *Hub) Run() {

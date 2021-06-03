@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/SoftbearStudios/mk48/server"
+	"github.com/SoftbearStudios/mk48/server_main/cloud"
 	"golang.org/x/net/netutil"
 	"log"
 	"net"
@@ -32,7 +33,12 @@ func main() {
 		log.Fatal("invalid argument players: ", players)
 	}
 
-	hub := server.NewHub(players, botMaxSpawnLevel, auth)
+	c, err := cloud.New()
+	if err != nil {
+		log.Printf("Cloud error: %v\n", err)
+	}
+
+	hub := server.NewHub(c, players, botMaxSpawnLevel, auth)
 	go hub.Run()
 
 	if port < 0 {
