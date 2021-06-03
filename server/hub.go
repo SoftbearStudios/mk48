@@ -99,10 +99,10 @@ func NewHub(c Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 
 func (h *Hub) Register(client Client) {
 	select {
-	case h.unregister <- client:
+	case h.register <- client:
 	default:
 		go func() {
-			h.unregister <- client
+			h.register <- client
 		}()
 	}
 }

@@ -78,9 +78,7 @@ func (client *SocketClient) Data() *ClientData {
 
 func (client *SocketClient) Destroy() {
 	client.once.Do(func() {
-		hub := client.Hub
-
-		hub.Despawn()
+		client.Hub.Unregister(client)
 
 		_ = client.conn.Close()
 	})
