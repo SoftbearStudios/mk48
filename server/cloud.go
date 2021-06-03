@@ -5,7 +5,52 @@ package server
 
 import (
 	"fmt"
+	"time"
 )
+
+// A nil cloud is valid to use with any methods (acts as a no-op)
+// This just means server is in offline mode
+type Cloud interface {
+	fmt.Stringer
+	UpdateServer(players int) error
+	IncrementPlayerStatistic()
+	IncrementNewPlayerStatistic()
+	IncrementPlaysStatistic()
+	FlushStatistics() error
+	UpdateLeaderboard(playerScores map[string]int) error
+	UploadTerrainSnapshot(data []byte) error // takes an encoded PNG
+	UpdatePeriod() time.Duration
+}
+
+type Offline struct{}
+
+func (offline Offline) String() string {
+	return "offline"
+}
+
+func (offline Offline) UpdateServer(players int) error {
+	return nil
+}
+
+func (offline Offline) IncrementPlayerStatistic()    {}
+func (offline Offline) IncrementNewPlayerStatistic() {}
+func (offline Offline) IncrementPlaysStatistic()     {}
+
+func (offline Offline) FlushStatistics() error {
+	return nil
+}
+
+func (offline Offline) UpdateLeaderboard(playerScores map[string]int) error {
+	return nil
+}
+
+func (offline Offline) UploadTerrainSnapshot(data []byte) error {
+	return nil
+}
+
+func (offline Offline) UpdatePeriod() time.Duration {
+	return time.Hour
+}
 
 func (h *Hub) Cloud() {
 	fmt.Println("Updating cloud")

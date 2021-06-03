@@ -6,26 +6,25 @@ package server
 type (
 	// Client is an actor on the Hub.
 	Client interface {
+		// Init is called once called by hub goroutine when the client is registered.
+		// client.Data().Hub will be set by the time this is called
+		Init()
+
+		// Close is called by (only) the hub goroutine when the client is unregistered.
+		Close()
+
+		// Send is how the server sends a message to the client.
+		Send(out outbound)
+
+		// Destroy marks the client for destruction. It must call hub.Unregister() only once (no matter how many
+		// times it is called; use a sync.Once if necessary). It may be called anywhere.
+		Destroy()
+
 		// Is this a bot or real player?
 		Bot() bool
 
-		// Close closes additional resources.
-		// Always called by hub goroutine.
-		Close()
-
 		// Data allows the Client to be added to a double-linked list.
 		Data() *ClientData
-
-		// Destroy triggers client destruction.
-		// Only the Client calls this.
-		Destroy()
-
-		// Init sets up receive channel and destroy func.
-		// Always called by hub goroutine.
-		Init()
-
-		// Send sends a message
-		Send(out outbound)
 	}
 
 	// ClientData is the data all clients must have.

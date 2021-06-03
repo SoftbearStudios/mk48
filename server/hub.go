@@ -10,7 +10,6 @@ import (
 	"github.com/SoftbearStudios/mk48/server/terrain/noise"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/SoftbearStudios/mk48/server/world/sector"
-	"github.com/SoftbearStudios/mk48/server_main/cloud"
 	"os"
 	"sync/atomic"
 	"time"
@@ -48,7 +47,7 @@ type Hub struct {
 	auth             string
 
 	// Cloud (and things that are served atomically by HTTP)
-	cloud      *cloud.Cloud
+	cloud      Cloud
 	statusJSON atomic.Value
 
 	// chats are buffered until next update.
@@ -72,7 +71,7 @@ type Hub struct {
 }
 
 // c can be nil
-func NewHub(c *cloud.Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
+func NewHub(c Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	if botMaxSpawnLevel > int(world.BoatLevelMax) {
 		botMaxSpawnLevel = int(world.BoatLevelMax)
 	}
@@ -90,7 +89,7 @@ func NewHub(c *cloud.Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *
 		inbound:           make(chan SignedInbound, 16+minPlayers*2),
 		register:          make(chan Client, 8+minPlayers/256),
 		unregister:        make(chan Client, 16+minPlayers/128),
-		cloudTicker:       time.NewTicker(cloud.UpdatePeriod),
+		cloudTicker:       time.NewTicker(c.UpdatePeriod()),
 		updateTicker:      time.NewTicker(updatePeriod),
 		leaderboardTicker: time.NewTicker(leaderboardPeriod),
 		debugTicker:       time.NewTicker(debugPeriod),
@@ -99,11 +98,23 @@ func NewHub(c *cloud.Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *
 }
 
 func (h *Hub) Register(client Client) {
-	h.register <- client
+	select {
+	case h.unregister <- client:
+	default:
+		go func() {
+			h.unregister <- client
+		}()
+	}
 }
 
 func (h *Hub) Unregister(client Client) {
-	h.unregister <- client
+	select {
+	case h.unregister <- client:
+	default:
+		go func() {
+			h.unregister <- client
+		}()
+	}
 }
 
 func (h *Hub) Run() {

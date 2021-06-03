@@ -40,22 +40,13 @@ func (bot *BotClient) Data() *ClientData {
 }
 
 func (bot *BotClient) Destroy() {
-	// In case goroutine hasn't run yet don't overload server by creating another one.
 	if bot.destroying {
 		return
 	}
 
 	bot.destroying = true
-	hub := bot.Hub
 
-	// Needs to go through always.
-	select {
-	case hub.unregister <- bot:
-	default:
-		go func() {
-			hub.unregister <- bot
-		}()
-	}
+	bot.Hub.Unregister(bot)
 }
 
 func (bot *BotClient) Init() {

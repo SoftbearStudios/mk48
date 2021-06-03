@@ -20,6 +20,7 @@ func main() {
 		auth             string
 		botMaxSpawnLevel int
 		port             int
+		maxConnections   int
 		players          int
 	)
 
@@ -27,15 +28,21 @@ func main() {
 	flag.IntVar(&botMaxSpawnLevel, "bot-max-spawn-level", 1, "maximum level for bots to spawn as")
 	flag.IntVar(&port, "port", 8192, "http service port")
 	flag.IntVar(&players, "players", 40, "minimum number of players")
+	flag.IntVar(&maxConnections, "max-connections", 256, "maximum number of inbound TCP connections")
 	flag.Parse()
 
 	if players < 0 {
 		log.Fatal("invalid argument players: ", players)
 	}
 
+	var c server.Cloud
+
 	c, err := cloud.New()
 	if err != nil {
+		// Cloud is not required for server to function, just log an error
 		log.Printf("Cloud error: %v\n", err)
+
+		c = server.Offline{}
 	}
 
 	hub := server.NewHub(c, players, botMaxSpawnLevel, auth)
@@ -60,7 +67,7 @@ func main() {
 	}
 	defer l.Close()
 
-	l = netutil.LimitListener(l, 256)
+	l = netutil.LimitListener(l, maxConnections)
 
 	log.Fatal("ListenAndServe: ", http.Serve(l, nil))
 }

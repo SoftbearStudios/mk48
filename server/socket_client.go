@@ -80,14 +80,7 @@ func (client *SocketClient) Destroy() {
 	client.once.Do(func() {
 		hub := client.Hub
 
-		// Needs to go through when called on hub goroutine.
-		select {
-		case hub.unregister <- client:
-		default:
-			go func() {
-				hub.unregister <- client
-			}()
-		}
+		hub.Despawn()
 
 		_ = client.conn.Close()
 	})

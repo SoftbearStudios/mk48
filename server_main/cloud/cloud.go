@@ -17,8 +17,6 @@ import (
 	"time"
 )
 
-const UpdatePeriod = 30 * time.Second
-
 // A nil cloud is valid to use with any methods (acts as a no-op)
 // This just means server is in offline mode
 type Cloud struct {
@@ -131,45 +129,29 @@ func New() (*Cloud, error) {
 
 // Call at least every 30s
 func (cloud *Cloud) UpdateServer(players int) error {
-	if cloud == nil {
-		return nil
-	}
 	return cloud.database.UpdateServer(db.Server{
 		Region:  cloud.region,
 		Slot:    cloud.serverSlot,
 		IP:      cloud.ip,
 		Players: players,
-		TTL:     time.Now().Unix() + int64(UpdatePeriod/time.Second) + 5,
+		TTL:     time.Now().Unix() + int64(cloud.UpdatePeriod()/time.Second) + 5,
 	})
 }
 
 func (cloud *Cloud) IncrementPlayerStatistic() {
-	if cloud == nil {
-		return
-	}
 	cloud.statAcc.Players++
 }
 
 func (cloud *Cloud) IncrementNewPlayerStatistic() {
-	if cloud == nil {
-		return
-	}
 	cloud.statAcc.NewPlayers++
 }
 
 func (cloud *Cloud) IncrementPlaysStatistic() {
-	if cloud == nil {
-		return
-	}
 	cloud.statAcc.Plays++
 }
 
 // Flushes accumulated statistics to database
 func (cloud *Cloud) FlushStatistics() error {
-	if cloud == nil {
-		return nil
-	}
-
 	cloud.statAcc.Region = cloud.region
 	cloud.statAcc.Timestamp = unixMillis()
 
@@ -184,10 +166,6 @@ func (cloud *Cloud) FlushStatistics() error {
 }
 
 func (cloud *Cloud) UpdateLeaderboard(playerScores map[string]int) (err error) {
-	if cloud == nil {
-		return nil
-	}
-
 	dbScores, err := cloud.database.ReadScores()
 	if err != nil {
 		return
@@ -278,12 +256,13 @@ func (cloud *Cloud) UpdateLeaderboard(playerScores map[string]int) (err error) {
 }
 
 func (cloud *Cloud) UploadTerrainSnapshot(data []byte) error {
-	if cloud == nil {
-		return nil
-	}
 	millis := time.Now().UnixNano() / int64(time.Millisecond/time.Nanosecond)
 	filename := fmt.Sprintf("%s-%d/terrain/%d.png", cloud.region, cloud.serverSlot, millis)
 	return cloud.fs.UploadStaticFile(filename, 0, data)
+}
+
+func (cloud *Cloud) UpdatePeriod() time.Duration {
+	return 30 * time.Second
 }
 
 func unixMillis() int64 {
