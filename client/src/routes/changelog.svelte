@@ -10,6 +10,17 @@
 
 	<h2>2021</h2>
 
+	<h3>6/1/2021</h3>
+
+	<ul>
+		<li>Add "ASROC" rocket-torpedo</li>
+		<li>Add "Kingfisher" floatplane to battleships in place of airdropped torpedoes</li>
+		<li>Improve loading and rendering efficiency</li>
+		<li>Improve client turret aiming</li>
+		<li>Add indicator to closed fleet panel showing number of pending requests</li>
+		<li>Improve aircraft weapons, and add helicopters to more ships</li>
+	</ul>
+
 	<h3>5/30/2021</h3>
 
 	<ul>
