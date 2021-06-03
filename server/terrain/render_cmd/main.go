@@ -6,11 +6,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"image/png"
-	"log"
 	terrain "github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
 	"github.com/SoftbearStudios/mk48/server/terrain/noise"
+	"image/png"
+	"log"
 	"os"
 	"runtime/pprof"
 )

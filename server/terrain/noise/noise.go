@@ -4,9 +4,9 @@
 package noise
 
 import (
-	"github.com/aquilax/go-perlin"
 	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/world"
+	"github.com/aquilax/go-perlin"
 )
 
 const (

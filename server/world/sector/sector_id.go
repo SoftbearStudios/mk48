@@ -4,8 +4,8 @@
 package sector
 
 import (
-	"github.com/chewxy/math32"
 	"github.com/SoftbearStudios/mk48/server/world"
+	"github.com/chewxy/math32"
 )
 
 type (

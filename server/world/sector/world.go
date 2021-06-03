@@ -5,9 +5,9 @@ package sector
 
 import (
 	"fmt"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
 	"math"
-	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 // size is the width of each sector in meters.

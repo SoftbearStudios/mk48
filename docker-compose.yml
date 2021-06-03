@@ -4,7 +4,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: server_main/Dockerfile
     ports:
       - "8192:8192"
   client:

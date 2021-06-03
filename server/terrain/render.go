@@ -2,9 +2,9 @@ package terrain
 
 import (
 	"fmt"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"image"
 	"image/color"
-	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 type ColorVec [3]float32

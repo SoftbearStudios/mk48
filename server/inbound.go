@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package main
+package server
 
 import (
+	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/finnbear/moderation"
 	"math/rand"
-	"github.com/SoftbearStudios/mk48/server/world"
 	"strings"
 	"time"
 	"unicode"

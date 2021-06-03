@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package main
+package server
 
 import (
 	"errors"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/SoftbearStudios/mk48/server/world"
+	jsoniter "github.com/json-iterator/go"
 	"reflect"
 	"sort"
 	"sync"

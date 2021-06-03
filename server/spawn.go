@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package main
+package server
 
 import (
+	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
 	"math/rand"
-	"github.com/SoftbearStudios/mk48/server/world"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -21,7 +21,7 @@ const (
 	// platformBarrelSpawnRate is average seconds per barrel spawn.
 	// Cant be less than spawnPeriod.
 	platformBarrelSpawnRate = time.Second * 3
-	// barreplatformBarrelSpawnProblSpawnProb is the probably that a barrel will spawn around an oil platform.
+	// platformBarrelSpawnProb is the probably that a barrel will spawn around an oil platform.
 	platformBarrelSpawnProb = float64(spawnPeriod) / float64(platformBarrelSpawnRate)
 	// hq is this many times better than platform
 	hqFactor = 2

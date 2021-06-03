@@ -5,7 +5,7 @@ WORKDIR /mk48
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY server server/
+COPY ../server/server server/
 COPY client/src/data/entities.json server/world/
 
 WORKDIR /mk48/server

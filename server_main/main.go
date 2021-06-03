@@ -6,31 +6,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/SoftbearStudios/mk48/server"
 	"golang.org/x/net/netutil"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 )
-
-func (h *Hub) serveIndex(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json")
-	buf, ok := h.statusJSON.Load().([]byte)
-	if ok {
-		_, _ = w.Write(buf)
-	}
-}
-
-func (h *Hub) serveWs(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("upgrade error", err)
-		return
-	}
-
-	h.register <- NewSocketClient(conn)
-}
 
 func main() {
 	var (
@@ -50,8 +32,8 @@ func main() {
 		log.Fatal("invalid argument players: ", players)
 	}
 
-	hub := newHub(players, botMaxSpawnLevel, auth)
-	go hub.run()
+	hub := server.NewHub(players, botMaxSpawnLevel, auth)
+	go hub.Run()
 
 	if port < 0 {
 		log.Println("https://mk48.io simulation started")
@@ -62,8 +44,8 @@ func main() {
 	// TODO localhost url
 	log.Println("https://mk48.io server started")
 
-	http.HandleFunc("/", hub.serveIndex)
-	http.HandleFunc("/ws", hub.serveWs)
+	http.HandleFunc("/", hub.ServeIndex)
+	http.HandleFunc("/ws", hub.ServeSocket)
 
 	l, err := net.Listen("tcp", fmt.Sprint(":", port))
 

@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package main
+package server
 
 import (
 	"fmt"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
 	"math/rand"
-	"github.com/SoftbearStudios/mk48/server/world"
 	"runtime"
 	"sync"
 	"time"

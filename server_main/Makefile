@@ -12,13 +12,9 @@ all: run
 ../client/src/data/entities.json: ../client/src/data/entities-raw.json
 	( cd ../client/src/data; node preprocess; )
 
-server: *.go */*.go */*/*.go ../client/src/data/entities.json
-	cp ../client/src/data/entities.json ./world/entities.json
+server: *.go ../server/*.go ../server/*/*.go ../server/*/*/*.go ../client/src/data/entities.json
+	cp ../client/src/data/entities.json ../server/world/entities.json
 	go build -o server
-
-server_arm: *.go world/*.go world/*/*.go ../client/src/data/entities.json
-	cp ../client/src/data/entities.json ./world/entities.json
-	GOARCH=arm64 go build -o server_arm
 
 run: server
 	./server $(s)

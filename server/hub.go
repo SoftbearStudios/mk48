@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package main
+package server
 
 import (
 	"fmt"
@@ -71,7 +71,7 @@ type Hub struct {
 	botsTicker        *time.Ticker
 }
 
-func newHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
+func NewHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	c, err := cloud.New()
 	if err != nil {
 		fmt.Println("Cloud error:", err)
@@ -103,7 +103,7 @@ func newHub(minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
 	}
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	defer func() {
 		if r := recover(); r != nil {
 			panic(r)
