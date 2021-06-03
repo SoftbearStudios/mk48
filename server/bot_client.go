@@ -29,6 +29,10 @@ type (
 	}
 )
 
+func (bot *BotClient) Bot() bool {
+	return true
+}
+
 func (bot *BotClient) Close() {}
 
 func (bot *BotClient) Data() *ClientData {

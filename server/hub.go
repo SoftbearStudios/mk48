@@ -121,7 +121,7 @@ func (h *Hub) Run() {
 			client.Data().Hub = h
 			client.Init()
 
-			if _, bot := client.(*BotClient); !bot {
+			if !client.Bot() {
 				h.cloud.IncrementPlayerStatistic()
 			}
 		case client := <-h.unregister:
@@ -193,7 +193,7 @@ func (h *Hub) Run() {
 			// - When minBotRatio is not met by bots / clients
 			playerCount := 0
 			for client := h.clients.First; client != nil; client = client.Data().Next {
-				if _, bot := client.(*BotClient); !bot {
+				if !client.Bot() {
 					playerCount++
 				}
 			}

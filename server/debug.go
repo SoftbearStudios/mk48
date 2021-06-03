@@ -32,15 +32,15 @@ func (h *Hub) Debug() {
 	)
 
 	for client := h.clients.First; client != nil; client = client.Data().Next {
-		if _, ok := client.(*SocketClient); ok {
+		if client.Bot() {
+			botCount++
+		} else {
 			player := &client.Data().Player
 			realPlayers = append(realPlayers, player)
 			if player.FPS != 0 {
 				fps += player.FPS
 				fpsCount++
 			}
-		} else {
-			botCount++
 		}
 	}
 

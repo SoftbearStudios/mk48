@@ -180,8 +180,8 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 			return
 		})
 
-		// Only send terrain to real players for now
-		if _, ok := client.(*SocketClient); ok {
+		// Bot client doesn't need terrain data
+		if _, ok := client.(*BotClient); !ok {
 			terrainPos := position.Sub(world.Vec2f{X: visualRange, Y: visualRange})
 			aabb := world.AABBFrom(terrainPos.X, terrainPos.Y, visualRange*2, visualRange*2)
 

@@ -6,6 +6,9 @@ package server
 type (
 	// Client is an actor on the Hub.
 	Client interface {
+		// Is this a bot or real player?
+		Bot() bool
+
 		// Close closes additional resources.
 		// Always called by hub goroutine.
 		Close()

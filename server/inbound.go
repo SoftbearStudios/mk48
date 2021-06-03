@@ -233,7 +233,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 		}
 
 		authed := h.auth != "" && data.Auth == h.auth
-		_, bot := client.(*BotClient)
+		bot := client.Bot()
 
 		maxLevel := uint8(1)
 		if bot {
@@ -495,7 +495,7 @@ func (data SendChat) Inbound(h *Hub, client Client, player *Player) {
 	msg, ok := player.ChatHistory.Update(data.Message, data.Team)
 
 	t := "user"
-	if _, bot := client.(*BotClient); bot {
+	if client.Bot() {
 		t = "bot"
 	}
 

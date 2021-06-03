@@ -22,7 +22,7 @@ func (h *Hub) Cloud() {
 	playerScores := make(map[string]int)
 
 	for client := h.clients.First; client != nil; client = client.Data().Next {
-		if _, ok := client.(*SocketClient); ok {
+		if !client.Bot() {
 			playerCount++
 			player := &client.Data().Player
 			if player.Score > 0 {

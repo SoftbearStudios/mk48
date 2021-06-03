@@ -64,6 +64,10 @@ func NewSocketClient(conn *websocket.Conn) *SocketClient {
 	}
 }
 
+func (client *SocketClient) Bot() bool {
+	return false
+}
+
 func (client *SocketClient) Close() {
 	close(client.send)
 }
