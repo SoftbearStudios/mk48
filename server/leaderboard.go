@@ -25,7 +25,7 @@ func (h *Hub) Leaderboard() {
 	}
 
 	top := TopPlayers(playerSet, 10)
-	leaderboard := outbound(Leaderboard{Leaderboard: top})
+	leaderboard := Outbound(Leaderboard{Leaderboard: top})
 
 	for client := h.clients.First; client != nil; client = client.Data().Next {
 		client.Send(leaderboard)

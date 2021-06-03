@@ -51,7 +51,7 @@ var upgrader = websocket.Upgrader{
 type SocketClient struct {
 	ClientData
 	conn    *websocket.Conn
-	send    chan outbound
+	send    chan Outbound
 	once    sync.Once
 	counter int // counts up every send
 }
@@ -60,7 +60,7 @@ type SocketClient struct {
 func NewSocketClient(conn *websocket.Conn) *SocketClient {
 	return &SocketClient{
 		conn: conn,
-		send: make(chan outbound, socketBufferSize),
+		send: make(chan Outbound, socketBufferSize),
 	}
 }
 
@@ -89,7 +89,7 @@ func (client *SocketClient) Init() {
 	go client.readPump()
 }
 
-func (client *SocketClient) Send(message outbound) {
+func (client *SocketClient) Send(message Outbound) {
 	// How many messages there are in excess of a reasonable amount
 	congestion := len(client.send) - socketCongestionThreshold
 
@@ -147,7 +147,7 @@ func (client *SocketClient) readPump() {
 		if invalidMessage, ok := message.Data.(InvalidInbound); ok {
 			log.Println("invalid message type received:", invalidMessage.messageType)
 		} else {
-			client.Hub.inbound <- SignedInbound{Client: client, inbound: message.Data.(inbound)}
+			client.Hub.ReceiveSigned(SignedInbound{Client: client, Inbound: message.Data.(Inbound)}, true)
 		}
 	}
 }

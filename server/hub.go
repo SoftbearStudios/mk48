@@ -117,6 +117,20 @@ func (h *Hub) Unregister(client Client) {
 	}
 }
 
+// May not use important=true when called on hub goroutine
+func (h *Hub) ReceiveSigned(in SignedInbound, important bool) {
+	select {
+	case h.inbound <- in:
+	default:
+		if important {
+			go func() {
+				h.inbound <- in
+			}()
+		}
+		// Otherwise, drop messages to avoid downfall of server.
+	}
+}
+
 func (h *Hub) Run() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -162,7 +176,7 @@ func (h *Hub) Run() {
 				// If not same hub the message is old
 				data := in.Client.Data()
 				if h == data.Hub {
-					in.Inbound(h, in.Client, &data.Player)
+					in.Process(h, in.Client, &data.Player)
 				}
 
 				if n--; n <= 0 {

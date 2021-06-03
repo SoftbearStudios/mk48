@@ -14,7 +14,7 @@ type (
 		Close()
 
 		// Send is how the server sends a message to the client.
-		Send(out outbound)
+		Send(out Outbound)
 
 		// Destroy marks the client for destruction. It must call hub.Unregister() only once (no matter how many
 		// times it is called; use a sync.Once if necessary). It may be called anywhere.

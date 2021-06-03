@@ -58,7 +58,7 @@ func (bot *BotClient) Init() {
 	bot.spawn(r)
 }
 
-func (bot *BotClient) Send(out outbound) {
+func (bot *BotClient) Send(out Outbound) {
 	defer out.Pool()
 
 	if bot.destroying {
@@ -306,12 +306,8 @@ func (bot *BotClient) Send(out outbound) {
 }
 
 // receiveAsync doesn't deadlock the hub.
-func (bot *BotClient) receiveAsync(in inbound) {
-	select {
-	case bot.Hub.inbound <- SignedInbound{Client: bot, inbound: in}:
-	default:
-		// Drop bot messages to avoid downfall of server.
-	}
+func (bot *BotClient) receiveAsync(in Inbound) {
+	bot.Hub.ReceiveSigned(SignedInbound{Client: bot, Inbound: in}, false)
 }
 
 func (bot *BotClient) spawn(r *rand.Rand) {

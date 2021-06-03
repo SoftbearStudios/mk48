@@ -124,7 +124,7 @@ var reservedNames = [...]string{
 	"system",
 }
 
-func (data AddToTeam) Inbound(h *Hub, _ Client, player *Player) {
+func (data AddToTeam) Process(h *Hub, _ Client, player *Player) {
 	teamID := data.TeamID
 	if teamID == world.TeamIDInvalid {
 		teamID = player.TeamID
@@ -176,7 +176,7 @@ func (data AddToTeam) Inbound(h *Hub, _ Client, player *Player) {
 	} // else possibly needed for voting system in future
 }
 
-func (data CreateTeam) Inbound(h *Hub, _ Client, player *Player) {
+func (data CreateTeam) Process(h *Hub, _ Client, player *Player) {
 	if player.TeamID != world.TeamIDInvalid {
 		return // Already on a team
 	}
@@ -206,7 +206,7 @@ func (data CreateTeam) Inbound(h *Hub, _ Client, player *Player) {
 	h.teams[teamID] = team
 }
 
-func (data RemoveFromTeam) Inbound(h *Hub, _ Client, player *Player) {
+func (data RemoveFromTeam) Process(h *Hub, _ Client, player *Player) {
 	team := h.teams[player.TeamID]
 
 	if team == nil {
@@ -226,7 +226,7 @@ func (data RemoveFromTeam) Inbound(h *Hub, _ Client, player *Player) {
 	}
 }
 
-func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
+func (data Spawn) Process(h *Hub, client Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(oldShip *world.Entity) (_ bool) {
 		if oldShip != nil {
 			return // can only have one ship
@@ -327,7 +327,7 @@ func (data Spawn) Inbound(h *Hub, client Client, player *Player) {
 	})
 }
 
-func (data Upgrade) Inbound(h *Hub, _ Client, player *Player) {
+func (data Upgrade) Process(h *Hub, _ Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(oldShip *world.Entity) (_ bool) {
 		if oldShip == nil {
 			return // hasn't spawned yet
@@ -343,7 +343,7 @@ func (data Upgrade) Inbound(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data AimTurrets) Inbound(h *Hub, _ Client, player *Player) {
+func (data AimTurrets) Process(h *Hub, _ Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
@@ -354,7 +354,7 @@ func (data AimTurrets) Inbound(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
+func (data Fire) Process(h *Hub, _ Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
@@ -427,7 +427,7 @@ func (data Fire) Inbound(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
+func (data Manual) Process(h *Hub, c Client, player *Player) {
 	h.world.EntityByID(data.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
@@ -445,7 +445,7 @@ func (data Manual) Inbound(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data Pay) Inbound(h *Hub, _ Client, player *Player) {
+func (data Pay) Process(h *Hub, _ Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
@@ -484,7 +484,7 @@ func (data Pay) Inbound(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data SendChat) Inbound(h *Hub, client Client, player *Player) {
+func (data SendChat) Process(h *Hub, client Client, player *Player) {
 	if len(data.Message) > 128 {
 		return
 	}
@@ -529,7 +529,7 @@ func (data SendChat) Inbound(h *Hub, client Client, player *Player) {
 	}
 }
 
-func (trace Trace) Inbound(_ *Hub, _ Client, p *Player) {
+func (trace Trace) Process(_ *Hub, _ Client, p *Player) {
 	if trace.FPS <= 0 {
 		return
 	}
@@ -548,7 +548,7 @@ func (trace Trace) Inbound(_ *Hub, _ Client, p *Player) {
 	})
 }
 
-func (data InvalidInbound) Inbound(_ *Hub, _ Client, _ *Player) {}
+func (data InvalidInbound) Process(_ *Hub, _ Client, _ *Player) {}
 
 func trimUtf8(in string, low, high int) (str string, ok bool) {
 	if !utf8.ValidString(in) {

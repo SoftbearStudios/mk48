@@ -65,6 +65,10 @@ func (vel Velocity) AddClamped(amount float32, mag Velocity) Velocity {
 	return Velocity(v)
 }
 
+func (vel Velocity) String() string {
+	return fmt.Sprintf("%.01f m/s", vel.Float())
+}
+
 func (vel Velocity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(vel.Float())
 }

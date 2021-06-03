@@ -9,19 +9,19 @@ import (
 )
 
 var (
-	// Valid inbound message types: messageType to type
+	// Valid Inbound message types: messageType to type
 	inboundMessageTypes = make(map[messageType]reflect.Type)
-	// Valid outbound message types: to messageType
+	// Valid Outbound message types: to messageType
 	outboundMessageTypes = make(map[reflect.Type]messageType)
 )
 
 type (
-	inbound interface {
-		Inbound(hub *Hub, client Client, player *Player)
+	Inbound interface {
+		Process(hub *Hub, client Client, player *Player)
 	}
 
-	outbound interface {
-		// Pool returns the contents of outbound to their sync.Pool
+	Outbound interface {
+		// Pool returns the contents of Outbound to their sync.Pool
 		Pool()
 	}
 
@@ -38,7 +38,7 @@ type (
 
 	SignedInbound struct {
 		Client Client
-		inbound
+		Inbound
 	}
 )
 
@@ -46,7 +46,7 @@ func uncapitalize(str string) string {
 	return strings.ToLower(str[0:1]) + str[1:]
 }
 
-func registerInbound(inbounds ...inbound) {
+func registerInbound(inbounds ...Inbound) {
 	for _, in := range inbounds {
 		val := reflect.ValueOf(in)
 		m := messageType(uncapitalize(reflect.Indirect(val).Type().Name()))
@@ -54,7 +54,7 @@ func registerInbound(inbounds ...inbound) {
 	}
 }
 
-func registerOutbound(outbounds ...outbound) {
+func registerOutbound(outbounds ...Outbound) {
 	for _, out := range outbounds {
 		val := reflect.ValueOf(out)
 		m := messageType(uncapitalize(reflect.Indirect(val).Type().Name()))
@@ -69,7 +69,7 @@ func (message Message) messageJSON() messageJSON {
 	mType, ok := outboundMessageTypes[typ]
 	if !ok {
 		// Panic because outbounds only come from trusted sources
-		panic("invalid outbound message type " + typ.Name())
+		panic("invalid Outbound message type " + typ.Name())
 	}
 
 	return messageJSON{Data: message.Data, Type: mType}
