@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"image/png"
 	"log"
-	terrain "mk48/server/terrain"
-	"mk48/server/terrain/compressed"
-	"mk48/server/terrain/noise"
+	terrain "github.com/SoftbearStudios/mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
+	"github.com/SoftbearStudios/mk48/server/terrain/noise"
 	"os"
 	"runtime/pprof"
 )

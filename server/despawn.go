@@ -1,6 +1,6 @@
 package main
 
-import "mk48/server/world"
+import "github.com/SoftbearStudios/mk48/server/world"
 
 // Despawn removes pending players.
 // The purpose is to make removing k players O(n + k)

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 type ColorVec [3]float32

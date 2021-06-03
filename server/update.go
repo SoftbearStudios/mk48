@@ -5,7 +5,7 @@ package main
 
 import (
 	"github.com/chewxy/math32"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"runtime"
 	"sync"
 	"time"

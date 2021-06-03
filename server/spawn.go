@@ -6,7 +6,7 @@ package main
 import (
 	"github.com/chewxy/math32"
 	"math/rand"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"runtime"
 	"sync"
 	"sync/atomic"

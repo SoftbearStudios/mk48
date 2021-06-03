@@ -7,9 +7,9 @@ import (
 	"encoding/json" // oof
 	"errors"
 	"fmt"
-	"mk48/server/cloud/db"
-	"mk48/server/cloud/dns"
-	"mk48/server/cloud/fs"
+	"github.com/SoftbearStudios/mk48/server/cloud/db"
+	"github.com/SoftbearStudios/mk48/server/cloud/dns"
+	"github.com/SoftbearStudios/mk48/server/cloud/fs"
 	"net"
 	"sort"
 	"strconv"

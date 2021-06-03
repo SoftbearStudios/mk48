@@ -6,7 +6,7 @@ package tree
 import (
 	"encoding/json"
 	"fmt"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 const treeNodeMaxEntities = 8

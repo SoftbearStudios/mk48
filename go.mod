@@ -1,4 +1,4 @@
-module mk48
+module github.com/SoftbearStudios/mk48
 
 go 1.16
 

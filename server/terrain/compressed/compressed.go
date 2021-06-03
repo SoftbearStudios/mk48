@@ -6,8 +6,8 @@ package compressed
 import (
 	"fmt"
 	"math/rand"
-	"mk48/server/terrain"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"sync"
 	"sync/atomic"
 	"time"

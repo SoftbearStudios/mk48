@@ -6,7 +6,7 @@ package main
 import (
 	"errors"
 	jsoniter "github.com/json-iterator/go"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"reflect"
 	"sort"
 	"sync"

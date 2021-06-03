@@ -5,7 +5,7 @@ package single
 
 import (
 	"fmt"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 // A world holds entities

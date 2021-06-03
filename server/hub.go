@@ -5,12 +5,12 @@ package main
 
 import (
 	"fmt"
-	"mk48/server/cloud"
-	"mk48/server/terrain"
-	"mk48/server/terrain/compressed"
-	"mk48/server/terrain/noise"
-	"mk48/server/world"
-	"mk48/server/world/sector"
+	"github.com/SoftbearStudios/mk48/server/cloud"
+	"github.com/SoftbearStudios/mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
+	"github.com/SoftbearStudios/mk48/server/terrain/noise"
+	"github.com/SoftbearStudios/mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world/sector"
 	"os"
 	"sync/atomic"
 	"time"

@@ -4,7 +4,7 @@
 package terrain
 
 import (
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"sync"
 )
 

@@ -4,8 +4,8 @@
 package main
 
 import (
-	terrain2 "mk48/server/terrain"
-	"mk48/server/world"
+	terrain2 "github.com/SoftbearStudios/mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"sync"
 )
 

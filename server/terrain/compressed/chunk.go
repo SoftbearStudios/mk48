@@ -4,7 +4,7 @@
 package compressed
 
 import (
-	"mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/terrain"
 )
 
 const (

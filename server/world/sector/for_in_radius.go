@@ -4,7 +4,7 @@
 package sector
 
 import (
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 // Iterates all the sectors in a radius and returns if stopped early

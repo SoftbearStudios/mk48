@@ -5,7 +5,7 @@ package main
 
 import (
 	"container/heap"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"sort"
 	"time"
 )

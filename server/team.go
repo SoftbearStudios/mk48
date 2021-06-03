@@ -4,7 +4,7 @@
 package main
 
 import (
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 // Team is an extension of world.Team with extra data

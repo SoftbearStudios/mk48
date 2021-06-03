@@ -6,7 +6,7 @@ package main
 import (
 	"github.com/finnbear/moderation"
 	"math/rand"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"strings"
 	"time"
 	"unicode"

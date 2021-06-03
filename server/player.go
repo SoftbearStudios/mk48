@@ -4,7 +4,7 @@
 package main
 
 import (
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 // Player is an extension of world.Player with extra data

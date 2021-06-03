@@ -5,7 +5,7 @@ package main
 
 import (
 	"math/rand"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/world"
 	"sort"
 	"strconv"
 	"testing"

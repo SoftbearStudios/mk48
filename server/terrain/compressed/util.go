@@ -4,8 +4,8 @@
 package compressed
 
 import (
-	"mk48/server/terrain"
-	"mk48/server/world"
+	"github.com/SoftbearStudios/mk48/server/terrain"
+	"github.com/SoftbearStudios/mk48/server/world"
 )
 
 func clampToGrassByte(f float32) byte {

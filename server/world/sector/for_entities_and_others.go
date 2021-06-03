@@ -3,7 +3,7 @@
 
 package sector
 
-import "mk48/server/world"
+import "github.com/SoftbearStudios/mk48/server/world"
 
 // ForEntitiesAndOthers TODO support multi-threading
 func (w *World) ForEntitiesAndOthers(entityCallback func(entity *world.Entity) (stop bool, radius float32),
