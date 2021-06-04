@@ -32,64 +32,73 @@ const (
 )
 
 // Hub maintains the set of active clients and broadcasts messages to the clients.
-type Hub struct {
-	// World state
-	world       *sector.World
-	worldRadius float32 // interpolated
-	terrain     terrain.Terrain
-	clients     ClientList // implemented as double-linked list
-	despawn     ClientList // clients that are being removed
-	teams       map[world.TeamID]*Team
-
-	// Flags
-	minPlayers       int
-	botMaxSpawnLevel uint8
-	auth             string
-
-	// Cloud (and things that are served atomically by HTTP)
-	cloud      Cloud
-	statusJSON atomic.Value
-
-	// chats are buffered until next update.
-	chats []Chat
-	// funcBenches are benchmarks of core Hub functions.
-	funcBenches []funcBench
-
-	// Inbound channels
-	inbound    chan SignedInbound
-	register   chan Client
-	unregister chan Client
-
-	// Timer based events
-	cloudTicker       *time.Ticker
-	updateTicker      *time.Ticker
-	skippedCounter    int
-	updateCounter     int
-	leaderboardTicker *time.Ticker
-	debugTicker       *time.Ticker
-	botsTicker        *time.Ticker
-}
-
-// c can be nil
-func NewHub(c Cloud, minPlayers int, botMaxSpawnLevel int, auth string) *Hub {
-	if botMaxSpawnLevel > int(world.BoatLevelMax) {
-		botMaxSpawnLevel = int(world.BoatLevelMax)
+type (
+	HubOptions struct {
+		Cloud            Cloud
+		MinClients       int
+		MaxBotSpawnLevel uint8
+		Auth             string
 	}
 
-	radius := max(world.MinRadius, world.RadiusOf(minPlayers))
+	Hub struct {
+		// World state
+		world       *sector.World
+		worldRadius float32 // interpolated
+		terrain     terrain.Terrain
+		clients     ClientList // implemented as double-linked list
+		despawn     ClientList // clients that are being removed
+		teams       map[world.TeamID]*Team
+
+		// Flags
+		minPlayers       int
+		botMaxSpawnLevel uint8
+		auth             string
+
+		// Cloud (and things that are served atomically by HTTP)
+		cloud      Cloud
+		statusJSON atomic.Value
+
+		// chats are buffered until next update.
+		chats []Chat
+		// funcBenches are benchmarks of core Hub functions.
+		funcBenches []funcBench
+
+		// Inbound channels
+		inbound    chan SignedInbound
+		register   chan Client
+		unregister chan Client
+
+		// Timer based events
+		cloudTicker       *time.Ticker
+		updateTicker      *time.Ticker
+		skippedCounter    int
+		updateCounter     int
+		leaderboardTicker *time.Ticker
+		debugTicker       *time.Ticker
+		botsTicker        *time.Ticker
+	}
+)
+
+// c can be nil
+func NewHub(options HubOptions) *Hub {
+	if options.MaxBotSpawnLevel > world.BoatLevelMax {
+		options.MaxBotSpawnLevel = world.BoatLevelMax
+	}
+
+	radius := max(world.MinRadius, world.RadiusOf(options.MinClients))
 	return &Hub{
-		cloud:             c,
+		cloud:             options.Cloud,
 		world:             sector.New(radius),
 		terrain:           compressed.New(noise.NewDefault()),
 		worldRadius:       radius,
 		teams:             make(map[world.TeamID]*Team),
-		minPlayers:        minPlayers,
-		botMaxSpawnLevel:  uint8(botMaxSpawnLevel),
-		auth:              auth,
-		inbound:           make(chan SignedInbound, 16+minPlayers*2),
-		register:          make(chan Client, 8+minPlayers/256),
-		unregister:        make(chan Client, 16+minPlayers/128),
-		cloudTicker:       time.NewTicker(c.UpdatePeriod()),
+		minPlayers:        options.MinClients,
+		botMaxSpawnLevel:  options.MaxBotSpawnLevel,
+		auth:              options.Auth,
+		inbound:           make(chan SignedInbound, 16+options.MinClients*2),
+		register:          make(chan Client, 8+options.MinClients/256),
+		unregister:        make(chan Client, 16+options.MinClients/128),
+		cloudTicker:       time.NewTicker(options.Cloud.UpdatePeriod()),
 		updateTicker:      time.NewTicker(updatePeriod),
 		leaderboardTicker: time.NewTicker(leaderboardPeriod),
 		debugTicker:       time.NewTicker(debugPeriod),

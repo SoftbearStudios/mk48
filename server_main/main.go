@@ -17,15 +17,15 @@ import (
 
 func main() {
 	var (
-		auth             string
-		botMaxSpawnLevel int
-		port             int
-		maxConnections   int
-		players          int
+		auth           string
+		botLevel       int
+		port           int
+		maxConnections int
+		players        int
 	)
 
 	flag.StringVar(&auth, "auth", "", "admin auth code")
-	flag.IntVar(&botMaxSpawnLevel, "bot-max-spawn-level", 1, "maximum level for bots to spawn as")
+	flag.IntVar(&botLevel, "bot-level", 1, "maximum level for bots to spawn as")
 	flag.IntVar(&port, "port", 8192, "http service port")
 	flag.IntVar(&players, "players", 40, "minimum number of players")
 	flag.IntVar(&maxConnections, "max-connections", 256, "maximum number of inbound TCP connections")
@@ -45,7 +45,13 @@ func main() {
 		c = server.Offline{}
 	}
 
-	hub := server.NewHub(c, players, botMaxSpawnLevel, auth)
+	hub := server.NewHub(server.HubOptions{
+		Cloud:            c,
+		MinClients:       players,
+		MaxBotSpawnLevel: uint8(botLevel),
+		Auth:             auth,
+	})
+
 	go hub.Run()
 
 	if port < 0 {

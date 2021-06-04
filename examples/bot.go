@@ -19,7 +19,12 @@ type Bot struct {
 }
 
 func main() {
-	hub := server.NewHub(server.Offline{}, 20, 3, "auth")
+	hub := server.NewHub(server.HubOptions{
+		Cloud:            server.Offline{},
+		MinClients:       20,
+		MaxBotSpawnLevel: 3,
+	})
+
 	go hub.Run()
 
 	bot := new(Bot)
