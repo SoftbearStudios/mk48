@@ -66,7 +66,7 @@ func (b *Bot) Send(out server.Outbound) {
 			}
 		}
 
-		img := rasterize(ship, update.Contacts, b.Hub.GetTerrain(), 1024, 64)
+		img := rasterize(ship, update.Contacts, b.Hub.GetTerrain(), 1024, 128)
 		var buf bytes.Buffer
 		err := png.Encode(&buf, img)
 		if err != nil {
@@ -111,6 +111,7 @@ func (b *Bot) sendToHub(inbound server.Inbound) {
 // scale = meters per image dimension
 // Red channel = enemy/danger
 // Green channel = obstacle/land
+// Blue channel = friendly/collectible
 func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terrain, scale float32, resolution int) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
 	scale /= float32(resolution)
@@ -135,9 +136,10 @@ func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terra
 
 		var new color.RGBA
 		new.A = 255
-		new.B = 255
 
-		if !contact.Friendly {
+		if contact.Friendly {
+			new.B = 255
+		} else {
 			new.R = 255 / 4
 		}
 
@@ -148,6 +150,8 @@ func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terra
 			new.R *= 4
 		case world.EntityKindCollectible:
 			new.R = 0
+			new.B = 255
+		case world.EntityKindObstacle:
 			new.G = 255
 		}
 
