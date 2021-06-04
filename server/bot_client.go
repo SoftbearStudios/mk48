@@ -342,8 +342,7 @@ func (bot *BotClient) isLandInDirection(pos world.Vec2f, length float32, angle w
 		return true
 	}
 
-	// -6 is a kludge factor to make terrain math line up with client
-	return bot.Hub.terrain.AtPos(inFront) > terrain.OceanLevel-6
+	return terrain.LandAtPos(bot.Hub.terrain, inFront)
 }
 
 func randomType(r *rand.Rand, entityTypes []world.EntityType) world.EntityType {

@@ -1,10 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/SoftbearStudios/mk48/server"
+	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
+	"image"
+	"image/color"
+	"image/png"
 	"os"
 )
 
@@ -14,7 +19,7 @@ type Bot struct {
 }
 
 func main() {
-	hub := server.NewHub(server.Offline{}, 0, 3, "auth")
+	hub := server.NewHub(server.Offline{}, 20, 3, "auth")
 	go hub.Run()
 
 	bot := new(Bot)
@@ -61,6 +66,19 @@ func (b *Bot) Send(out server.Outbound) {
 			}
 		}
 
+		img := rasterize(ship, update.Contacts, b.Hub.GetTerrain(), 1024, 64)
+		var buf bytes.Buffer
+		err := png.Encode(&buf, img)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+		err = os.WriteFile("world.png", buf.Bytes(), 0755)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return
+		}
+
 		driving := server.Manual{
 			EntityID: update.EntityID,
 		}
@@ -88,4 +106,62 @@ func (b *Bot) Data() *server.ClientData {
 
 func (b *Bot) sendToHub(inbound server.Inbound) {
 	b.Hub.ReceiveSigned(server.SignedInbound{Client: b, Inbound: inbound}, false)
+}
+
+// scale = meters per image dimension
+// Red channel = enemy/danger
+// Green channel = obstacle/land
+func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terrain, scale float32, resolution int) image.Image {
+	img := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
+	scale /= float32(resolution)
+
+	for x := 0; x < resolution; x++ {
+		for y := 0; y < resolution; y++ {
+			bg := color.RGBA{A: 255}
+			pos := ship.Position
+			pos.X += float32(x-resolution/2) * scale
+			pos.Y += float32(y-resolution/2) * scale
+			if terrain.LandAtPos(t, pos) {
+				bg.G = 255
+			}
+			img.SetRGBA(x, y, bg)
+		}
+	}
+
+	for _, contact := range contacts {
+		data := contact.EntityType.Data()
+		normal := contact.Direction.Vec2f()
+		tangent := normal.Rot90()
+
+		var new color.RGBA
+		new.A = 255
+		new.B = 255
+
+		if !contact.Friendly {
+			new.R = 255 / 4
+		}
+
+		switch data.Kind {
+		case world.EntityKindBoat:
+			new.R *= 2
+		case world.EntityKindWeapon:
+			new.R *= 4
+		case world.EntityKindCollectible:
+			new.R = 0
+			new.G = 255
+		}
+
+		for l := -0.5 * data.Length; l <= 0.5*data.Length; l += scale * 0.5 {
+			for w := -0.5 * data.Width; w <= 0.5*data.Width; w += scale * 0.5 {
+				pos := contact.Position.Sub(ship.Position).AddScaled(normal, l).AddScaled(tangent, w)
+
+				pos = pos.Div(scale)
+
+				//old := rgba.RGBAAt(int(pos.X), int(pos.Y))
+
+				img.SetRGBA(int(pos.X)+resolution/2, int(pos.Y)+resolution/2, new)
+			}
+		}
+	}
+	return img
 }

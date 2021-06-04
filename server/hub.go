@@ -107,6 +107,10 @@ func (h *Hub) Register(client Client) {
 	}
 }
 
+func (h *Hub) GetTerrain() terrain.Terrain {
+	return h.terrain
+}
+
 func (h *Hub) Unregister(client Client) {
 	select {
 	case h.unregister <- client:

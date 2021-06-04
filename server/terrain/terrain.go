@@ -59,6 +59,11 @@ type Terrain interface {
 	Debug()
 }
 
+func LandAtPos(t Terrain, pos world.Vec2f) bool {
+	// -6 is a kludge factor to make terrain math line up with client
+	return t.AtPos(pos) > OceanLevel-6
+}
+
 // Data describes part of a heightmap.
 // It may be in a compressed format.
 type Data struct {
