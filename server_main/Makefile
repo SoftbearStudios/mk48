@@ -39,7 +39,7 @@ race:
 test: server
 	go test
 	go build -o server_test -race
-	/usr/bin/test `GORACE="halt_on_error=1" timeout --preserve-status 60 ./server_test -players 100 -bot-max-spawn-level 10 > ./out.txt 2> ./err.txt; echo $$?;` -eq 143 || (cat out.txt err.txt; false)
+	/usr/bin/test `GORACE="halt_on_error=1" timeout --preserve-status 60 ./server_test -players 100 -bot-level 10 > ./out.txt 2> ./err.txt; echo $$?;` -eq 143 || (cat out.txt err.txt; false)
 
 pprof:
 	go tool pprof -http localhost:8193 -seconds $(seconds) localhost:8192/debug/pprof/$(profile)
