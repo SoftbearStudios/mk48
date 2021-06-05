@@ -5,9 +5,10 @@
 
 <script>
 	import Link from '../lib/Link.svelte';
+	import Page from '../lib/Page.svelte';
 </script>
 
-<div>
+<Page>
 	<h1>Mk48.io Help Guide</h1>
 
 	<h2>Basics</h2>
@@ -111,9 +112,6 @@
 	and each turret reload independently. Consuming crates speeds up reloading,
 	while using weapons underwater slows it down.</p>
 
-	<p>Some battleships have the ability to <b>airdrop</b> torpedoes. These torpedoes
-	will enter the water near the target and approach it from all angles.</p>
-
 	<h2>Sensors</h2>
 
 	<p>All ships have some combination of sensors to identify other ships and obstacles:</p>
@@ -133,21 +131,9 @@
 		<li><b>Blue</b> dots are enemies (sonar).</li>
 		<li><b>Yellow</b> dots are collectibles that increase your health, ammunition, and score.</li>
 	</ol>
-
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}

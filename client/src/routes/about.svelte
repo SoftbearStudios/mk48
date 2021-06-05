@@ -6,6 +6,7 @@
 <script>
 	import entityData from '../data/entities.json';
 	import Link from '../lib/Link.svelte';
+	import Page from '../lib/Page.svelte';
 
 	let shipTypeCount = 0;
 	let shipLevelMax = 0;
@@ -27,7 +28,7 @@
 	weaponSubTypeCount = Object.keys(weaponSubTypes).length;
 </script>
 
-<div>
+<Page>
 	<h1>About Mk48.io</h1>
 
 	<h2>Description</h2>
@@ -57,20 +58,9 @@
 	<p>If you have any feedback to share, business inquiries, or any other
 	concern, please contact us by email at
 	<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}

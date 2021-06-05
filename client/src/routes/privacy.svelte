@@ -3,7 +3,11 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<div>
+<script>
+	import Page from '../lib/Page.svelte';
+</script>
+
+<Page>
 	<h1>Mk48.io Privacy Policy</h1>
 
 	<h2>Introduction</h2>
@@ -73,20 +77,9 @@
 
 	<p>If you have any concern, such as a desire to be removed from the leaderboard, please contact us by email at
 	<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}

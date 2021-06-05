@@ -3,7 +3,11 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<div>
+<script>
+	import Page from '../lib/Page.svelte';
+</script>
+
+<Page>
 	<h1>Mk48.io Changelog</h1>
 
 	<p>Warning: This changelog may not always be fully up to date</p>
@@ -222,20 +226,9 @@
 	<h3>Before 5/8/2021</h3>
 
 	<p>Changes before the game was open source are not yet documented</p>
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}

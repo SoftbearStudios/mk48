@@ -4,11 +4,12 @@
 -->
 
 <script>
+	import Page from '../lib/Page.svelte';
 	import entityDatas from '../data/entities.json';
 	import EntityCard from '../lib/EntityCard.svelte';
 </script>
 
-<div>
+<Page>
 	<h1>Mk48.io Ships</h1>
 
 	<p>The following is a list of all ships in the game, and their weapons.</p>
@@ -24,20 +25,9 @@
 			{/if}
 		{/each}
 	</table>
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}

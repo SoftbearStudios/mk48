@@ -1108,7 +1108,7 @@
 	}
 
 	main {
-		background-color: #00487d;
+		background-color: #003574;
 		color: white;
 		left: 0;
 		right: 0;

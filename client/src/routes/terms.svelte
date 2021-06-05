@@ -3,7 +3,11 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<div>
+<script>
+	import Page from '../lib/Page.svelte';
+</script>
+
+<Page>
 	<h1>Mk48.io Terms of Service</h1>
 
 	<p>The following terms govern your use of the <a href="https://mk48.io">Mk48.io</a> website and game.</p>
@@ -43,20 +47,9 @@
 	<h2>Changes</h2>
 
 	<p>We reserve the right to alter these Terms of Service at any time, without notice.</p>
-</div>
+</Page>
 
 <style>
-	div {
-		background-color: #2c3e50;
-		color: white;
-		font-family: sans-serif;
-		font-size: 20px;
-		overflow-y: scroll;
-		padding: 10px;
-		position: absolute;
-		inset: 0;
-	}
-
 	a {
 		color: white;
 	}
