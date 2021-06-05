@@ -365,30 +365,6 @@
 				"vertical": true
 			},
 			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
-				"default": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
-				"vertical": true
-			},
-			{
 				"default": "seahawk",
 				"positionForward": -62,
 				"positionSide": 0
