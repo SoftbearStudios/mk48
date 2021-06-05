@@ -550,6 +550,7 @@
 				const mouseAngle = Math.atan2(mousePosition.y - localSprite.position.y, mousePosition.x - localSprite.position.x);
 
 				keyEvent |= keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
+				let angVelTarget = undefined;
 				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
 					if (mouseDownNotClick()) {
 						localSprite.directionTarget = mouseAngle;
@@ -565,8 +566,8 @@
 					}
 
 					if (keyEvent) {
-						let newTarget = localSprite.directionTarget;
-						let forwardBackward = keyboard.forward || keyboard.backward;
+						const forwardBackward = keyboard.forward || keyboard.backward;
+						const turnSpeed = 150 / (150 + localEntityData.length);
 
 						if (forwardBackward) {
 							if (keyboard.forward) {
@@ -576,29 +577,35 @@
 								localSprite.velocityTarget -= 50 * seconds;
 							}
 
-							// Straighten out (and damp oscillation by using the entity ground truth)
-							newTarget = localEntity.direction;
-						}
+							// Straighten out
+							angVelTarget = 0;
 
-						let turnSpeed = 100 / (100 + localEntityData.length);
-						const sign = 1; // localSprite.velocity >= -0.1 ? 1 : -1;
-
-						if (forwardBackward) {
 							// This turn will be added to the current course,
 							// not the current desired course.
 							// If too low, relative to tick rate, oscillations
 							// will occur.
-							turnSpeed *= 5;
-						}
+							if (keyboard.right) {
+								angVelTarget = turnSpeed * Math.PI;
+							}
+							if (keyboard.left) {
+								angVelTarget = -turnSpeed * Math.PI;
+							}
 
-						if (keyboard.right) {
-							newTarget += turnSpeed * sign * Math.PI * seconds;
-						}
-						if (keyboard.left) {
-							newTarget -= turnSpeed * sign * Math.PI * seconds;
-						}
-						if (Math.abs(angleDiff(newTarget, localSprite.rotation)) < 0.5 * Math.PI) {
-							localSprite.directionTarget = newTarget;
+							localSprite.directionTarget = localSprite.rotation + angVelTarget * seconds;
+						} else {
+							let newDirectionTarget = localSprite.directionTarget;
+
+							if (keyboard.right) {
+								newDirectionTarget += turnSpeed * Math.PI * seconds;
+							}
+							if (keyboard.left) {
+								newDirectionTarget -= turnSpeed * Math.PI * seconds;
+							}
+
+							// Limit turn target to 90 degrees from current bearing
+							if (Math.abs(angleDiff(newDirectionTarget, localSprite.rotation)) < 0.5 * Math.PI) {
+								localSprite.directionTarget = newDirectionTarget;
+							}
 						}
 
 						localSprite.velocityTarget = clamp(localSprite.velocityTarget, -0.33 * localEntityData.speed, localEntityData.speed);
@@ -709,6 +716,7 @@
 						send('manual', {
 							entityID: localEntityID,
 							velocityTarget: localSprite.velocityTarget,
+							angVelTarget,
 							directionTarget: localSprite.directionTarget,
 							altitudeTarget: localEntityData.subtype === 'submarine' ? altitudeTarget : undefined,
 							turretTarget: mousePosition,
@@ -716,6 +724,8 @@
 
 						lastAltitudeTarget = altitudeTarget;
 					} else if (Array.isArray(localEntityData.turrets) && localEntityData.turrets.length > 0) {
+						// TODO: Ships with aircaft also need turret aiming, but currently
+						// all ships with aircraft also have turrets so the condition works
 						send('aimTurrets', {
 							target: mousePosition
 						});

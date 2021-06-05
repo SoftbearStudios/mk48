@@ -50,9 +50,10 @@ type (
 	// TODO embed AimTurrets
 	Manual struct {
 		world.Guidance
-		AltitudeTarget *float32       `json:"altitudeTarget"`
-		TurretTarget   world.Vec2f    `json:"turretTarget"`
-		EntityID       world.EntityID `json:"entityID"`
+		AngularVelocityTarget *world.Angle   `json:"angVelTarget"` // angular velocity must be calculated on the server to avoid oscillations
+		AltitudeTarget        *float32       `json:"altitudeTarget"`
+		TurretTarget          world.Vec2f    `json:"turretTarget"`
+		EntityID              world.EntityID `json:"entityID"`
 	}
 
 	// Drop gold coins to transfer score (within limits)
@@ -434,6 +435,11 @@ func (data Manual) Process(h *Hub, c Client, player *Player) {
 		}
 
 		entity.Guidance = data.Guidance
+
+		if data.AngularVelocityTarget != nil {
+			// This only lasts one frame
+			entity.DirectionTarget = entity.Direction + world.ToAngle(data.AngularVelocityTarget.Float()/float32(world.TicksPerSecond))
+		}
 
 		if data.AltitudeTarget != nil {
 			entity.SetAltitudeTarget(*data.AltitudeTarget)
