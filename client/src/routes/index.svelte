@@ -151,12 +151,6 @@
 		const hud = new PIXI.Graphics();
 		viewport.addChild(hud);
 
-		const entityContainer = new PIXI.Container();
-		viewport.addChild(entityContainer);
-
-		const splashes = new PIXI.Container();
-		viewport.addChild(splashes);
-
 		const wakeParticles = new PIXI.ParticleContainer(16384, {
 			scale: true,
 			position: true,
@@ -164,6 +158,12 @@
 			autoResize: true
 		});
 		viewport.addChild(wakeParticles);
+
+		const entityContainer = new PIXI.Container();
+		viewport.addChild(entityContainer);
+
+		const splashes = new PIXI.Container();
+		viewport.addChild(splashes);
 
 		// Keep a map of entityID to sprite
 		const entitySprites = {};
