@@ -20,12 +20,13 @@ import (
 // A nil cloud is valid to use with any methods (acts as a no-op)
 // This just means server is in offline mode
 type Cloud struct {
-	region     string
-	serverSlot int
-	ip         net.IP
-	database   db.Database
-	dns        dns.DNS
-	fs         fs.Filesystem
+	region             string
+	serverSlot         int
+	disableLeaderboard bool
+	ip                 net.IP
+	database           db.Database
+	dns                dns.DNS
+	fs                 fs.Filesystem
 
 	// accumulators of statistics since the last update
 	statAcc db.Statistic
@@ -34,22 +35,23 @@ type Cloud struct {
 func (cloud *Cloud) String() string {
 	var builder strings.Builder
 	builder.WriteByte('[')
-	if cloud == nil {
-		builder.WriteString("offline")
-	} else {
-		builder.WriteString(cloud.region)
-		builder.WriteByte(' ')
-		builder.WriteString(strconv.Itoa(cloud.serverSlot))
-		builder.WriteByte(' ')
-		builder.WriteString(cloud.ip.String())
+	builder.WriteString(cloud.region)
+	builder.WriteByte(' ')
+	builder.WriteString(strconv.Itoa(cloud.serverSlot))
+	builder.WriteByte(' ')
+	builder.WriteString(cloud.ip.String())
+	if cloud.disableLeaderboard {
+		builder.WriteString(" NOLB ")
 	}
 	builder.WriteByte(']')
 	return builder.String()
 }
 
 // Returns nil cloud on error
-func New() (*Cloud, error) {
-	cloud := &Cloud{}
+func New(disableLeaderboard bool) (*Cloud, error) {
+	cloud := &Cloud{
+		disableLeaderboard: disableLeaderboard,
+	}
 
 	userData, err := loadUserData()
 	if err != nil {
@@ -166,6 +168,10 @@ func (cloud *Cloud) FlushStatistics() error {
 }
 
 func (cloud *Cloud) UpdateLeaderboard(playerScores map[string]int) (err error) {
+	if cloud.disableLeaderboard {
+		return nil
+	}
+
 	dbScores, err := cloud.database.ReadScores()
 	if err != nil {
 		return

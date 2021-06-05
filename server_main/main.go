@@ -17,11 +17,12 @@ import (
 
 func main() {
 	var (
-		auth           string
-		botLevel       int
-		port           int
-		maxConnections int
-		players        int
+		auth               string
+		botLevel           int
+		port               int
+		maxConnections     int
+		players            int
+		disableLeaderboard bool
 	)
 
 	flag.StringVar(&auth, "auth", "", "admin auth code")
@@ -29,6 +30,7 @@ func main() {
 	flag.IntVar(&port, "port", 8192, "http service port")
 	flag.IntVar(&players, "players", 40, "minimum number of players")
 	flag.IntVar(&maxConnections, "max-connections", 256, "maximum number of inbound TCP connections")
+	flag.BoolVar(&disableLeaderboard, "disable-leaderboard", false, "don't publish to leaderboard")
 	flag.Parse()
 
 	if players < 0 {
@@ -37,7 +39,7 @@ func main() {
 
 	var c server.Cloud
 
-	c, err := cloud.New()
+	c, err := cloud.New(disableLeaderboard)
 	if err != nil {
 		// Cloud is not required for server to function, just log an error
 		log.Printf("Cloud error: %v\n", err)
@@ -53,6 +55,8 @@ func main() {
 	})
 
 	go hub.Run()
+
+	log.Println("Leaderboard enabled:", !disableLeaderboard)
 
 	if port < 0 {
 		log.Println("https://mk48.io simulation started")
