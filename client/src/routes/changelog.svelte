@@ -14,6 +14,14 @@
 
 	<h2>2021</h2>
 
+	<h3>6/4/2021</h3>
+
+	<ul>
+		<li>Reduce "Arleigh Burke" number of "ESSM" SAM's from 8 to 4</li>
+		<li>Improve supporting pages appearance and accuracy</li>
+		<li>Improve keyboard input</li>
+	</ul>
+
 	<h3>6/1/2021</h3>
 
 	<ul>
