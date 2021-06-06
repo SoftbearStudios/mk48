@@ -91,7 +91,7 @@ func (b *Bot) Send(out server.Outbound) {
 		driving.VelocityTarget = 20 * world.MeterPerSecond
 		driving.DirectionTarget = world.ToAngle(math32.Pi / 2)
 
-		fmt.Printf("I'm driving at (%.02f, %.02f) with speed %s and bearing %s\n", ship.Position.X, ship.Position.Y, ship.Velocity, ship.Direction)
+		fmt.Printf("I'm driving at (%.02f, %.02f) with speed %s and bearing %s (score: %d)\n", ship.Position.X, ship.Position.Y, ship.Velocity, ship.Direction, ship.Score)
 		b.sendToHub(driving)
 	}
 }
