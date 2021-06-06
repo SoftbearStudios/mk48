@@ -241,7 +241,7 @@ func (bot *BotClient) Send(out Outbound) {
 		}
 
 		// Upgrade up to level ambition if available.
-		if shipData.Level < bot.levelAmbition {
+		if shipData.Level < bot.levelAmbition && prob(r, 0.05) {
 			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
 				bot.receiveAsync(Upgrade{
 					Type: randomType(r, upgradePaths),

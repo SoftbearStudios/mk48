@@ -39,8 +39,9 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'shell':
 					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
 					break;
-				case 'rocket':
 				case 'sam':
+					maxRange *= 0.5;
+				case 'rocket':
 				case 'missile':
 					maxRange = mapRanges(entityData.length, 1, 10, 500, 1200, true);
 
@@ -132,8 +133,10 @@ for (const entityType of Object.keys(entityDatas)) {
 					case 'mine':
 						entityData.reload = 30;
 						break;
-					case 'missile':
 					case 'sam':
+						entityData.reload = 10;
+						break;
+					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
 						break;
 					case 'shell':

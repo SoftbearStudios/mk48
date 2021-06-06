@@ -628,6 +628,66 @@
 			}
 		]
 	},
+	"freedom": {
+		"label": "Freedom",
+		"link": "https://en.wikipedia.org/wiki/Freedom-class_littoral_combat_ship",
+		"type": "boat",
+		"subtype": "lcs",
+		"level": 5,
+		"length": 115,
+		"width": 17.5,
+		"speed": 24.1789,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "nsm",
+				"positionForward": -15,
+				"positionSide": 5,
+				"angle": 90,
+				"symmetrical": true,
+				"count": 2,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -16,
+				"positionSide": 5,
+				"angle": 90,
+				"symmetrical": true,
+				"count": 2,
+				"external": false
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -40,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "bofors57mmMK3",
+				"positionForward": 33,
+				"positionSide": 0
+			},
+			{
+				"type": "mark49",
+				"positionForward": -22.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
 	"g5": {
 		"label": "G-5",
 		"link": "https://en.wikipedia.org/wiki/G-5-class_motor_torpedo_boat",
@@ -1535,7 +1595,7 @@
 		"link": "https://en.wikipedia.org/wiki/Visby-class_corvette",
 		"type": "boat",
 		"subtype": "corvette",
-		"level": 5,
+		"level": 4,
 		"length": 72.7,
 		"width": 10.4,
 		"speed": 18.00556,
@@ -2249,6 +2309,38 @@
 			}
 		]
 	},
+	"nsm": {
+		"label": "Naval Strike Missile",
+		"link": "https://en.wikipedia.org/wiki/Naval_Strike_Missile",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 3.95,
+		"width": 1.049,
+		"speed": 300,
+		"range": 185000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"rim116": {
+		"label": "Rolling Airframe Missile",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 2.79,
+		"width": 0.3052,
+		"speed": 680,
+		"range": 10000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
 	"seahawk": {
 		"label": "Seahawk",
 		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
@@ -2411,6 +2503,24 @@
 		"sensors": [
 			{
 				"type": "radar"
+			}
+		]
+	},
+	"mark49": {
+		"label": "Mark 49",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "turret",
+		"length": 3.02,
+		"width": 2.00547,
+		"positionForward": 0.15,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"count": 8,
+				"hidden": true
 			}
 		]
 	},

@@ -70,7 +70,7 @@
             </struct>
         </struct>
         <key>shapePadding</key>
-        <uint>6</uint>
+        <uint>7</uint>
         <key>jpgQuality</key>
         <uint>80</uint>
         <key>pngOptimizationLevel</key>
@@ -187,6 +187,7 @@
             <key type="filename">../../client/static/entities/57x441mmR.png</key>
             <key type="filename">../../client/static/entities/76x636mmR.png</key>
             <key type="filename">../../client/static/entities/mark8.png</key>
+            <key type="filename">../../client/static/entities/nsm.png</key>
             <key type="filename">../../client/static/entities/of45.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
@@ -401,6 +402,7 @@
                 <false/>
             </struct>
             <key type="filename">../../client/static/entities/brahmos.png</key>
+            <key type="filename">../../client/static/entities/rim116.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
                 <point_f>0,0</point_f>
@@ -552,6 +554,21 @@
                 <rect>256,28,512,55</rect>
                 <key>scale9Paddings</key>
                 <rect>256,28,512,55</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/freedom.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>256,39,512,79</rect>
+                <key>scale9Paddings</key>
+                <rect>256,39,512,79</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
@@ -720,6 +737,21 @@
                 <rect>32,3,64,7</rect>
                 <key>scale9Paddings</key>
                 <rect>32,3,64,7</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/mark49.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,21,64,43</rect>
+                <key>scale9Paddings</key>
+                <rect>32,21,64,43</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>

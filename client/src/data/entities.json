@@ -1061,6 +1061,181 @@
 		],
 		"antiAircraft": 0.092
 	},
+	"freedom": {
+		"label": "Freedom",
+		"link": "https://en.wikipedia.org/wiki/Freedom-class_littoral_combat_ship",
+		"type": "boat",
+		"subtype": "lcs",
+		"level": 6,
+		"length": 115,
+		"width": 17.5,
+		"speed": 24.1789,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 845
+			},
+			{
+				"type": "radar",
+				"range": 1230
+			},
+			{
+				"type": "sonar",
+				"range": 1115
+			}
+		],
+		"armaments": [
+			{
+				"default": "nsm",
+				"positionForward": -15,
+				"positionSide": 5,
+				"angle": 1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -15,
+				"positionSide": -5,
+				"angle": -1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -15,
+				"positionSide": 5,
+				"angle": 1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -15,
+				"positionSide": -5,
+				"angle": -1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -16,
+				"positionSide": 5,
+				"angle": 1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -16,
+				"positionSide": -5,
+				"angle": -1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -16,
+				"positionSide": 5,
+				"angle": 1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": -16,
+				"positionSide": -5,
+				"angle": -1.5707963267948966,
+				"external": false
+			},
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -40,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "bofors57mmMK3",
+				"positionForward": 33,
+				"positionSide": 0,
+				"angle": 0
+			},
+			{
+				"type": "mark49",
+				"positionForward": -22.5,
+				"positionSide": 0,
+				"angle": 3.141592653589793
+			}
+		],
+		"antiAircraft": 0.092
+	},
 	"g5": {
 		"label": "G-5",
 		"link": "https://en.wikipedia.org/wiki/G-5-class_motor_torpedo_boat",
@@ -3431,7 +3606,7 @@
 		],
 		"lifespan": 4.290123456790123,
 		"damage": 0.605,
-		"reload": 12.399999999999999,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3566,7 +3741,7 @@
 		],
 		"lifespan": 4.109819121447028,
 		"damage": 0.4958,
-		"reload": 10.384,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},
@@ -3837,6 +4012,48 @@
 		"armaments": [],
 		"turrets": []
 	},
+	"nsm": {
+		"label": "Naval Strike Missile",
+		"link": "https://en.wikipedia.org/wiki/Naval_Strike_Missile",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 3.95,
+		"width": 1.049,
+		"speed": 300,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1007.9
+			}
+		],
+		"lifespan": 4.284693816410552,
+		"damage": 0.5335000000000001,
+		"reload": 11.080000000000002,
+		"armaments": [],
+		"turrets": []
+	},
+	"rim116": {
+		"label": "Rolling Airframe Missile",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 2.79,
+		"width": 0.3052,
+		"speed": 680,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1005.58
+			}
+		],
+		"lifespan": 3.8976964769647693,
+		"damage": 0.3827,
+		"reload": 10,
+		"armaments": [],
+		"turrets": []
+	},
 	"seahawk": {
 		"label": "Seahawk",
 		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
@@ -4065,6 +4282,74 @@
 		"reload": 11.992,
 		"armaments": [],
 		"turrets": []
+	},
+	"mark49": {
+		"label": "Mark 49",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "turret",
+		"length": 3.02,
+		"width": 2.00547,
+		"positionForward": 0.15,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			}
+		],
+		"turrets": [],
+		"sensors": []
 	},
 	"set65": {
 		"label": "Set 65",
