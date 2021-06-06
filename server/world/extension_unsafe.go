@@ -12,11 +12,12 @@ type (
 	// unsafeData is allocated with extra space for armaments and angles
 	// basics documented in extension_safe
 	unsafeExtension struct {
-		data      *uint16
-		target    Vec2f
-		alt       float32
-		altTarget float32
-		typ       EntityType
+		data            *uint16
+		target          Vec2f
+		alt             float32
+		altTarget       float32
+		spawnProtection Ticks
+		typ             EntityType
 	}
 )
 
@@ -123,4 +124,12 @@ func (ext *unsafeExtension) turretTarget() Vec2f {
 
 func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
 	ext.target = target
+}
+
+func (ext *unsafeExtension) getSpawnProtection() Ticks {
+	return ext.spawnProtection
+}
+
+func (ext *unsafeExtension) setSpawnProtection(val Ticks) {
+	ext.spawnProtection = val
 }

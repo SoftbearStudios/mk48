@@ -297,7 +297,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			dist2 := entity.Position.DistanceSquared(other.Position)
 			r2 := square(boat.Data().Radius)
 
-			if boat.Damage(world.DamageToTicks(weapon.Data().Damage * collisionMultiplier(dist2, r2))) {
+			if boat.Damage(world.DamageToTicks(weapon.Data().Damage * collisionMultiplier(dist2, r2) * boat.SpawnProtection())) {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
 				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()))
 			}
@@ -341,10 +341,12 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					frontPos := oB.Position.AddScaled(oB.Direction.Vec2f(), oD.Length*0.5)
 					dist2 := frontPos.DistanceSquared(b.Position)
 					damage *= collisionMultiplier(dist2, square(d.Radius))
+					damage *= b.SpawnProtection()
 
 					// Rams take less damage from ramming
 					isRam := d.SubKind == world.EntitySubKindRam
 					if isRam {
+						b.ClearSpawnProtection()
 						massDiff *= 0.5
 						damage *= 1.0 / ramDamage
 					}

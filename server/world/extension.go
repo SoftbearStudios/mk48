@@ -64,6 +64,24 @@ func (entity *Entity) Altitude() float32 {
 	}
 }
 
+// Returns value in the range [0,1] where 0 is full protection and 1 is no protection
+// Intended to be multiplied by, for example, damage, to decrease damage taken
+// while having been spawned recently
+func (entity *Entity) SpawnProtection() float32 {
+	entity.mustBoat()
+	remaining := entity.Owner.ext.getSpawnProtection()
+	ret := (spawnProtection - remaining).Float() / spawnProtection.Float()
+	if ret > 1 {
+		panic("spawn protection would be too high")
+	}
+	return ret
+}
+
+func (entity *Entity) ClearSpawnProtection() {
+	entity.mustBoat()
+	entity.Owner.ext.setSpawnProtection(0)
+}
+
 func (entity *Entity) SetAltitudeTarget(altitudeTarget float32) {
 	entity.mustBoat()
 	entity.Owner.ext.setAltitudeTarget(clamp(altitudeTarget, -1, 1))

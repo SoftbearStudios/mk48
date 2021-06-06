@@ -4,11 +4,12 @@
 package world
 
 type safeExtension struct {
-	armaments []Ticks // consumption of each armament
-	angles    []Angle // angle of each turret
-	target    Vec2f   // turret target position
-	alt       float32 // altitude (see entity.Altitude for meaning)
-	altTarget float32 // desired altitude
+	armaments       []Ticks // consumption of each armament
+	angles          []Angle // angle of each turret
+	target          Vec2f   // turret target position
+	alt             float32 // altitude (see entity.Altitude for meaning)
+	altTarget       float32 // desired altitude
+	spawnProtection Ticks   // remaining
 }
 
 var _ = extension(&safeExtension{})
@@ -17,7 +18,7 @@ func (ext *safeExtension) setType(entityType EntityType) {
 	data := entityType.Data()
 
 	// Only keep target and target time
-	*ext = safeExtension{target: ext.target, altTarget: ext.altTarget}
+	*ext = safeExtension{target: ext.target, altTarget: ext.altTarget, spawnProtection: ext.spawnProtection}
 
 	// Replenish all
 	ext.armaments = make([]Ticks, len(data.Armaments))
@@ -75,4 +76,12 @@ func (ext *safeExtension) altitudeTarget() float32 {
 
 func (ext *safeExtension) setAltitudeTarget(a float32) {
 	ext.altTarget = a
+}
+
+func (ext *safeExtension) getSpawnProtection() Ticks {
+	return ext.spawnProtection
+}
+
+func (ext *safeExtension) setSpawnProtection(val Ticks) {
+	ext.spawnProtection = val
 }

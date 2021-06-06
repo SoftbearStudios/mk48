@@ -19,6 +19,7 @@
 	<ul>
 		<li>Add "Freedom" class LCS (level 6) and associated weapons.</li>
 		<li>Reduce "Arleigh Burke" number of "ESSM" SAM's from 8 to 4</li>
+		<li>Add back spawn protection (lasts 10 seconds or until you attack)</li>
 		<li>Improve supporting pages appearance and accuracy</li>
 		<li>Improve keyboard input</li>
 	</ul>

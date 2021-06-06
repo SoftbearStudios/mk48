@@ -7,6 +7,8 @@ import (
 	"github.com/chewxy/math32"
 )
 
+const spawnProtection Ticks = 10 * TicksPerSecond
+
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
 // Its size is 32 bytes for optimal efficiency.
 // Cannot modify EntityType directly.
@@ -78,6 +80,15 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 
 	boat := data.Kind == EntityKindBoat
 	if boat {
+		// Spawn protection
+		sp := entity.Owner.ext.getSpawnProtection()
+		toSubtract := ticks
+		// Avoid overflow of unsigned ticks
+		if toSubtract > sp {
+			toSubtract = sp
+		}
+		entity.Owner.ext.setSpawnProtection(sp - toSubtract)
+
 		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
 		if len(entity.ArmamentConsumption()) > 0 {
 			// If turrets were already copied and the extension
@@ -422,6 +433,8 @@ func (entity *Entity) Close() {
 }
 
 func (entity *Entity) ConsumeArmament(index int) {
+	entity.ClearSpawnProtection()
+
 	entity.Owner.ext.copyArmamentConsumption()
 	a := &entity.Data().Armaments[index]
 
@@ -441,6 +454,11 @@ func (entity *Entity) ConsumeArmament(index int) {
 
 // Initialize is called whenever a boat's type is set/changed.
 func (entity *Entity) Initialize(entityType EntityType) {
+	if entity.EntityType == EntityTypeInvalid {
+		// Just spawned
+		entity.Owner.ext.setSpawnProtection(spawnProtection)
+	}
+
 	var oldArmaments []Ticks
 	if entity.EntityType != EntityTypeInvalid {
 		oldArmaments = entity.ArmamentConsumption()
