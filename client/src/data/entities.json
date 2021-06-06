@@ -1066,7 +1066,7 @@
 		"link": "https://en.wikipedia.org/wiki/Freedom-class_littoral_combat_ship",
 		"type": "boat",
 		"subtype": "lcs",
-		"level": 6,
+		"level": 5,
 		"length": 115,
 		"width": 17.5,
 		"speed": 24.1789,
@@ -1088,58 +1088,58 @@
 		"armaments": [
 			{
 				"default": "nsm",
-				"positionForward": -15,
-				"positionSide": 5,
-				"angle": 1.5707963267948966,
+				"positionForward": 26.5436,
+				"positionSide": 4.77561,
+				"angle": -0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -15,
-				"positionSide": -5,
-				"angle": -1.5707963267948966,
+				"positionForward": 26.5436,
+				"positionSide": -4.77561,
+				"angle": 0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -15,
-				"positionSide": 5,
-				"angle": 1.5707963267948966,
+				"positionForward": 26.5436,
+				"positionSide": 4.77561,
+				"angle": -0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -15,
-				"positionSide": -5,
-				"angle": -1.5707963267948966,
+				"positionForward": 26.5436,
+				"positionSide": -4.77561,
+				"angle": 0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -16,
-				"positionSide": 5,
-				"angle": 1.5707963267948966,
+				"positionForward": 27.5111,
+				"positionSide": 5.51015,
+				"angle": -0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -16,
-				"positionSide": -5,
-				"angle": -1.5707963267948966,
+				"positionForward": 27.5111,
+				"positionSide": -5.51015,
+				"angle": 0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -16,
-				"positionSide": 5,
-				"angle": 1.5707963267948966,
+				"positionForward": 27.5111,
+				"positionSide": 5.51015,
+				"angle": -0.9384076882612873,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -16,
-				"positionSide": -5,
-				"angle": -1.5707963267948966,
+				"positionForward": 27.5111,
+				"positionSide": -5.51015,
+				"angle": 0.9384076882612873,
 				"external": false
 			},
 			{
@@ -2885,7 +2885,7 @@
 		"link": "https://en.wikipedia.org/wiki/Visby-class_corvette",
 		"type": "boat",
 		"subtype": "corvette",
-		"level": 5,
+		"level": 4,
 		"length": 72.7,
 		"width": 10.4,
 		"speed": 18.00556,

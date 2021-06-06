@@ -708,10 +708,10 @@
 "meta": {
 	"app": "https://www.codeandweb.com/texturepacker",
 	"version": "1.0",
-	"image": "/entities.webp",
+	"image": "/entities.png",
 	"format": "RGBA8888",
 	"size": {"w":1811,"h":1793},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e7fd5762e8301e176d32567ea910a4c3:9a4ffd602e02cd395e795b2ff320cde0:bffe4003b054c3d142b5c6eb76f112e3$"
+	"smartupdate": "$TexturePacker:SmartUpdate:70ce14c7739f850ec279efcd07745cd6:0905e5570e5a03a514eebd90ff0a62f5:cfaa7ad3941a4856d1b92e5a4fa54ebc$"
 }
 }

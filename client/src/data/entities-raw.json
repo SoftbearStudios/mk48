@@ -652,18 +652,18 @@
 		"armaments": [
 			{
 				"default": "nsm",
-				"positionForward": -15,
-				"positionSide": 5,
-				"angle": 90,
+				"positionForward": 26.5436,
+				"positionSide": 4.77561,
+				"angle": -53.7668,
 				"symmetrical": true,
 				"count": 2,
 				"external": false
 			},
 			{
 				"default": "nsm",
-				"positionForward": -16,
-				"positionSide": 5,
-				"angle": 90,
+				"positionForward": 27.5111,
+				"positionSide": 5.51015,
+				"angle": -53.7668,
 				"symmetrical": true,
 				"count": 2,
 				"external": false
