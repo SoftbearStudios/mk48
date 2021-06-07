@@ -9,8 +9,8 @@ THREE=ws-us-east-1-3.mk48.io
 
 all: run
 
-../server/world/entities.json: ../server/world/entities-raw.json
-	( cd ../server/world; node preprocess.mjs; )
+../server/world/entities.json: ../data/entities-raw.json
+	( cd ../data; node preprocess.mjs; )
 
 server: *.go ../server/*.go ../server/*/*.go ../server/*/*/*.go ../server/world/entities.json
 	go build -o server

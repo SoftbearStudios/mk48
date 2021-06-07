@@ -8,8 +8,8 @@ node_modules:
 dev: node_modules src/data/entities.json
 	npm run dev
 
-../server/world/entities.json: ../server/world/entities-raw.json
-	( cd ../server/world; node preprocess.mjs; )
+../server/world/entities.json: ../data/entities-raw.json
+	( cd ../data; node preprocess.mjs; )
 
 src/data/entities.json: ../server/world/entities.json
 	cp ../server/world/entities.json src/data/entities.json

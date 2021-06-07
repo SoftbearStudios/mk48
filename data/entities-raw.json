@@ -1,0 +1,2596 @@
+{
+	"barrel": {
+		"label": "Barrel",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 1,
+		"reload": 0,
+		"length": 2.72,
+		"lifespan": 60,
+		"width": 1.785,
+		"speed": 20
+	},
+	"coin": {
+		"label": "Coin",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 5,
+		"reload": 0,
+		"length": 3,
+		"lifespan": 120,
+		"width": 3,
+		"speed": 15
+	},
+	"crate": {
+		"label": "Crate",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 1,
+		"reload": 2,
+		"length": 2,
+		"lifespan": 60,
+		"width": 2,
+		"speed": 20
+	},
+	"scrap": {
+		"label": "Scrap",
+		"type": "collectible",
+		"subtype": "score",
+		"level": 2,
+		"reload": 1,
+		"length": 3,
+		"lifespan": 80,
+		"width": 3,
+		"speed": 15
+	},
+	"hq": {
+		"label": "HQ",
+		"type": "obstacle",
+		"subtype": "structure",
+		"length": 90,
+		"width": 90,
+		"lifespan": 3600
+	},
+	"oilPlatform": {
+		"label": "Oil Platform",
+		"type": "obstacle",
+		"subtype": "structure",
+		"length": 90,
+		"width": 90
+	},
+	"akula": {
+		"label": "Akula",
+		"link": "https://en.wikipedia.org/wiki/Akula-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 5,
+		"length": 113.3,
+		"width": 20.137,
+		"speed": 18.00556,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 50.5,
+				"positionSide": 1.5,
+				"angle": 0,
+				"count": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 51,
+				"positionSide": 0.6,
+				"angle": 0,
+				"count": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": 52,
+				"positionSide": 0.5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
+	"arleighBurke": {
+		"label": "Arleigh Burke",
+		"link": "https://en.wikipedia.org/wiki/Arleigh_Burke-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 4,
+		"length": 154,
+		"width": 20,
+		"speed": 17,
+		"stealth": 0.25,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark54",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "harpoon",
+				"positionForward": -10.25,
+				"positionSide": 5.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "harpoon",
+				"positionForward": -11,
+				"positionSide": 5.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "harpoon",
+				"positionForward": -10.25,
+				"positionSide": 5.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "harpoon",
+				"positionForward": -11,
+				"positionSide": 5.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 0,
+				"vertical": true,
+				"count": 4
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -62,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -15.25,
+				"positionSide": 9.4
+			},
+			{
+				"positionForward": -15.25,
+				"positionSide": -9.4
+			},
+			{
+				"type": "mark12",
+				"positionForward": 51,
+				"positionSide": 0
+			}
+		]
+	},
+	"bismarck": {
+		"label": "Bismarck",
+		"link": "https://en.wikipedia.org/wiki/German_battleship_Bismarck",
+		"type": "boat",
+		"subtype": "battleship",
+		"level": 5,
+		"length": 241.6,
+		"width": 36,
+		"speed": 15.438478,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "kingfisher",
+				"positionForward": -8.75,
+				"positionSide": 5,
+				"angle": 90,
+				"symmetrical": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "38cmSKC34",
+				"positionForward": 67.9856,
+				"positionSide": 0
+			},
+			{
+				"type": "38cmSKC34",
+				"positionForward": 50.672,
+				"positionSide": 0
+			},
+			{
+				"type": "38cmSKC34",
+				"positionForward": -55.405,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "38cmSKC34",
+				"positionForward": -73.124,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"dredger": {
+		"label": "Dredger",
+		"link": "https://en.wikipedia.org/wiki/Trailing_suction_hopper_dredger",
+		"type": "boat",
+		"subtype": "dredger",
+		"level": 4,
+		"length": 99,
+		"width": 16.5,
+		"speed": 8,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "depositor",
+				"positionForward": 7,
+				"turret": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": 43.75,
+				"positionSide": 0
+			}
+		]
+	},
+	"essex": {
+		"label": "Essex",
+		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
+		"type": "boat",
+		"subtype": "carrier",
+		"level": 6,
+		"length": 265.8,
+		"width": 42.5695,
+		"speed": 16.83333,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "avenger",
+				"positionForward": 16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": 0,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -16,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -32,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -48,
+				"positionSide": 0,
+				"external": true
+			},
+			{
+				"default": "avenger",
+				"positionForward": -64,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark12x2",
+				"positionForward": 46.25,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": 38,
+				"positionSide": 12.75
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -23.5,
+				"positionSide": 12.75,
+				"angle": 180
+			},
+			{
+				"type": "mark12x2",
+				"positionForward": -31.5,
+				"positionSide": 12.75,
+				"angle": 180
+			}
+		]
+	},
+	"fairmileD": {
+		"label": "Fairmile D",
+		"link": "https://en.wikipedia.org/wiki/Fairmile_D_motor_torpedo_boat",
+		"type": "boat",
+		"subtype": "MTB",
+		"level": 1,
+		"length": 35,
+		"width": 6.35,
+		"speed": 15.9477,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": -7,
+				"positionSide": 2.3,
+				"angle": 7.5,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": 4.5,
+				"positionSide": 2.5,
+				"angle": 184,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": 5,
+				"positionSide": 2.55,
+				"angle": 184,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "6pounder",
+				"positionForward": 8,
+				"positionSide": 0
+			},
+			{
+				"type": "6pounder",
+				"positionForward": -11.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"fletcher": {
+		"label": "Fletcher",
+		"link": "https://en.wikipedia.org/wiki/Fletcher-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 3,
+		"length": 114.8,
+		"width": 12,
+		"speed": 18.777,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 1.066,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.533,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 1.066,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.533,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -55,
+				"positionSide": 1,
+				"angle": 180,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -55.5,
+				"positionSide": 1,
+				"angle": 180,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -56,
+				"positionSide": 1,
+				"angle": 180,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -56.5,
+				"positionSide": 1,
+				"angle": 180,
+				"symmetrical": false,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": 2.75,
+				"positionSide": 0
+			},
+			{
+				"positionForward": -13,
+				"positionSide": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": 37.75,
+				"positionSide": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": 30.24,
+				"positionSide": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": -31.07,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "mark12",
+				"positionForward": -38.61,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"freedom": {
+		"label": "Freedom",
+		"link": "https://en.wikipedia.org/wiki/Freedom-class_littoral_combat_ship",
+		"type": "boat",
+		"subtype": "lcs",
+		"level": 6,
+		"length": 115,
+		"width": 17.5,
+		"speed": 24.1789,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "nsm",
+				"positionForward": 26.5436,
+				"positionSide": 4.77561,
+				"angle": -53.7668,
+				"symmetrical": true,
+				"count": 2,
+				"external": false
+			},
+			{
+				"default": "nsm",
+				"positionForward": 27.5111,
+				"positionSide": 5.51015,
+				"angle": -53.7668,
+				"symmetrical": true,
+				"count": 2,
+				"external": false
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -40,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "bofors57mmMK3",
+				"positionForward": 33,
+				"positionSide": 0
+			},
+			{
+				"type": "mark49",
+				"positionForward": -22.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"g5": {
+		"label": "G-5",
+		"link": "https://en.wikipedia.org/wiki/G-5-class_motor_torpedo_boat",
+		"type": "boat",
+		"subtype": "MTB",
+		"level": 1,
+		"length": 18.85,
+		"width": 3.5,
+		"speed": 27.26557,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "type53",
+				"width": 0.533,
+				"positionForward": -7,
+				"positionSide": 0.333,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			}
+		]
+	},
+	"golf": {
+		"label": "Golf",
+		"link": "https://en.wikipedia.org/wiki/Golf-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 3,
+		"length": 98.4,
+		"width": 8.2,
+		"speed": 8.7455,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "set65",
+				"width": 0.533,
+				"positionForward": 41,
+				"positionSide": 0.5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "set65",
+				"width": 0.533,
+				"positionForward": 41,
+				"positionSide": 0.5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "set65",
+				"width": 0.533,
+				"positionForward": 41,
+				"positionSide": 0.5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
+	"indiaman": {
+		"label": "East Indiaman",
+		"link": "https://en.wikipedia.org/wiki/East_Indiaman",
+		"type": "boat",
+		"subtype": "pirate",
+		"level": 3,
+		"length": 52.8143,
+		"width": 13.6162,
+		"speed": 4,
+		"armaments": [
+			{
+				"default": "cannonBall",
+				"positionForward": 2.72433,
+				"positionSide": 4.48329,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 7.0183,
+				"positionSide": 4.53272,
+				"angle": 89,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -1.48315,
+				"positionSide": 4.31076,
+				"angle": 91,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": 11.0811,
+				"positionSide": 4.33021,
+				"angle": 88,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "cannonBall",
+				"positionForward": -9.85305,
+				"positionSide": 4.31076,
+				"angle": 92,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		]
+	},
+	"kolkata": {
+		"label": "Kolkata",
+		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 5,
+		"length": 163,
+		"width": 17.4,
+		"speed": 15.43334,
+		"stealth": 0.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "set65",
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "brahmos",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"count": 3,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": 38,
+				"positionSide": 2,
+				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"default": "barak8",
+				"positionForward": -36,
+				"positionSide": 1.5,
+				"count": 1,
+				"symmetrical": true,
+				"vertical": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -2.5,
+				"positionSide": 2.5,
+				"angle": -90
+			},
+			{
+				"positionForward": -5.3,
+				"positionSide": -2.5,
+				"angle": 90
+			},
+			{
+				"type": "otoMelara76mm",
+				"positionForward": 54,
+				"positionSide": 0
+			}
+		]
+	},
+	"komar": {
+		"label": "Komar",
+		"link": "https://en.wikipedia.org/wiki/Komar-class_missile_boat",
+		"type": "boat",
+		"subtype": "MTB",
+		"level": 1,
+		"length": 25.4,
+		"width": 6.24,
+		"speed": 22.6,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "type53",
+				"width": 0.533,
+				"positionForward": -0.5,
+				"positionSide": 2.3,
+				"angle": 5.2,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -11.5,
+				"positionSide": 1.2,
+				"angle": 182,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -12,
+				"positionSide": 1.2,
+				"angle": 182,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "2m3m",
+				"positionForward": 3.4,
+				"positionSide": -0.8,
+				"angle": 0
+			},
+			{
+				"type": "2m3m",
+				"positionForward": -8.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"leander": {
+		"label": "Leander",
+		"link": "https://en.wikipedia.org/wiki/Leander-class_cruiser_(1931)",
+		"type": "boat",
+		"subtype": "cruiser",
+		"level": 4,
+		"length": 169.1,
+		"width": 17.1,
+		"speed": 16.71945,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.26,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.78,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.26,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.78,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -3.41018,
+				"positionSide": 6.52922,
+				"angle": 180
+			},
+			{
+				"positionForward": -3.41018,
+				"positionSide": -6.52922,
+				"angle": 180
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": 52.7746,
+				"positionSide": 0
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": 43.2429,
+				"positionSide": 0
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": -45.3247,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "bl6MkXXIII",
+				"positionForward": -56.3283,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"lublin": {
+		"label": "Lublin",
+		"link": "https://en.wikipedia.org/wiki/Lublin-class_minelayer-landing_ship",
+		"type": "boat",
+		"subtype": "minelayer",
+		"level": 3,
+		"length": 95.8,
+		"width": 10.8,
+		"speed": 8.5,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "wz08_39",
+				"positionForward": -38,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -39,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -40,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -41,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "wz08_39",
+				"positionForward": -42,
+				"positionSide": 1.75,
+				"symmetrical": true,
+				"external": true
+			}
+		]
+	},
+	"momi": {
+		"label": "Momi",
+		"link": "https://en.wikipedia.org/wiki/Momi-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 2,
+		"length": 85.3,
+		"width": 7.9,
+		"speed": 18.52,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.3,
+				"angle": 0,
+				"turret": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.3,
+				"angle": 0,
+				"turret": 1,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -42,
+				"positionSide": 1.4,
+				"angle": 180,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "depthCharge",
+				"default": "mark9",
+				"positionForward": -41.5,
+				"positionSide": 1.4,
+				"angle": 180,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": 22.15,
+				"positionSide": 0
+			},
+			{
+				"positionForward": -13.85,
+				"positionSide": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": 30,
+				"positionSide": 0
+			},
+			{
+				"type": "mark12",
+				"positionForward": 1.5,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "mark12",
+				"positionForward": -22.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"montana": {
+		"label": "Montana",
+		"link": "https://en.wikipedia.org/wiki/Montana-class_battleship",
+		"type": "boat",
+		"subtype": "battleship",
+		"level": 6,
+		"length": 280.80,
+		"width": 36.93,
+		"speed": 14.404,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "kingfisher",
+				"positionForward": -122,
+				"positionSide": 8.5,
+				"angle": 17.5,
+				"symmetrical": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark7",
+				"positionForward": 74.62,
+				"positionSide": 0
+			},
+			{
+				"type": "mark7",
+				"positionForward": 52.50,
+				"positionSide": 0
+			},
+			{
+				"type": "mark7",
+				"positionForward": -47.90,
+				"positionSide": 0,
+				"angle": 180
+			},
+			{
+				"type": "mark7",
+				"positionForward": -69.49,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"ohio": {
+		"label": "Ohio",
+		"link": "https://en.wikipedia.org/wiki/Ohio-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 6,
+		"length": 170,
+		"width": 13,
+		"speed": 12.8611,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "mk70",
+				"positionForward": 72,
+				"positionSide": 5,
+				"angle": 0,
+				"symmetrical": false,
+				"external": false
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 32,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 24,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 16,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 8,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
+			}
+		]
+	},
+	"olympias": {
+		"label": "Olympias",
+		"link": "https://en.wikipedia.org/wiki/Olympias_%28trireme%29",
+		"type": "boat",
+		"subtype": "ram",
+		"level": 1,
+		"length": 36.9,
+		"width": 5.5,
+		"speed": 16,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		]
+	},
+	"osa": {
+		"label": "Osa",
+		"link": "https://en.wikipedia.org/wiki/Osa-class_missile_boat",
+		"type": "boat",
+		"subtype": "MTB",
+		"level": 3,
+		"length": 38.6,
+		"width": 7.64,
+		"speed": 21.6067,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "p15",
+				"width": 0.533,
+				"positionForward": -1.75,
+				"positionSide": 2.5,
+				"angle": 2,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "p15",
+				"width": 0.533,
+				"positionForward": -12,
+				"positionSide": 2.5,
+				"angle": 2,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "2m3m",
+				"positionForward": 10,
+				"positionSide": 0,
+				"angle": 0
+			},
+			{
+				"type": "2m3m",
+				"positionForward": -16.5,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"pt34": {
+		"label": "PT-34",
+		"link": "https://en.wikipedia.org/wiki/Patrol_torpedo_boat_PT-34",
+		"type": "boat",
+		"subtype": "MTB",
+		"level": 1,
+		"length": 23,
+		"width": 6.07,
+		"speed": 21.09,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0,
+				"positionSide": 2.5,
+				"angle": 4.5,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": -8,
+				"positionSide": 1.8,
+				"angle": 4.5,
+				"symmetrical": true,
+				"external": true
+			}
+		]
+	},
+	"skipjack": {
+		"label": "Skipjack",
+		"link": "https://en.wikipedia.org/wiki/Skipjack-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 4,
+		"length": 76.71,
+		"width": 9.65,
+		"speed": 16.976667,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 33.75,
+				"positionSide": 0.7,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark48",
+				"width": 0.533,
+				"positionForward": 33.75,
+				"positionSide": 0.7,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "mk70",
+				"positionForward": 33.75,
+				"positionSide": 0.7,
+				"angle": 0,
+				"symmetrical": false,
+				"external": false
+			},
+			{
+				"default": "harpoon",
+				"positionForward": 34,
+				"positionSide": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
+	"typeVIIC": {
+		"label": "Type VII C",
+		"link": "https://en.wikipedia.org/wiki/Type_VII_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 2,
+		"length": 67.1,
+		"width": 6.2,
+		"speed": 9.06,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 26,
+				"positionSide": 0.333,
+				"angle": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 25,
+				"positionSide": 0.666,
+				"angle": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": -30,
+				"positionSide": 0,
+				"angle": 180,
+				"symmetrical": false,
+				"external": false
+			}
+		],
+		"turrets": [
+			{
+				"type": "8_8cmSKC35",
+				"positionForward": -4.35,
+				"positionSide": 0,
+				"angle": 180
+			}
+		]
+	},
+	"visby": {
+		"label": "Visby",
+		"link": "https://en.wikipedia.org/wiki/Visby-class_corvette",
+		"type": "boat",
+		"subtype": "corvette",
+		"level": 5,
+		"length": 72.7,
+		"width": 10.4,
+		"speed": 18.00556,
+		"stealth": 0.75,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0.25,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "torpedo",
+				"default": "torped45",
+				"width": 0.324,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": false,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": 3.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": 3.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -2.25,
+				"positionSide": 3.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "weapon",
+				"subtype": "missile",
+				"default": "rbs15",
+				"positionForward": -3,
+				"positionSide": 3.5,
+				"angle": 90,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -23,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -22,
+				"positionSide": 4.5
+			},
+			{
+				"positionForward": -22,
+				"positionSide": -4.5
+			},
+			{
+				"type": "bofors57mmMK3",
+				"positionForward": 20,
+				"positionSide": 0
+			}
+		]
+	},
+	"zubr": {
+		"label": "Zubr",
+		"link": "https://en.wikipedia.org/wiki/Zubr-class_LCAC",
+		"type": "boat",
+		"subtype": "hovercraft",
+		"level": 2,
+		"length": 57,
+		"width": 21.15234375,
+		"speed": 28.29446,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+
+		],
+		"turrets": [
+			{
+				"type": "ogon",
+				"positionSide": 0,
+				"positionForward": 15.2
+			},
+			{
+				"type": "2m3m",
+				"positionForward": 10,
+				"positionSide": 6.25,
+				"angle": 0,
+				"symmetrical": true
+			}
+		]
+	},
+	"zumwalt": {
+		"label": "Zumwalt",
+		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
+		"type": "boat",
+		"subtype": "destroyer",
+		"level": 6,
+		"length": 190,
+		"width": 24.6,
+		"speed": 15.43333,
+		"stealth": 0.75,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "tomahawk",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": -50,
+				"positionSide": 9,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "asroc",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": 40,
+				"positionSide": 7,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "essm",
+				"positionForward": -50,
+				"positionSide": 9,
+				"vertical": true,
+				"count": 2,
+				"symmetrical": true
+			},
+			{
+				"default": "seahawk",
+				"positionForward": -65,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark51",
+				"positionForward": 49.5963,
+				"positionSide": 0
+			},
+			{
+				"type": "mark51",
+				"positionForward": 25.2885,
+				"positionSide": 0
+			}
+		]
+	},
+	"2m3m": {
+		"label": "2M-3M",
+		"link": "http://www.navweaps.com/Weapons/WNRussian_25mm-79_2m-3.php",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 2.975,
+		"width": 1.72,
+		"positionForward": 0.5,
+		"armaments": [
+			{
+				"default": "25x129mmR",
+				"positionForward": 0.5,
+				"positionSide": 0,
+				"angle": 0,
+				"external": true
+			}
+		]
+	},
+	"25x129mmR": {
+		"label": "25 x 129 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"width": 0.0254,
+		"length": 0.1295,
+		"speed": 900,
+		"range": 10000
+	},
+	"38cmSKC34": {
+		"label": "38 cm SK C/34",
+		"link": "https://en.wikipedia.org/wiki/16-inch/50-caliber_Mark_7_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 25.6,
+		"width": 11.1,
+		"positionForward": 5,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "380x1700mmR",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": 4.5,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"380x1700mmR": {
+		"label": "380 x 1700 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"length": 1.7,
+		"width": 0.380,
+		"speed": 820,
+		"range": 35600
+	},
+	"6pounder": {
+		"label": "6-Pounder",
+		"link": "https://en.wikipedia.org/wiki/Ordnance_QF_6-pounder",
+		"type": "turret",
+		"positionForward": 0.5,
+		"positionSide": 0.25,
+		"subtype": "gun",
+		"length": 2.675,
+		"width": 1.588,
+		"armaments": [
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 0.5,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"57x441mmR": {
+		"label": "57 x 441 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"positionForward": 0.5,
+		"length": 0.441,
+		"width": 0.57,
+		"speed": 853,
+		"range": 1510
+	},
+	"8_8cmSKC35": {
+		"label": "8.8 cm SK C/35",
+		"link": "https://en.wikipedia.org/wiki/8.8_cm_SK_C/35_naval_gun",
+		"type": "turret",
+		"positionForward": 0.4,
+		"positionSide": -0.1,
+		"subtype": "gun",
+		"length": 3.41,
+		"width": 1.812,
+		"armaments": [
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 0.5,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"avenger": {
+		"label": "TBF Avenger",
+		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 12.45,
+		"width": 16.5143,
+		"speed": 96.1136,
+		"range": 1456000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
+		"limited": true
+	},
+	"asroc": {
+		"label": "ASROC",
+		"link": "https://en.wikipedia.org/wiki/RUR-5_ASROC",
+		"type": "weapon",
+		"subtype": "rocket",
+		"level": 5,
+		"length": 4.5,
+		"width": 0.80859,
+		"speed": 200,
+		"range": 9700,
+		"damage": 0,
+		"reload": 12,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark54"
+			}
+		],
+		"limited": true
+	},
+	"barak8": {
+		"label": "Barak 8",
+		"link": "https://en.wikipedia.org/wiki/Barak_8",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 4.5,
+		"width": 0.703,
+		"speed": 662.6,
+		"range": 50000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"bl6MkXXIII": {
+		"label": "BL 6-inch Mk XXIII",
+		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 11.9,
+		"width": 5.671,
+		"positionForward": 2,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 2,
+				"symmetrical": true,
+				"external": true,
+				"hidden": false
+			}
+		]
+	},
+	"bofors57mmMK3": {
+		"label": "Bofors 57mm MK3",
+		"link": "https://en.wikipedia.org/wiki/Bofors_57_mm_L/70_naval_artillery_gun",
+		"type": "turret",
+		"positionForward": 1,
+		"positionSide": 0,
+		"subtype": "gun",
+		"length": 6.925,
+		"width": 4.2199,
+		"armaments": [
+			{
+				"default": "57x441mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"brahmos": {
+		"label": "BrahMos",
+		"link": "https://en.wikipedia.org/wiki/BrahMos",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 8.4,
+		"width": 0.9515625,
+		"speed": 993.9,
+		"range": 650000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"brosok": {
+		"label": "Brosok",
+		"link": "http://cmano-db.com/weapon/2176/",
+		"type": "decoy",
+		"subtype": "sonar",
+		"level": 4,
+		"length": 1.5,
+		"width": 0.28125,
+		"speed": 12,
+		"lifespan": 15
+	},
+	"cannonBall": {
+		"label": "Cannon Ball",
+		"type": "weapon",
+		"subtype": "shell",
+		"width": 0.091,
+		"length": 0.091,
+		"speed": 438.912,
+		"range": 1000
+	},
+	"depositor": {
+		"label": "Depositor",
+		"type": "weapon",
+		"subtype": "depositor",
+		"length": 21.9,
+		"width": 5.1328,
+		"range": 60
+	},
+	"essm": {
+		"label": "ESSM",
+		"link": "https://en.wikipedia.org/wiki/RIM-162_ESSM",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 3.66,
+		"width": 0.4575,
+		"speed": 1325.2,
+		"range": 50000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"harpoon": {
+		"label": "Harpoon",
+		"link": "https://en.wikipedia.org/wiki/Harpoon_(missile)",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 4,
+		"length": 3.8,
+		"width": 0.59375,
+		"speed": 240,
+		"range": 280000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"kingfisher": {
+		"label": "Kingfisher",
+		"link": "https://en.wikipedia.org/wiki/Vought_OS2U_Kingfisher",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 10.0853,
+		"width": 10.940,
+		"speed": 67.9067,
+		"range": 1461000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark18"
+			}
+		],
+		"limited": true
+	},
+	"mark7": {
+		"label": "Mark 7",
+		"link": "https://en.wikipedia.org/wiki/16-inch/50-caliber_Mark_7_gun",
+		"type": "turret",
+		"length": 30.05,
+		"width": 15.26,
+		"positionForward": 6.5,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": 7.5,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"symmetrical": false,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"mark8": {
+		"label": "Mark 8",
+		"link": "http://www.navweaps.com/Weapons/WNUS_16-45_mk5.php",
+		"type": "weapon",
+		"subtype": "shell",
+		"length": 1.626,
+		"width": 0.406,
+		"speed": 760,
+		"range": 38000
+	},
+	"mark9": {
+		"label": "Mark 9",
+		"link": "https://maritime.org/doc/depthcharge9/index.htm",
+		"type": "weapon",
+		"subtype": "depthCharge",
+		"level": 1,
+		"length": 0.448056,
+		"width": 0.701675,
+		"lifespan": 5
+	},
+	"mark12": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.34,
+		"positionForward": 1,
+		"width": 3.06,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"mark12x2": {
+		"label": "Mark 12",
+		"link": "https://en.wikipedia.org/wiki/5-inch/38-caliber_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.6,
+		"positionForward": 1,
+		"width": 4.39375,
+		"armaments": [
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"symmetrical": true,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"127x680mmR": {
+		"label": "127 x 680 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"positionForward": 1,
+		"length": 0.680,
+		"width": 0.127,
+		"speed": 790,
+		"range": 16000
+	},
+	"mark18": {
+		"label": "Mark 18",
+		"link": "https://en.wikipedia.org/wiki/Mark_18_torpedo",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 1,
+		"length": 6.2,
+		"width": 0.533,
+		"speed": 14.9189,
+		"range": 18000
+	},
+	"mark48": {
+		"label": "Mark 48",
+		"link": "https://en.wikipedia.org/wiki/Mark_48_torpedo",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 5.8,
+		"width": 0.533,
+		"speed": 28.2944,
+		"range": 38000,
+		"sensors": [
+			{
+				"type": "sonar"
+			}
+		]
+	},
+	"mark51": {
+		"label": "Mark 51",
+		"link": "https://en.wikipedia.org/wiki/Advanced_Gun_System",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 11.45,
+		"positionForward": 2.0724,
+		"width": 6.35,
+		"armaments": [
+			{
+				"default": "lrlap",
+				"angle": 0
+			}
+		]
+	},
+	"lrlap": {
+		"label": "LRLAP",
+		"type": "weapon",
+		"subtype": "shell",
+		"length": 2.3,
+		"width": 0.2875,
+		"speed": 825,
+		"range": 140000,
+		"reload": 6
+	},
+	"mark54": {
+		"label": "Mark 54",
+		"link": "https://en.wikipedia.org/wiki/Mark_54_Lightweight_Torpedo",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 2.72,
+		"width": 0.324,
+		"speed": 22.63557,
+		"range": 9100,
+		"sensors": [
+			{
+				"type": "sonar"
+			}
+		]
+	},
+	"nsm": {
+		"label": "Naval Strike Missile",
+		"link": "https://en.wikipedia.org/wiki/Naval_Strike_Missile",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 3.95,
+		"width": 1.049,
+		"speed": 300,
+		"range": 185000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"rim116": {
+		"label": "Rolling Airframe Missile",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 2.79,
+		"width": 0.3052,
+		"speed": 680,
+		"range": 10000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"seahawk": {
+		"label": "Seahawk",
+		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
+		"type": "weapon",
+		"subtype": "aircraft",
+		"level": 5,
+		"length": 19.6,
+		"width": 16.078,
+		"speed": 75.1089,
+		"range": 5000,
+		"sensors": [
+			{
+				"type": "visual"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark54",
+				"positionSide": 1,
+				"symmetrical": true
+			}
+		],
+		"limited": true
+	},
+	"mk70": {
+		"label": "MOSS",
+		"link": "https://en.wikipedia.org/wiki/Mobile_submarine_simulator",
+		"type": "decoy",
+		"subtype": "sonar",
+		"level": 2,
+		"length": 2.075,
+		"width": 0.29,
+		"speed": 10,
+		"lifespan": 15
+	},
+	"ogon": {
+		"label": "Ogon",
+		"link": "http://roe.ru/eng/catalog/naval-systems/shipborne-weapons/ogon/",
+		"type": "turret",
+		"length": 2.6,
+		"width": 2.6,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "of45",
+				"angle": 0,
+				"positionForward": 0,
+				"symmetrical": false,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "of45",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.3,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "of45",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.6,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "of45",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.9,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "weapon",
+				"default": "of45",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 1.2,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"of45": {
+		"label": "OF-45",
+		"link": "http://roe.ru/eng/catalog/naval-systems/shipborne-weapons/ogon/",
+		"type": "weapon",
+		"subtype": "rocket",
+		"level": 2,
+		"length": 1.125,
+		"width": 0.29883,
+		"speed": 200,
+		"range": 9810
+	},
+	"otoMelara76mm": {
+		"label": "OTO Melara 76 mm",
+		"link": "https://en.wikipedia.org/wiki/OTO_Melara_76_mm",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 7.3,
+		"positionForward": 1,
+		"width": 3.0796875,
+		"armaments": [
+			{
+				"default": "76x636mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"76x636mmR": {
+		"label": "76 x 636 mmR",
+		"type": "weapon",
+		"subtype": "shell",
+		"positionForward": 1,
+		"length": 0.636,
+		"width": 0.76,
+		"speed": 915,
+		"range": 16000
+	},
+	"p15": {
+		"label": "P-15 Termit",
+		"link": "https://en.wikipedia.org/wiki/P-15_Termit",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 3,
+		"length": 5.8,
+		"width": 2.084375,
+		"speed": 325.85,
+		"range": 40000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"rbs15": {
+		"label": "RBS-15",
+		"link": "https://en.wikipedia.org/wiki/RBS-15",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 3,
+		"length": 4.33,
+		"width": 1.2516,
+		"speed": 300,
+		"range": 70000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"mark49": {
+		"label": "Mark 49",
+		"link": "https://en.wikipedia.org/wiki/RIM-116_Rolling_Airframe_Missile",
+		"type": "turret",
+		"length": 3.02,
+		"width": 2.00547,
+		"positionForward": 0.15,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "rim116",
+				"angle": 0,
+				"external": false,
+				"count": 8,
+				"hidden": true
+			}
+		]
+	},
+	"set65": {
+		"label": "Set 65",
+		"link": "https://commons.wikimedia.org/wiki/File:SET-65.svg",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 3,
+		"length": 7.9,
+		"width": 0.533,
+		"speed": 20.577778,
+		"range": 16000,
+		"sensors": [
+			{
+				"type": "sonar"
+			}
+		]
+	},
+	"tomahawk": {
+		"label": "Tomahawk",
+		"link": "https://en.wikipedia.org/wiki/Tomahawk_(missile)",
+		"type": "weapon",
+		"subtype": "missile",
+		"level": 5,
+		"length": 5.56,
+		"width": 2.60625,
+		"speed": 245.872,
+		"range": 250000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"torped45": {
+		"label": "Torped 45",
+		"link": "https://en.wikipedia.org/wiki/Torped_45",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 2.85,
+		"width": 0.4,
+		"speed": 20.57779,
+		"range": 20000,
+		"sensors": [
+			{
+				"type": "sonar"
+			}
+		]
+	},
+	"type53": {
+		"label": "Type 53",
+		"link": "https://en.wikipedia.org/wiki/Type_53_torpedo",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 1,
+		"length": 7.2,
+		"width": 0.533,
+		"speed": 23.2,
+		"range": 18000
+	},
+	"wz08_39": {
+		"label": "wz. 08/39",
+		"link": "https://pl.wikipedia.org/wiki/Plik:Mina_morska_typu_M_1908-39.jpg",
+		"type": "weapon",
+		"subtype": "mine",
+		"level":3,
+		"length": 1.0725,
+		"width": 1.32,
+		"lifespan": 900
+	}
+}
