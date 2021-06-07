@@ -84,7 +84,14 @@ export async function connect(callback) {
 		};
 
 		socket.onmessage = messageRaw => {
-			const message = JSON.parse(messageRaw.data);
+			let message = null;
+			try {
+				message = JSON.parse(messageRaw.data);
+			} catch (err) {
+				console.log(`Error parsing JSON on socket: ${err}`);
+				console.log(messageRaw.data);
+				return;
+			}
 			switch (message.type) {
 				case "update":
 					entityID.set(message.data.entityID);
