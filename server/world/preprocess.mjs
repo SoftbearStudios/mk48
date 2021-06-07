@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import fs from 'fs';
-import {mapRanges} from '../util/math.js';
+import {mapRanges} from '../../client/src/util/math.js';
 
 /*
 	This file applies basic operations on the raw entity data, such

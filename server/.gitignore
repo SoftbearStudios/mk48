@@ -2,7 +2,6 @@ server
 server_arm
 server_race
 server_test
-*.json
 *.log
 *.csv
 out.txt

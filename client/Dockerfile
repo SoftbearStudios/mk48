@@ -10,6 +10,7 @@ COPY client/package*.json ./
 RUN npm install
 
 COPY client ./
+COPY server/world/entities.json client/src/data/
 
 EXPOSE 3000
 EXPOSE 24678
