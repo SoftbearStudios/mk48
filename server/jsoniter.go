@@ -157,8 +157,10 @@ func emptyTicks(ptr unsafe.Pointer) bool {
 
 func encodeTeamID(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	id := *(*world.TeamID)(ptr)
-	// Short string
-	stream.SetBuffer(append(id.AppendText(append(stream.Buffer(), '"')), '"'))
+	stream.WriteString(string(id.AppendText(make([]byte, 0, 6))))
+
+	// Short string (doesn't sanitize quotes)
+	//stream.SetBuffer(append(id.AppendText(append(stream.Buffer(), '"')), '"'))
 }
 
 func emptyTeamID(ptr unsafe.Pointer) bool {
