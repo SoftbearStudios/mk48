@@ -1556,22 +1556,6 @@
 				"vertical": true
 			},
 			{
-				"type": "weapon",
-				"subtype": "missile",
-				"default": "brahmos",
-				"positionForward": 44,
-				"positionSide": 1.5,
-				"vertical": true
-			},
-			{
-				"type": "weapon",
-				"subtype": "missile",
-				"default": "brahmos",
-				"positionForward": 44,
-				"positionSide": -1.5,
-				"vertical": true
-			},
-			{
 				"default": "76x636mmR",
 				"angle": 0,
 				"positionForward": 2,
@@ -1601,18 +1585,6 @@
 				"default": "barak8",
 				"positionForward": 38,
 				"positionSide": -2,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": 1.5,
-				"vertical": true
-			},
-			{
-				"default": "barak8",
-				"positionForward": -36,
-				"positionSide": -1.5,
 				"vertical": true
 			},
 			{

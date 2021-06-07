@@ -872,7 +872,7 @@
 				"default": "brahmos",
 				"positionForward": 44,
 				"positionSide": 1.5,
-				"count": 4,
+				"count": 3,
 				"symmetrical": true,
 				"vertical": true
 			},
@@ -888,7 +888,7 @@
 				"default": "barak8",
 				"positionForward": -36,
 				"positionSide": 1.5,
-				"count": 2,
+				"count": 1,
 				"symmetrical": true,
 				"vertical": true
 			}
