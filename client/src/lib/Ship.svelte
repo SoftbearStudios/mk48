@@ -52,7 +52,11 @@
 
 	export function summarizeType(type) {
 		const data = entityData[type];
-		return fromCamelCase(data.subtype) + (data.type === 'weapon' ? '' : ` ${data.type}`);
+		let subtype = fromCamelCase(data.subtype);
+		if (data.subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
+			subtype = 'rocket torpedo';
+		}
+		return subtype + (data.type === 'weapon' ? '' : ` ${data.type}`);
 	}
 </script>
 

@@ -3,6 +3,12 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
+<script context='module'>
+	export function toKnotsString(speed) {
+		return `${((speed || 0) * 1.943844492).toFixed(1)}kn`;
+	}
+</script>
+
 <script>
 	import {plural} from '../util/strings.js';
 	import {fly} from 'svelte/transition';
@@ -25,7 +31,7 @@
 
 <div transition:fly="{{y: 100}}">
 	<h2>{overlay.score || 0} {plural('point', overlay.score || 0)} —
-	{(overlay.speed * 1.943844492).toFixed(1)}kn —
+	{toKnotsString(overlay.speed)} —
 	{Math.round(((overlay.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(overlay.direction)}] —
 	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})
 	{recording ? ' — Recording (v to stop)' : ''}</h2>

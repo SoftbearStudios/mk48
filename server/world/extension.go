@@ -35,7 +35,8 @@ func (entity *Entity) ArmamentConsumption() []Ticks {
 
 // -1 = deep, 0 = surface, 1 = high in the air
 func (entity *Entity) Altitude() float32 {
-	switch entity.EntityType.Data().Kind {
+	data := entity.Data()
+	switch data.Kind {
 	case EntityKindBoat:
 		return entity.Owner.ext.altitude()
 	case EntityKindDecoy:
@@ -45,18 +46,18 @@ func (entity *Entity) Altitude() float32 {
 		}
 	}
 
-	switch entity.EntityType.Data().SubKind {
+	switch data.SubKind {
 	case EntitySubKindTorpedo, EntitySubKindDepthCharge, EntitySubKindMine:
 		// By multiplying by almost  negative one, these entities are allowed to
 		// hit surface ships, but not much airborne things
 		return -0.9 * AltitudeCollisionThreshold
 	case EntitySubKindShell, EntitySubKindMissile, EntitySubKindRocket:
-		if entity.EntityType != EntityTypeASROC {
+		if len(data.Armaments) == 0 {
 			// By multiplying by almost one, these entities are allowed to
 			// hit surface ships, but not much underwater things
 			return 0.9 * AltitudeCollisionThreshold
 		}
-		fallthrough
+		fallthrough // ASROC
 	case EntitySubKindAircraft, EntitySubKindSAM:
 		return 1.8 * AltitudeCollisionThreshold
 	default:

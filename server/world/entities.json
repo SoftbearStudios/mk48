@@ -2499,6 +2499,22 @@
 				"vertical": true
 			},
 			{
+				"default": "tomahawk",
+				"positionForward": 0,
+				"positionSide": 2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 0,
+				"positionSide": -2,
+				"angle": 0,
+				"external": false,
+				"vertical": true
+			},
+			{
 				"default": "mk70",
 				"positionForward": 72,
 				"positionSide": 5,
@@ -3049,6 +3065,169 @@
 		],
 		"antiAircraft": 0.056
 	},
+	"yasen": {
+		"label": "Yasen",
+		"link": "https://en.wikipedia.org/wiki/Yasen-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 7,
+		"length": 130,
+		"width": 19.8046875,
+		"speed": 18.00556,
+		"sensors": [
+			{
+				"type": "visual",
+				"range": 890
+			},
+			{
+				"type": "sonar",
+				"range": 1130
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": -5.75,
+				"angle": -0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": -5.75,
+				"angle": -0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": -5.75,
+				"angle": -0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": 2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": -2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": 2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": -2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": 2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": -2,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "rpk6",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "rpk6",
+				"positionForward": 41,
+				"positionSide": -5.75,
+				"angle": -0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "rpk6",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "rpk6",
+				"positionForward": 41,
+				"positionSide": -5.75,
+				"angle": -0.03490658503988659,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": 43,
+				"positionSide": 3,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": 43,
+				"positionSide": -3,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": -16.5,
+				"positionSide": 1.5,
+				"angle": -3.141592653589793,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": -16.5,
+				"positionSide": -1.5,
+				"angle": 3.141592653589793,
+				"external": false
+			}
+		],
+		"turrets": []
+	},
 	"zubr": {
 		"label": "Zubr",
 		"link": "https://en.wikipedia.org/wiki/Zubr-class_LCAC",
@@ -3510,6 +3689,26 @@
 		"turrets": [],
 		"sensors": []
 	},
+	"82r": {
+		"label": "82R",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 3.275,
+		"width": 0.4605,
+		"speed": 23,
+		"sensors": [
+			{
+				"type": "sonar",
+				"range": 1003.275
+			}
+		],
+		"lifespan": 65.21739130434783,
+		"damage": 0.634375,
+		"reload": 8,
+		"armaments": [],
+		"turrets": []
+	},
 	"avenger": {
 		"label": "TBF Avenger",
 		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
@@ -3545,7 +3744,6 @@
 		"width": 0.80859,
 		"speed": 200,
 		"damage": 0,
-		"reload": 12,
 		"sensors": [
 			{
 				"type": "radar",
@@ -3559,6 +3757,7 @@
 		],
 		"limited": true,
 		"lifespan": 5.211645949126277,
+		"reload": 20,
 		"turrets": []
 	},
 	"barak8": {
@@ -4253,6 +4452,32 @@
 		"damage": 0.5829000000000001,
 		"reload": 11.992,
 		"armaments": [],
+		"turrets": []
+	},
+	"rpk6": {
+		"label": "Vodopad",
+		"link": "https://en.wikipedia.org/wiki/RPK-6_Vodopad/RPK-7_Veter",
+		"type": "weapon",
+		"subtype": "rocket",
+		"level": 6,
+		"length": 6.5,
+		"width": 0.533,
+		"speed": 200,
+		"damage": 0,
+		"reload": 12,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1013
+			}
+		],
+		"armaments": [
+			{
+				"default": "82r"
+			}
+		],
+		"limited": true,
+		"lifespan": 5.991584504002548,
 		"turrets": []
 	},
 	"mark49": {

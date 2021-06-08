@@ -1358,6 +1358,15 @@
 				"symmetrical": true,
 				"external": false,
 				"vertical": true
+			},
+			{
+				"default": "tomahawk",
+				"positionForward": 0,
+				"positionSide": 2,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"vertical": true
 			}
 		]
 	},
@@ -1722,6 +1731,69 @@
 			}
 		]
 	},
+	"yasen": {
+		"label": "Yasen",
+		"link": "https://en.wikipedia.org/wiki/Yasen-class_submarine",
+		"type": "boat",
+		"subtype": "submarine",
+		"level": 7,
+		"length": 130,
+		"width": 19.8046875,
+		"speed": 18.00556,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "sonar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "set65",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 2,
+				"count": 3,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "rpk6",
+				"positionForward": 41,
+				"positionSide": 5.75,
+				"angle": 2,
+				"count": 2,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "brahmos",
+				"positionForward": -6,
+				"positionSide": 2,
+				"count": 3,
+				"symmetrical": true,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": 43,
+				"positionSide": 3,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"default": "brosok",
+				"positionForward": -16.5,
+				"positionSide": 1.5,
+				"angle": -180,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
 	"zubr": {
 		"label": "Zubr",
 		"link": "https://en.wikipedia.org/wiki/Zubr-class_LCAC",
@@ -1943,6 +2015,21 @@
 			}
 		]
 	},
+	"82r": {
+		"label": "82R",
+		"type": "weapon",
+		"subtype": "torpedo",
+		"level": 4,
+		"length": 3.275,
+		"width": 0.4605,
+		"speed": 23,
+		"range": 10000,
+		"sensors": [
+			{
+				"type": "sonar"
+			}
+		]
+	},
 	"avenger": {
 		"label": "TBF Avenger",
 		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
@@ -1976,7 +2063,6 @@
 		"speed": 200,
 		"range": 9700,
 		"damage": 0,
-		"reload": 12,
 		"sensors": [
 			{
 				"type": "radar"
@@ -2505,6 +2591,30 @@
 				"type": "radar"
 			}
 		]
+	},
+	"rpk6": {
+		"label": "Vodopad",
+		"link": "https://en.wikipedia.org/wiki/RPK-6_Vodopad/RPK-7_Veter",
+		"type": "weapon",
+		"subtype": "rocket",
+		"level": 6,
+		"length": 6.5,
+		"width": 0.533,
+		"speed": 200,
+		"range": 20000,
+		"damage": 0,
+		"reload": 12,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "82r"
+			}
+		],
+		"limited": true
 	},
 	"mark49": {
 		"label": "Mark 49",

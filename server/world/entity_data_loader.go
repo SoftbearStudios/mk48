@@ -170,7 +170,6 @@ func init() {
 	EntitySubKindSonar = ParseEntitySubKind("sonar")
 	EntitySubKindSubmarine = ParseEntitySubKind("submarine")
 
-	EntityTypeASROC = ParseEntityType("asroc")
 	EntityTypeBarrel = ParseEntityType("barrel")
 	EntityTypeCoin = ParseEntityType("coin")
 	EntityTypeCount = len(entityTypeEnum.strings)
@@ -225,7 +224,6 @@ var (
 	EntitySubKindSubmarine   EntitySubKind
 	EntitySubKindTorpedo     EntitySubKind
 
-	EntityTypeASROC       EntityType
 	EntityTypeBarrel      EntityType
 	EntityTypeCoin        EntityType
 	EntityTypeCrate       EntityType

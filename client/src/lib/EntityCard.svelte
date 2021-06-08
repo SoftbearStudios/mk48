@@ -7,6 +7,7 @@
 	import entityDatas from '../data/entities.json';
 	import Link from './Link.svelte';
 	import {summarizeType, groupArmaments} from './Ship.svelte';
+	import {toKnotsString} from './Status.svelte';
 
 	export let type;
 	export let depth = 0; // recursion depth
@@ -39,7 +40,7 @@
 					<li>Length: {entityData.length.toFixed(1)}m</li>
 				{/if}
 				{#if entityData.speed}
-					<li>Speed: {entityData.speed.toFixed(1)}m/s</li>
+					<li>Speed: {entityData.speed.toFixed(1)}m/s ({toKnotsString(entityData.speed)})</li>
 				{/if}
 				{#if entityData.range}
 					<li>Range: {entityData.range.toFixed(0)}m</li>

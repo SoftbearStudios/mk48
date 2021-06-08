@@ -128,7 +128,12 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 1;
 						break;
 					case 'rocket':
-						entityData.reload = 2.5;
+						if (entityData.armaments && entityData.armaments.length > 0) {
+							// ASROC
+							entityData.reload = 20;
+						} else {
+							entityData.reload = 2.5;
+						}
 						break;
 					case 'mine':
 						entityData.reload = 30;
