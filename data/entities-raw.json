@@ -251,7 +251,7 @@
 		"link": "https://en.wikipedia.org/wiki/German_battleship_Bismarck",
 		"type": "boat",
 		"subtype": "battleship",
-		"level": 5,
+		"level": 6,
 		"length": 241.6,
 		"width": 36,
 		"speed": 15.438478,
@@ -1261,7 +1261,7 @@
 		"link": "https://en.wikipedia.org/wiki/Montana-class_battleship",
 		"type": "boat",
 		"subtype": "battleship",
-		"level": 6,
+		"level": 7,
 		"length": 280.80,
 		"width": 36.93,
 		"speed": 14.404,
@@ -1571,6 +1571,110 @@
 				"angle": 0,
 				"symmetrical": true,
 				"external": false
+			}
+		]
+	},
+	"town": {
+		"label": "Town",
+		"link": "https://en.wikipedia.org/wiki/Town-class_cruiser_(1936)",
+		"type": "boat",
+		"subtype": "cruiser",
+		"level": 5,
+		"length": 180.3,
+		"width": 20.77676,
+		"speed": 16.59084,
+		"sensors": [
+			{
+				"type": "visual"
+			},
+			{
+				"type": "radar"
+			}
+		],
+		"armaments": [
+			{
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 0,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.52,
+				"turret": 0,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"turret": 1,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"default": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.52,
+				"turret": 1,
+				"angle": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"default": "kingfisher",
+				"positionForward": 4.82098,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -20.2181,
+				"positionSide": 8.41364,
+				"angle": 180,
+				"azimuthBR": 180
+			},
+			{
+				"positionForward": -20.2181,
+				"positionSide": -8.41364,
+				"angle": 180,
+				"azimuthBL": 180
+			},
+			{
+				"type": "bl6MkXXIIIx3",
+				"positionForward": 59.4418,
+				"positionSide": 0,
+				"azimuthB": 20
+			},
+			{
+				"type": "bl6MkXXIIIx3",
+				"positionForward": 48.659,
+				"positionSide": 0,
+				"azimuthB": 30
+			},
+			{
+				"type": "bl6MkXXIIIx3",
+				"positionForward": -47.9432,
+				"positionSide": 0,
+				"angle": 180,
+				"azimuthB": 30
+			},
+			{
+				"type": "bl6MkXXIIIx3",
+				"positionForward": -59.1084,
+				"positionSide": 0,
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -2148,6 +2252,36 @@
 				"angle": 0,
 				"positionForward": 1,
 				"positionSide": 2,
+				"symmetrical": true,
+				"external": true,
+				"hidden": false
+			}
+		]
+	},
+	"bl6MkXXIIIx3": {
+		"label": "BL 6-inch Mk XXIII",
+		"link": "https://en.wikipedia.org/wiki/BL_6-inch_Mk_XXIII_naval_gun",
+		"type": "turret",
+		"subtype": "gun",
+		"length": 12.3,
+		"width": 7.207,
+		"positionForward": 2,
+		"armaments": [
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 0,
+				"external": true,
+				"hidden": false
+			},
+			{
+				"type": "weapon",
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 1,
+				"positionSide": 3,
 				"symmetrical": true,
 				"external": true,
 				"hidden": false

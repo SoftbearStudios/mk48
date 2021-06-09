@@ -14,10 +14,11 @@
 
 	<h2>2021</h2>
 
-	<h3>6/8/2021</h3>
+	<h3>6/9/2021</h3>
 
 	<ul>
 		<li>Add "Yasen" class submarine (level 7) and associated weapons.</li>
+		<li>Add "Town" class cruiser (level 5) and move "Bismarck" and "Montana" battleships one level up.</li>
 		<li>Rebalance number of weapons on various high level ships.</li>
 		<li>Restrict turret angles where applicable.</li>
 		<li>Make stealth more effective.</li>
