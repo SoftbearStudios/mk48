@@ -60,7 +60,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			if remove {
 				if data.Kind == world.EntityKindBoat {
 					boatOutput <- *e // Copy entity
-				} else if data.Kind == world.EntityKindWeapon && data.SubKind == world.EntitySubKindTorpedo {
+				} else if data.Kind == world.EntityKindWeapon && (data.SubKind == world.EntitySubKindTorpedo || data.SubKind == world.EntitySubKindMissile || data.SubKind == world.EntitySubKindShell) {
 					// This torpedo died of "natural" causes, affect the
 					// terrain (see #49)
 					if rand.Float32()*2 < data.Damage {
@@ -69,9 +69,11 @@ func (h *Hub) Physics(ticks world.Ticks) {
 							position: e.Position.AddScaled(e.Direction.Vec2f(), 20),
 							delta:    32 * data.Damage,
 						}
+					}
 
+					if rand.Float32() < data.Damage {
 						sculptOutput <- sculpt{
-							position: e.Position,
+							position: e.Position.AddScaled(e.Direction.Vec2f(), 5),
 							delta:    -8 * data.Damage,
 						}
 					}
