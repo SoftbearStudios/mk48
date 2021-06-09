@@ -13,9 +13,9 @@ const (
 	// chunkSize is the width and height of a chunk.
 	// It must be a power of 2.
 	chunkSize = 1 << chunkSizeBits
-)
 
-const regenMillis = 30 * 60 * 1000
+	regenMillis = 20 * 60 * 1000
+)
 
 // chunk stores a region of heightmap data as nibbles.
 type chunk struct {
