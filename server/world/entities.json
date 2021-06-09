@@ -374,18 +374,22 @@
 			{
 				"positionForward": -15.25,
 				"positionSide": 9.4,
+				"azimuthBL": 3.141592653589793,
 				"angle": 0
 			},
 			{
 				"positionForward": -15.25,
 				"positionSide": -9.4,
+				"azimuthBR": 3.141592653589793,
 				"angle": 0
 			},
 			{
 				"type": "mark12",
 				"positionForward": 51,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.126
@@ -508,25 +512,33 @@
 				"type": "38cmSKC34",
 				"positionForward": 67.9856,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": 50.672,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": -55.405,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": -73.124,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.2
@@ -696,25 +708,33 @@
 				"type": "mark12x2",
 				"positionForward": 46.25,
 				"positionSide": 12.75,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": 38,
 				"positionSide": 12.75,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -23.5,
 				"positionSide": 12.75,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -31.5,
 				"positionSide": 12.75,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.221
@@ -1027,36 +1047,52 @@
 			{
 				"positionForward": 2.75,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthFL": 0.7853981633974483,
+				"azimuthFR": 0.7853981633974483,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"positionForward": -13,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthFL": 0.7853981633974483,
+				"azimuthFR": 0.7853981633974483,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"type": "mark12",
 				"positionForward": 37.75,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30.24,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "mark12",
 				"positionForward": -31.07,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "mark12",
 				"positionForward": -38.61,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.092
@@ -1225,7 +1261,9 @@
 				"type": "bofors57mmMK3",
 				"positionForward": 33,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.6108652381980153,
+				"azimuthBR": 0.6108652381980153
 			},
 			{
 				"type": "mark49",
@@ -1604,18 +1642,24 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": -1.5707963267948966
+				"angle": -1.5707963267948966,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
-				"angle": 1.5707963267948966
+				"angle": 1.5707963267948966,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"type": "otoMelara76mm",
 				"positionForward": 54,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.133
@@ -1922,36 +1966,46 @@
 			{
 				"positionForward": -3.41018,
 				"positionSide": 6.52922,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBR": 3.141592653589793
 			},
 			{
 				"positionForward": -3.41018,
 				"positionSide": -6.52922,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 3.141592653589793
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 52.7746,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 43.2429,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": -45.3247,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": -56.3283,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.138
@@ -2169,30 +2223,46 @@
 			{
 				"positionForward": 22.15,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthFL": 0.7853981633974483,
+				"azimuthFR": 0.7853981633974483,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"positionForward": -13.85,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthFL": 0.7853981633974483,
+				"azimuthFR": 0.7853981633974483,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark12",
 				"positionForward": 1.5,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthFL": 0.5235987755982988,
+				"azimuthFR": 0.5235987755982988,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "mark12",
 				"positionForward": -22.5,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.067
@@ -2351,25 +2421,33 @@
 				"type": "mark7",
 				"positionForward": 74.62,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark7",
 				"positionForward": 52.5,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "mark7",
 				"positionForward": -47.9,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			},
 			{
 				"type": "mark7",
 				"positionForward": -69.49,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		],
 		"antiAircraft": 0.234
@@ -2864,7 +2942,9 @@
 				"type": "8_8cmSKC35",
 				"positionForward": -4.35,
 				"positionSide": 0,
-				"angle": 3.141592653589793
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			}
 		]
 	},
@@ -3049,18 +3129,22 @@
 			{
 				"positionForward": -22,
 				"positionSide": 4.5,
+				"azimuthBL": 3.141592653589793,
 				"angle": 0
 			},
 			{
 				"positionForward": -22,
 				"positionSide": -4.5,
+				"azimuthBR": 3.141592653589793,
 				"angle": 0
 			},
 			{
 				"type": "bofors57mmMK3",
 				"positionForward": 20,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			}
 		],
 		"antiAircraft": 0.056
@@ -3542,13 +3626,17 @@
 				"type": "mark51",
 				"positionForward": 49.5963,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
 			},
 			{
 				"type": "mark51",
 				"positionForward": 25.2885,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
 			}
 		],
 		"antiAircraft": 0.156

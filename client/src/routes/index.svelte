@@ -659,7 +659,24 @@
 
 							if (armament.turret != null) {
 								const turretData = localEntityData.turrets[armament.turret];
-								const turretAngle = (localEntity.turretAngles[armament.turret] || turretData.angle);
+								const turretAngle = localEntity.turretAngles[armament.turret] || (turretData.angle || 0);
+
+								const azimuthF = angleDiff((turretData.angle || 0) + Math.PI, turretAngle);
+								if (turretData.azimuthFL != null && turretData.azimuthFL - Math.PI > azimuthF) {
+									continue;
+								}
+								if (turretData.azimuthFR != null && Math.PI - turretData.azimuthFR < azimuthF) {
+									continue;
+								}
+
+								const azimuthB = angleDiff(turretData.angle || 0, turretAngle);
+								if (turretData.azimuthBL != null && turretData.azimuthBL - Math.PI > azimuthB) {
+									continue;
+								}
+								if (turretData.azimuthBR != null && Math.PI - turretData.azimuthBR < azimuthB) {
+									continue;
+								}
+
 								armamentAngle += turretAngle;
 
 								const newArmamentPos = addTransforms(turretData.positionForward || 0, turretData.positionSide || 0, armamentPosX, armamentPosY, turretAngle);

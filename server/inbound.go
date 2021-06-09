@@ -380,6 +380,14 @@ func (data Fire) Process(h *Hub, _ Client, player *Player) {
 			}
 		}
 
+		if armamentData.Turret != nil {
+			turretData := shipData.Turrets[*armamentData.Turret]
+			if !turretData.CheckAzimuth(entity.TurretAngles()[*armamentData.Turret]) {
+				println("Invalid azimuth from client")
+				return
+			}
+		}
+
 		transform := entity.ArmamentTransform(data.Index)
 
 		failed := false

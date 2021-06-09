@@ -230,16 +230,19 @@
 		"turrets": [
 			{
 				"positionForward": -15.25,
-				"positionSide": 9.4
+				"positionSide": 9.4,
+				"azimuthBL": 180
 			},
 			{
 				"positionForward": -15.25,
-				"positionSide": -9.4
+				"positionSide": -9.4,
+				"azimuthBR": 180
 			},
 			{
 				"type": "mark12",
 				"positionForward": 51,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -273,24 +276,28 @@
 			{
 				"type": "38cmSKC34",
 				"positionForward": 67.9856,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": 50.672,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": -55.405,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 30
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": -73.124,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -382,24 +389,28 @@
 			{
 				"type": "mark12x2",
 				"positionForward": 46.25,
-				"positionSide": 12.75
+				"positionSide": 12.75,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": 38,
-				"positionSide": 12.75
+				"positionSide": 12.75,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -23.5,
 				"positionSide": 12.75,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -31.5,
 				"positionSide": 12.75,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -598,33 +609,39 @@
 		"turrets": [
 			{
 				"positionForward": 2.75,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuth": 45
 			},
 			{
 				"positionForward": -13,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuth": 45
 			},
 			{
 				"type": "mark12",
 				"positionForward": 37.75,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30.24,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			},
 			{
 				"type": "mark12",
 				"positionForward": -31.07,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 30
 			},
 			{
 				"type": "mark12",
 				"positionForward": -38.61,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -678,7 +695,8 @@
 			{
 				"type": "bofors57mmMK3",
 				"positionForward": 33,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 35
 			},
 			{
 				"type": "mark49",
@@ -897,17 +915,20 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": -90
+				"angle": -90,
+				"azimuthB": 45
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
-				"angle": 90
+				"angle": 90,
+				"azimuthB": 45
 			},
 			{
 				"type": "otoMelara76mm",
 				"positionForward": 54,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -1047,34 +1068,40 @@
 			{
 				"positionForward": -3.41018,
 				"positionSide": 6.52922,
-				"angle": 180
+				"angle": 180,
+				"azimuthBR": 180
 			},
 			{
 				"positionForward": -3.41018,
 				"positionSide": -6.52922,
-				"angle": 180
+				"angle": 180,
+				"azimuthBL": 180
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 52.7746,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 43.2429,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": -45.3247,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 30
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": -56.3283,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -1199,28 +1226,33 @@
 		"turrets": [
 			{
 				"positionForward": 22.15,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuth": 45
 			},
 			{
 				"positionForward": -13.85,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuth": 45
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark12",
 				"positionForward": 1.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuth": 30
 			},
 			{
 				"type": "mark12",
 				"positionForward": -22.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -1254,24 +1286,28 @@
 			{
 				"type": "mark7",
 				"positionForward": 74.62,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark7",
 				"positionForward": 52.50,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			},
 			{
 				"type": "mark7",
 				"positionForward": -47.90,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 30
 			},
 			{
 				"type": "mark7",
 				"positionForward": -69.49,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -1595,7 +1631,8 @@
 				"type": "8_8cmSKC35",
 				"positionForward": -4.35,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"azimuthB": 20
 			}
 		]
 	},
@@ -1718,16 +1755,19 @@
 		"turrets": [
 			{
 				"positionForward": -22,
-				"positionSide": 4.5
+				"positionSide": 4.5,
+				"azimuthBL": 180
 			},
 			{
 				"positionForward": -22,
-				"positionSide": -4.5
+				"positionSide": -4.5,
+				"azimuthBR": 180
 			},
 			{
 				"type": "bofors57mmMK3",
 				"positionForward": 20,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			}
 		]
 	},
@@ -1901,12 +1941,14 @@
 			{
 				"type": "mark51",
 				"positionForward": 49.5963,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 20
 			},
 			{
 				"type": "mark51",
 				"positionForward": 25.2885,
-				"positionSide": 0
+				"positionSide": 0,
+				"azimuthB": 30
 			}
 		]
 	},

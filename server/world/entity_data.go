@@ -4,6 +4,7 @@
 package world
 
 import (
+	"github.com/chewxy/math32"
 	"strings"
 	"unicode"
 )
@@ -78,6 +79,10 @@ type (
 		PositionForward float32 `json:"positionForward"`
 		PositionSide    float32 `json:"positionSide"`
 		Angle           Angle   `json:"angle"`
+		AzimuthFL       Angle   `json:"azimuthFL"`
+		AzimuthFR       Angle   `json:"azimuthFR"`
+		AzimuthBL       Angle   `json:"azimuthBL"`
+		AzimuthBR       Angle   `json:"azimuthBR"`
 	}
 )
 
@@ -97,6 +102,27 @@ func (armament *Armament) Reload() Ticks {
 // Similar returns if the Armament is on the same turret and the same type as other.
 func (armament *Armament) Similar(other *Armament) bool {
 	return armament.Default == other.Default && armament.TurretIndex() == other.TurretIndex()
+}
+
+// Returns true only if the parameter is within the turrets valid azimuth ranges
+func (turret *Turret) CheckAzimuth(curr Angle) bool {
+	// Use floats so that negative angles work better with
+	// comparison operators
+	azimuthF := (Pi + curr - turret.Angle).Float()
+	if turret.AzimuthFL.Float()-math32.Pi > azimuthF {
+		return false
+	}
+	if math32.Pi-turret.AzimuthFR.Float() < azimuthF {
+		return false
+	}
+	azimuthB := (curr - turret.Angle).Float()
+	if turret.AzimuthBL.Float()-math32.Pi > azimuthB {
+		return false
+	}
+	if math32.Pi-turret.AzimuthBR.Float() < azimuthB {
+		return false
+	}
+	return true
 }
 
 func (entityType EntityType) Data() *EntityTypeData {

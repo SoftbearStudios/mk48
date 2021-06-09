@@ -171,12 +171,44 @@ for (const entityType of Object.keys(entityDatas)) {
 			// Degrees to radians
 			turret.angle = (turret.angle || 0) * Math.PI / 180;
 
+			if (turret.azimuth != undefined) {
+				turret.azimuthB = turret.azimuth;
+				turret.azimuthF = turret.azimuth;
+				delete turret.azimuth;
+			}
+
+			if (turret.azimuthF != undefined) {
+				turret.azimuthFL = turret.azimuthF;
+				turret.azimuthFR = turret.azimuthF;
+				delete turret.azimuthF;
+			}
+
+			if (turret.azimuthFL != undefined) {
+				turret.azimuthFL *= Math.PI / 180;
+			}
+			if (turret.azimuthFR != undefined) {
+				turret.azimuthFR *= Math.PI / 180;
+			}
+
+			if (turret.azimuthB != undefined) {
+				turret.azimuthBL = turret.azimuthB;
+				turret.azimuthBR = turret.azimuthB;
+				delete turret.azimuthB;
+			}
+
+			if (turret.azimuthBL != undefined) {
+				turret.azimuthBL *= Math.PI / 180;
+			}
+			if (turret.azimuthBR != undefined) {
+				turret.azimuthBR *= Math.PI / 180;
+			}
+
 			const sym = turret.symmetrical;
 			delete turret.symmetrical;
 			entityData.turrets.push(turret);
 
 			if (sym) {
-				const copy = {...turret, angle: -turret.angle, positionSide: -turret.positionSide};
+				const copy = {...turret, angle: -turret.angle, azimuthFL: turret.azimuthFR, azimuthFR: turret.azimuthFL, azimuthBL: turret.azimuthBR, azimuthBR: turret.azimuthBL, positionSide: -turret.positionSide};
 				entityData.turrets.push(copy);
 			}
 		}

@@ -14,6 +14,15 @@
 
 	<h2>2021</h2>
 
+	<h3>6/8/2021</h3>
+
+	<ul>
+		<li>Add "Yasen" class submarine (level 7) and associated weapons.</li>
+		<li>Rebalance number of weapons on various high level ships.</li>
+		<li>Restrict turret angles where applicable.</li>
+		<li>Make stealth more effective.</li>
+	</ul>
+
 	<h3>6/5/2021</h3>
 
 	<ul>

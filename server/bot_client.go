@@ -281,6 +281,12 @@ func (bot *BotClient) Send(out Outbound) {
 
 					if ship.ArmamentConsumption[index] == 0 {
 						armamentTransform := world.ArmamentTransform(ship.EntityType, ship.Transform, ship.TurretAngles, index)
+						if armament.Turret != nil {
+							turretData := shipData.Turrets[*armament.Turret]
+							if !turretData.CheckAzimuth(ship.TurretAngles[*armament.Turret]) {
+								continue
+							}
+						}
 						diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
 						if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
 							diff = 0
