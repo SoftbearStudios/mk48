@@ -153,6 +153,18 @@
 				"external": false
 			},
 			{
+				"default": "igla",
+				"positionForward": 4.86495,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "igla",
+				"positionForward": 4.86495,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
 				"default": "brosok",
 				"positionForward": 52,
 				"positionSide": 0.5,
@@ -3531,6 +3543,30 @@
 				"external": false
 			},
 			{
+				"default": "igla",
+				"positionForward": 29.19,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "igla",
+				"positionForward": 29.19,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "igla",
+				"positionForward": 29.19,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
+				"default": "igla",
+				"positionForward": 29.19,
+				"positionSide": 0,
+				"vertical": true
+			},
+			{
 				"default": "brosok",
 				"positionForward": 43,
 				"positionSide": 3,
@@ -4311,6 +4347,27 @@
 		"lifespan": 4.5563634318853135,
 		"damage": 0.514,
 		"reload": 10.719999999999999,
+		"armaments": [],
+		"turrets": []
+	},
+	"igla": {
+		"label": "Igla",
+		"link": "https://en.wikipedia.org/wiki/9K38_Igla",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 1.574,
+		"width": 0.1599,
+		"speed": 570,
+		"sensors": [
+			{
+				"type": "radar",
+				"range": 1003.148
+			}
+		],
+		"lifespan": 3.5831871345029236,
+		"damage": 0.22462,
+		"reload": 10,
 		"armaments": [],
 		"turrets": []
 	},

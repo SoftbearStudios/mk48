@@ -95,6 +95,13 @@
 				"external": false
 			},
 			{
+				"default": "igla",
+				"positionForward": 4.86495,
+				"positionSide": 0,
+				"vertical": true,
+				"count": 2
+			},
+			{
 				"default": "brosok",
 				"positionForward": 52,
 				"positionSide": 0.5,
@@ -1921,6 +1928,13 @@
 				"external": false
 			},
 			{
+				"default": "igla",
+				"positionForward": 29.19,
+				"positionSide": 0,
+				"count": 4,
+				"vertical": true
+			},
+			{
 				"default": "brosok",
 				"positionForward": 43,
 				"positionSide": 3,
@@ -2377,6 +2391,22 @@
 		"width": 0.59375,
 		"speed": 240,
 		"range": 280000,
+		"sensors": [
+			{
+				"type": "radar"
+			}
+		]
+	},
+	"igla": {
+		"label": "Igla",
+		"link": "https://en.wikipedia.org/wiki/9K38_Igla",
+		"type": "weapon",
+		"subtype": "sam",
+		"level": 4,
+		"length": 1.574,
+		"width": 0.1599,
+		"speed": 570,
+		"range": 5200,
 		"sensors": [
 			{
 				"type": "radar"

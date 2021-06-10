@@ -375,7 +375,7 @@ func (data Fire) Process(h *Hub, _ Client, player *Player) {
 
 		if shipData.SubKind == world.EntitySubKindSubmarine && entity.Altitude() < 0 {
 			// Submerged submarine
-			if armamentEntityData.SubKind == world.EntitySubKindShell {
+			if armamentEntityData.SubKind == world.EntitySubKindShell || armamentEntityData.SubKind == world.EntitySubKindSAM {
 				return
 			}
 		}

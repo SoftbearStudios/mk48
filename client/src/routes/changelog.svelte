@@ -19,9 +19,11 @@
 	<ul>
 		<li>Add "Yasen" class submarine (level 7) and associated weapons.</li>
 		<li>Add "Town" class cruiser (level 5) and move "Bismarck" and "Montana" battleships one level up.</li>
+		<li>Add "Igla" SAM to submarines where applicable.</li>
 		<li>Rebalance number of weapons on various high level ships.</li>
 		<li>Restrict turret angles where applicable.</li>
 		<li>Make stealth more effective.</li>
+		<li>Make land more vulnerable to weapons and erosion.</li>
 	</ul>
 
 	<h3>6/5/2021</h3>

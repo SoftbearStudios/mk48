@@ -282,6 +282,9 @@ for (const entityType of Object.keys(entityDatas)) {
 
 	function rankArmament(armament) {
 		const armamentEntityData = entityDatas[armament.default];
+		if (armamentEntityData.type === 'decoy') {
+			return -8;
+		}
 		// Positive means closer to beginning
 		const typeRanks = {
 			'torpedo': 10,
@@ -289,7 +292,7 @@ for (const entityType of Object.keys(entityDatas)) {
 			'rocket': 8,
 			'shell': ['battleship', 'cruiser'].includes(entityData.subtype) ? 12 : 5,
 			'sam': -5,
-			'decoy': -8,
+			// decoy: -8
 			'aircraft': entityData.type == 'carrier' ? 12 : -10,
 		}
 		return typeRanks[armamentEntityData.subtype] || 0;
