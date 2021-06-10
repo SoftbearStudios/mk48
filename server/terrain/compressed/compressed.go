@@ -134,21 +134,33 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 		threshold = terrain.SandLevel
 	}
 
-	sweep := seconds * entity.Velocity.Float()
+	normal := entity.Direction.Vec2f()
+	tangent := normal.Rot90()
+
+	position := entity.Position
+	dimensions := world.Vec2f{X: data.Length, Y: data.Width}
+	dx := min(terrain.Scale*2/3, dimensions.X*0.499)
+	dy := min(terrain.Scale*2/3, dimensions.Y*0.499)
+
+	conservative := seconds < 0
+	if conservative {
+		dimensions = dimensions.Mul(2)
+		dx *= 0.25
+		dy *= 0.25
+	} else {
+		sweep := seconds * entity.Velocity.Float()
+		dimensions.X += sweep
+		position = position.AddScaled(normal, sweep*0.5)
+	}
+
+	// Make math easier later on by halving dimensions
 	const graceMargin = 0.9
-	dimensions := world.Vec2f{X: data.Length + sweep, Y: data.Width}.Mul(0.5 * graceMargin)
+	dimensions.Mul(0.5 * graceMargin)
 
 	// Not worth doing multiple terrain samples for small, slow moving entities
 	if dimensions.X <= terrain.Scale/5 && dimensions.Y <= terrain.Scale/5 {
 		return t.AtPos(entity.Position) > threshold
 	}
-
-	normal := entity.Direction.Vec2f()
-	tangent := normal.Rot90()
-	position := entity.Position.AddScaled(normal, sweep*0.5)
-
-	dx := min(terrain.Scale*2/3, dimensions.X*0.499)
-	dy := min(terrain.Scale*2/3, dimensions.Y*0.499)
 
 	for l := -dimensions.X; l <= dimensions.X; l += dx {
 		for w := -dimensions.Y; w <= dimensions.Y; w += dy {

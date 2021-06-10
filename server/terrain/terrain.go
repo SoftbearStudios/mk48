@@ -45,6 +45,7 @@ type Terrain interface {
 	// Clamp outputs the clamps the bounding box.
 	Clamp(world.AABB) world.AABB
 	// Collides tests if an entity collides with the Terrain.
+	// Negative numbers of seconds mean to do a conservative check (larger scan, more precise)
 	Collides(e *world.Entity, seconds float32) bool
 	// Decodes data from this terrain into a heightmap.
 	Decode(*Data) ([]byte, error)
