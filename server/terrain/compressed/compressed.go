@@ -155,7 +155,7 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	// Make math easier later on by halving dimensions
 	const graceMargin = 0.9
-	dimensions.Mul(0.5 * graceMargin)
+	dimensions = dimensions.Mul(0.5 * graceMargin)
 
 	// Not worth doing multiple terrain samples for small, slow moving entities
 	if dimensions.X <= terrain.Scale/5 && dimensions.Y <= terrain.Scale/5 {
