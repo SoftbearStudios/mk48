@@ -102,7 +102,7 @@
 		<li><b>Mines</b> are like depth charges but last much longer and are
 		more powerful.</li>
 
-		<li><b>Aircraft</b> fly towards your mouse cursor, and may carry weapons of their own.</li>
+		<li><b>Aircraft</b> fly towards your mouse cursor, and automatically deploy weapons of their own.</li>
 
 		<li><b>Depositor</b> creates new land. We'll let you figure out if this
 		can be used as a weapon.</li>

@@ -89,30 +89,39 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
-	if (entityData.type === 'weapon' && entityData.damage == undefined) {
-		switch (entityData.subtype) {
-			case 'torpedo':
-				entityData.damage = mapRanges(entityData.length, 3, 7, 0.6, 1.1, true);
-				// NOTE: This makes homing torpedoes do less damage.
-				/*
-				if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
-					entityData.damage -= 0.1;
+	if (entityData.damage == undefined) {
+		switch (entityData.type) {
+			case 'boat':
+				// Damage means health (i.e. how much damage before death)
+				const factor = 20 / 10 / 60;
+				entityData.damage = Math.max(factor, factor * entityData.length);
+				break;
+			case 'weapon':
+				// Damage means damage dealt
+				switch (entityData.subtype) {
+					case 'torpedo':
+						entityData.damage = mapRanges(entityData.length, 3, 7, 0.6, 1.1, true);
+						// NOTE: This makes homing torpedoes do less damage.
+						/*
+						if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
+							entityData.damage -= 0.1;
+						}
+						*/
+						break;
+					case 'mine':
+						entityData.damage = 1.5;
+						break;
+					case 'rocket':
+					case 'missile':
+						entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
+						break;
+					case 'shell':
+						entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.7, true);
+						break;
+					case 'depthCharge':
+						entityData.damage = 0.8;
+						break;
 				}
-				*/
-				break;
-			case 'mine':
-				entityData.damage = 1.5;
-				break;
-			case 'rocket':
-			case 'sam':
-			case 'missile':
-				entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
-				break;
-			case 'shell':
-				entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.7, true);
-				break;
-			case 'depthCharge':
-				entityData.damage = 0.8;
 				break;
 		}
 	}
@@ -171,31 +180,30 @@ for (const entityType of Object.keys(entityDatas)) {
 			// Degrees to radians
 			turret.angle = (turret.angle || 0) * Math.PI / 180;
 
+			// Apply azimuth abbreviations
 			if (turret.azimuth != undefined) {
 				turret.azimuthB = turret.azimuth;
 				turret.azimuthF = turret.azimuth;
 				delete turret.azimuth;
 			}
-
 			if (turret.azimuthF != undefined) {
 				turret.azimuthFL = turret.azimuthF;
 				turret.azimuthFR = turret.azimuthF;
 				delete turret.azimuthF;
 			}
-
-			if (turret.azimuthFL != undefined) {
-				turret.azimuthFL *= Math.PI / 180;
-			}
-			if (turret.azimuthFR != undefined) {
-				turret.azimuthFR *= Math.PI / 180;
-			}
-
 			if (turret.azimuthB != undefined) {
 				turret.azimuthBL = turret.azimuthB;
 				turret.azimuthBR = turret.azimuthB;
 				delete turret.azimuthB;
 			}
 
+			// Degrees to radians
+			if (turret.azimuthFL != undefined) {
+				turret.azimuthFL *= Math.PI / 180;
+			}
+			if (turret.azimuthFR != undefined) {
+				turret.azimuthFR *= Math.PI / 180;
+			}
 			if (turret.azimuthBL != undefined) {
 				turret.azimuthBL *= Math.PI / 180;
 			}
@@ -293,7 +301,7 @@ for (const entityType of Object.keys(entityDatas)) {
 			'shell': ['battleship', 'cruiser'].includes(entityData.subtype) ? 12 : 5,
 			'sam': -5,
 			// decoy: -8
-			'aircraft': entityData.type == 'carrier' ? 12 : -10,
+			'aircraft': entityData.subtype == 'carrier' ? 12 : -10,
 		}
 		return typeRanks[armamentEntityData.subtype] || 0;
 	}

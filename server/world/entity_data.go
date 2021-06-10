@@ -56,7 +56,7 @@ type (
 		Width        float32       `json:"width"`
 		Radius       float32       `json:"-"`
 		InvSize      float32       `json:"-"`
-		Damage       float32       `json:"damage"`
+		Damage       float32       `json:"damage"` // health of ship, or damage dealt by weapon
 		AntiAircraft float32       `json:"antiAircraft"` // chance aircraft is shot down per second
 		Stealth      float32       `json:"stealth"`
 		Sensors      []Sensor      `json:"sensors"`
@@ -131,11 +131,12 @@ func (entityType EntityType) Data() *EntityTypeData {
 
 // MaxHealth is the maximum health of an EntityType as Ticks.
 func (entityType EntityType) MaxHealth() Ticks {
-	health := Ticks(entityType.Data().Length * 20)
-	if health < 20 {
-		health = 20
+	data := entityType.Data()
+	if data.Kind == EntityKindBoat {
+		return DamageToTicks(entityType.Data().Damage)
 	}
-	return health
+	// Arbitrary, small, non-zero value (TODO: maybe panic instead)
+	return 20
 }
 
 // Returns a lifespan to start an entity's life at, so as to make it expire

@@ -52,7 +52,7 @@
 					<li>Reload: {entityData.reload.toFixed(1)}s</li>
 				{/if}
 				{#if entityData.damage}
-					<li>Damage: {entityData.damage.toFixed(1)}</li>
+					<li>{entityData.type === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(1)}</li>
 				{/if}
 				{#if entityData.stealth}
 					<li>Stealth: {Math.round(entityData.stealth * 100)}%</li>

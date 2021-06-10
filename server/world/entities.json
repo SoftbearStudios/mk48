@@ -179,6 +179,7 @@
 				"external": false
 			}
 		],
+		"damage": 3.7766666666666664,
 		"turrets": []
 	},
 	"arleighBurke": {
@@ -404,7 +405,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.126
+		"antiAircraft": 0.126,
+		"damage": 5.133333333333333
 	},
 	"bismarck": {
 		"label": "Bismarck",
@@ -553,7 +555,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.2
+		"antiAircraft": 0.2,
+		"damage": 8.053333333333333
 	},
 	"dredger": {
 		"label": "Dredger",
@@ -584,7 +587,8 @@
 				"positionSide": 0,
 				"angle": 0
 			}
-		]
+		],
+		"damage": 3.3
 	},
 	"essex": {
 		"label": "Essex",
@@ -606,78 +610,6 @@
 			}
 		],
 		"armaments": [
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 0
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 0
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 1
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 1
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 2
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": 0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 3
-			},
-			{
-				"default": "127x680mmR",
-				"angle": 0,
-				"positionForward": 2,
-				"positionSide": -0.727,
-				"external": false,
-				"hidden": false,
-				"turret": 3
-			},
 			{
 				"default": "avenger",
 				"positionForward": 16,
@@ -713,6 +645,78 @@
 				"positionForward": -64,
 				"positionSide": 0,
 				"external": true
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"default": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
 			}
 		],
 		"turrets": [
@@ -749,7 +753,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.221
+		"antiAircraft": 0.221,
+		"damage": 8.86
 	},
 	"fairmileD": {
 		"label": "Fairmile D",
@@ -854,7 +859,8 @@
 				"angle": 3.141592653589793
 			}
 		],
-		"antiAircraft": 0.024
+		"antiAircraft": 0.024,
+		"damage": 1.1666666666666667
 	},
 	"fletcher": {
 		"label": "Fletcher",
@@ -1107,7 +1113,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.092
+		"antiAircraft": 0.092,
+		"damage": 3.8266666666666667
 	},
 	"freedom": {
 		"label": "Freedom",
@@ -1284,7 +1291,8 @@
 				"angle": 3.141592653589793
 			}
 		],
-		"antiAircraft": 0.092
+		"antiAircraft": 0.092,
+		"damage": 3.8333333333333335
 	},
 	"g5": {
 		"label": "G-5",
@@ -1324,6 +1332,7 @@
 			}
 		],
 		"antiAircraft": 0.011,
+		"damage": 0.6283333333333334,
 		"turrets": []
 	},
 	"golf": {
@@ -1407,6 +1416,7 @@
 				"external": false
 			}
 		],
+		"damage": 3.2800000000000002,
 		"turrets": []
 	},
 	"indiaman": {
@@ -1498,6 +1508,7 @@
 		],
 		"antiAircraft": 0.039,
 		"npc": true,
+		"damage": 1.7604766666666667,
 		"turrets": []
 	},
 	"kolkata": {
@@ -1674,7 +1685,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.133
+		"antiAircraft": 0.133,
+		"damage": 5.433333333333334
 	},
 	"komar": {
 		"label": "Komar",
@@ -1783,7 +1795,8 @@
 				"angle": 3.141592653589793
 			}
 		],
-		"antiAircraft": 0.016
+		"antiAircraft": 0.016,
+		"damage": 0.8466666666666666
 	},
 	"leander": {
 		"label": "Leander",
@@ -2020,7 +2033,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.138
+		"antiAircraft": 0.138,
+		"damage": 5.636666666666667
 	},
 	"lublin": {
 		"label": "Lublin",
@@ -2104,6 +2118,7 @@
 			}
 		],
 		"antiAircraft": 0.076,
+		"damage": 3.1933333333333334,
 		"turrets": []
 	},
 	"momi": {
@@ -2277,7 +2292,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.067
+		"antiAircraft": 0.067,
+		"damage": 2.8433333333333333
 	},
 	"montana": {
 		"label": "Montana",
@@ -2462,7 +2478,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.234
+		"antiAircraft": 0.234,
+		"damage": 9.36
 	},
 	"ohio": {
 		"label": "Ohio",
@@ -2612,6 +2629,7 @@
 				"external": false
 			}
 		],
+		"damage": 5.666666666666667,
 		"turrets": []
 	},
 	"olympias": {
@@ -2630,6 +2648,7 @@
 			}
 		],
 		"antiAircraft": 0.026,
+		"damage": 1.23,
 		"armaments": [],
 		"turrets": []
 	},
@@ -2724,7 +2743,8 @@
 				"angle": 3.141592653589793
 			}
 		],
-		"antiAircraft": 0.027
+		"antiAircraft": 0.027,
+		"damage": 1.2866666666666666
 	},
 	"pt34": {
 		"label": "PT-34",
@@ -2784,6 +2804,7 @@
 			}
 		],
 		"antiAircraft": 0.014,
+		"damage": 0.7666666666666666,
 		"turrets": []
 	},
 	"skipjack": {
@@ -2868,6 +2889,7 @@
 				"external": false
 			}
 		],
+		"damage": 2.557,
 		"turrets": []
 	},
 	"town": {
@@ -3117,7 +3139,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"antiAircraft": 0.148
+		"antiAircraft": 0.148,
+		"damage": 6.010000000000001
 	},
 	"typeVIIC": {
 		"label": "Type VII C",
@@ -3207,7 +3230,8 @@
 				"azimuthBL": 0.3490658503988659,
 				"azimuthBR": 0.3490658503988659
 			}
-		]
+		],
+		"damage": 2.2366666666666664
 	},
 	"visby": {
 		"label": "Visby",
@@ -3408,7 +3432,8 @@
 				"azimuthBR": 0.5235987755982988
 			}
 		],
-		"antiAircraft": 0.056
+		"antiAircraft": 0.056,
+		"damage": 2.4233333333333333
 	},
 	"yasen": {
 		"label": "Yasen",
@@ -3595,6 +3620,7 @@
 				"external": false
 			}
 		],
+		"damage": 4.333333333333333,
 		"turrets": []
 	},
 	"zubr": {
@@ -3743,7 +3769,8 @@
 				"angle": 0
 			}
 		],
-		"antiAircraft": 0.043
+		"antiAircraft": 0.043,
+		"damage": 1.9
 	},
 	"zumwalt": {
 		"label": "Zumwalt",
@@ -3924,7 +3951,8 @@
 				"azimuthBR": 0.5235987755982988
 			}
 		],
-		"antiAircraft": 0.156
+		"antiAircraft": 0.156,
+		"damage": 6.333333333333333
 	},
 	"2m3m": {
 		"label": "2M-3M",
@@ -4149,7 +4177,6 @@
 			}
 		],
 		"lifespan": 4.290123456790123,
-		"damage": 0.605,
 		"reload": 10,
 		"armaments": [],
 		"turrets": []
@@ -4324,7 +4351,6 @@
 			}
 		],
 		"lifespan": 4.109819121447028,
-		"damage": 0.4958,
 		"reload": 10,
 		"armaments": [],
 		"turrets": []
@@ -4366,7 +4392,6 @@
 			}
 		],
 		"lifespan": 3.5831871345029236,
-		"damage": 0.22462,
 		"reload": 10,
 		"armaments": [],
 		"turrets": []
@@ -4654,7 +4679,6 @@
 			}
 		],
 		"lifespan": 3.8976964769647693,
-		"damage": 0.3827,
 		"reload": 10,
 		"armaments": [],
 		"turrets": []
