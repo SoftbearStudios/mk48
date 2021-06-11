@@ -4106,7 +4106,7 @@
 		],
 		"lifespan": 65.21739130434783,
 		"damage": 0.634375,
-		"reload": 8,
+		"reload": 12,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4177,7 +4177,7 @@
 			}
 		],
 		"lifespan": 4.290123456790123,
-		"reload": 10,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4351,7 +4351,7 @@
 			}
 		],
 		"lifespan": 4.109819121447028,
-		"reload": 10,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4392,7 +4392,7 @@
 			}
 		],
 		"lifespan": 3.5831871345029236,
-		"reload": 10,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4586,7 +4586,7 @@
 		],
 		"lifespan": 53.01402397647591,
 		"damage": 0.95,
-		"reload": 8,
+		"reload": 12,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4638,7 +4638,7 @@
 		],
 		"lifespan": 66.26738359140062,
 		"damage": 0.6,
-		"reload": 8,
+		"reload": 12,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4679,7 +4679,7 @@
 			}
 		],
 		"lifespan": 3.8976964769647693,
-		"reload": 10,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4922,7 +4922,6 @@
 		"width": 0.533,
 		"speed": 200,
 		"damage": 0,
-		"reload": 12,
 		"sensors": [
 			{
 				"type": "radar",
@@ -4936,6 +4935,7 @@
 		],
 		"limited": true,
 		"lifespan": 5.991584504002548,
+		"reload": 20,
 		"turrets": []
 	},
 	"mark49": {
@@ -5023,7 +5023,7 @@
 		],
 		"lifespan": 72.89416767932865,
 		"damage": 1.1,
-		"reload": 8,
+		"reload": 12,
 		"armaments": [],
 		"turrets": []
 	},
@@ -5065,7 +5065,7 @@
 		],
 		"lifespan": 72.89412517087598,
 		"damage": 0.6,
-		"reload": 8,
+		"reload": 12,
 		"armaments": [],
 		"turrets": []
 	},

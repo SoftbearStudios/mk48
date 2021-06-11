@@ -148,13 +148,20 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 30;
 						break;
 					case 'sam':
-						entityData.reload = 10;
+						entityData.reload = 16;
 						break;
 					case 'missile':
 						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
 						break;
 					case 'shell':
 						entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 16, true);
+						break;
+					case 'torpedo':
+						entityData.reload = 8;
+						if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
+							// Homing torpedoes take longer to reload
+							entityData.reload *= 1.5;
+						}
 						break;
 					default:
 						entityData.reload = 8;

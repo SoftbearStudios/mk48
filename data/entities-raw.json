@@ -2809,7 +2809,6 @@
 		"speed": 200,
 		"range": 20000,
 		"damage": 0,
-		"reload": 12,
 		"sensors": [
 			{
 				"type": "radar"
