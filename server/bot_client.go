@@ -15,11 +15,13 @@ import (
 type (
 	BotClient struct {
 		ClientData
-		destination   world.Vec2f // where bot will head towards if no other objective
-		aggression    float32     // how likely bot is to attack when given a chance
-		levelAmbition uint8       // max level to upgrade to
-		destroying    bool        // already called destroy
-		request       int64       // last time requested team in millis
+		destination    world.Vec2f // where bot will head towards if no other objective
+		aggression     float32     // how likely bot is to attack when given a chance
+		levelAmbition  uint8       // max level to upgrade to
+		destroying     bool        // already called destroy
+		counter        uint8       // counts up by 1 every update
+		decisionPeriod uint8       // how many ticks between making decisions (avoid oscillation due to rapid direction changes)
+		request        int64       // last time requested team in millis
 	}
 
 	// Target is a contact that is closest or furthest
@@ -55,6 +57,7 @@ func (bot *BotClient) Init() {
 
 	bot.aggression = square(r.Float32())
 	bot.levelAmbition = uint8(r.Intn(int(world.BoatLevelMax)) + 1)
+	bot.decisionPeriod = uint8(3 + r.Intn(3))
 	bot.spawn(r)
 }
 
@@ -78,6 +81,17 @@ func (bot *BotClient) Send(out Outbound) {
 
 	switch update := out.(type) {
 	case *Update:
+		bot.counter++
+		if bot.counter%bot.decisionPeriod != 0 {
+			// Drop a variable amount of decisions on the floor
+			// this helps to avoid rapid oscillation caused by
+			// rapid direction changes
+			return
+		}
+		// Multiply probabilities by this to not influence them
+		// by dropped decisions
+		probScale := float64(bot.decisionPeriod)
+
 		// Checks if bot ship does not exist
 		if update.EntityID == world.EntityIDInvalid {
 			// When bot dies it either quits, leaves its team, or does nothing.
@@ -103,12 +117,12 @@ func (bot *BotClient) Send(out Outbound) {
 		}
 
 		// Create or leave team
-		if prob(r, 1e-4) {
+		if prob(r, probScale*1e-4) {
 			if ship.TeamID == world.TeamIDInvalid {
 				bot.receiveAsync(CreateTeam{
 					Name: randomTeamName(r),
 				})
-			} else if prob(r, 0.5) {
+			} else if prob(r, probScale*0.5) {
 				bot.receiveAsync(RemoveFromTeam{
 					PlayerID: update.PlayerID,
 				})
@@ -121,7 +135,7 @@ func (bot *BotClient) Send(out Outbound) {
 			diff := float64(ship.Score - request.Score)
 
 			// Only accept members with similar score
-			if prob(r, 1.0/(50.0+(diff*diff)*0.05)) {
+			if prob(r, probScale/(50.0+(diff*diff)*0.05)) {
 				bot.receiveAsync(AddToTeam{
 					PlayerID: request.PlayerID,
 				})
@@ -241,7 +255,7 @@ func (bot *BotClient) Send(out Outbound) {
 		}
 
 		// Upgrade up to level ambition if available.
-		if shipData.Level < bot.levelAmbition && prob(r, 0.05) {
+		if shipData.Level < bot.levelAmbition && prob(r, 0.05*probScale) {
 			if upgradePaths := ship.EntityType.UpgradePaths(ship.Score); len(upgradePaths) > 0 {
 				bot.receiveAsync(Upgrade{
 					Type: randomType(r, upgradePaths),
@@ -255,7 +269,7 @@ func (bot *BotClient) Send(out Outbound) {
 			manual.TurretTarget = closestEnemy.Position
 
 			// Fire
-			if prob(r, float64(bot.aggression*0.1)) {
+			if prob(r, float64(bot.aggression*0.1)*probScale) {
 				closestEnemyAngle := closestEnemy.Position.Sub(ship.Position).Angle()
 				bestArmamentIndex := -1
 				bestArmamentAngleDiff := float32(math32.MaxFloat32)
