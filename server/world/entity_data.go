@@ -56,7 +56,7 @@ type (
 		Width        float32       `json:"width"`
 		Radius       float32       `json:"-"`
 		InvSize      float32       `json:"-"`
-		Damage       float32       `json:"damage"` // health of ship, or damage dealt by weapon
+		Damage       float32       `json:"damage"`       // health of ship, or damage dealt by weapon
 		AntiAircraft float32       `json:"antiAircraft"` // chance aircraft is shot down per second
 		Stealth      float32       `json:"stealth"`
 		Sensors      []Sensor      `json:"sensors"`

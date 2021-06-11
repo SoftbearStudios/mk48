@@ -144,7 +144,10 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	conservative := seconds < 0
 	if conservative {
-		dimensions = dimensions.Mul(2)
+		// Test a large margin around the dimensions
+		const margin = 200
+		dimensions.X += margin
+		dimensions.Y += margin
 		dx *= 0.25
 		dy *= 0.25
 	} else {
