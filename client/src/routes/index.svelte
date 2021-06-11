@@ -740,9 +740,12 @@
 						});
 
 						lastAltitudeTarget = altitudeTarget;
-					} else if (Array.isArray(localEntityData.turrets) && localEntityData.turrets.length > 0) {
-						// TODO: Ships with aircaft also need turret aiming, but currently
-						// all ships with aircraft also have turrets so the condition works
+					} else {
+						// TODO: Some ships don't need to aim turrets, in which
+						// case this is a (wasteful) no-op
+						// NOTE: until the bug is fixed, must consider the case
+						// of a ship with an airborne aircraft upgrading into a
+						// ship without turrets/aircraft
 						send('aimTurrets', {
 							target: mousePosition
 						});
