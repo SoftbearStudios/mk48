@@ -172,7 +172,8 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 					c.IDPlayerData = entity.Owner.IDPlayerData()
 					team := h.teams[entity.Owner.TeamID]
 					if team != nil {
-						c.TeamFull = team.Full()
+						// Bots always leave 2 spots for real players
+						c.TeamFull = team.Full() || (client.Bot() && len(team.Members)+len(team.JoinRequests) > world.TeamMembersMax-2)
 					}
 				}
 			}

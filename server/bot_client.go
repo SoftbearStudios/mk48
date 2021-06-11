@@ -168,7 +168,7 @@ func (bot *BotClient) Send(out Outbound) {
 			}
 
 			// Favor joining teams that have more score for protection.
-			if requesting && ship.TeamID == world.TeamIDInvalid && contact.TeamID != world.TeamIDInvalid &&
+			if requesting && ship.TeamID == world.TeamIDInvalid && contact.TeamID != world.TeamIDInvalid && !contact.TeamFull &&
 				((ship.Score < contact.Score-5 && prob(r, 2e-3)) || prob(r, 1e-4)) {
 
 				bot.request = now
