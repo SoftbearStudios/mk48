@@ -55,8 +55,8 @@ ssh-zero:
 ssh-one:
 	ssh $(SSH_OPTS) ec2-user@$(ONE)
 
-sftp:
-	sftp $(SSH_OPTS) ec2-user@ws0.mk48.io
+sftp-zero:
+	sftp $(SSH_OPTS) ec2-user@$(ZERO)
 
 fmt:
 	go fmt github.com/SoftbearStudios/mk48/...
