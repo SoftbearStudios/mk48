@@ -25,7 +25,7 @@
 ### Server
 
 0. Install `go1.16` or higher
-1. Enter `/server`
+1. Enter `/server_main`
 2. `make`
 3. Profile with `make pprof` and optionally specify `seconds=<number>` and/or `profile=heap`
 
