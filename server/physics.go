@@ -164,11 +164,12 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		}
 
 		// e must be either entity or other
-		removeEntity := func(e *world.Entity, reason string) {
+		removeEntity := func(e *world.Entity, reason string, playerKilledPlayer bool) {
 			data := e.Data()
 
 			if data.Kind == world.EntityKindBoat {
 				e.Owner.DeathMessage = reason
+				e.Owner.DeathFromPlayer = playerKilledPlayer
 				h.boatDied(e)
 			}
 
@@ -247,7 +248,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 							if asroc {
 								// ASROC expires when dropping torpedo
-								removeEntity(entity, "done")
+								removeEntity(entity, "done", false)
 							}
 						}
 
@@ -259,7 +260,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 							if d2 < r2 {
 								chance := (1.0 - d2/r2) * otherData.AntiAircraft
 								if chance*timeDeltaSeconds > rand.Float32() {
-									removeEntity(entity, "shot down")
+									removeEntity(entity, "shot down", false)
 								}
 							}
 						}
@@ -287,7 +288,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				boat.Replenish(collectible.Data().Reload)
 			}
 
-			removeEntity(collectible, "collected")
+			removeEntity(collectible, "collected", false)
 		case collectible != nil && collectible.Owner != nil && obstacle != nil && obstacle.EntityType == world.EntityTypeOilPlatform:
 			// Payment upgrades oil rigs to HQs
 			if rand.Float64() < 0.1 {
@@ -295,17 +296,17 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				obstacle.Ticks = 0 // reset expiry
 			}
 
-			removeEntity(collectible, "collected")
+			removeEntity(collectible, "collected", false)
 		case boat != nil && weapon != nil && !friendly:
 			dist2 := entity.Position.DistanceSquared(other.Position)
 			r2 := square(boat.Data().Radius)
 
 			if boat.Damage(world.DamageToTicks(weapon.Data().Damage * collisionMultiplier(dist2, r2) * boat.SpawnProtection())) {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
-				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()))
+				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()), true)
 			}
 
-			removeEntity(weapon, "hit")
+			removeEntity(weapon, "hit", false)
 		case boat != nil && otherBoat != nil:
 			/*
 				Goals:
@@ -366,7 +367,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 						if isOtherRam {
 							verb = "Rammed by"
 						}
-						removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name))
+						removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name), true)
 					}
 				}
 
@@ -376,15 +377,15 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
 			boat.Velocity = boat.Velocity.AddClamped(6*posDiff.Dot(boat.Direction.Vec2f()), 30*world.MeterPerSecond)
 			if boat.KillIn(ticks, 6*world.TicksPerSecond) {
-				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label))
+				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label), false)
 			}
 		case !(friendly || (boat != nil && decoy != nil)):
 			// Other ex weapon vs. weapon collision
 			if entityData.Kind != world.EntityKindObstacle {
-				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label))
+				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label), false)
 			}
 			if otherData.Kind != world.EntityKindObstacle {
-				removeEntity(other, fmt.Sprintf("Crashed into %s!", entity.Data().Label))
+				removeEntity(other, fmt.Sprintf("Crashed into %s!", entity.Data().Label), false)
 			}
 		}
 

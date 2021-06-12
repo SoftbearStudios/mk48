@@ -18,13 +18,15 @@
 	<h3>6/11/2021</h3>
 
 	<ul>
+		<li>Players no longer respawn with their team within 10 seconds of being
+		killed by another player.</li>
 		<li>Add support for translations.</li>
 	</ul>
 
 	<h3>6/10/2021</h3>
 
 	<ul>
-		<li>Rebalance aircraft weapon reload speed.</li>
+		<li>Rebalance various reload speeds.</li>
 		<li>Improve player spawning.</li>
 		<li>Show health on Ships page.</li>
 	</ul>

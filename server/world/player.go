@@ -16,7 +16,8 @@ const (
 	PlayerNameLengthMin = 3
 	PlayerNameLengthMax = 12
 
-	playerDeathTime = time.Second * 2
+	playerDeathTime     = time.Second * 2
+	teamRespawnCooldown = time.Second * 10 // only affects respawning after dying at the hands of a player
 )
 
 type (
@@ -24,11 +25,12 @@ type (
 	Player struct {
 		ext unsafeExtension // extension for EntityID
 		PlayerData
-		DeathMessage string
-		DeathPos     Vec2f
-		DeathTime    int64
-		DeathVisual  float32
-		EntityID     EntityID
+		DeathMessage    string
+		DeathPos        Vec2f
+		DeathTime       int64
+		DeathVisual     float32 // if non-zero, in respawn animation
+		DeathFromPlayer bool
+		EntityID        EntityID
 	}
 
 	// PlayerID is the unique id of a Player
@@ -68,7 +70,7 @@ func (player *Player) Died(entity *Entity) {
 
 // Respawning returns if player is currently in the respawn animation
 func (player *Player) Respawning() bool {
-	if player.DeathTime != 0 {
+	if player.DeathVisual != 0 {
 		if unixMillis()-player.DeathTime > int64(playerDeathTime/time.Millisecond) {
 			player.ClearRespawn()
 		} else {
@@ -78,11 +80,27 @@ func (player *Player) Respawning() bool {
 	return false
 }
 
-// ClearRespawn clears death camera
+// ClearRespawn clears after-death camera
 func (player *Player) ClearRespawn() {
-	player.DeathPos = Vec2f{}
+	// Do not clear death position/time/pvp. They are useful for implementing a
+	// team respawn coodown. Clearing death visual is enough to end the respawn
+	// animation
 	player.DeathVisual = 0
+}
+
+// Clears all death related fields
+func (player *Player) ClearDeath() {
+	player.DeathVisual = 0
+	player.DeathMessage = ""
+	player.DeathFromPlayer = false
 	player.DeathTime = 0
+	player.DeathPos = Vec2f{}
+}
+
+// Says nothing about whether player is in a team. Only whether they
+// are allowed to respawn with it if it exists.
+func (player Player) CanRespawnWithTeam() bool {
+	return !player.DeathFromPlayer || unixMillis()-player.DeathTime > int64(teamRespawnCooldown/time.Millisecond)
 }
 
 // Camera Returns the camera that a player has if their entity doesn't exist

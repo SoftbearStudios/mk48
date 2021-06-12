@@ -264,7 +264,6 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 			}
 		}
 		player.Name = name
-		player.DeathMessage = ""
 
 		// Team codes
 		if code := data.Code; code != world.TeamCodeInvalid && player.TeamID == world.TeamIDInvalid {
@@ -287,7 +286,7 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 		entity.Initialize(data.Type)
 		spawnRadius := h.worldRadius * 0.75
 
-		if team := h.teams[player.TeamID]; team != nil {
+		if team := h.teams[player.TeamID]; team != nil && player.CanRespawnWithTeam() {
 			// Spawn near the first other team member with a ship
 			for _, member := range team.Members {
 				if member == &player.Player {
@@ -301,7 +300,7 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 						return
 					}
 					entity.Position = memberShip.Position
-					spawnRadius = 150
+					spawnRadius = 200
 					spawned = true
 					return
 				})
@@ -316,6 +315,8 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 			// Spawn failed
 			return
 		}
+
+		player.ClearDeath()
 
 		if !bot {
 			h.cloud.IncrementPlaysStatistic()

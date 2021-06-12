@@ -135,14 +135,11 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		for entity.Position == center || (entity.Data().Kind != world.EntityKindCollectible &&
 			entity.Data().Kind != world.EntityKindWeapon && h.nearAny(entity, threshold)) {
 
-			angle := world.ToAngle(rand.Float32() * 2 * math32.Pi)
-			position := angle.Vec2f().Mul(math32.Sqrt(rand.Float32()) * radius)
+			position := world.RandomAngle().Vec2f().Mul(math32.Sqrt(rand.Float32()) * radius)
 			entity.Position = center.Add(position)
+			entity.Direction = world.RandomAngle()
 
-			angle = world.ToAngle(rand.Float32() * 2 * math32.Pi)
-			entity.Direction = angle
-
-			radius = min(radius*1.1, h.worldRadius)
+			radius = min(radius*1.1, h.worldRadius*0.9)
 			threshold = 0.25 + threshold*0.75 // Approaches 1.0
 
 			governor++
@@ -175,10 +172,9 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 	return entityID
 }
 
-// nearAny Returns if any entities are within a threshold for spawning.
+// nearAny Returns if any entities are within a threshold for spawning (or if colliding with terrain)
 func (h *Hub) nearAny(entity *world.Entity, threshold float32) bool {
 	// Extra space between entities
-
 	radius := entity.Data().Radius
 	maxT := (radius + world.EntityRadiusMax) * threshold
 

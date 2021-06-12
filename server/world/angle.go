@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/chewxy/math32"
+	"math/rand"
 )
 
 const Pi = 32768
@@ -19,6 +20,11 @@ type Angle uint16
 func ToAngle(x float32) Angle {
 	x *= Pi / math32.Pi
 	return Angle(int16(int32(x)))
+}
+
+// Returns a random angle (all possible angles are equally likely)
+func RandomAngle() Angle {
+	return Angle(rand.Intn(2 * Pi))
 }
 
 // Float returns angle in range [-π, π)
