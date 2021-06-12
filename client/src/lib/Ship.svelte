@@ -114,7 +114,7 @@
 			</div>
 		{/each}
 		{#if entityData[type].subtype === 'ram'}
-			<small>{$t('kind.ram.hint')}</small>
+			<small>{$t('kind.boat.ram.hint')}</small>
 		{:else if entityData[type].subtype === 'submarine'}
 			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>Surface</div>
 		{/if}
