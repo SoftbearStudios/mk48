@@ -13,6 +13,7 @@
 	import t, {setLanguage, translateAs} from './translation.js';
 	import strings from '../data/strings.json';
 	import {browser} from '$app/env';
+	import Link, {outboundEnabled} from './Link.svelte';
 
 	export let callback;
 	export let connectionLost = false;
@@ -38,10 +39,35 @@
 	let name = storage.name || '';
 	let type = storage.type || getRandomSpawnable();
 	let invite = undefined;
+	let paused = false;
 
 	onMount(() => {
 		invite = parseInviteCode(getInvite());
+
+		if (window.parent && window.parent.postMessage) {
+			try {
+				window.parent.postMessage('splash', '*');
+			} catch (err) {
+				console.warn(err);
+			}
+		}
 	});
+
+	// Message originates from iframe parent
+	function handleMessage(event) {
+		console.log(`game received message: ${event.data}`);
+		switch (event.data) {
+			case 'pause':
+				paused = true;
+				break;
+			case 'unpause':
+				paused = false;
+				break;
+			case 'disableOutbound':
+				outboundEnabled.set(false);
+				break;
+		}
+	}
 
 	function parseInviteCode(invite) {
 		try {
@@ -72,6 +98,9 @@
 			storage.join = Date.now();
 		}
 	}
+
+	// Link target
+	$: target = $outboundEnabled ? '_blank' : null;
 </script>
 
 <div class='splash' in:fade="{{delay: 2000, duration: 500}}">
@@ -89,16 +118,16 @@
 				<option value={type}>{entityData[type].label}</option>
 			{/each}
 		</select>
-		<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength))} on:click={handleSubmit}>{$t('panel.splash.action.spawn.label')}</button>
+		<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused} on:click={handleSubmit}>{$t('panel.splash.action.spawn.label')}</button>
 		{#if invite}
 			<small>{$t('panel.splash.invitePrefix')} {invite}</small>
 		{/if}
 	</form>
 	<span>
-		<a href='/help' target='_blank'>{$t('panel.splash.action.help.label')}</a>
-		<a href='/about' target='_blank'>{$t('panel.splash.action.about.label')}</a>
-		<a href='/privacy' target='_blank'>{$t('panel.splash.action.privacy.label')}</a>
-		<a href='/terms' target='_blank'>{$t('panel.splash.action.terms.label')}</a>
+		<a href='/help' {target}>{$t('panel.splash.action.help.label')}</a>
+		<a href='/about' {target}>{$t('panel.splash.action.about.label')}</a>
+		<a href='/privacy' {target}>{$t('panel.splash.action.privacy.label')}</a>
+		<a href='/terms' {target}>{$t('panel.splash.action.terms.label')}</a>
 	</span>
 </div>
 
@@ -113,7 +142,7 @@
 	</select>
 </div>
 
-<svelte:window on:hashchange={() => invite = parseInviteCode(getInvite())}/>
+<svelte:window on:message={handleMessage} on:hashchange={() => invite = parseInviteCode(getInvite())}/>
 
 <style>
 	div {

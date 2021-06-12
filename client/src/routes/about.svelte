@@ -5,7 +5,7 @@
 
 <script>
 	import entityData from '../data/entities.json';
-	import Link from '../lib/Link.svelte';
+	import Link, {outboundEnabled} from '../lib/Link.svelte';
 	import Page from '../lib/Page.svelte';
 	import t from '../lib/translation.js';
 
@@ -55,11 +55,13 @@
 		<li>You can contribute to the translations at <Link href="https://crowdl.io/mk48/entries">crowdl.io</Link>.</li>
 	</ul>
 
-	<h2>Contact Us</h2>
+	{#if $outboundEnabled}
+		<h2>Contact Us</h2>
 
-	<p>If you have any feedback to share, business inquiries, or any other
-	concern, please contact us by email at
-	<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
+		<p>If you have any feedback to share, business inquiries, or any other
+		concern, please contact us by email at
+		<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
+	{/if}
 </Page>
 
 <style>

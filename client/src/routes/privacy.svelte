@@ -6,6 +6,7 @@
 <script>
 	import Page from '../lib/Page.svelte';
 	import t from '../lib/translation.js';
+	import {outboundEnabled} from '../lib/Link.svelte';
 </script>
 
 <Page>
@@ -77,10 +78,12 @@
 
 	<p>We reserve the right to alter these privacy policies at any time, without notice.</p>
 
-	<h2>Contact Us</h2>
+	{#if $outboundEnabled}
+		<h2>Contact Us</h2>
 
-	<p>If you have any concern, such as a desire to be removed from the leaderboard, please contact us by email at
-	<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
+		<p>If you have any concern, such as a desire to be removed from the leaderboard, please contact us by email at
+		<a href="mailto:finnbearone@gmail.com">finnbearone@gmail.com</a>.</p>
+	{/if}
 </Page>
 
 <style>
