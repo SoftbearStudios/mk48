@@ -95,10 +95,10 @@
 		{/if}
 	</form>
 	<span>
-		<a href='/help' target='_blank'>Help</a>
-		<a href='/about' target='_blank'>About</a>
-		<a href='/privacy' target='_blank'>Privacy</a>
-		<a href='/terms' target='_blank'>Terms</a>
+		<a href='/help' target='_blank'>{$t('panel.splash.action.help.label')}</a>
+		<a href='/about' target='_blank'>{$t('panel.splash.action.about.label')}</a>
+		<a href='/privacy' target='_blank'>{$t('panel.splash.action.privacy.label')}</a>
+		<a href='/terms' target='_blank'>{$t('panel.splash.action.terms.label')}</a>
 	</span>
 </div>
 
@@ -153,5 +153,11 @@
 	span {
 		display: flex;
 		justify-content: space-around;
+	}
+
+	a {
+		margin-left: 0.25em;
+		margin-right: 0.25em;
+		white-space: nowrap;
 	}
 </style>

@@ -70,6 +70,9 @@
 		</tbody>
 	</table>
 
+	<p>Other information, such as which language you select, remains on your
+	computer.</p>
+
 	<h2>Changes</h2>
 
 	<p>We reserve the right to alter these privacy policies at any time, without notice.</p>

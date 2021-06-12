@@ -137,8 +137,20 @@
 			},
 			"splash": {
 				"action": {
+					"about": {
+						"label": "About"
+					},
+					"help": {
+						"label": "Help"
+					},
+					"privacy": {
+						"label": "Privacy"
+					},
 					"spawn": {
 						"label": "Start"
+					},
+					"terms": {
+						"label": "Terms"
 					}
 				},
 				"connectionLost": "The battle is over. Try starting again shortly.",
@@ -323,8 +335,20 @@
 			},
 			"splash": {
 				"action": {
+					"about": {
+						"label": "О"
+					},
+					"help": {
+						"label": "Помощь"
+					},
+					"privacy": {
+						"label": "секретность"
+					},
 					"spawn": {
 						"label": "Начинать"
+					},
+					"terms": {
+						"label": "Условия"
 					}
 				},
 				"connectionLost": "Битва окончена. Попробуйте начать снова в ближайшее время.",
@@ -494,8 +518,20 @@
 			},
 			"splash": {
 				"action": {
+					"about": {
+						"label": "Acerca"
+					},
+					"help": {
+						"label": "Ayuda"
+					},
+					"privacy": {
+						"label": "Intimidad"
+					},
 					"spawn": {
 						"label": "Comienzo"
+					},
+					"terms": {
+						"label": "Condiciones"
 					}
 				},
 				"connectionLost": "La batalla ha terminado. Intente comenzar de nuevo en breve.",
@@ -664,8 +700,20 @@
 			},
 			"splash": {
 				"action": {
+					"about": {
+						"label": "À propos"
+					},
+					"help": {
+						"label": "Aider"
+					},
+					"privacy": {
+						"label": "Intimité"
+					},
 					"spawn": {
 						"label": "Démarrer"
+					},
+					"terms": {
+						"label": "Termes"
 					}
 				},
 				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
@@ -832,8 +880,20 @@
 			},
 			"splash": {
 				"action": {
+					"about": {
+						"label": "关于"
+					},
+					"help": {
+						"label": "帮助"
+					},
+					"privacy": {
+						"label": "隐私"
+					},
 					"spawn": {
 						"label": "开始"
+					},
+					"terms": {
+						"label": "条款"
 					}
 				},
 				"connectionLost": "战斗结束了。稍后重新开始尝试。",
