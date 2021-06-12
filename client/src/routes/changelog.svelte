@@ -15,11 +15,16 @@
 
 	<h2>2021</h2>
 
+	<h3>6/12/2021</h3>
+
+	<ul>
+		<li>Players no longer respawn with their team within 10 seconds of being
+		killed by another player.</li>
+	</ul>
+
 	<h3>6/11/2021</h3>
 
 	<ul>
-		<!--<li>Players no longer respawn with their team within 10 seconds of being
-		killed by another player.</li>-->
 		<li>Add support for translations.</li>
 	</ul>
 
