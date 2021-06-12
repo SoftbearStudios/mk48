@@ -5,6 +5,7 @@
 
 <script context='module'>
 	import {fromCamelCase} from '../util/strings.js';
+	import t from './translation.js';
 
 	function armamentConsumption(consumption, index) {
 		return (!consumption || consumption.length <= index) ? 0 : consumption[index]
@@ -50,13 +51,13 @@
 		return Object.entries(groups);
 	}
 
-	export function summarizeType(type) {
+	export function summarizeType(translation, type) {
 		const data = entityData[type];
-		let subtype = fromCamelCase(data.subtype);
+		let subtype = data.subtype;
 		if (data.subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
-			subtype = 'rocket torpedo';
+			subtype = 'rocketTorpedo';
 		}
-		return subtype + (data.type === 'weapon' ? '' : ` ${data.type}`);
+		return translation(`kind.${data.type}.${subtype}.name`);
 	}
 </script>
 
@@ -108,12 +109,12 @@
 	<Section name={entityData[type].label}>
 		{#each groupArmaments(armaments, consumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
-				<img title={`${entityData[group.type].label} (${summarizeType(group.type)})`} class:consumed={group.ready === 0} src={`/entities/${group.type}.png`}/>
+				<img title={`${entityData[group.type].label} (${summarizeType($t, group.type)})`} class:consumed={group.ready === 0} src={`/entities/${group.type}.png`}/>
 				<span class='consumption' title={(group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`) + (group.deployed === 0 ? '' : ` (${group.deployed} still deployed)`)}>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
 		{#if entityData[type].subtype === 'ram'}
-			<small>Your boat is designed<br/>to ram other boats!</small>
+			<small>{$t('kind.ram.hint')}</small>
 		{:else if entityData[type].subtype === 'submarine'}
 			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>Surface</div>
 		{/if}

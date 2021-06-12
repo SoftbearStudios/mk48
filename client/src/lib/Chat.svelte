@@ -5,6 +5,7 @@
 
 <script context='module'>
 	import {teamMembers} from './socket.js';
+	import t from './translation.js';
 	import {writable} from 'svelte/store';
 	// Store message in module context to persist it between
 	// player deaths (See #22)
@@ -75,7 +76,7 @@
 </script>
 
 <div>
-	<Section name='Radio'>
+	<Section name={$t('panel.chat.label')}>
 		<table>
 			{#each $chats as {name, team, teamOnly, message}}
 				<tr>
@@ -87,7 +88,7 @@
 		{#if auto($message)}
 			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
-		<input type='text' name='message' title={`Press Enter to send${$teamMembers ? ', or Shift+Enter to send to team only' : ''}`} placeholder='Message' autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} on:keydown={onKeyDown} bind:this={input}/>
+		<input type='text' name='message' title={$t(`panel.chat.action.send.hint${$teamMembers ? 'Team' : ''}`)} placeholder={$t('panel.chat.action.send.label')} autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} on:keydown={onKeyDown} bind:this={input}/>
 	</Section>
 </div>
 

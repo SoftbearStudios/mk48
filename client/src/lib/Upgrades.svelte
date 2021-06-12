@@ -5,8 +5,10 @@
 
 <script>
 	import Section from './Section.svelte';
+	import t from './translation.js';
 	import entityData from '../data/entities.json';
 	import {clamp} from '../util/math.js';
+	import {summarizeType} from './Ship.svelte';
 
 	export let score;
 	export let type;
@@ -37,9 +39,9 @@
 
 {#if upgrades && upgrades.length > 0}
 	<div>
-		<Section name={`${Math.round(progress * 100)}% to level ${nextLevel}`}>
+		<Section name={`${Math.round(progress * 100)}% ${$t('panel.upgrade.labelMiddle')} ${nextLevel}`}>
 			{#each upgrades as upgradeType}
-				<img title={`${entityData[upgradeType].label} (${entityData[upgradeType].subtype})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
+				<img title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
 				<br/>
 			{/each}
 		</Section>

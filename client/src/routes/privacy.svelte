@@ -5,10 +5,11 @@
 
 <script>
 	import Page from '../lib/Page.svelte';
+	import t from '../lib/translation.js';
 </script>
 
 <Page>
-	<h1>Mk48.io Privacy Policy</h1>
+	<h1>{$t('page.privacy.title')}</h1>
 
 	<h2>Introduction</h2>
 

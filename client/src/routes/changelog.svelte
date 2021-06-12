@@ -5,14 +5,29 @@
 
 <script>
 	import Page from '../lib/Page.svelte';
+	import t from '../lib/translation.js';
 </script>
 
 <Page>
-	<h1>Mk48.io Changelog</h1>
+	<h1>{$t('page.changelog.title')}</h1>
 
 	<p>Warning: This changelog may not always be fully up to date</p>
 
 	<h2>2021</h2>
+
+	<h3>6/11/2021</h3>
+
+	<ul>
+		<li>Add support for translations.</li>
+	</ul>
+
+	<h3>6/10/2021</h3>
+
+	<ul>
+		<li>Rebalance aircraft weapon reload speed.</li>
+		<li>Improve player spawning.</li>
+		<li>Show health on Ships page.</li>
+	</ul>
 
 	<h3>6/9/2021</h3>
 

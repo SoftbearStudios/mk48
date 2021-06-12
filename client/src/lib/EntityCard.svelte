@@ -8,6 +8,7 @@
 	import Link from './Link.svelte';
 	import {summarizeType, groupArmaments} from './Ship.svelte';
 	import {toKnotsString} from './Status.svelte';
+	import t from './translation.js';
 
 	export let type;
 	export let depth = 0; // recursion depth
@@ -26,9 +27,9 @@
 		<td>
 			<h3>{entityData.label + (count != null ? ` × ${count}` : '')}</h3>
 			{#if entityData.type === 'boat'}
-				<i>Level {entityData.level} {entityData.subtype}</i>
+				<i>Level {entityData.level} {summarizeType($t, type)}</i>
 			{:else}
-				<i>{summarizeType(type)}</i>
+				<i>{summarizeType($t, type)}</i>
 			{/if}
 			{#if entityData.link}
 				(<Link href={entityData.link}>Learn more</Link>)

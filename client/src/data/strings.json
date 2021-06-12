@@ -1,0 +1,466 @@
+{
+	"en": {
+		"boat": "boat",
+		"kind": {
+			"boat": {
+				"battleship": {
+					"name": "battleship"
+				},
+				"carrier": {
+					"name": "aircraft carrier"
+				},
+				"corvette": {
+					"name": "corvette"
+				},
+				"cruiser": {
+					"name": "cruiser"
+				},
+				"destroyer": {
+					"name": "destroyer"
+				},
+				"dredger": {
+					"name": "dredger"
+				},
+				"hovercraft": {
+					"name": "hovercraft"
+				},
+				"lcs": {
+					"name": "LCS"
+				},
+				"minelayer": {
+					"name": "minelayer"
+				},
+				"pirate": {
+					"name": "pirate"
+				},
+				"ram": {
+					"hint": "Your boat is designed to ram other boats!",
+					"name": "ram"
+				},
+				"submarine": {
+					"name": "submarine"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "sonar decoy"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "aircraft"
+				},
+				"depositor": {
+					"name": "depositor"
+				},
+				"depthCharge": {
+					"name": "depth charge"
+				},
+				"mine": {
+					"name": "mine"
+				},
+				"missile": {
+					"name": "missile"
+				},
+				"rocket": {
+					"name": "rocket"
+				},
+				"rocketTorpedo": {
+					"name": "rocket torpedo"
+				},
+				"sam": {
+					"name": "SAM"
+				},
+				"shell": {
+					"name": "shell"
+				},
+				"torpedo": {
+					"name": "torpedo"
+				}
+			}
+		},
+		"label": "English",
+		"page": {
+			"about": {
+				"title": "About Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Warning: This changelog may not always be fully up to date",
+				"title": "Mk48.io Changelog"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io is a multiplayer naval combat game. You start off a small ship, and consume <b>crates</b> to increase your score (to level up your ship). While a small amount of crates spawn naturally, sinking other ships directly sincreases your score and spawns many more crates.</p>",
+					"title": "Basics"
+				},
+				"title": "Mk48.io Help Guide"
+			},
+			"privacy": {
+				"title": "Mk48.io Privacy Policy"
+			},
+			"ships": {
+				"intro": "The following is a list of all ships in the game, and their weapons. Note that certain values are approximate and may be affected by other factors. For example, weapon damage depends on hit location.",
+				"title": "Mk48.io Ships"
+			},
+			"terms": {
+				"title": "Mk48.io Terms of Service"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Press Enter to send",
+						"hintTeam": "Press Enter to send, or Shift+Enter to send to team only",
+						"label": "Message"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Click and hold to move, click to fire torpedos",
+					"zoom": "Scroll to zoom out for a better view"
+				},
+				"touch": {
+					"movement": "Touch in a direction to move, tap to fire torpedos",
+					"zoom": "Pinch to zoom out for a better view"
+				}
+			},
+			"leaderboard": {
+				"label": "Leaderboard",
+				"type": {
+					"single/all": "All-time Leaderboard",
+					"single/day": "Daily Leaderboard",
+					"single/week": "Weekly Leaderboard"
+				}
+			},
+			"splash": {
+				"action": {
+					"spawn": {
+						"label": "Start"
+					}
+				},
+				"connectionLost": "The battle is over. Try starting again shortly.",
+				"invitePrefix": "Using invite code",
+				"label": "mk48.io"
+			},
+			"status": {
+				"score": "point",
+				"scorePlural": "points"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Accept"
+					},
+					"create": {
+						"label": "Create"
+					},
+					"deny": {
+						"label": "Deny"
+					},
+					"invite": {
+						"hint": "Give this link to players who are not yet in game, to allow them to directly join your team",
+						"label": "Copy Invite"
+					},
+					"kick": {
+						"label": "Kick"
+					},
+					"leave": {
+						"label": "Leave"
+					},
+					"name": {
+						"label": "Fleet name"
+					},
+					"request": {
+						"label": "Request Join"
+					}
+				},
+				"full": "Team full",
+				"label": "Fleet"
+			},
+			"upgrade": {
+				"labelMiddle": "to level"
+			}
+		}
+	},
+	"es": {
+		"boat": "barco",
+		"kind": {
+			"boat": {
+				"battleship": {
+					"name": "acorazado"
+				},
+				"carrier": {
+					"name": "portaaviones"
+				},
+				"corvette": {
+					"name": "corbeta"
+				},
+				"cruiser": {
+					"name": "crucero"
+				},
+				"destroyer": {
+					"name": "destructor"
+				},
+				"hovercraft": {
+					"name": "aerodeslizador"
+				},
+				"minelayer": {
+					"name": "minador"
+				},
+				"pirate": {
+					"name": "pirata"
+				},
+				"ram": {
+					"hint": "¡Su barco está diseñado para embestir a otros barcos!",
+					"name": "ariete"
+				},
+				"submarine": {
+					"name": "submarina"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "señuelo de sonar"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "aeronave"
+				},
+				"depositor": {
+					"name": "transportadora"
+				},
+				"depthCharge": {
+					"name": "carga de profundidad"
+				},
+				"mine": {
+					"name": "mina"
+				},
+				"missile": {
+					"name": "misil"
+				},
+				"rocket": {
+					"name": "cohete"
+				},
+				"rocketTorpedo": {
+					"name": "torpedo cohete"
+				},
+				"shell": {
+					"name": "caparazón"
+				}
+			}
+		},
+		"label": "Español",
+		"page": {
+			"about": {
+				"title": "Sobre Mk48.io"
+			},
+			"changelog": {
+				"title": "Registro de cambios de Mk48.io"
+			},
+			"help": {
+				"basics": {
+					"title": "Lo esencial"
+				},
+				"title": "Guía de ayuda de Mk48.io"
+			},
+			"privacy": {
+				"title": "Política de privacidad de Mk48.io"
+			},
+			"ships": {
+				"title": "Barcos Mk48.io"
+			},
+			"terms": {
+				"title": "Condiciones de servicio de Mk48.io"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Presione Enter para enviar",
+						"hintTeam": "Presiona Enter para enviar, o Shift + Enter para enviar solo al equipo",
+						"label": "Mensaje"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Haga clic y mantenga presionado para moverse, haga clic para disparar torpedos",
+					"zoom": "Desplácese para alejar y ver mejor"
+				},
+				"touch": {
+					"movement": "Toque en una dirección para moverse, toque para disparar torpedos",
+					"zoom": "Pellizca para alejar y ver mejor"
+				}
+			},
+			"leaderboard": {
+				"label": "Tabla",
+				"type": {
+					"single/all": "Tabla de todos los tiempos",
+					"single/day": "Tabla diaria",
+					"single/week": "Tabla semanal"
+				}
+			},
+			"splash": {
+				"action": {
+					"spawn": {
+						"label": "Comienzo"
+					}
+				},
+				"connectionLost": "La batalla ha terminado. Intente comenzar de nuevo en breve.",
+				"invitePrefix": "Usando el código de invitación"
+			},
+			"status": {
+				"score": "punto",
+				"scorePlural": "puntos"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Aceptar"
+					},
+					"create": {
+						"label": "Crear"
+					},
+					"deny": {
+						"label": "Negar"
+					},
+					"invite": {
+						"label": "Copiar invitación"
+					},
+					"kick": {
+						"label": "Retirar"
+					},
+					"leave": {
+						"label": "Dejar"
+					},
+					"name": {
+						"label": "Nombre"
+					},
+					"request": {
+						"label": "Solicitar unirse"
+					}
+				},
+				"full": "El equipo esta lleno",
+				"label": "Flota"
+			},
+			"upgrade": {
+				"labelMiddle": "a nivel"
+			}
+		}
+	},
+	"xx-bork": {
+		"boat": "bork",
+		"kind": {
+			"boat": {
+				"battleship": {
+					"name": "borkship"
+				},
+				"carrier": {
+					"name": "bork carrier"
+				},
+				"destroyer": {
+					"name": "borker"
+				},
+				"hovercraft": {
+					"name": "hoverbork"
+				},
+				"minelayer": {
+					"name": "borklayer"
+				},
+				"ram": {
+					"hint": "Your bork is designed to bork other borks!"
+				},
+				"submarine": {
+					"name": "underwater bork"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "flying bork"
+				},
+				"depthCharge": {
+					"name": "depth bork"
+				}
+			}
+		},
+		"label": "Bork, bork, bork!",
+		"page": {
+			"about": {
+				"title": "Mk48.io?!"
+			},
+			"changelog": {
+				"title": "Mk48.io Borklog"
+			},
+			"help": {
+				"title": "Mk48.io Bork Guide"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Press Enter to bork",
+						"hintTeam": "Press Enter to bork, or Shift+Enter to bork to borks only",
+						"label": "Bork"
+					}
+				},
+				"label": "Messagebork"
+			},
+			"leaderboard": {
+				"label": "Leaderbork",
+				"type": {
+					"single/all": "All-time Leaderbork",
+					"single/day": "Daily Leaderbork",
+					"single/week": "Weekly Leaderbork"
+				}
+			},
+			"splash": {
+				"action": {
+					"spawn": {
+						"label": "Bork"
+					}
+				},
+				"connectionLost": "Your connection was borked. Try again later!"
+			},
+			"status": {
+				"score": "bork",
+				"scorePlural": "borks"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Bork"
+					},
+					"create": {
+						"label": "Bork"
+					},
+					"deny": {
+						"label": "Unbork"
+					},
+					"invite": {
+						"hint": "Send this link to other borks",
+						"label": "Copy Bork"
+					},
+					"kick": {
+						"label": "Unbork"
+					},
+					"leave": {
+						"label": "Unbork"
+					},
+					"request": {
+						"label": "Bork"
+					}
+				},
+				"full": "Team borked",
+				"label": "Borks"
+			}
+		}
+	},
+	"fr": {}
+}

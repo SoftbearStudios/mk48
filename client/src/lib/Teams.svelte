@@ -5,6 +5,7 @@
 
 <script context='module'>
 	import Section from './Section.svelte';
+	import t from './translation.js';
 	import {get} from 'svelte/store';
 	import {entityID, playerID as socketPlayerID, send, teamInvite, teamMembers, teamJoinRequests} from './socket.js';
 
@@ -44,7 +45,7 @@
 </script>
 
 <div>
-	<Section name={myTeamID || 'Fleet'} emblem={$teamJoinRequests ? ($teamJoinRequests).length : null} open={false}>
+	<Section name={myTeamID || $t('panel.team.label')} emblem={$teamJoinRequests ? ($teamJoinRequests).length : null} open={false}>
 		{#if myTeamID}
 			<table>
 				{#if $teamMembers}
@@ -52,7 +53,7 @@
 						<tr>
 							<td class='name'>{name}</td>
 							{#if isOwner && i > 0}
-								<td><button on:click={() => send('removeFromTeam', {playerID})}>{i == 0 ? 'Leave' : 'Kick'}</button></td>
+								<td><button on:click={() => send('removeFromTeam', {playerID})}>{$t('panel.team.action.kick.label')}</button></td>
 							{/if}
 						</tr>
 					{/each}
@@ -61,26 +62,26 @@
 					{#each $teamJoinRequests as {playerID, name}}
 						<tr>
 							<td class='name'>{name}</td>
-							<td><button on:click={() => send('addToTeam', {playerID})}>Accept</button></td>
+							<td><button on:click={() => send('addToTeam', {playerID})}>{$t('panel.team.action.accept.label')}</button></td>
 						</tr>
 					{/each}
 				{/if}
 			</table>
 			{#if $teamInvite}
-				<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>Copy Invite</button>
+				<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>{$t('panel.team.action.invite.label')}</button>
 			{/if}
-			<button on:click={() => send('removeFromTeam')}>Leave</button>
+			<button on:click={() => send('removeFromTeam')}>{$t('panel.team.action.leave.label')}</button>
 		{:else}
 			<table>
 				{#each getTeams(contacts) as teamID}
 					<tr>
 						<td class='name'>{teamID}</td>
-						<td><button on:click={() => send('addToTeam', {teamID})}>Request Join</button></td>
+						<td><button on:click={() => send('addToTeam', {teamID})}>{$t('panel.team.action.request.label')}</button></td>
 					</tr>
 				{/each}
 				<tr>
-					<td class='name'><input type='text' placeholder='Fleet name' maxLength={maxNameLength} bind:value={newTeamName}/></td>
-					<td><button disabled={newTeamName.length < minNameLength || newTeamName.length > maxNameLength} on:click={createTeam}>Create</button></td>
+					<td class='name'><input type='text' placeholder={$t('panel.team.action.name.label')} maxLength={maxNameLength} bind:value={newTeamName}/></td>
+					<td><button disabled={newTeamName.length < minNameLength || newTeamName.length > maxNameLength} on:click={createTeam}>{$t('panel.team.action.create.label')}</button></td>
 				</tr>
 			</table>
 		{/if}

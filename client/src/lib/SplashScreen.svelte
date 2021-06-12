@@ -10,6 +10,8 @@
 	import {deathMessage} from './socket.js';
 	import {onMount} from 'svelte';
 	import {fade} from 'svelte/transition';
+	import t, {setLanguage, translateAs} from './translation.js';
+	import strings from '../data/strings.json';
 	import {browser} from '$app/env';
 
 	export let callback;
@@ -72,10 +74,10 @@
 	}
 </script>
 
-<div in:fade="{{delay: 2000, duration: 500}}">
-	<h2>mk48.io</h2>
+<div class='splash' in:fade="{{delay: 2000, duration: 500}}">
+	<h2>{$t('panel.splash.label')}</h2>
 	{#if connectionLost}
-		<p>The battle is over. Try starting again shortly.</p>
+		<p>{$t('panel.splash.connectionLost')}</p>
 	{:else if $deathMessage}
 		<p>{$deathMessage}</p>
 	{/if}
@@ -87,9 +89,9 @@
 				<option value={type}>{entityData[type].label}</option>
 			{/each}
 		</select>
-		<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength))} on:click={handleSubmit}>Start</button>
+		<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength))} on:click={handleSubmit}>{$t('panel.splash.action.spawn.label')}</button>
 		{#if invite}
-			<small>Using invite code {invite}</small>
+			<small>{$t('panel.splash.invitePrefix')} {invite}</small>
 		{/if}
 	</form>
 	<span>
@@ -98,6 +100,17 @@
 		<a href='/privacy' target='_blank'>Privacy</a>
 		<a href='/terms' target='_blank'>Terms</a>
 	</span>
+</div>
+
+<div class='translation' in:fade="{{delay: 2000, duration: 500}}">
+	<h3>Language</h3>
+	<select value={storage.language} on:change={e => setLanguage(e.target.value)}>
+		{#each Object.keys(strings) as lang}
+			{#if Object.keys(strings[lang]).length > 0}
+				<option value={lang}>{translateAs(lang, 'label')}</option>
+			{/if}
+		{/each}
+	</select>
 </div>
 
 <svelte:window on:hashchange={() => invite = parseInviteCode(getInvite())}/>
@@ -109,17 +122,27 @@
 		box-shadow: 0em 0.2em 0 #cccccc;
 		color: black;
 		height: min-content;
-		left: 50%;
 		margin: auto;
 		padding: 1em;
 		position: absolute;
 		text-align: center;
-		top: 50%;
-		transform: translate(-50%, -50%);
 		width: min-content;
 	}
 
-	h2 {
+	div.splash {
+		left: 50%;
+		padding: 1em;
+		top: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+	div.translation {
+		right: 10px;
+		padding: 1em;
+		bottom: 10px;
+	}
+
+	h2, h3 {
 		margin: 0;
 	}
 

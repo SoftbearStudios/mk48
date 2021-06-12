@@ -5,6 +5,7 @@
 
 <script>
 	import {fade, fly} from 'svelte/transition';
+	import t from './translation.js';
 
 	export let touch;
 	export let instructBasics = true;
@@ -14,11 +15,14 @@
 {#if instructBasics}
 	<div in:fly="{{y: -100}}" out:fade>
 		{#if touch}
-			<h2>Touch in a direction to move, tap to fire torpedos</h2>
-		{:else}
-			<h2>Click and hold to move, click to fire torpedos</h2>
+			<h2>{$t('panel.instruction.touch.movement')}</h2>
 			{#if instructZoom}
-				<p out:fade>Scroll to zoom out for a better view</p>
+				<p out:fade>{$t('panel.instruction.touch.zoom')}</p>
+			{/if}
+		{:else}
+			<h2>{$t('panel.instruction.mouse.movement')}</h2>
+			{#if instructZoom}
+				<p out:fade>{$t('panel.instruction.mouse.zoom')}</p>
 			{/if}
 		{/if}
 	</div>

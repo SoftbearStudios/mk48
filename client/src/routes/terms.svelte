@@ -5,10 +5,11 @@
 
 <script>
 	import Page from '../lib/Page.svelte';
+	import t from '../lib/translation.js';
 </script>
 
 <Page>
-	<h1>Mk48.io Terms of Service</h1>
+	<h1>{$t('page.terms.title')}</h1>
 
 	<p>The following terms govern your use of the <a href="https://mk48.io">Mk48.io</a> website and game.</p>
 

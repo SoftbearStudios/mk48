@@ -7,14 +7,13 @@
 	import Page from '../lib/Page.svelte';
 	import entityDatas from '../data/entities.json';
 	import EntityCard from '../lib/EntityCard.svelte';
+	import t from '../lib/translation.js';
 </script>
 
 <Page>
-	<h1>Mk48.io Ships</h1>
+	<h1>{$t('page.ships.title')}</h1>
 
-	<p>The following is a list of all ships in the game, and their weapons. Note
-	that certain values are approximate and may be affected by other factors. For
-	example, weapon damage depends on hit location.</p>
+	<p>{$t('page.ships.intro')}</p>
 
 	<table>
 		{#each Object.entries(entityDatas) as [type, entityData]}

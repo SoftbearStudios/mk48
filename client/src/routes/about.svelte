@@ -7,6 +7,7 @@
 	import entityData from '../data/entities.json';
 	import Link from '../lib/Link.svelte';
 	import Page from '../lib/Page.svelte';
+	import t from '../lib/translation.js';
 
 	let shipTypeCount = 0;
 	let shipLevelMax = 0;
@@ -29,7 +30,7 @@
 </script>
 
 <Page>
-	<h1>About Mk48.io</h1>
+	<h1>{$t('page.about.title')}</h1>
 
 	<h2>Description</h2>
 
@@ -51,6 +52,7 @@
 		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/client">client</Link> is written in the <Link href="https://kit.svelte.dev/">SvelteKit</Link> JavaScript framework, and
 		uses <Link href="https://www.pixijs.com/">PIXI.js</Link> for the 2D graphics.</li>
 		<li>The assets were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</li>
+		<li>You can contribute to the translations at <Link href="https://crowdl.io/mk48/entries">crowdl.io</Link>.</li>
 	</ul>
 
 	<h2>Contact Us</h2>

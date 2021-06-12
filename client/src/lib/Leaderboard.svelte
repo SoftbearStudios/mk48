@@ -5,14 +5,15 @@
 
 <script>
 	import Section from './Section.svelte';
+	import t from './translation.js';
 
 	export let leaderboard;
-	export let label = 'Leaderboard';
+	export let label = null;
 	export let open = true;
 </script>
 
 <div>
-	<Section name={label} {open}>
+	<Section name={label || $t('panel.leaderboard.label')} {open}>
 		<table>
 			{#each leaderboard as {name, team, score}}
 				<tr>

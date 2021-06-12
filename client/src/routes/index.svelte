@@ -13,6 +13,7 @@
 	import Status from '../lib/Status.svelte';
 	import SplashScreen from '../lib/SplashScreen.svelte';
 	import Teams from '../lib/Teams.svelte';
+	import t from '../lib/translation.js';
 	import Upgrades from '../lib/Upgrades.svelte';
 	import {drawHud, THROTTLE_END, THROTTLE_START} from '../lib/hud.js';
 	import {recycleParticle, updateParticles} from '../lib/particles.js';
@@ -1088,13 +1089,13 @@
 		{#if globalLeaderboard}
 			<div class='globalLeaderboard'>
 				{#if globalLeaderboard['single/all']}
-					<Leaderboard label='All-time Leaderboard' leaderboard={globalLeaderboard['single/all']}/>
+					<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']}/>
 				{/if}
 				{#if globalLeaderboard['single/week']}
-					<Leaderboard label='Weekly Leaderboard' open={false} leaderboard={globalLeaderboard['single/week']}/>
+					<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']}/>
 				{/if}
 				{#if globalLeaderboard['single/day']}
-					<Leaderboard label='Daily Leaderboard' open={false} leaderboard={globalLeaderboard['single/day']}/>
+					<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']}/>
 				{/if}
 			</div>
 		{/if}

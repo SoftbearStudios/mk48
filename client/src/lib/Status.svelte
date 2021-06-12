@@ -12,6 +12,7 @@
 <script>
 	import {plural} from '../util/strings.js';
 	import {fly} from 'svelte/transition';
+	import t from './translation.js';
 
 	export let overlay;
 	export let recording = false;
@@ -30,7 +31,7 @@
 </script>
 
 <div transition:fly="{{y: 100}}">
-	<h2>{overlay.score || 0} {plural('point', overlay.score || 0)} —
+	<h2>{overlay.score || 0} {$t('panel.status.score' + (overlay.score === 1 ? '' : 'Plural'))} —
 	{toKnotsString(overlay.speed)} —
 	{Math.round(((overlay.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(overlay.direction)}] —
 	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})

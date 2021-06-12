@@ -6,17 +6,15 @@
 <script>
 	import Link from '../lib/Link.svelte';
 	import Page from '../lib/Page.svelte';
+	import t from '../lib/translation.js';
 </script>
 
 <Page>
-	<h1>Mk48.io Help Guide</h1>
+	<h1>{$t('page.help.title')}</h1>
 
-	<h2>Basics</h2>
+	<h2>{$t('page.help.basics.title')}</h2>
 
-	<p>Mk48.io is a multiplayer naval combat game. You start off a small ship,
-	and consume <b>crates</b> to increase your score (to level up your ship). While a
-	small amount of crates spawn naturally, sinking other ships directly
-	increases your score and spawns many more crates.</p>
+	<p>{@html $t('page.help.basics.html')}</p>
 
 	<p>You can <Link href='https://discord.gg/YMheuFQWTX'>join the Discord server</Link> to
 	get help from the community!</p>
