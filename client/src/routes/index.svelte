@@ -50,7 +50,7 @@
 	let globalLeaderboard = null;
 
 	// To debug global leaderboard locally
-	globalLeaderboard = JSON.parse(`{"single/all":[{"name":"test1","score":1234}], "single/week":[{"name":"test1","score":1234}], "single/day":[{"name":"test1","score":1234}]}`);
+	// globalLeaderboard = JSON.parse(`{"single/all":[{"name":"test1","score":1234}], "single/week":[{"name":"test1","score":1234}], "single/day":[{"name":"test1","score":1234}]}`);
 
 	// Tutorial status
 	let timesMoved = 0;

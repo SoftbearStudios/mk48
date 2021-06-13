@@ -15,7 +15,7 @@ export const teamInvite = writable(null);
 export const teamMembers = writable([]);
 export const teamJoinRequests = writable([]);
 export const worldRadius = writable(500);
-export const deathMessage = writable(null);
+export const deathReason = writable(null);
 export const terrain = writable(null);
 export const serverID = writable(null);
 
@@ -119,7 +119,7 @@ export async function connect(callback) {
 						});
 					}
 					worldRadius.set(message.data.worldRadius)
-					deathMessage.set(message.data.deathMessage);
+					deathReason.set(message.data.deathReason);
 					if (message.data.terrain) {
 						message.data.terrain.data = readTerrain(message.data.terrain.data, message.data.terrain.length);
 

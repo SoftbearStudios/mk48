@@ -53,7 +53,7 @@ type (
 		TeamCode     world.TeamCode       `json:"teamInvite,omitempty"`
 		TeamMembers  []world.IDPlayerData `json:"teamMembers,omitempty"`
 		TeamRequests []world.IDPlayerData `json:"teamJoinRequests,omitempty"`
-		DeathMessage string               `json:"deathMessage,omitempty"`
+		DeathReason  world.DeathReason    `json:"deathReason,omitempty"`
 		Terrain      *terrain2.Data       `json:"terrain,omitempty"`
 
 		// Put smaller fields here for packing

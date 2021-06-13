@@ -7,13 +7,14 @@
 	import entityData from '../data/entities.json';
 	import storage from '../util/storage.js';
 	import {getInvite} from './teams.js';
-	import {deathMessage} from './socket.js';
+	import {deathReason} from './socket.js';
 	import {onMount} from 'svelte';
 	import {fade} from 'svelte/transition';
 	import t, {setLanguage, translateAs} from './translation.js';
 	import strings from '../data/strings.json';
 	import {browser} from '$app/env';
 	import Link, {outboundEnabled} from './Link.svelte';
+	import {summarizeType} from './Ship.svelte';
 
 	export let callback;
 	export let connectionLost = false;
@@ -99,6 +100,23 @@
 		}
 	}
 
+	function fmtDeathReason(t, reason) {
+		let message = t(`death.${reason.type}.message`);
+
+		message = message.replace('{player}', reason.player);
+		//message = message.replace('{entity}', reason.entity);
+		let entityKind = undefined;
+		let entityLabel = undefined;
+		if (reason.entity) {
+			entityKind = summarizeType(t, reason.entity);
+			entityLabel = entityData[reason.entity].label;
+		}
+		message = message.replace('{entityKind}', entityKind)
+		message = message.replace('{playerOrEntityLabel}', reason.player || entityLabel);
+
+		return message;
+	}
+
 	// Link target
 	$: target = $outboundEnabled ? '_blank' : null;
 </script>
@@ -107,8 +125,8 @@
 	<h2>{$t('panel.splash.label')}</h2>
 	{#if connectionLost}
 		<p>{$t('panel.splash.connectionLost')}</p>
-	{:else if $deathMessage}
-		<p>{$deathMessage}</p>
+	{:else if $deathReason}
+		<p>{fmtDeathReason($t, $deathReason)}</p>
 	{/if}
 	<!--<small>Server maintainance in progress</small>-->
 	<form on:submit|preventDefault|stopPropagation={handleSubmit}>

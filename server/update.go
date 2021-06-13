@@ -69,7 +69,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 
 	update.EntityID = player.EntityID
 	update.PlayerID = player.PlayerID()
-	update.DeathMessage = player.DeathMessage
+	update.DeathReason = player.DeathReason
 	update.WorldRadius = h.worldRadius
 	update.Chats = h.chats
 

@@ -223,7 +223,7 @@ func (data RemoveFromTeam) Process(h *Hub, _ Client, player *Player) {
 
 	// You can remove yourself or other if you are owner
 	if removePlayer != nil {
-		if  (&player.Player == team.Owner() || &player.Player == removePlayer) {
+		if &player.Player == team.Owner() || &player.Player == removePlayer {
 			h.leaveTeam(removePlayer)
 		}
 	} else if &player.Player == team.Owner() {

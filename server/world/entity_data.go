@@ -5,8 +5,6 @@ package world
 
 import (
 	"github.com/chewxy/math32"
-	"strings"
-	"unicode"
 )
 
 var (
@@ -171,19 +169,6 @@ func (entityType EntityType) UpgradesTo(nextEntityType EntityType, score int) bo
 	nextData := nextEntityType.Data()
 
 	return nextData.Level > data.Level && nextData.Kind == data.Kind && score >= LevelToScore(nextEntityType.Data().Level)
-}
-
-// depthCharge -> depth charge
-func (entitySubKind EntitySubKind) Label() string {
-	str := entitySubKind.String()
-	var builder strings.Builder
-	for _, r := range str {
-		if unicode.IsUpper(r) {
-			builder.WriteByte(' ')
-		}
-		builder.WriteRune(unicode.ToLower(r))
-	}
-	return builder.String()
 }
 
 // levelToScore converts a boat level to a score required to upgrade

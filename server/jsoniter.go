@@ -27,6 +27,7 @@ var json = func() jsoniter.API {
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Angle(0)).String(), encodeAngle, emptyAngle)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Velocity(0)).String(), encodeVelocity, emptyVelocity)
 	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.Ticks(0)).String(), encodeTicks, emptyTicks)
+	jsoniter.RegisterTypeEncoderFunc(reflect.TypeOf(world.DeathReason{}).String(), encodeDeathReason, emptyDeathReason)
 
 	// Decoders
 	jsoniter.RegisterTypeDecoderFunc(reflect.TypeOf(Message{}).String(), decodeMessage)
@@ -174,6 +175,30 @@ func encodeVelocity(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 
 func emptyVelocity(ptr unsafe.Pointer) bool {
 	return *(*world.Velocity)(ptr) == 0
+}
+
+// This is a relatively normal encoder (same as default behavior), but it exists
+// to allow a custom isempty
+func encodeDeathReason(ptr unsafe.Pointer, stream *jsoniter.Stream) {
+	reason := *(*world.DeathReason)(ptr)
+	stream.WriteObjectStart()
+	stream.WriteObjectField("type")
+	stream.WriteString(reason.Type)
+	if reason.Player != "" {
+		stream.WriteMore()
+		stream.WriteObjectField("player")
+		stream.WriteString(reason.Player)
+	}
+	if reason.Entity != world.EntityTypeInvalid {
+		stream.WriteMore()
+		stream.WriteObjectField("entity")
+		stream.WriteVal(reason.Entity)
+	}
+	stream.WriteObjectEnd()
+}
+
+func emptyDeathReason(ptr unsafe.Pointer) bool {
+	return *(*world.DeathReason)(ptr) == world.DeathReason{}
 }
 
 func decodeAngle(ptr unsafe.Pointer, iter *jsoniter.Iterator) {
