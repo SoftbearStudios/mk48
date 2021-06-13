@@ -49,6 +49,9 @@
 	// Global leaderboard
 	let globalLeaderboard = null;
 
+	// To debug global leaderboard locally
+	globalLeaderboard = JSON.parse(`{"single/all":[{"name":"test1","score":1234}], "single/week":[{"name":"test1","score":1234}], "single/day":[{"name":"test1","score":1234}]}`);
+
 	// Tutorial status
 	let timesMoved = 0;
 	let weaponsFired = 0;
@@ -1091,9 +1094,11 @@
 				{#if globalLeaderboard}
 					{#if globalLeaderboard['single/all']}
 						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']} headerAlign='left'/>
+						<br/>
 					{/if}
 					{#if globalLeaderboard['single/week']}
 						<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']} headerAlign='left'/>
+						<br/>
 					{/if}
 					{#if globalLeaderboard['single/day']}
 						<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']} headerAlign='left'/>

@@ -174,4 +174,10 @@
 		float: right;
 		color: white;
 	}
+
+	@media(max-width: 800px) {
+		span.consumption {
+			display: none;
+		}
+	}
 </style>

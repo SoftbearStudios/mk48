@@ -26,9 +26,9 @@
 
 	div.inset {
 		background-color: transparent;
-		left: 12em;
-		right: 12em;
-		top: 12em;
+		left: 10vw;
+		right: 10vw;
+		top: 10vw;
 		position: absolute;
 	}
 
