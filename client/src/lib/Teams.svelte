@@ -53,7 +53,7 @@
 						<td class='name'>{name}</td>
 						{#if isOwner}
 							<td class='hidden'><button class:hidden={i == 0}>✔</button></td>
-							<td><button class:hidden={i == 0} on:click={() => send('removeFromTeam', {playerID})}>✘</button></td>
+							<td><button class:hidden={i == 0} on:click={() => send('removeFromTeam', {playerID})} title={$t('panel.team.action.kick.label')}>✘</button></td>
 						{/if}
 					</tr>
 				{/each}
@@ -62,8 +62,8 @@
 				{#each $teamJoinRequests as {playerID, name}}
 					<tr>
 						<td class='name pending'>{name}</td>
-						<td><button on:click={() => send('addToTeam', {playerID})}>✔</button></td>
-						<td><button on:click={() => send('removeFromTeam', {playerID})}>✘</button></td>
+						<td><button on:click={() => send('addToTeam', {playerID})} title={$t('panel.team.action.accept.label')}>✔</button></td>
+						<td><button on:click={() => send('removeFromTeam', {playerID})} title={$t('panel.team.action.deny.label')}>✘</button></td>
 					</tr>
 				{/each}
 			{/if}
@@ -119,7 +119,7 @@
 		background-color: transparent;
 		border: 0px;
 		width: min-content;
-		padding: 0.1em;
+		padding: 0.1em 0.5em;
 	}
 
 	button:hover {

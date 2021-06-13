@@ -13,8 +13,12 @@
 	import {plural} from '../util/strings.js';
 	import {fly} from 'svelte/transition';
 	import t from './translation.js';
+	import Meter from './Meter.svelte';
+	import entityData from '../data/entities.json';
+	import {hasUpgrades, upgradeProgress} from './Upgrades.svelte';
 
 	export let overlay;
+	export let type;
 	export let recording = false;
 
 	function positionString(element, positiveLabel, negativeLabel) {
@@ -28,6 +32,8 @@
 		const index = Math.round(theta * directions.length);
 		return directions[((index + directions.length) % directions.length + directions.length) % directions.length];
 	}
+
+	$: progress = upgradeProgress(type, overlay.score || 0);
 </script>
 
 <div transition:fly="{{y: 100}}">
@@ -36,6 +42,9 @@
 	{Math.round(((overlay.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(overlay.direction)}] —
 	({positionString(overlay.positionX, 'E', 'W')}, {positionString(overlay.positionY, 'S', 'N')})
 	{recording ? ' — Recording (v to stop)' : ''}</h2>
+	{#if hasUpgrades(type)}
+		<Meter value={progress}>{Math.round(progress * 100)}% {$t('panel.upgrade.labelMiddle')} {entityData[type].level + 1}</Meter>
+	{/if}
 </div>
 
 <style>

@@ -1108,7 +1108,7 @@
 	<div class='bottom bar'>
 		{#if spawned}
 			<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
-			<Status {overlay} {recording}/>
+			<Status {overlay} {recording} type={contacts[localEntityID].type}/>
 			<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
 		{/if}
 	</div>

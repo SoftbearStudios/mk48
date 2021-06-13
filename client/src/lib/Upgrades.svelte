@@ -28,7 +28,7 @@
 		return clamp(((score || 0) - levelToScore(level)) / (levelToScore(level + 1) - levelToScore(level)), 0, 1);
 	}
 
-	function hasUpgrades(type) {
+	export function hasUpgrades(type) {
 		return getUpgrades(type).length > 0;
 	}
 
