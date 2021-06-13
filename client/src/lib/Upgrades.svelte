@@ -3,27 +3,16 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<script>
-	import Section from './Section.svelte';
-	import t from './translation.js';
+<script context='module'>
 	import entityData from '../data/entities.json';
-	import {clamp} from '../util/math.js';
-	import {summarizeType} from './Ship.svelte';
-
-	export let score;
-	export let type;
-	export let callback;
 
 	function levelToScore(level) {
+		// Must match server code
 		return (level * level - 1) * 10;
 	}
 
-	$: level = entityData[type].level;
-	$: nextLevel = level + 1;
-	$: progress = clamp(((score || 0) - levelToScore(level)) / (levelToScore(nextLevel) - levelToScore(level)), 0, 1);
-	$: ready = progress === 1;
-
-	function getUpgrades(nextLevel) {
+	function getUpgrades(type) {
+		const nextLevel = entityData[type].level + 1;
 		const list = [];
 		for (const entityType of Object.keys(entityData)) {
 			const data = entityData[entityType];
@@ -34,28 +23,62 @@
 		return list;
 	}
 
-	$: upgrades = getUpgrades(nextLevel);
+	export function upgradeProgress(type, score) {
+		const level = entityData[type].level;
+		return clamp(((score || 0) - levelToScore(level)) / (levelToScore(level + 1) - levelToScore(level)), 0, 1);
+	}
+
+	function hasUpgrades(type) {
+		return getUpgrades(type).length > 0;
+	}
+
+	export function canUpgrade(type, score) {
+		return upgradeProgress(type, score) === 1 && hasUpgrades(type);
+	}
 </script>
 
-{#if upgrades && upgrades.length > 0}
-	<div>
-		<Section name={`${Math.round(progress * 100)}% ${$t('panel.upgrade.labelMiddle')} ${nextLevel}`}>
-			{#each upgrades as upgradeType}
-				<img title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} class:ready on:click={() => ready ? callback(upgradeType) : null} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
-				<br/>
+<script>
+	import Section from './Section.svelte';
+	import t from './translation.js';
+	import {clamp} from '../util/math.js';
+	import {summarizeType} from './Ship.svelte';
+
+	export let score;
+	export let type;
+	export let callback;
+</script>
+
+
+<div class='box'>
+	<Section name={`${$t('panel.upgrade.labelPrefix')} ${entityData[type].level + 1}`}>
+		<div class='upgrades'>
+			{#each getUpgrades(type) as upgradeType}
+				<img title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} on:click={callback.bind(null, upgradeType)} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
 			{/each}
-		</Section>
-	</div>
-{/if}
+		</div>
+	</Section>
+</div>
 
 <style>
-	div {
-		background-color: #00000040;
-		left: 0;
-		margin: 10px;
+	div.box {
 		padding: 10px;
-		position: absolute;
-		top: 0;
+		background-color: #00000040;
+		width: min-content;
+		min-width: 30%;
+	}
+
+	div.upgrades {
+		padding: 10px;
+		display: grid;
+		grid-gap: 10px 10px;
+		grid-template-columns: repeat(1, 1fr);
+	}
+
+
+	@media(min-width: 1000px) {
+		div.upgrades {
+			grid-template-columns: repeat(2, 1fr);
+		}
 	}
 
 	h2 {
@@ -64,12 +87,8 @@
 	}
 
 	img {
-		margin: 5px;
-		max-width: 15em;
-	}
-
-	img:not(.ready) {
-		opacity: 0.6;
+		height: auto;
+		width: 100%;
 	}
 
 	p {

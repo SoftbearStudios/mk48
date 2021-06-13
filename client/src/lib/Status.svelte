@@ -40,11 +40,6 @@
 
 <style>
 	div {
-		bottom: 0;
-		left: 0;
-		pointer-events: none;
-		position: absolute;
-		right: 0;
 		text-align: center;
 		user-select: none;
 	}

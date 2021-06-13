@@ -43,10 +43,14 @@
 		user-select: none;
 	}
 
+	div.container {
+		position: relative;
+	}
+
 	div.emblem {
 		position: absolute;
-		right: -0.4em;
-		top: -0.4em;
+		right: -0.7em;
+		top: -0.7em;
 		background-color: #00bfff;
 		border-radius: 50%;
 		width: 1.15em;

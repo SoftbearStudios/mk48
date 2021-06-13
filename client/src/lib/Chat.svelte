@@ -94,13 +94,9 @@
 
 <style>
 	div {
-		bottom: 0;
 		background-color: #00000040;
-		margin: 10px;
 		max-width: 25%;
 		padding: 10px;
-		position: absolute;
-		right: 0;
 	}
 
 	h2 {

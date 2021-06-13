@@ -15,7 +15,7 @@
 	import Hint from '../lib/Hint.svelte';
 	import Teams from '../lib/Teams.svelte';
 	import t from '../lib/translation.js';
-	import Upgrades from '../lib/Upgrades.svelte';
+	import Upgrades, {canUpgrade} from '../lib/Upgrades.svelte';
 	import {drawHud, THROTTLE_END, THROTTLE_START} from '../lib/hud.js';
 	import {recycleParticle, updateParticles} from '../lib/particles.js';
 	import {applyVelocity} from '../lib/physics.js';
@@ -1059,6 +1059,8 @@
 			}
 		}
 	}
+
+	$: spawned = localEntityID && contacts[localEntityID];
 </script>
 
 <main bind:clientWidth={widthFract} bind:clientHeight={heightFract}>
@@ -1069,38 +1071,51 @@
 		on:contextmenu|preventDefault
 		on:mousedown={handleMouseButton} on:mouseup={handleMouseButton} on:mousemove={handleMouseMove}
 		on:touchstart={handleTouch} on:touchend={handleTouch} on:touchmove={handleMouseMove}></canvas>
-	{#if $leaderboard}
-		<div class='leaderboard'>
-			<Leaderboard leaderboard={$leaderboard}/>
-		</div>
-	{/if}
-	{#if localEntityID && contacts[localEntityID]}
-		<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
-		<Status {overlay} {recording}/>
-		<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
-		<Hint type={contacts[localEntityID].type}/>
-		<Upgrades
-			score={contacts[localEntityID].score}
-			type={contacts[localEntityID].type}
-			callback={type => send('upgrade', {type})}
-		/>
-		<Teams {contacts}/>
-		<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
-	{:else}
-		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
-		{#if globalLeaderboard}
-			<div class='globalLeaderboard'>
-				{#if globalLeaderboard['single/all']}
-					<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']}/>
-				{/if}
-				{#if globalLeaderboard['single/week']}
-					<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']}/>
-				{/if}
-				{#if globalLeaderboard['single/day']}
-					<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']}/>
+
+	<div class='top bar'>
+		{#if spawned}
+			<Teams {contacts}/>
+			{#if canUpgrade(contacts[localEntityID].type, contacts[localEntityID].score)}
+				<Upgrades
+					score={contacts[localEntityID].score}
+					type={contacts[localEntityID].type}
+					callback={type => send('upgrade', {type})}
+				/>
+			{:else}
+				<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
+			{/if}
+		{:else}
+			<!-- Render this div even without contents, as it causes the flex
+			box to shift the other contents to the right side -->
+			<div>
+				{#if globalLeaderboard}
+					{#if globalLeaderboard['single/all']}
+						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']}/>
+					{/if}
+					{#if globalLeaderboard['single/week']}
+						<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']}/>
+					{/if}
+					{#if globalLeaderboard['single/day']}
+						<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']}/>
+					{/if}
 				{/if}
 			</div>
 		{/if}
+		{#if $leaderboard}
+			<Leaderboard leaderboard={$leaderboard}/>
+		{/if}
+	</div>
+	<div class='bottom bar'>
+		{#if spawned}
+			<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
+			<Status {overlay} {recording}/>
+			<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
+		{/if}
+	</div>
+	{#if spawned}
+		<Hint type={contacts[localEntityID].type}/>
+	{:else}
+		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
 	{/if}
 </main>
 
@@ -1118,16 +1133,29 @@
 		width: 100%;
 	}
 
-	div.leaderboard {
+	div.bar {
 		position: absolute;
+		left: 0;
 		right: 0;
+		height: min-content;
+		pointer-events: none;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	div.bar.top {
 		top: 0;
 	}
 
-	div.globalLeaderboard {
-		position: absolute;
-		left: 0;
-		top: 0;
+	div.bar.bottom {
+		bottom: 0;
+		align-items: flex-end;
+	}
+
+	div.bar > :global(div) {
+		height: min-content;
+		pointer-events: all;
+		margin: 10px;
 	}
 
 	main {

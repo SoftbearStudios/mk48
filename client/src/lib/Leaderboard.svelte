@@ -28,7 +28,6 @@
 <style>
 	div {
 		background-color: #00000040;
-		margin: 10px;
 		padding: 10px;
 	}
 

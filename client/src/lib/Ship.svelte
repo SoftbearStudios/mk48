@@ -127,13 +127,9 @@
 
 <style>
 	div.container {
-		bottom: 0;
 		background-color: #00000040;
-		left: 0;
-		margin: 10px;
 		max-width: 25%;
 		padding: 10px;
-		position: absolute;
 	}
 
 	div.button {

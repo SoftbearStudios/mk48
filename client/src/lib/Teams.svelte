@@ -90,12 +90,8 @@
 
 <style>
 	div {
-		bottom: 45%;
 		background-color: #00000040;
-		left: 0;
-		margin: 10px;
 		padding: 10px;
-		position: absolute;
 	}
 
 	h2 {

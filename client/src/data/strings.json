@@ -207,7 +207,8 @@
 				"label": "Fleet"
 			},
 			"upgrade": {
-				"labelMiddle": "to level"
+				"labelMiddle": "to level",
+				"labelPrefix": "Upgrade to level"
 			}
 		}
 	},
