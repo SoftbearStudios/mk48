@@ -1,6 +1,23 @@
 {
 	"en": {
 		"boat": "boat",
+		"death": {
+			"border": {
+				"message": "Crashed into the border!"
+			},
+			"collision": {
+				"message": "Crashed into {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Rammed by {player}!"
+			},
+			"sinking": {
+				"message": "Sunk by {player} with a {entityKind}!"
+			},
+			"terrain": {
+				"message": "Crashed into the ground!"
+			}
+		},
 		"kind": {
 			"boat": {
 				"battleship": {
@@ -188,7 +205,7 @@
 					},
 					"invite": {
 						"hint": "Give this link to players who are not yet in game, to allow them to directly join your team",
-						"label": "Copy Invite"
+						"label": "Invite"
 					},
 					"kick": {
 						"label": "Kick"
@@ -207,37 +224,301 @@
 				"label": "Fleet"
 			},
 			"upgrade": {
-				"labelMiddle": "to level"
+				"labelMiddle": "to level",
+				"labelPrefix": "Upgrade to level"
+			}
+		}
+	},
+	"es": {
+		"boat": "barco",
+		"death": {
+			"border": {
+				"message": "¡Se estrelló contra la frontera!"
+			},
+			"collision": {
+				"message": "¡Se estrelló contra {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "¡Embestido por {player}!"
+			},
+			"sinking": {
+				"message": "¡Hundido por {player} con un {entityKind}!"
+			},
+			"terrain": {
+				"message": "¡Se estrelló contra el suelo!"
+			}
+		},
+		"kind": {
+			"boat": {
+				"battleship": {
+					"hint": "¡Tu barco tiene armas poderosas y mucha armadura!",
+					"name": "acorazado"
+				},
+				"carrier": {
+					"hint": "¡Tu barco puede lanzar aviones con sus propias armas!",
+					"name": "portaaviones"
+				},
+				"corvette": {
+					"hint": "¡Tu nave es pequeña y difícil de alcanzar!",
+					"name": "corbeta"
+				},
+				"cruiser": {
+					"hint": "¡Tu barco está equipado con armas antibuque y antisubmarinas!",
+					"name": "crucero"
+				},
+				"destroyer": {
+					"hint": "¡Tu barco está equipado con una variedad de armas!",
+					"name": "destructor"
+				},
+				"dredger": {
+					"hint": "¡Tu barco puede crear y destruir tierra!",
+					"name": "draga"
+				},
+				"hovercraft": {
+					"hint": "¡Su barco puede viajar tanto por tierra como por agua!",
+					"name": "aerodeslizador"
+				},
+				"lcs": {
+					"hint": "¡Tu barco puede desencadenar armas mortales desde pequeños grupos de islas!",
+					"name": "barco de combate costero"
+				},
+				"minelayer": {
+					"hint": "¡Su barco puede colocar minas magnéticas mortales!",
+					"name": "minador"
+				},
+				"mtb": {
+					"hint": "¡Tu barco tiene armas para hundir otros barcos!",
+					"name": "barco de motor-torpedo"
+				},
+				"pirate": {
+					"name": "pirata"
+				},
+				"ram": {
+					"hint": "¡Su barco está diseñado para embestir a otros barcos!",
+					"name": "ariete"
+				},
+				"submarine": {
+					"hint": "¡Tu barco puede lanzar armas desde el agua!",
+					"name": "submarina"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "señuelo de sonar"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "aeronave"
+				},
+				"depositor": {
+					"name": "transportadora"
+				},
+				"depthCharge": {
+					"name": "carga de profundidad"
+				},
+				"mine": {
+					"name": "mina"
+				},
+				"missile": {
+					"name": "misil"
+				},
+				"rocket": {
+					"name": "cohete"
+				},
+				"rocketTorpedo": {
+					"name": "torpedo cohete"
+				},
+				"sam": {
+					"name": "misil tierra-aire"
+				},
+				"shell": {
+					"name": "caparazón"
+				},
+				"torpedo": {
+					"name": "torpedo"
+				}
+			}
+		},
+		"label": "Spanish",
+		"page": {
+			"about": {
+				"title": "Sobre Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Advertencia: es posible que este registro de cambios no siempre esté completamente actualizado",
+				"title": "Registro de cambios de Mk48.io"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io es un juego de combate naval multijugador. Empiezas con un barco pequeño y consume <b>cajas</b> para aumentar tu puntuación (para subir de nivel tu barco). Mientras que una pequeña cantidad de cajas se generan de forma natural, hundir otros barcos aumenta directamente tu puntuación y genera muchas más cajas.</p>",
+					"title": "Lo esencial"
+				},
+				"title": "Guía de ayuda de Mk48.io"
+			},
+			"privacy": {
+				"title": "Política de privacidad de Mk48.io"
+			},
+			"ships": {
+				"intro": "La siguiente es una lista de todos los barcos del juego y sus armas. Tenga en cuenta que ciertos valores son aproximados y pueden verse afectados por otros factores. Por ejemplo, el daño del arma depende de la ubicación del impacto.",
+				"title": "Barcos Mk48.io"
+			},
+			"terms": {
+				"title": "Condiciones de servicio de Mk48.io"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Presione Enter para enviar",
+						"hintTeam": "Presiona Enter para enviar, o Shift + Enter para enviar solo al equipo",
+						"label": "Mensaje"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Haga clic y mantenga presionado para moverse, haga clic para disparar torpedos",
+					"zoom": "Desplácese para alejar y ver mejor"
+				},
+				"touch": {
+					"movement": "Toque en una dirección para moverse, toque para disparar torpedos",
+					"zoom": "Pellizca para alejar y ver mejor"
+				}
+			},
+			"leaderboard": {
+				"label": "Tabla",
+				"type": {
+					"single/all": "Tabla de todos los tiempos",
+					"single/day": "Tabla diaria",
+					"single/week": "Tabla semanal"
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "Acerca"
+					},
+					"help": {
+						"label": "Ayuda"
+					},
+					"privacy": {
+						"label": "Intimidad"
+					},
+					"spawn": {
+						"label": "Comienzo"
+					},
+					"terms": {
+						"label": "Condiciones"
+					}
+				},
+				"connectionLost": "La batalla ha terminado. Intente comenzar de nuevo en breve.",
+				"invitePrefix": "Usando el código de invitación",
+				"label": "mk48.io"
+			},
+			"status": {
+				"score": "punto",
+				"scorePlural": "puntos"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Aceptar"
+					},
+					"create": {
+						"label": "Crear"
+					},
+					"deny": {
+						"label": "Negar"
+					},
+					"invite": {
+						"hint": "Proporcione este enlace a los jugadores que aún no están en el juego, para permitirles unirse directamente a su equipo.",
+						"label": "Copiar invitación"
+					},
+					"kick": {
+						"label": "Retirar"
+					},
+					"leave": {
+						"label": "Dejar"
+					},
+					"name": {
+						"label": "Nombre"
+					},
+					"request": {
+						"label": "Solicitar unirse"
+					}
+				},
+				"full": "El equipo esta lleno",
+				"label": "Flota"
+			},
+			"upgrade": {
+				"labelMiddle": "a nivel",
+				"labelPrefix": "Actualizar a nivel"
 			}
 		}
 	},
 	"ru": {
 		"boat": "судно",
+		"death": {
+			"border": {
+				"message": "Врезался в границу!"
+			},
+			"collision": {
+				"message": "Разбился на {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Таранит {player}!"
+			},
+			"sinking": {
+				"message": "Потоплен {player} с помощью {entityKind}!"
+			},
+			"terrain": {
+				"message": "Врезался в землю!"
+			}
+		},
 		"kind": {
 			"boat": {
 				"battleship": {
+					"hint": "У вашего корабля мощные орудия и много брони!",
 					"name": "линкор"
 				},
 				"carrier": {
+					"hint": "Ваш корабль может запускать самолеты с собственным оружием!",
 					"name": "авианосец"
 				},
 				"corvette": {
+					"hint": "Ваш корабль маленький, и в него сложно попасть!",
 					"name": "корвет"
 				},
 				"cruiser": {
+					"hint": "Ваш корабль оснащен противокорабельным и противолодочным вооружением!",
 					"name": "крейсер"
 				},
 				"destroyer": {
+					"hint": "Ваш корабль оснащен разнообразным вооружением!",
 					"name": "миноносец"
 				},
 				"dredger": {
+					"hint": "Ваш корабль может создавать и разрушать землю!",
 					"name": "экскаватор"
 				},
 				"hovercraft": {
+					"hint": "Ваша лодка может путешествовать как по суше, так и по воде!",
 					"name": "судно на воздушной подушке"
 				},
+				"lcs": {
+					"hint": "Ваша лодка может выпускать смертоносное оружие из небольших островных групп!",
+					"name": "прибрежный боевой корабль"
+				},
 				"minelayer": {
+					"hint": "Ваша лодка может устанавливать смертельные магнитные мины!",
 					"name": "заградитель"
+				},
+				"mtb": {
+					"hint": "У вашей лодки есть оружие, чтобы топить другие лодки!",
+					"name": "моторно-торпедный катер"
 				},
 				"pirate": {
 					"name": "пират"
@@ -247,6 +528,7 @@
 					"name": "таран"
 				},
 				"submarine": {
+					"hint": "Ваша лодка может доставлять оружие из-под воды!",
 					"name": "подводная лодка"
 				}
 			},
@@ -276,6 +558,9 @@
 				},
 				"rocketTorpedo": {
 					"name": "ракетная торпеда"
+				},
+				"sam": {
+					"name": "ракета земля-воздух"
 				},
 				"shell": {
 					"name": "снаряд"
@@ -399,12 +684,489 @@
 				"label": "Флот"
 			},
 			"upgrade": {
-				"labelMiddle": "до уровня"
+				"labelMiddle": "до уровня",
+				"labelPrefix": "Перейти на уровень"
+			}
+		}
+	},
+	"fr": {
+		"boat": "navire",
+		"death": {
+			"border": {
+				"message": "S'est écrasé à la frontière!"
+			},
+			"collision": {
+				"message": "Crash dans {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Battu par {player}!"
+			},
+			"sinking": {
+				"message": "Coulé par {player} avec un {entityKind}!"
+			},
+			"terrain": {
+				"message": "Enfoncé dans le sol!"
+			}
+		},
+		"kind": {
+			"boat": {
+				"battleship": {
+					"hint": "Votre vaisseau a des canons puissants et beaucoup d'armures!",
+					"name": "bataille navale"
+				},
+				"carrier": {
+					"hint": "Votre vaisseau peut lancer des avions avec leurs propres armes!",
+					"name": "porte-avions"
+				},
+				"corvette": {
+					"hint": "Votre vaisseau est petit et difficile à toucher!",
+					"name": "corvette"
+				},
+				"cruiser": {
+					"hint": "Votre navire est équipé d'armes anti-navire et anti-sous-marine!",
+					"name": "croiseur"
+				},
+				"destroyer": {
+					"hint": "Votre vaisseau est équipé d'une variété d'armes!",
+					"name": "destructeur"
+				},
+				"dredger": {
+					"hint": "Votre navire peut créer et détruire des terres!",
+					"name": "dragueur"
+				},
+				"hovercraft": {
+					"hint": "Votre bateau peut voyager aussi bien sur terre que sur l'eau!",
+					"name": "aéroglisseur"
+				},
+				"lcs": {
+					"hint": "Votre bateau peut déchaîner des armes mortelles au sein de petits groupes d'îles!",
+					"name": "navire de combat côtier"
+				},
+				"minelayer": {
+					"hint": "Votre bateau peut poser des mines magnétiques mortelles!",
+					"name": "mouilleur de mines"
+				},
+				"mtb": {
+					"hint": "Votre bateau a des armes pour couler d'autres bateaux!",
+					"name": "bateau lance-torpilles"
+				},
+				"pirate": {
+					"name": "pirate"
+				},
+				"ram": {
+					"hint": "Votre bateau est conçu pour éperonner d'autres bateaux!",
+					"name": "bélier"
+				},
+				"submarine": {
+					"hint": "Votre bateau peut livrer des armes sous l'eau!",
+					"name": "sous-marin"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "leurre sonar"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "avion"
+				},
+				"depositor": {
+					"name": "déposant"
+				},
+				"depthCharge": {
+					"name": "grenade sous-marine"
+				},
+				"mine": {
+					"name": "mine"
+				},
+				"missile": {
+					"name": "missile"
+				},
+				"rocket": {
+					"name": "fusée"
+				},
+				"rocketTorpedo": {
+					"name": "torpille de fusée"
+				},
+				"sam": {
+					"name": "missile sol-air"
+				},
+				"shell": {
+					"name": "obus"
+				},
+				"torpedo": {
+					"name": "torpille"
+				}
+			}
+		},
+		"label": "French",
+		"page": {
+			"about": {
+				"title": "À propos de Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Avertissement: Ce journal des modifications peut ne pas être toujours à jour",
+				"title": "Journal des modifications de Mk48.io"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io est un jeu de combat naval multijoueur. Vous démarrez un petit navire et consommez des <b>caisses</b> pour augmenter votre score (pour améliorer votre navire). Alors qu'une petite quantité de caisses apparaît naturellement, couler d'autres navires augmente directement votre score et génère beaucoup plus de caisses.</p>",
+					"title": "Notions de base"
+				},
+				"title": "Guide d'aide Mk48.io"
+			},
+			"privacy": {
+				"title": "Politique de confidentialité de Mk48.io"
+			},
+			"ships": {
+				"intro": "Ce qui suit est une liste de tous les navires du jeu et de leurs armes. Notez que certaines valeurs sont approximatives et peuvent être affectées par d'autres facteurs. Par exemple, les dégâts de l'arme dépendent de l'emplacement de l'impact.",
+				"title": "Navires Mk48.io"
+			},
+			"terms": {
+				"title": "Conditions d'utilisation de Mk48.io"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Appuyez sur Entrée pour envoyer",
+						"hintTeam": "Appuyez sur Entrée pour envoyer ou sur Maj+Entrée pour envoyer à l'équipe uniquement",
+						"label": "Message"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Cliquez et maintenez pour vous déplacer, cliquez pour tirer des torpilles",
+					"zoom": "Faites défiler pour dézoomer pour une meilleure vue"
+				},
+				"touch": {
+					"movement": "Touchez dans une direction pour vous déplacer, touchez pour tirer des torpilles",
+					"zoom": "Pincez pour dézoomer pour une meilleure vue"
+				}
+			},
+			"leaderboard": {
+				"label": "Classement",
+				"type": {
+					"single/all": "Classement de tous les temps",
+					"single/day": "Classement quotidien",
+					"single/week": "Classement hebdomadaire"
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "À propos"
+					},
+					"help": {
+						"label": "Aide"
+					},
+					"privacy": {
+						"label": "Confidentialité"
+					},
+					"spawn": {
+						"label": "Démarrer"
+					},
+					"terms": {
+						"label": "Termes"
+					}
+				},
+				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
+				"invitePrefix": "Utiliser le code d'invitation",
+				"label": "mk48.io"
+			},
+			"status": {
+				"score": "point",
+				"scorePlural": "points"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "J'accepte"
+					},
+					"create": {
+						"label": "Créer"
+					},
+					"deny": {
+						"label": "Refuser"
+					},
+					"invite": {
+						"hint": "Donnez ce lien aux joueurs qui ne sont pas encore en jeu, pour leur permettre de rejoindre directement votre équipe",
+						"label": "Copier l'invitation"
+					},
+					"kick": {
+						"label": "Coup"
+					},
+					"leave": {
+						"label": "Quitter"
+					},
+					"name": {
+						"label": "Nom de la flotte"
+					},
+					"request": {
+						"label": "Demande d'adhésion"
+					}
+				},
+				"full": "Equipe au complet",
+				"label": "Flotte"
+			},
+			"upgrade": {
+				"labelMiddle": "à niveau",
+				"labelPrefix": "Passer au niveau"
+			}
+		}
+	},
+	"zh": {
+		"boat": "船",
+		"death": {
+			"border": {
+				"message": "坠入边境!"
+			},
+			"collision": {
+				"message": "撞到了 {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "被{player}撞了！"
+			},
+			"sinking": {
+				"message": "被 {player} 用 {entityKind} 击沉!"
+			},
+			"terrain": {
+				"message": "摔在地上!"
+			}
+		},
+		"kind": {
+			"boat": {
+				"battleship": {
+					"hint": "你的船有强大的枪支和大量的装甲!",
+					"name": "战舰"
+				},
+				"carrier": {
+					"hint": "你的船可以用自己的武器发射飞机!",
+					"name": "航空母舰"
+				},
+				"corvette": {
+					"hint": "你的船很小，很难被击中!",
+					"name": "护卫舰"
+				},
+				"cruiser": {
+					"hint": "你的船配备了反舰和反潜武器!",
+					"name": "巡洋舰"
+				},
+				"destroyer": {
+					"hint": "你的船配备了各种武器!",
+					"name": "驱逐舰"
+				},
+				"dredger": {
+					"hint": "你的船可以创造和摧毁土地!",
+					"name": "挖泥船"
+				},
+				"hovercraft": {
+					"hint": "您的船可以在陆地和水上行驶!",
+					"name": "气垫船"
+				},
+				"lcs": {
+					"hint": "您的船可以从小岛群内释放致命的武器!",
+					"name": "濒海战斗舰"
+				},
+				"minelayer": {
+					"hint": "你的船可以布下致命的磁性水雷!",
+					"name": "矿工"
+				},
+				"mtb": {
+					"hint": "你的船有武器可以击沉其他船只!",
+					"name": "机动鱼雷艇"
+				},
+				"pirate": {
+					"name": "海盗"
+				},
+				"ram": {
+					"hint": "您的船旨在撞击其他船只!",
+					"name": "羝"
+				},
+				"submarine": {
+					"hint": "你的船可以从水下运送武器!",
+					"name": "潜艇"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "声纳诱饵"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "飞机"
+				},
+				"depositor": {
+					"name": "储户"
+				},
+				"depthCharge": {
+					"name": "深水炸弹"
+				},
+				"mine": {
+					"name": "水雷"
+				},
+				"missile": {
+					"name": "导弹"
+				},
+				"rocket": {
+					"name": "火箭"
+				},
+				"rocketTorpedo": {
+					"name": "火箭鱼雷"
+				},
+				"sam": {
+					"name": "地对空导弹"
+				},
+				"shell": {
+					"name": "炮击"
+				},
+				"torpedo": {
+					"name": "鱼雷"
+				}
+			}
+		},
+		"label": "Chinese (Simplified)",
+		"page": {
+			"about": {
+				"title": "关于 Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "警告：此更改日志可能并不总是完全最新",
+				"title": "Mk48.io 更新日志"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io 是一款多人海战游戏。你从一艘小船开始，消耗<b>板条箱</b>来增加你的分数（升级你的船）。虽然自然生成少量板条箱，但击沉其他船只会直接增加您的分数并生成更多板条箱。</p>",
+					"title": "基本"
+				},
+				"title": "Mk48.io 帮助指南"
+			},
+			"privacy": {
+				"title": "Mk48.io 隐私政策"
+			},
+			"ships": {
+				"intro": "以下是游戏中所有船只及其武器的列表。请注意，某些值是近似值，可能会受到其他因素的影响。例如，武器伤害取决于命中位置。",
+				"title": "Mk48.io 飞船"
+			},
+			"terms": {
+				"title": "Mk48.io 服务条款"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "按回车发送",
+						"hintTeam": "按 Enter 发送，或 Shift+Enter 仅发送给团队",
+						"label": "信息"
+					}
+				},
+				"label": "收音机"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "点击并按住移动，点击发射鱼雷",
+					"zoom": "滚动以缩小以获得更好的视图"
+				},
+				"touch": {
+					"movement": "触摸一个方向移动，点击发射鱼雷",
+					"zoom": "捏合以缩小以获得更好的视图"
+				}
+			},
+			"leaderboard": {
+				"label": "排行榜",
+				"type": {
+					"single/all": "历史排行榜",
+					"single/day": "每日排行榜",
+					"single/week": "每周排行榜"
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "关于"
+					},
+					"help": {
+						"label": "帮助"
+					},
+					"privacy": {
+						"label": "隐私"
+					},
+					"spawn": {
+						"label": "开始"
+					},
+					"terms": {
+						"label": "条款"
+					}
+				},
+				"connectionLost": "战斗结束了。稍后重新开始尝试。",
+				"invitePrefix": "使用邀请码"
+			},
+			"status": {
+				"score": "分",
+				"scorePlural": "分"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "接受"
+					},
+					"create": {
+						"label": "创造"
+					},
+					"deny": {
+						"label": "拒绝"
+					},
+					"invite": {
+						"hint": "将此链接提供给尚未进入游戏的玩家，以允许他们直接加入您的团队",
+						"label": "复制邀请"
+					},
+					"kick": {
+						"label": "踢出"
+					},
+					"leave": {
+						"label": "离开"
+					},
+					"name": {
+						"label": "机队名称"
+					},
+					"request": {
+						"label": "请求加入"
+					}
+				},
+				"full": "团队满员",
+				"label": "舰队"
+			},
+			"upgrade": {
+				"labelMiddle": "至",
+				"labelPrefix": "升级到"
 			}
 		}
 	},
 	"xx-bork": {
 		"boat": "bork",
+		"death": {
+			"border": {
+				"message": "Borked by border!"
+			},
+			"collision": {
+				"message": "Borked by {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Borked by {player}!"
+			},
+			"sinking": {
+				"message": "Borked by {player} with a {entityKind}!"
+			},
+			"terrain": {
+				"message": "Borked by the ground!"
+			}
+		},
 		"kind": {
 			"boat": {
 				"battleship": {
@@ -442,6 +1204,10 @@
 				"minelayer": {
 					"hint": "Bork lays magnetic borks!",
 					"name": "borklayer"
+				},
+				"mtb": {
+					"hint": "Bork can bork other borks!",
+					"name": "motor-torpedo bork"
 				},
 				"pirate": {
 					"name": "illegal bork"
@@ -554,8 +1320,7 @@
 						"label": "Unbork"
 					},
 					"invite": {
-						"hint": "Send this link to other borks",
-						"label": "Copy Bork"
+						"hint": "Send this link to other borks"
 					},
 					"kick": {
 						"label": "Unbork"
@@ -572,549 +1337,6 @@
 				},
 				"full": "Team borked",
 				"label": "Borks"
-			}
-		}
-	},
-	"es": {
-		"boat": "barco",
-		"kind": {
-			"boat": {
-				"battleship": {
-					"name": "acorazado"
-				},
-				"carrier": {
-					"name": "portaaviones"
-				},
-				"corvette": {
-					"name": "corbeta"
-				},
-				"cruiser": {
-					"name": "crucero"
-				},
-				"destroyer": {
-					"name": "destructor"
-				},
-				"hovercraft": {
-					"name": "aerodeslizador"
-				},
-				"minelayer": {
-					"name": "minador"
-				},
-				"pirate": {
-					"name": "pirata"
-				},
-				"ram": {
-					"hint": "¡Su barco está diseñado para embestir a otros barcos!",
-					"name": "ariete"
-				},
-				"submarine": {
-					"name": "submarina"
-				}
-			},
-			"decoy": {
-				"sonar": {
-					"name": "señuelo de sonar"
-				}
-			},
-			"weapon": {
-				"aircraft": {
-					"name": "aeronave"
-				},
-				"depositor": {
-					"name": "transportadora"
-				},
-				"depthCharge": {
-					"name": "carga de profundidad"
-				},
-				"mine": {
-					"name": "mina"
-				},
-				"missile": {
-					"name": "misil"
-				},
-				"rocket": {
-					"name": "cohete"
-				},
-				"rocketTorpedo": {
-					"name": "torpedo cohete"
-				},
-				"shell": {
-					"name": "caparazón"
-				}
-			}
-		},
-		"label": "Spanish",
-		"page": {
-			"about": {
-				"title": "Sobre Mk48.io"
-			},
-			"changelog": {
-				"title": "Registro de cambios de Mk48.io"
-			},
-			"help": {
-				"basics": {
-					"title": "Lo esencial"
-				},
-				"title": "Guía de ayuda de Mk48.io"
-			},
-			"privacy": {
-				"title": "Política de privacidad de Mk48.io"
-			},
-			"ships": {
-				"title": "Barcos Mk48.io"
-			},
-			"terms": {
-				"title": "Condiciones de servicio de Mk48.io"
-			}
-		},
-		"panel": {
-			"chat": {
-				"action": {
-					"send": {
-						"hint": "Presione Enter para enviar",
-						"hintTeam": "Presiona Enter para enviar, o Shift + Enter para enviar solo al equipo",
-						"label": "Mensaje"
-					}
-				},
-				"label": "Radio"
-			},
-			"instruction": {
-				"mouse": {
-					"movement": "Haga clic y mantenga presionado para moverse, haga clic para disparar torpedos",
-					"zoom": "Desplácese para alejar y ver mejor"
-				},
-				"touch": {
-					"movement": "Toque en una dirección para moverse, toque para disparar torpedos",
-					"zoom": "Pellizca para alejar y ver mejor"
-				}
-			},
-			"leaderboard": {
-				"label": "Tabla",
-				"type": {
-					"single/all": "Tabla de todos los tiempos",
-					"single/day": "Tabla diaria",
-					"single/week": "Tabla semanal"
-				}
-			},
-			"splash": {
-				"action": {
-					"about": {
-						"label": "Acerca"
-					},
-					"help": {
-						"label": "Ayuda"
-					},
-					"privacy": {
-						"label": "Intimidad"
-					},
-					"spawn": {
-						"label": "Comienzo"
-					},
-					"terms": {
-						"label": "Condiciones"
-					}
-				},
-				"connectionLost": "La batalla ha terminado. Intente comenzar de nuevo en breve.",
-				"invitePrefix": "Usando el código de invitación"
-			},
-			"status": {
-				"score": "punto",
-				"scorePlural": "puntos"
-			},
-			"team": {
-				"action": {
-					"accept": {
-						"label": "Aceptar"
-					},
-					"create": {
-						"label": "Crear"
-					},
-					"deny": {
-						"label": "Negar"
-					},
-					"invite": {
-						"label": "Copiar invitación"
-					},
-					"kick": {
-						"label": "Retirar"
-					},
-					"leave": {
-						"label": "Dejar"
-					},
-					"name": {
-						"label": "Nombre"
-					},
-					"request": {
-						"label": "Solicitar unirse"
-					}
-				},
-				"full": "El equipo esta lleno",
-				"label": "Flota"
-			},
-			"upgrade": {
-				"labelMiddle": "a nivel"
-			}
-		}
-	},
-	"fr": {
-		"boat": "navire",
-		"kind": {
-			"boat": {
-				"battleship": {
-					"name": "bataille navale"
-				},
-				"carrier": {
-					"name": "porte-avions"
-				},
-				"corvette": {
-					"name": "corvette"
-				},
-				"cruiser": {
-					"name": "croiseur"
-				},
-				"destroyer": {
-					"name": "destructeur"
-				},
-				"dredger": {
-					"name": "dragueur"
-				},
-				"hovercraft": {
-					"name": "aéroglisseur"
-				},
-				"minelayer": {
-					"name": "mouilleur de mines"
-				},
-				"pirate": {
-					"name": "pirate"
-				},
-				"ram": {
-					"hint": "Votre bateau est conçu pour éperonner d'autres bateaux!",
-					"name": "bélier"
-				},
-				"submarine": {
-					"name": "sous-marin"
-				}
-			},
-			"decoy": {
-				"sonar": {
-					"name": "leurre sonar"
-				}
-			},
-			"weapon": {
-				"aircraft": {
-					"name": "avion"
-				},
-				"depositor": {
-					"name": "déposant"
-				},
-				"depthCharge": {
-					"name": "grenade sous-marine"
-				},
-				"missile": {
-					"name": "missile"
-				},
-				"rocket": {
-					"name": "fusée"
-				},
-				"rocketTorpedo": {
-					"name": "torpille de fusée"
-				},
-				"shell": {
-					"name": "obus"
-				},
-				"torpedo": {
-					"name": "torpille"
-				}
-			}
-		},
-		"label": "French",
-		"page": {
-			"about": {
-				"title": "À propos de Mk48.io"
-			},
-			"changelog": {
-				"disclaimer": "Avertissement: Ce journal des modifications peut ne pas être toujours à jour",
-				"title": "Journal des modifications de Mk48.io"
-			},
-			"help": {
-				"title": "Guide d'aide Mk48.io"
-			},
-			"privacy": {
-				"title": "Politique de confidentialité de Mk48.io"
-			},
-			"ships": {
-				"title": "Navires Mk48.io"
-			},
-			"terms": {
-				"title": "Conditions d'utilisation de Mk48.io"
-			}
-		},
-		"panel": {
-			"chat": {
-				"action": {
-					"send": {
-						"hint": "Appuyez sur Entrée pour envoyer",
-						"hintTeam": "Appuyez sur Entrée pour envoyer ou sur Maj+Entrée pour envoyer à l'équipe uniquement",
-						"label": "Message"
-					}
-				},
-				"label": "Radio"
-			},
-			"instruction": {
-				"mouse": {
-					"movement": "Cliquez et maintenez pour vous déplacer, cliquez pour tirer des torpilles",
-					"zoom": "Faites défiler pour dézoomer pour une meilleure vue"
-				},
-				"touch": {
-					"movement": "Touchez dans une direction pour vous déplacer, touchez pour tirer des torpilles",
-					"zoom": "Pincez pour dézoomer pour une meilleure vue"
-				}
-			},
-			"leaderboard": {
-				"label": "Classement",
-				"type": {
-					"single/all": "Classement de tous les temps",
-					"single/day": "Classement quotidien",
-					"single/week": "Classement hebdomadaire"
-				}
-			},
-			"splash": {
-				"action": {
-					"about": {
-						"label": "À propos"
-					},
-					"help": {
-						"label": "Aide"
-					},
-					"privacy": {
-						"label": "Confidentialité"
-					},
-					"spawn": {
-						"label": "Démarrer"
-					},
-					"terms": {
-						"label": "Termes"
-					}
-				},
-				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
-				"invitePrefix": "Utiliser le code d'invitation"
-			},
-			"team": {
-				"action": {
-					"accept": {
-						"label": "J'accepte"
-					},
-					"create": {
-						"label": "Créer"
-					},
-					"deny": {
-						"label": "Refuser"
-					},
-					"invite": {
-						"hint": "Donnez ce lien aux joueurs qui ne sont pas encore en jeu, pour leur permettre de rejoindre directement votre équipe",
-						"label": "Copier l'invitation"
-					},
-					"kick": {
-						"label": "Coup"
-					},
-					"leave": {
-						"label": "Quitter"
-					},
-					"name": {
-						"label": "Nom de la flotte"
-					},
-					"request": {
-						"label": "Demande d'adhésion"
-					}
-				},
-				"full": "Equipe au complet",
-				"label": "Flotte"
-			},
-			"upgrade": {
-				"labelMiddle": "à niveau"
-			}
-		}
-	},
-	"zh": {
-		"boat": "船",
-		"kind": {
-			"boat": {
-				"battleship": {
-					"name": "战舰"
-				},
-				"carrier": {
-					"name": "航空母舰"
-				},
-				"corvette": {
-					"name": "护卫舰"
-				},
-				"cruiser": {
-					"name": "巡洋舰"
-				},
-				"destroyer": {
-					"name": "驱逐舰"
-				},
-				"dredger": {
-					"name": "挖泥船"
-				},
-				"hovercraft": {
-					"name": "气垫船"
-				},
-				"minelayer": {
-					"name": "矿工"
-				},
-				"pirate": {
-					"name": "海盗"
-				},
-				"ram": {
-					"hint": "您的船旨在撞击其他船只!",
-					"name": "羝"
-				},
-				"submarine": {
-					"name": "潜艇"
-				}
-			},
-			"decoy": {
-				"sonar": {
-					"name": "声纳诱饵"
-				}
-			},
-			"weapon": {
-				"aircraft": {
-					"name": "飞机"
-				},
-				"depositor": {
-					"name": "储户"
-				},
-				"depthCharge": {
-					"name": "深水炸弹"
-				},
-				"mine": {
-					"name": "水雷"
-				},
-				"missile": {
-					"name": "导弹"
-				},
-				"rocket": {
-					"name": "火箭"
-				},
-				"rocketTorpedo": {
-					"name": "火箭鱼雷"
-				},
-				"shell": {
-					"name": "炮击"
-				},
-				"torpedo": {
-					"name": "鱼雷"
-				}
-			}
-		},
-		"label": "Chinese (Simplified)",
-		"page": {
-			"about": {
-				"title": "关于 Mk48.io"
-			},
-			"changelog": {
-				"title": "Mk48.io 更新日志"
-			},
-			"help": {
-				"title": "Mk48.io 帮助指南"
-			},
-			"privacy": {
-				"title": "Mk48.io 隐私政策"
-			},
-			"ships": {
-				"title": "Mk48.io 飞船"
-			},
-			"terms": {
-				"title": "Mk48.io 服务条款"
-			}
-		},
-		"panel": {
-			"chat": {
-				"action": {
-					"send": {
-						"hint": "按回车发送",
-						"label": "信息"
-					}
-				},
-				"label": "收音机"
-			},
-			"instruction": {
-				"mouse": {
-					"movement": "点击并按住移动，点击发射鱼雷",
-					"zoom": "滚动以缩小以获得更好的视图"
-				},
-				"touch": {
-					"movement": "触摸一个方向移动，点击发射鱼雷",
-					"zoom": "捏合以缩小以获得更好的视图"
-				}
-			},
-			"leaderboard": {
-				"label": "排行榜",
-				"type": {
-					"single/all": "历史排行榜",
-					"single/day": "每日排行榜",
-					"single/week": "每周排行榜"
-				}
-			},
-			"splash": {
-				"action": {
-					"about": {
-						"label": "关于"
-					},
-					"help": {
-						"label": "帮助"
-					},
-					"privacy": {
-						"label": "隐私"
-					},
-					"spawn": {
-						"label": "开始"
-					},
-					"terms": {
-						"label": "条款"
-					}
-				},
-				"connectionLost": "战斗结束了。稍后重新开始尝试。",
-				"invitePrefix": "使用邀请码"
-			},
-			"status": {
-				"score": "分",
-				"scorePlural": "分"
-			},
-			"team": {
-				"action": {
-					"accept": {
-						"label": "接受"
-					},
-					"create": {
-						"label": "创造"
-					},
-					"deny": {
-						"label": "拒绝"
-					},
-					"invite": {
-						"label": "复制邀请"
-					},
-					"kick": {
-						"label": "踢出"
-					},
-					"leave": {
-						"label": "离开"
-					},
-					"name": {
-						"label": "机队名称"
-					},
-					"request": {
-						"label": "请求加入"
-					}
-				},
-				"full": "团队满员",
-				"label": "舰队"
-			},
-			"upgrade": {
-				"labelMiddle": "至"
 			}
 		}
 	}

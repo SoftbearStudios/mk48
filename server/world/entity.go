@@ -135,7 +135,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
 				if entity.KillIn(ticks, 4*TicksPerSecond) {
 					if owner := entity.Owner; owner != nil {
-						owner.DeathMessage = "Crashed into the ground!"
+						owner.DeathReason = DeathReason{Type: DeathTypeTerrain}
 					}
 					return true
 				}
@@ -151,7 +151,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		// Everything but boats is instantly killed by border
 		if dead || data.Kind != EntityKindBoat || centerDist2 > square(worldRadius*RadiusClearance) {
 			if owner := entity.Owner; owner != nil && entity.Data().Kind == EntityKindBoat {
-				owner.DeathMessage = "Crashed into the border!"
+				owner.DeathReason = DeathReason{Type: DeathTypeBorder}
 			}
 			return true
 		}

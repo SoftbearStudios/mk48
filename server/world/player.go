@@ -25,7 +25,7 @@ type (
 	Player struct {
 		ext unsafeExtension // extension for EntityID
 		PlayerData
-		DeathMessage    string
+		DeathReason     DeathReason
 		DeathPos        Vec2f
 		DeathTime       int64
 		DeathVisual     float32 // if non-zero, in respawn animation
@@ -91,8 +91,7 @@ func (player *Player) ClearRespawn() {
 // Clears all death related fields
 func (player *Player) ClearDeath() {
 	player.DeathVisual = 0
-	player.DeathMessage = ""
-	player.DeathFromPlayer = false
+	player.DeathReason = DeathReason{}
 	player.DeathTime = 0
 	player.DeathPos = Vec2f{}
 }
@@ -100,7 +99,7 @@ func (player *Player) ClearDeath() {
 // Says nothing about whether player is in a team. Only whether they
 // are allowed to respawn with it if it exists.
 func (player Player) CanRespawnWithTeam() bool {
-	return !player.DeathFromPlayer || unixMillis()-player.DeathTime > int64(teamRespawnCooldown/time.Millisecond)
+	return !player.DeathReason.FromPlayer() || unixMillis()-player.DeathTime > int64(teamRespawnCooldown/time.Millisecond)
 }
 
 // Camera Returns the camera that a player has if their entity doesn't exist

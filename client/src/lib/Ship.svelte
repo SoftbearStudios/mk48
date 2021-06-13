@@ -127,27 +127,22 @@
 
 <style>
 	div.container {
-		bottom: 0;
-		background-color: #00000040;
-		left: 0;
-		margin: 10px;
 		max-width: 25%;
-		padding: 10px;
-		position: absolute;
 	}
 
 	div.button {
-		background-color: #44444480;
 		padding: 5px;
 		filter: brightness(0.8);
 		user-select: none;
 	}
 
 	div.button:hover {
+		background-color: #44444440;
 		filter: brightness(0.9);
 	}
 
 	div.button.selected {
+		background-color: #44444480;
 		filter: brightness(1.2);
 		padding: 5px;
 	}
@@ -177,5 +172,12 @@
 
 	span.consumption {
 		float: right;
+		color: white;
+	}
+
+	@media(max-width: 800px) {
+		span.consumption {
+			display: none;
+		}
 	}
 </style>

@@ -222,8 +222,16 @@ func (data RemoveFromTeam) Process(h *Hub, _ Client, player *Player) {
 	removePlayer := team.Members.GetByID(data.PlayerID)
 
 	// You can remove yourself or other if you are owner
-	if removePlayer != nil && (&player.Player == team.Owner() || &player.Player == removePlayer) {
-		h.leaveTeam(removePlayer)
+	if removePlayer != nil {
+		if &player.Player == team.Owner() || &player.Player == removePlayer {
+			h.leaveTeam(removePlayer)
+		}
+	} else if &player.Player == team.Owner() {
+		// Deny join request
+		removePlayer = team.JoinRequests.GetByID(data.PlayerID)
+		if removePlayer != nil {
+			team.JoinRequests.Remove(removePlayer)
+		}
 	}
 }
 

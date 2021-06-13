@@ -4,7 +4,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
 	"math/rand"
@@ -164,12 +163,11 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		}
 
 		// e must be either entity or other
-		removeEntity := func(e *world.Entity, reason string, playerKilledPlayer bool) {
+		removeEntity := func(e *world.Entity, reason world.DeathReason) {
 			data := e.Data()
 
 			if data.Kind == world.EntityKindBoat {
-				e.Owner.DeathMessage = reason
-				e.Owner.DeathFromPlayer = playerKilledPlayer
+				e.Owner.DeathReason = reason
 				h.boatDied(e)
 			}
 
@@ -248,7 +246,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 							if asroc {
 								// ASROC expires when dropping torpedo
-								removeEntity(entity, "done", false)
+								removeEntity(entity, world.DeathReason{})
 							}
 						}
 
@@ -260,7 +258,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 							if d2 < r2 {
 								chance := (1.0 - d2/r2) * otherData.AntiAircraft
 								if chance*timeDeltaSeconds > rand.Float32() {
-									removeEntity(entity, "shot down", false)
+									removeEntity(entity, world.DeathReason{})
 								}
 							}
 						}
@@ -288,7 +286,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				boat.Replenish(collectible.Data().Reload)
 			}
 
-			removeEntity(collectible, "collected", false)
+			removeEntity(collectible, world.DeathReason{})
 		case collectible != nil && collectible.Owner != nil && obstacle != nil && obstacle.EntityType == world.EntityTypeOilPlatform:
 			// Payment upgrades oil rigs to HQs
 			if rand.Float64() < 0.1 {
@@ -296,17 +294,21 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				obstacle.Ticks = 0 // reset expiry
 			}
 
-			removeEntity(collectible, "collected", false)
+			removeEntity(collectible, world.DeathReason{})
 		case boat != nil && weapon != nil && !friendly:
 			dist2 := entity.Position.DistanceSquared(other.Position)
 			r2 := square(boat.Data().Radius)
 
 			if boat.Damage(world.DamageToTicks(weapon.Data().Damage * collisionMultiplier(dist2, r2) * boat.SpawnProtection())) {
 				weapon.Owner.Score += 10 + boat.Owner.Score/4
-				removeEntity(boat, fmt.Sprintf("Sunk by %s with a %s!", weapon.Owner.Name, weapon.Data().SubKind.Label()), true)
+				removeEntity(boat, world.DeathReason{
+					Type:   world.DeathTypeSinking,
+					Player: weapon.Owner.Name,
+					Entity: weapon.EntityType,
+				})
 			}
 
-			removeEntity(weapon, "hit", false)
+			removeEntity(weapon, world.DeathReason{})
 		case boat != nil && otherBoat != nil:
 			/*
 				Goals:
@@ -363,11 +365,15 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					}
 
 					if b.Damage(world.DamageToTicks(damage)) {
-						verb := "Crashed into"
+						deathType := world.DeathTypeCollision
 						if isOtherRam {
-							verb = "Rammed by"
+							deathType = world.DeathTypeRamming
 						}
-						removeEntity(b, fmt.Sprintf("%s %s!", verb, oB.Owner.Name), true)
+						removeEntity(b, world.DeathReason{
+							Type:   deathType,
+							Player: oB.Owner.Name,
+							Entity: oB.EntityType,
+						})
 					}
 				}
 
@@ -377,15 +383,20 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			posDiff := boat.Position.Sub(obstacle.Position).Norm()
 			boat.Velocity = boat.Velocity.AddClamped(6*posDiff.Dot(boat.Direction.Vec2f()), 30*world.MeterPerSecond)
 			if boat.KillIn(ticks, 6*world.TicksPerSecond) {
-				removeEntity(boat, fmt.Sprintf("Crashed into %s!", obstacle.Data().Label), false)
+				removeEntity(boat, world.DeathReason{
+					Type:   world.DeathTypeCollision,
+					Entity: obstacle.EntityType,
+				})
 			}
-		case !(friendly || (boat != nil && decoy != nil)):
+		case boat != nil && decoy != nil:
+			// No-op
+		case !friendly:
 			// Other ex weapon vs. weapon collision
 			if entityData.Kind != world.EntityKindObstacle {
-				removeEntity(entity, fmt.Sprintf("Crashed into %s!", other.Data().Label), false)
+				removeEntity(entity, world.DeathReason{})
 			}
 			if otherData.Kind != world.EntityKindObstacle {
-				removeEntity(other, fmt.Sprintf("Crashed into %s!", entity.Data().Label), false)
+				removeEntity(other, world.DeathReason{})
 			}
 		}
 
