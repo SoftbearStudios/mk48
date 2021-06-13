@@ -160,14 +160,12 @@
 
 	div.splash {
 		left: 50%;
-		padding: 1em;
 		top: 50%;
 		transform: translate(-50%, -50%);
 	}
 
 	div.translation {
 		right: 10px;
-		padding: 1em;
 		bottom: 10px;
 	}
 

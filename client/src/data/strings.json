@@ -4,31 +4,44 @@
 		"kind": {
 			"boat": {
 				"battleship": {
+					"hint": "Your ship has powerful guns and plenty of armor!",
 					"name": "battleship"
 				},
 				"carrier": {
+					"hint": "Your ship can launch aircraft with weapons of their own!",
 					"name": "aircraft carrier"
 				},
 				"corvette": {
+					"hint": "Your ship is small and difficult to hit!",
 					"name": "corvette"
 				},
 				"cruiser": {
+					"hint": "Your ship is equipped with anti-ship and anti-submarine weapons!",
 					"name": "cruiser"
 				},
 				"destroyer": {
+					"hint": "Your ship is equipped with a variety of weapons!",
 					"name": "destroyer"
 				},
 				"dredger": {
+					"hint": "You ship can create and destroy land!",
 					"name": "dredger"
 				},
 				"hovercraft": {
+					"hint": "Your boat can travel on both land and water!",
 					"name": "hovercraft"
 				},
 				"lcs": {
-					"name": "LCS"
+					"hint": "Your boat can unleash deadly weapons from within small island groups!",
+					"name": "littoral combat ship"
 				},
 				"minelayer": {
+					"hint": "Your boat can lay deadly magnetic mines",
 					"name": "minelayer"
+				},
+				"mtb": {
+					"hint": "Your boat has weapons to sink other boats!",
+					"name": "motor-torpedo boat"
 				},
 				"pirate": {
 					"name": "pirate"
@@ -38,6 +51,7 @@
 					"name": "ram"
 				},
 				"submarine": {
+					"hint": "Your boat can deliver weapons from underwater!",
 					"name": "submarine"
 				}
 			},
@@ -69,7 +83,7 @@
 					"name": "rocket torpedo"
 				},
 				"sam": {
-					"name": "SAM"
+					"name": "surface-to-air missile"
 				},
 				"shell": {
 					"name": "shell"
@@ -90,7 +104,7 @@
 			},
 			"help": {
 				"basics": {
-					"html": "<p>Mk48.io is a multiplayer naval combat game. You start off a small ship, and consume <b>crates</b> to increase your score (to level up your ship). While a small amount of crates spawn naturally, sinking other ships directly sincreases your score and spawns many more crates.</p>",
+					"html": "<p>Mk48.io is a multiplayer naval combat game. You start off a small ship, and consume <b>crates</b> to increase your score (to level up your ship). While a small amount of crates spawn naturally, sinking other ships directly increases your score and spawns many more crates.</p>",
 					"title": "Basics"
 				},
 				"title": "Mk48.io Help Guide"
@@ -222,9 +236,6 @@
 				"hovercraft": {
 					"name": "судно на воздушной подушке"
 				},
-				"lcs": {
-					"name": "Прибрежный боевой корабль"
-				},
 				"minelayer": {
 					"name": "заградитель"
 				},
@@ -265,9 +276,6 @@
 				},
 				"rocketTorpedo": {
 					"name": "ракетная торпеда"
-				},
-				"sam": {
-					"name": "Ракета земля-воздух"
 				},
 				"shell": {
 					"name": "снаряд"
@@ -391,7 +399,179 @@
 				"label": "Флот"
 			},
 			"upgrade": {
-				"labelMiddle": "к уровня"
+				"labelMiddle": "до уровня"
+			}
+		}
+	},
+	"xx-bork": {
+		"boat": "bork",
+		"kind": {
+			"boat": {
+				"battleship": {
+					"hint": "Bork is a strong bork",
+					"name": "borkship"
+				},
+				"carrier": {
+					"hint": "Bork launches airborks!",
+					"name": "bork carrier"
+				},
+				"corvette": {
+					"hint": "Bork is a small bork!",
+					"name": "minibork"
+				},
+				"cruiser": {
+					"hint": "Bork is even gooder at borking other borks!",
+					"name": "cruise bork"
+				},
+				"destroyer": {
+					"hint": "Bork is good at borking other borks!",
+					"name": "borker"
+				},
+				"dredger": {
+					"hint": "Bork can bork land!",
+					"name": "land borker"
+				},
+				"hovercraft": {
+					"hint": "Bork is a landbork",
+					"name": "hoverbork"
+				},
+				"lcs": {
+					"hint": "Bork can bork other borks from small island groups!",
+					"name": "coastal bork"
+				},
+				"minelayer": {
+					"hint": "Bork lays magnetic borks!",
+					"name": "borklayer"
+				},
+				"pirate": {
+					"name": "illegal bork"
+				},
+				"ram": {
+					"hint": "Bork is designed to bork other borks!",
+					"name": "pointy bork"
+				},
+				"submarine": {
+					"hint": "Bork can bork other borks from underwater!",
+					"name": "underwater bork"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "underwater bork distractor"
+				}
+			},
+			"weapon": {
+				"aircraft": {
+					"name": "flying bork"
+				},
+				"depositor": {
+					"name": "land borker"
+				},
+				"depthCharge": {
+					"name": "depth bork"
+				},
+				"mine": {
+					"name": "magnetic bork"
+				},
+				"missile": {
+					"name": "guided airbork"
+				},
+				"rocket": {
+					"name": "airbork"
+				},
+				"rocketTorpedo": {
+					"name": "air-launched underwater bork"
+				},
+				"sam": {
+					"name": "surface-to-air bork"
+				},
+				"shell": {
+					"name": "destructive bork"
+				},
+				"torpedo": {
+					"name": "underwater bork"
+				}
+			}
+		},
+		"label": "Bork, bork, bork!",
+		"page": {
+			"about": {
+				"title": "Mk48.io?!"
+			},
+			"changelog": {
+				"disclaimer": "Warning: The changelog is probably borked",
+				"title": "Mk48.io Borklog"
+			},
+			"help": {
+				"title": "Mk48.io Bork Guide"
+			},
+			"ships": {
+				"intro": "The following is a list of all borks in the game, and their weapons.",
+				"title": "Mk48.io Borks"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Press Enter to bork",
+						"hintTeam": "Press Enter to bork, or Shift+Enter to bork to borks only",
+						"label": "Bork"
+					}
+				},
+				"label": "Messagebork"
+			},
+			"leaderboard": {
+				"label": "Leaderbork",
+				"type": {
+					"single/all": "All-time Leaderbork",
+					"single/day": "Daily Leaderbork",
+					"single/week": "Weekly Leaderbork"
+				}
+			},
+			"splash": {
+				"action": {
+					"spawn": {
+						"label": "Bork"
+					}
+				},
+				"connectionLost": "Your connection was borked. Try again later!",
+				"invitePrefix": "Joining other borks with code"
+			},
+			"status": {
+				"score": "bork",
+				"scorePlural": "borks"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Bork"
+					},
+					"create": {
+						"label": "Bork"
+					},
+					"deny": {
+						"label": "Unbork"
+					},
+					"invite": {
+						"hint": "Send this link to other borks",
+						"label": "Copy Bork"
+					},
+					"kick": {
+						"label": "Unbork"
+					},
+					"leave": {
+						"label": "Unbork"
+					},
+					"name": {
+						"label": "Name of borks"
+					},
+					"request": {
+						"label": "Bork"
+					}
+				},
+				"full": "Team borked",
+				"label": "Borks"
 			}
 		}
 	},
@@ -463,7 +643,7 @@
 				}
 			}
 		},
-		"label": "Español",
+		"label": "Spanish",
 		"page": {
 			"about": {
 				"title": "Sobre Mk48.io"
@@ -935,114 +1115,6 @@
 			},
 			"upgrade": {
 				"labelMiddle": "至"
-			}
-		}
-	},
-	"xx-bork": {
-		"boat": "bork",
-		"kind": {
-			"boat": {
-				"battleship": {
-					"name": "borkship"
-				},
-				"carrier": {
-					"name": "bork carrier"
-				},
-				"destroyer": {
-					"name": "borker"
-				},
-				"hovercraft": {
-					"name": "hoverbork"
-				},
-				"minelayer": {
-					"name": "borklayer"
-				},
-				"ram": {
-					"hint": "Your bork is designed to bork other borks!"
-				},
-				"submarine": {
-					"name": "underwater bork"
-				}
-			},
-			"weapon": {
-				"aircraft": {
-					"name": "flying bork"
-				},
-				"depthCharge": {
-					"name": "depth bork"
-				}
-			}
-		},
-		"label": "Bork, bork, bork!",
-		"page": {
-			"about": {
-				"title": "Mk48.io?!"
-			},
-			"changelog": {
-				"title": "Mk48.io Borklog"
-			},
-			"help": {
-				"title": "Mk48.io Bork Guide"
-			}
-		},
-		"panel": {
-			"chat": {
-				"action": {
-					"send": {
-						"hint": "Press Enter to bork",
-						"hintTeam": "Press Enter to bork, or Shift+Enter to bork to borks only",
-						"label": "Bork"
-					}
-				},
-				"label": "Messagebork"
-			},
-			"leaderboard": {
-				"label": "Leaderbork",
-				"type": {
-					"single/all": "All-time Leaderbork",
-					"single/day": "Daily Leaderbork",
-					"single/week": "Weekly Leaderbork"
-				}
-			},
-			"splash": {
-				"action": {
-					"spawn": {
-						"label": "Bork"
-					}
-				},
-				"connectionLost": "Your connection was borked. Try again later!"
-			},
-			"status": {
-				"score": "bork",
-				"scorePlural": "borks"
-			},
-			"team": {
-				"action": {
-					"accept": {
-						"label": "Bork"
-					},
-					"create": {
-						"label": "Bork"
-					},
-					"deny": {
-						"label": "Unbork"
-					},
-					"invite": {
-						"hint": "Send this link to other borks",
-						"label": "Copy Bork"
-					},
-					"kick": {
-						"label": "Unbork"
-					},
-					"leave": {
-						"label": "Unbork"
-					},
-					"request": {
-						"label": "Bork"
-					}
-				},
-				"full": "Team borked",
-				"label": "Borks"
 			}
 		}
 	}

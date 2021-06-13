@@ -54,7 +54,11 @@
 	export function summarizeType(translation, type) {
 		const data = entityData[type];
 		let subtype = data.subtype;
-		if (data.subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
+		if (subtype === 'MTB') {
+			// TODO: Temporary patch
+			subtype = 'mtb';
+		}
+		if (subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
 			subtype = 'rocketTorpedo';
 		}
 		return translation(`kind.${data.type}.${subtype}.name`);

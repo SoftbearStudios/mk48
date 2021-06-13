@@ -12,6 +12,7 @@
 	import Leaderboard from '../lib/Leaderboard.svelte';
 	import Status from '../lib/Status.svelte';
 	import SplashScreen from '../lib/SplashScreen.svelte';
+	import Hint from '../lib/Hint.svelte';
 	import Teams from '../lib/Teams.svelte';
 	import t from '../lib/translation.js';
 	import Upgrades from '../lib/Upgrades.svelte';
@@ -1077,6 +1078,7 @@
 		<Instructions touch={mouse.touch} instructBasics={timesMoved < 100 || weaponsFired < 2} {instructZoom}/>
 		<Status {overlay} {recording}/>
 		<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
+		<Hint type={contacts[localEntityID].type}/>
 		<Upgrades
 			score={contacts[localEntityID].score}
 			type={contacts[localEntityID].type}
