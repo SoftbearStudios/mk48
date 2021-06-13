@@ -127,9 +127,7 @@
 
 <style>
 	div.container {
-		background-color: #00000040;
 		max-width: 25%;
-		padding: 10px;
 	}
 
 	div.button {

@@ -30,12 +30,8 @@
 
 <style>
 	div {
-		left: 0;
 		pointer-events: none;
-		position: absolute;
-		right: 0;
 		text-align: center;
-		top: 0;
 		user-select: none;
 	}
 </style>

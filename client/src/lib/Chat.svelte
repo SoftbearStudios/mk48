@@ -76,15 +76,12 @@
 </script>
 
 <div>
-	<Section name={$t('panel.chat.label')}>
-		<table>
-			{#each $chats as {name, team, teamOnly, message}}
-				<tr>
-					<td class='name' class:teamOnly on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</td>
-					<td class='message' class:teamOnly>{message}</td>
-				</tr>
-			{/each}
-		</table>
+	<Section name={$t('panel.chat.label')} headerAlign='right'>
+		{#each $chats as {name, team, teamOnly, message}}
+			<p class='message' class:teamOnly>
+				<span class='name' on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</span>&nbsp;{message}
+			</p>
+		{/each}
 		{#if auto($message)}
 			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
@@ -94,9 +91,7 @@
 
 <style>
 	div {
-		background-color: #00000040;
 		max-width: 25%;
-		padding: 10px;
 	}
 
 	h2 {
@@ -108,24 +103,25 @@
 		width: 100%;
 	}
 
-	td {
-		text-align: left;
-	}
-
-	td.name {
-		cursor: pointer;
-		font-weight: bold;
+	p.message {
 		text-overflow: ellipsis;
-		white-space: nowrap;
-		width: 1%;
+		overflow-wrap: anywhere;
+		word-break: normal;
+		margin-top: 0.25em;
+		margin-bottom: 0.25em;
 	}
 
-	td.teamOnly {
+	p.teamOnly {
 		filter: brightness(0.7);
 	}
 
-	td.message {
-		overflow-wrap: anywhere;
-		word-break: normal;
+	span.name {
+		cursor: pointer;
+		font-weight: bold;
+		white-space: nowrap;
+	}
+
+	input {
+		width: 100%;
 	}
 </style>

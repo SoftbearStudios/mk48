@@ -50,7 +50,7 @@
 
 
 <div class='box'>
-	<Section name={`${$t('panel.upgrade.labelPrefix')} ${entityData[type].level + 1}`}>
+	<Section name={`${$t('panel.upgrade.labelPrefix')} ${entityData[type].level + 1}`} headerAlign='center'>
 		<div class='upgrades'>
 			{#each getUpgrades(type) as upgradeType}
 				<img title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} on:click={callback.bind(null, upgradeType)} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
@@ -61,8 +61,6 @@
 
 <style>
 	div.box {
-		padding: 10px;
-		background-color: #00000040;
 		width: min-content;
 		min-width: 30%;
 	}

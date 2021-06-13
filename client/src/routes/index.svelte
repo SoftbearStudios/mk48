@@ -1090,19 +1090,19 @@
 			<div>
 				{#if globalLeaderboard}
 					{#if globalLeaderboard['single/all']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']}/>
+						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']} headerAlign='left'/>
 					{/if}
 					{#if globalLeaderboard['single/week']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']}/>
+						<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={globalLeaderboard['single/week']} headerAlign='left'/>
 					{/if}
 					{#if globalLeaderboard['single/day']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']}/>
+						<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={globalLeaderboard['single/day']} headerAlign='left'/>
 					{/if}
 				{/if}
 			</div>
 		{/if}
 		{#if $leaderboard}
-			<Leaderboard leaderboard={$leaderboard}/>
+			<Leaderboard leaderboard={$leaderboard} headerAlign='right'/>
 		{/if}
 	</div>
 	<div class='bottom bar'>
@@ -1172,24 +1172,25 @@
 	}
 
 	:global(input), :global(select) {
-		border: 1px solid gray;
 		border-radius: 5px;
 		box-sizing: border-box;
-		color: black;
 		cursor: pointer;
 		font-weight: bold;
-		margin-top: 5px;
-		min-width: 200px;
 		outline: 0px;
 		padding: 8px;
 		pointer-events: all;
 		white-space: nowrap;
-		width: 100%;
+		margin-top: 0.25em;
+
+		background-color: #00000025;
+		border: 0px;
+		color: white;
 	}
 
 	:global(input::placeholder) {
-		color: black;
 		opacity: 0.75;
+
+		color: white;
 	}
 
 	:global(button) {

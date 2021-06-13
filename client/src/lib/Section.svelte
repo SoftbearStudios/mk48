@@ -6,10 +6,8 @@
 <script>
 	import {slide} from 'svelte/transition';
 
-	const _DOWN_ARROW = '\u25BC';
-	const _RIGHT_ARROW = '\u25BA';
-
 	export let name = '';
+	export let headerAlign = 'left';
 	export let emblem = null;
 
 	export let open = true;
@@ -20,12 +18,11 @@
 </script>
 
 <div class=container>
-	<h2 on:click={toggleOpen}>
-		<span>{open ? _DOWN_ARROW : _RIGHT_ARROW}</span>
-		{#if !open && emblem}
+	<h2 on:click={toggleOpen} style={`text-align: ${headerAlign};`}>
+		{name}
+		{#if emblem && !open}
 			<div class='emblem'>{emblem}</div>
 		{/if}
-		{name}
 	</h2>
 	{#if open}
 		<div transition:slide="{{delay: 100}}">
@@ -39,8 +36,13 @@
 		cursor: pointer;
 		font-weight: bold;
 		margin: 0px;
-		margin-right: 1em;
 		user-select: none;
+		text-align: center;
+		transition: filter 0.1s;
+	}
+
+	h2:hover {
+		filter: opacity(0.85);
 	}
 
 	div.container {
@@ -48,16 +50,15 @@
 	}
 
 	div.emblem {
-		position: absolute;
-		right: -0.7em;
-		top: -0.7em;
 		background-color: #00bfff;
 		border-radius: 50%;
-		width: 1.15em;
-		font-size: 1.25em;
+		width: 1em;
+		font-size: 1em;
 		font-weight: bold;
-		height: 1.15em;
+		height: 1em;
 		text-align: center;
+		display: inline-block;
+		margin-left: 0.2em;
 	}
 
 	span {

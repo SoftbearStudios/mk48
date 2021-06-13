@@ -10,27 +10,21 @@
 	export let leaderboard;
 	export let label = null;
 	export let open = true;
+	export let headerAlign = 'left';
 </script>
 
-<div>
-	<Section name={label || $t('panel.leaderboard.label')} {open}>
-		<table>
-			{#each leaderboard as {name, team, score}}
-				<tr>
-					<td class='name'>{team ? `[${team}] ${name}` : name}</td>
-					<td class='score'>{score || 0}</td>
-				</tr>
-			{/each}
-		</table>
-	</Section>
-</div>
+<Section name={label || $t('panel.leaderboard.label')} {headerAlign} {open}>
+	<table>
+		{#each leaderboard as {name, team, score}}
+			<tr>
+				<td class='name'>{team ? `[${team}] ${name}` : name}</td>
+				<td class='score'>{score || 0}</td>
+			</tr>
+		{/each}
+	</table>
+</Section>
 
 <style>
-	div {
-		background-color: #00000040;
-		padding: 10px;
-	}
-
 	h2 {
 		margin-bottom: 10px;
 		margin-top: 0px;

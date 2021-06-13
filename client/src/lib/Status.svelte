@@ -43,4 +43,8 @@
 		text-align: center;
 		user-select: none;
 	}
+
+	h2 {
+		margin-bottom: 0.25em;
+	}
 </style>

@@ -177,6 +177,30 @@
 		padding-bottom: 10px;
 	}
 
+	input, select {
+		border: 1px solid gray;
+		color: black;
+		cursor: pointer;
+		margin-top: 5px;
+		min-width: 200px;
+		outline: 0px;
+		padding: 8px;
+		width: 100%;
+	}
+
+	input {
+		background-color: white;
+	}
+
+	select {
+		background-color: buttonface;
+	}
+
+	input::placeholder {
+		color: black;
+		opacity: 0.75;
+	}
+
 	span {
 		display: flex;
 		justify-content: space-around;
