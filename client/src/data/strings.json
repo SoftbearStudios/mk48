@@ -188,7 +188,7 @@
 					},
 					"invite": {
 						"hint": "Give this link to players who are not yet in game, to allow them to directly join your team",
-						"label": "Copy Invite"
+						"label": "Invite"
 					},
 					"kick": {
 						"label": "Kick"

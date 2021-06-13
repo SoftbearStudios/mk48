@@ -131,17 +131,18 @@
 	}
 
 	div.button {
-		background-color: #44444480;
 		padding: 5px;
 		filter: brightness(0.8);
 		user-select: none;
 	}
 
 	div.button:hover {
+		background-color: #44444440;
 		filter: brightness(0.9);
 	}
 
 	div.button.selected {
+		background-color: #44444480;
 		filter: brightness(1.2);
 		padding: 5px;
 	}
@@ -171,5 +172,6 @@
 
 	span.consumption {
 		float: right;
+		color: white;
 	}
 </style>

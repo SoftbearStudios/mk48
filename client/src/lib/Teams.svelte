@@ -51,8 +51,9 @@
 				{#each $teamMembers as {playerID, name}, i}
 					<tr>
 						<td class='name'>{name}</td>
-						{#if isOwner && i > 0}
-							<td><button on:click={() => send('removeFromTeam', {playerID})}>{$t('panel.team.action.kick.label')}</button></td>
+						{#if isOwner}
+							<td class='hidden'><button class:hidden={i == 0}>✔</button></td>
+							<td><button class:hidden={i == 0} on:click={() => send('removeFromTeam', {playerID})}>✘</button></td>
 						{/if}
 					</tr>
 				{/each}
@@ -60,16 +61,17 @@
 			{#if $teamJoinRequests}
 				{#each $teamJoinRequests as {playerID, name}}
 					<tr>
-						<td class='name'>{name}</td>
-						<td><button on:click={() => send('addToTeam', {playerID})}>{$t('panel.team.action.accept.label')}</button></td>
+						<td class='name pending'>{name}</td>
+						<td><button on:click={() => send('addToTeam', {playerID})}>✔</button></td>
+						<td><button on:click={() => send('removeFromTeam', {playerID})}>✘</button></td>
 					</tr>
 				{/each}
 			{/if}
 		</table>
+		<button on:click={() => send('removeFromTeam')}>{$t('panel.team.action.leave.label')}</button>
 		{#if $teamInvite}
 			<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>{$t('panel.team.action.invite.label')}</button>
 		{/if}
-		<button on:click={() => send('removeFromTeam')}>{$t('panel.team.action.leave.label')}</button>
 	{:else}
 		<table>
 			{#each getTeams(contacts) as teamID}
@@ -96,7 +98,35 @@
 		width: 100%;
 	}
 
+	tr {
+		margin-top: 0.25em;
+		margin-bottom: 0.25em;
+	}
+
+	td.name {
+		font-weight: bold;
+	}
+
+	td.name.pending {
+		filter: brightness(0.7);
+	}
+
 	a {
 		color: white;
+	}
+
+	button {
+		background-color: transparent;
+		border: 0px;
+		width: min-content;
+		padding: 0.1em;
+	}
+
+	button:hover {
+		background-color: #00000025;
+	}
+
+	.hidden {
+		visibility: hidden;
 	}
 </style>

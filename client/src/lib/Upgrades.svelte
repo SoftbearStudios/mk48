@@ -46,13 +46,15 @@
 	export let score;
 	export let type;
 	export let callback;
+
+	$: upgrades = getUpgrades(type);
+	$: columns = upgrades.length > 3;
 </script>
 
-
-<div class='box'>
+<div class='box' class:columns>
 	<Section name={`${$t('panel.upgrade.labelPrefix')} ${entityData[type].level + 1}`} headerAlign='center'>
-		<div class='upgrades'>
-			{#each getUpgrades(type) as upgradeType}
+		<div class='upgrades' class:columns>
+			{#each upgrades as upgradeType}
 				<img title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} on:click={callback.bind(null, upgradeType)} alt={upgradeType} src={`/entities/${upgradeType}.png`}/>
 			{/each}
 		</div>
@@ -62,7 +64,11 @@
 <style>
 	div.box {
 		width: min-content;
-		min-width: 30%;
+		min-width: 15%;
+	}
+
+	div.box.columns {
+		min-width: 30%
 	}
 
 	div.upgrades {
@@ -72,9 +78,8 @@
 		grid-template-columns: repeat(1, 1fr);
 	}
 
-
 	@media(min-width: 1000px) {
-		div.upgrades {
+		div.upgrades.columns {
 			grid-template-columns: repeat(2, 1fr);
 		}
 	}
