@@ -102,7 +102,7 @@ func (hist *ChatHistory) Update(message string, allowSpam bool) (string, bool) {
 		}
 	*/
 
-	frequencySpam := hist.total >= 10
+	frequencySpam := hist.total >= 7
 	inappropriateSpam := hist.inappropriate > 2 && inappropriateFraction > 0.20
 	repetitionSpam := int(hist.total) > repetitionThresholdTotal && lengthStandardDeviation < 3 && lengthSpecificDeviation < 3
 	anySpam := frequencySpam || inappropriateSpam || repetitionSpam
