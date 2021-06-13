@@ -986,11 +986,11 @@
 	}
 
 	function handleKey(event) {
-		const {keyCode, preventDefault, shiftKey, target, type} = event;
+		const {ctrlKey, keyCode, preventDefault, shiftKey, target, type} = event;
 
 		const down = {keydown: true, keyup: false}[type];
 
-		if (down && target && (target instanceof HTMLInputElement)) {
+		if (down && target && (ctrlKey || (target instanceof HTMLInputElement))) {
 			return;
 		}
 
