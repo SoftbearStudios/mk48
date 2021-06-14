@@ -20,6 +20,7 @@
 	<ul>
 		<li>Complete UI redesign.</li>
 		<li>Add ability deny team join requests.</li>
+		<li>Improve weapon guidance.</li>
 	</ul>
 
 	<h3>6/12/2021</h3>

@@ -187,8 +187,8 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		return
 	}
 
-	// Sensor activates after 1 second.
-	if entity.Ticks < TicksPerSecond {
+	// Sensor activates after 1 second and when the direction target is reached
+	if entity.Ticks < TicksPerSecond && entity.Direction.Diff(entity.DirectionTarget) > ToAngle(0.15) {
 		return
 	}
 
@@ -214,13 +214,13 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	angle := diff.Angle()
 
 	angleTargetDiff := entity.DirectionTarget.Diff(angle).Abs()
-	if angleTargetDiff > math32.Pi/3 {
+	if angleTargetDiff > math32.Pi/6 {
 		// Should not go off target
 		return
 	}
 
 	angleDiff := entity.Direction.Diff(angle).Abs()
-	if angleDiff > math32.Pi/3 {
+	if angleDiff > math32.Pi/5 {
 		// Cannot sense beyond this angle
 		return
 	}
@@ -231,7 +231,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 		size = 100
 	}
 
-	homingStrength := size * baseHomingStrength / (1 + diff.LengthSquared() + 20000*square(angleDiff))
+	homingStrength := size * baseHomingStrength / (1 + diff.LengthSquared() + 1000*square(square(angleDiff)))
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 
