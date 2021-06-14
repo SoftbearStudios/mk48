@@ -70,12 +70,19 @@ func (set *PlayerSet) Remove(player *Player) {
 }
 
 func (set *PlayerSet) Add(player *Player) {
-	for _, p := range *set {
-		if p == player {
-			return // Already in set
-		}
+	if set.Contains(player) {
+		return
 	}
 	*set = append(*set, player)
+}
+
+func (set *PlayerSet) Contains(player *Player) bool {
+	for _, p := range *set {
+		if p == player {
+			return true
+		}
+	}
+	return false
 }
 
 // AppendData converts a PlayerSet to []IDPlayerData

@@ -15,6 +15,13 @@
 
 	<h2>2021</h2>
 
+	<h3>6/13/2021</h3>
+
+	<ul>
+		<li>Complete UI redesign.</li>
+		<li>Add ability deny team join requests.</li>
+	</ul>
+
 	<h3>6/12/2021</h3>
 
 	<ul>
