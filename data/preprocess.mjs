@@ -19,9 +19,9 @@ for (const entityType of Object.keys(entityDatas)) {
 	const entityData = entityDatas[entityType];
 
 	if (entityData.speed) {
-		switch (entityData.type) {
+		switch (entityData.kind) {
 			case 'weapon':
-				switch (entityData.subtype) {
+				switch (entityData.subkind) {
 					case 'shell':
 						entityData.speed *= 0.75;
 						break;
@@ -34,8 +34,8 @@ for (const entityType of Object.keys(entityDatas)) {
 	if (entityData.range && entityType !== 'depositor') {
 		let maxRange = 1500;
 		let avgSpeed = entityData.speed
-		if (entityData.type === 'weapon') {
-			switch (entityData.subtype) {
+		if (entityData.kind === 'weapon') {
+			switch (entityData.subkind) {
 				case 'shell':
 					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
 					break;
@@ -72,9 +72,9 @@ for (const entityType of Object.keys(entityDatas)) {
 		delete(entityData.range);
 	}
 
-	if (entityData.type === 'boat') {
+	if (entityData.kind === 'boat') {
 		// Anti-aircraft power
-		switch (entityData.subtype) {
+		switch (entityData.subkind) {
 			case 'dredger':
 			case 'submarine':
 				break;
@@ -82,7 +82,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
 		}
 
-		switch (entityData.subtype) {
+		switch (entityData.subkind) {
 			case 'pirate':
 				entityData.npc = true;
 				break;
@@ -90,7 +90,7 @@ for (const entityType of Object.keys(entityDatas)) {
 	}
 
 	if (entityData.damage == undefined) {
-		switch (entityData.type) {
+		switch (entityData.kind) {
 			case 'boat':
 				// Damage means health (i.e. how much damage before death)
 				const factor = 20 / 10 / 60;
@@ -98,7 +98,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				break;
 			case 'weapon':
 				// Damage means damage dealt
-				switch (entityData.subtype) {
+				switch (entityData.subkind) {
 					case 'torpedo':
 						entityData.damage = mapRanges(entityData.length, 3, 7, 0.6, 1.1, true);
 						// NOTE: This makes homing torpedoes do less damage.
@@ -127,9 +127,9 @@ for (const entityType of Object.keys(entityDatas)) {
 	}
 
 	if (entityData.reload == undefined) {
-		switch (entityData.type) {
+		switch (entityData.kind) {
 			case 'weapon':
-				switch (entityData.subtype) {
+				switch (entityData.subkind) {
 					case 'aircraft':
 						entityData.reload = 10;
 						break;
@@ -158,7 +158,7 @@ for (const entityType of Object.keys(entityDatas)) {
 						break;
 					case 'torpedo':
 						entityData.reload = 8;
-						if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
+						if (entityData.sensors && Object.keys(entityData.sensors).length > 0) {
 							// Homing torpedoes take longer to reload
 							entityData.reload *= 1.5;
 						}
@@ -260,15 +260,14 @@ for (const entityType of Object.keys(entityDatas)) {
 		}
 	}
 
-	const sensors = entityData.sensors;
-	entityData.sensors = [];
+	if (entityData.sensors) {
+		for (const sensorType in entityData.sensors) {
+			const sensor = entityData.sensors[sensorType];
 
-	if (sensors) {
-		for (const sensor of sensors) {
 			if (typeof sensor.range !== 'number') {
 				let base = 0;
 				let factor = 0;
-				switch (sensor.type) {
+				switch (sensorType) {
 					case 'visual':
 						base = 500;
 						factor = 3;
@@ -286,7 +285,6 @@ for (const entityType of Object.keys(entityDatas)) {
 				sensor.range = base + factor * entityData.length;
 				sensor.range = Math.min(sensor.range, 2000);
 			}
-			entityData.sensors.push(sensor);
 		}
 	}
 }
@@ -296,8 +294,8 @@ for (const entityType of Object.keys(entityDatas)) {
 	const entityData = entityDatas[entityType];
 
 	function rankArmament(armament) {
-		const armamentEntityData = entityDatas[armament.default];
-		if (armamentEntityData.type === 'decoy') {
+		const armamentEntityData = entityDatas[armament.type];
+		if (armamentEntityData.kind === 'decoy') {
 			return -8;
 		}
 		// Positive means closer to beginning
@@ -305,12 +303,12 @@ for (const entityType of Object.keys(entityDatas)) {
 			'torpedo': 10,
 			'missile': 9,
 			'rocket': 8,
-			'shell': ['battleship', 'cruiser'].includes(entityData.subtype) ? 12 : 5,
+			'shell': ['battleship', 'cruiser'].includes(entityData.subkind) ? 12 : 5,
 			'sam': -5,
 			// decoy: -8
-			'aircraft': entityData.subtype == 'carrier' ? 12 : -10,
+			'aircraft': entityData.subkind == 'carrier' ? 12 : -10,
 		}
-		return typeRanks[armamentEntityData.subtype] || 0;
+		return typeRanks[armamentEntityData.subkind] || 0;
 	}
 
 	entityData.armaments.sort((first, second) => {

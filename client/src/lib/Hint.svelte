@@ -35,7 +35,7 @@
 
 {#if type && timeout}
 	<div class='splash' transition:fade="{{duration: 500}}">
-		{$t(`kind.boat.${entityData[type].subtype.toLowerCase()}.hint`)}
+		{$t(`kind.boat.${entityData[type].subkind.toLowerCase()}.hint`)}
 	</div>
 {/if}
 

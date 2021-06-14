@@ -16,13 +16,13 @@
 	const weaponSubTypes = {};
 	for (const entityType of Object.keys(entityData)) {
 		const data = entityData[entityType];
-		switch (data.type) {
+		switch (data.kind) {
 			case 'boat':
 				shipTypeCount++;
 				shipLevelMax = Math.max(shipLevelMax, data.level);
 				break;
 			case 'weapon':
-				weaponSubTypes[data.subtype] = true;
+				weaponSubTypes[data.subkind] = true;
 				break;
 		}
 	}

@@ -380,7 +380,7 @@ func (data Fire) Process(h *Hub, _ Client, player *Player) {
 		}
 
 		armamentData := shipData.Armaments[data.Index]
-		armamentEntityData := armamentData.Default.Data()
+		armamentEntityData := armamentData.Type.Data()
 
 		if shipData.SubKind == world.EntitySubKindSubmarine && entity.Altitude() < 0 {
 			// Submerged submarine
@@ -426,7 +426,7 @@ func (data Fire) Process(h *Hub, _ Client, player *Player) {
 			}
 
 			armamentEntity := &world.Entity{
-				EntityType: armamentData.Default,
+				EntityType: armamentData.Type,
 				Owner:      &player.Player,
 				Transform:  transform,
 				Guidance:   armamentGuidance,

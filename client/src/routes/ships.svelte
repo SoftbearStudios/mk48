@@ -17,7 +17,7 @@
 
 	<table>
 		{#each Object.entries(entityDatas) as [type, entityData]}
-			{#if entityData.type === 'boat'}
+			{#if entityData.kind === 'boat'}
 				<tr>
 					<td>
 						<EntityCard {type}/>

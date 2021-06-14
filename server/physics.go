@@ -113,9 +113,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 		// Unless the entity needs to know about its neighbors
 		if entity.Data().Kind == world.EntityKindWeapon {
-			for _, sensor := range entity.Data().Sensors {
-				radius = max(radius, sensor.Range)
-			}
+			radius = max(radius, entity.Data().Sensors.MaxRange())
 		}
 
 		return
@@ -209,7 +207,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 
 				if entityData.Kind == world.EntityKindWeapon {
 					// Home towards target/decoy
-					if altitudeOverlap && len(entityData.Sensors) > 0 {
+					if altitudeOverlap && entityData.Sensors.Any() {
 						entity.UpdateSensor(other)
 					}
 
@@ -226,13 +224,13 @@ func (h *Hub) Physics(ticks world.Ticks) {
 								armamentData := &armaments[i]
 
 								armament := &world.Entity{
-									EntityType: armamentData.Default,
+									EntityType: armamentData.Type,
 									Owner:      entity.Owner,
-									Ticks:      armamentData.Default.ReducedLifespan(10 * world.TicksPerSecond),
+									Ticks:      armamentData.Type.ReducedLifespan(10 * world.TicksPerSecond),
 									Transform:  entity.ArmamentTransform(i),
 									Guidance: world.Guidance{
 										DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
-										VelocityTarget:  armamentData.Default.Data().Speed,
+										VelocityTarget:  armamentData.Type.Data().Speed,
 									},
 								}
 

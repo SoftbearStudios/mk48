@@ -14,7 +14,6 @@ const (
 	EntityKindInvalid    = EntityKind(invalidEnumChoice)
 	EntitySubKindInvalid = EntitySubKind(invalidEnumChoice)
 	EntityTypeInvalid    = EntityType(invalidEnumChoice)
-	SensorTypeInvalid    = SensorType(invalidEnumChoice)
 	invalidEnumChoice    = 0
 )
 
@@ -23,19 +22,13 @@ var (
 	entitySubKindEnum enum
 	entityTypeData    []EntityTypeData
 	entityTypeEnum    enum
-	sensorTypeEnum    enum
 )
 
 type (
 	// entityTypeLoader loads an EntityType before the enums are defined
 	entityTypeLoader struct {
-		Kind    string         `json:"type"`
-		SubKind string         `json:"subtype"`
-		Sensors []sensorLoader `json:"sensors"`
-	}
-
-	sensorLoader struct {
-		Type string `json:"type"`
+		Kind    string `json:"kind"`
+		Subkind string `json:"subkind"`
 	}
 
 	// enum is a list of possible choices and their strings
@@ -110,17 +103,13 @@ func init() {
 
 	for t, d := range typeLoaders {
 		entityKindEnum.add(d.Kind)
-		entitySubKindEnum.add(d.SubKind)
+		entitySubKindEnum.add(d.Subkind)
 		entityTypeEnum.add(t)
-		for _, s := range d.Sensors {
-			sensorTypeEnum.add(s.Type)
-		}
 	}
 
 	entityKindEnum.create("entity kind")
 	entitySubKindEnum.create("entity sub kind")
 	entityTypeEnum.create("entity type")
-	sensorTypeEnum.create("sensor type")
 
 	// Unmarshal data now that enums are created
 	entityData := make(map[string]EntityTypeData)
@@ -180,10 +169,6 @@ func init() {
 	EntityTypeScrap = ParseEntityType("scrap")
 	EntityTypeSeahawk = ParseEntityType("seahawk")
 
-	SensorTypeRadar = ParseSensorType("radar")
-	SensorTypeSonar = ParseSensorType("sonar")
-	SensorTypeVisual = ParseSensorType("visual")
-
 	// Spawn entities are boats that are level 1
 	for i, data := range entityTypeData {
 		if data.Kind == EntityKindBoat {
@@ -232,10 +217,6 @@ var (
 	EntityTypeOilPlatform EntityType
 	EntityTypeScrap       EntityType
 	EntityTypeSeahawk     EntityType
-
-	SensorTypeRadar  SensorType
-	SensorTypeSonar  SensorType
-	SensorTypeVisual SensorType
 )
 
 // EntityKind helpers
@@ -310,30 +291,5 @@ func (entityType *EntityType) UnmarshalText(text []byte) (err error) {
 	var choice enumChoice
 	err = choice.unmarshalText(&entityTypeEnum, text)
 	*entityType = EntityType(choice)
-	return
-}
-
-// SensorType helpers
-
-func (sensorType SensorType) AppendText(buf []byte) []byte {
-	return append(buf, sensorType.String()...)
-}
-
-func (sensorType SensorType) MarshalText() ([]byte, error) {
-	return sensorType.AppendText(nil), nil
-}
-
-func ParseSensorType(s string) SensorType {
-	return SensorType(sensorTypeEnum.mustParse(s))
-}
-
-func (sensorType SensorType) String() string {
-	return sensorTypeEnum.strings[sensorType]
-}
-
-func (sensorType *SensorType) UnmarshalText(text []byte) (err error) {
-	var choice enumChoice
-	err = choice.unmarshalText(&sensorTypeEnum, text)
-	*sensorType = SensorType(choice)
 	return
 }

@@ -25,15 +25,6 @@ export function drawHud(hud, entity, sprite, contacts) {
 		hud.lineTo(cos * THROTTLE_END, sin * THROTTLE_END);
 	}
 
-	/*
-	for (const sensor of entityData[entity.type].sensors) {
-		if (sensor.range < 1000) {
-			hud.lineStyle(1, 0xff0000, 0.25)
-			hud.drawCircle(0, 0, sensor.range);
-		}
-	}
-	*/
-
 	hud.lineStyle(0, 0, 0);
 
 	const scale = sprite.width * THROTTLE_END;
@@ -42,6 +33,7 @@ export function drawHud(hud, entity, sprite, contacts) {
 		const distance = dist(contact.position, sprite.position);
 
 		if (distance < sprite.width * THROTTLE_END) {
+			// Too close
 			continue;
 		}
 
@@ -52,9 +44,9 @@ export function drawHud(hud, entity, sprite, contacts) {
 
 		if (contact.friendly) {
 			color = 0x2ecc71; // green
-		} else if (['collectible'].includes(entityData[contact.type].type)) {
+		} else if (['collectible', 'obstacle'].includes(entityData[contact.type].kind)) {
 			color = 0xf1c40f; // yellow
-		} else if (contact.type && ['submarine', 'torpedo'].includes(entityData[contact.type].subtype)) {
+		} else if (contact.altitude < 0) {
 			color = 0x3498db; // blue
 		}
 

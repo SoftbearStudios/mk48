@@ -166,6 +166,19 @@
 					"single/week": "Weekly Leaderboard"
 				}
 			},
+			"ship": {
+				"action": {
+					"activeRadar": {
+						"label": "Active Radar"
+					},
+					"activeSonar": {
+						"label": "Active Sonar"
+					},
+					"surface": {
+						"label": "Surface"
+					}
+				}
+			},
 			"splash": {
 				"action": {
 					"about": {
@@ -394,6 +407,19 @@
 					"single/all": "Tabla de todos los tiempos",
 					"single/day": "Tabla diaria",
 					"single/week": "Tabla semanal"
+				}
+			},
+			"ship": {
+				"action": {
+					"activeRadar": {
+						"label": "Radar activo"
+					},
+					"activeSonar": {
+						"label": "Sonar activo"
+					},
+					"surface": {
+						"label": "Superficie"
+					}
 				}
 			},
 			"splash": {
@@ -626,6 +652,19 @@
 					"single/week": "Еженедельная таблица лидеров"
 				}
 			},
+			"ship": {
+				"action": {
+					"activeRadar": {
+						"label": "Активный радар"
+					},
+					"activeSonar": {
+						"label": "Активный сонар"
+					},
+					"surface": {
+						"label": "Поверхность"
+					}
+				}
+			},
 			"splash": {
 				"action": {
 					"about": {
@@ -856,6 +895,19 @@
 					"single/week": "Classement hebdomadaire"
 				}
 			},
+			"ship": {
+				"action": {
+					"activeRadar": {
+						"label": "Radar actif"
+					},
+					"activeSonar": {
+						"label": "Sonar actif"
+					},
+					"surface": {
+						"label": "Surface"
+					}
+				}
+			},
 			"splash": {
 				"action": {
 					"about": {
@@ -1084,6 +1136,19 @@
 					"single/all": "历史排行榜",
 					"single/day": "每日排行榜",
 					"single/week": "每周排行榜"
+				}
+			},
+			"ship": {
+				"action": {
+					"activeRadar": {
+						"label": "主動雷達"
+					},
+					"activeSonar": {
+						"label": "主動聲納"
+					},
+					"surface": {
+						"label": "表面"
+					}
 				}
 			},
 			"splash": {

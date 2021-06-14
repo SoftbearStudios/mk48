@@ -26,7 +26,7 @@
 	<tr>
 		<td>
 			<h3>{entityData.label + (count != null ? ` × ${count}` : '')}</h3>
-			{#if entityData.type === 'boat'}
+			{#if entityData.kind === 'boat'}
 				<i>Level {entityData.level} {summarizeType($t, type)}</i>
 			{:else}
 				<i>{summarizeType($t, type)}</i>
@@ -53,7 +53,7 @@
 					<li>Reload: {entityData.reload.toFixed(1)}s</li>
 				{/if}
 				{#if entityData.damage}
-					<li>{entityData.type === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(1)}</li>
+					<li>{entityData.kind === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(1)}</li>
 				{/if}
 				{#if entityData.stealth}
 					<li>Stealth: {Math.round(entityData.stealth * 100)}%</li>
@@ -66,7 +66,7 @@
 	</tr>
 	<tr>
 		<td>
-			<img class:ship={entityData.type === 'boat'} class:small={depth > 0} title={entityData.label} alt={type} src={`/entities/${type}.png`}/>
+			<img class:ship={entityData.kind === 'boat'} class:small={depth > 0} title={entityData.label} alt={type} src={`/entities/${type}.png`}/>
 		</td>
 	</tr>
 	{#each groupArmaments(entityData.armaments, []) as [type, group]}

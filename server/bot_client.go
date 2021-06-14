@@ -275,19 +275,12 @@ func (bot *BotClient) Send(out Outbound) {
 				bestArmamentAngleDiff := float32(math32.MaxFloat32)
 
 				for index, armament := range shipData.Armaments {
-					armamentType := armament.Type
-					if armamentType == world.EntityKindInvalid {
-						armamentType = armament.Default.Data().Kind
-					}
-
-					armamentSubtype := armament.Subtype
-					if armamentSubtype == world.EntitySubKindInvalid {
-						armamentSubtype = armament.Default.Data().SubKind
-					}
-
+					armamentType := armament.Type.Data().Kind
 					if armamentType != world.EntityKindWeapon {
 						continue
 					}
+
+					armamentSubtype := armament.Type.Data().SubKind
 					if armamentSubtype == world.EntitySubKindSAM {
 						// TODO: Teach bots how to use SAMs
 						continue
@@ -302,7 +295,7 @@ func (bot *BotClient) Send(out Outbound) {
 							}
 						}
 						diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
-						if armament.Vertical || armament.Default.Data().SubKind == world.EntitySubKindAircraft {
+						if armament.Vertical || armament.Type.Data().SubKind == world.EntitySubKindAircraft {
 							diff = 0
 						}
 						if diff < bestArmamentAngleDiff {

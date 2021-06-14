@@ -375,7 +375,7 @@ func ArmamentTransform(entityType EntityType, entityTransform Transform, turretA
 		Direction: armamentData.Angle,
 	}
 
-	weaponData := armamentData.Default.Data()
+	weaponData := armamentData.Type.Data()
 
 	// Shells start with all their velocity.
 	if weaponData.SubKind == EntitySubKindShell {
@@ -423,7 +423,7 @@ func (entity *Entity) Close() {
 			// Reload 1 limited armament of its type.
 			for i := range armaments {
 				a := &armaments[i]
-				if a.Default == entity.EntityType && consumption[i] == TicksMax {
+				if a.Type == entity.EntityType && consumption[i] == TicksMax {
 					consumption[i] = a.Reload()
 					return
 				}
@@ -440,7 +440,7 @@ func (entity *Entity) ConsumeArmament(index int) {
 
 	// Limited armaments start their timer when they die.
 	reload := TicksMax
-	if !a.Default.Data().Limited {
+	if !a.Type.Data().Limited {
 		reload = a.Reload()
 
 		// Submerged submarines reload slower
@@ -521,16 +521,10 @@ func upgradeArmaments(entityType EntityType, new []Ticks, old []Ticks) {
 
 // Camera is the combined Sensor view of an Entity.
 func (entity *Entity) Camera() (position Vec2f, visual, radar, sonar float32) {
-	for _, sensor := range entity.Data().Sensors {
-		switch sensor.Type {
-		case SensorTypeRadar:
-			radar = max(radar, sensor.Range)
-		case SensorTypeSonar:
-			sonar = max(sonar, sensor.Range)
-		case SensorTypeVisual:
-			visual = max(visual, sensor.Range)
-		}
-	}
+	sensors := entity.Data().Sensors
+	visual = sensors.Visual.Range
+	radar = sensors.Radar.Range
+	sonar = sensors.Sonar.Range
 	position = entity.Position
 
 	// High altitude benefits radar and visual, low altitude diminishes them

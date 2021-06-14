@@ -264,7 +264,7 @@
 								continue;
 							}
 
-							const armamentSprite = PIXI.Sprite.from(entitiesSpritesheet.textures[armament.default]);
+							const armamentSprite = PIXI.Sprite.from(entitiesSpritesheet.textures[armament.type]);
 							armamentSprite.position.set((armament.positionForward || 0) / sprite.scale.x, (armament.positionSide || 0) / sprite.scale.y);
 							armamentSprite.anchor.set(0.5);
 							armamentSprite.rotation = armament.angle || 0;
@@ -274,8 +274,8 @@
 								sprite.addChild(armamentSprite);
 							}
 
-							armamentSprite.height = entityData[armament.default].width / sprite.scale.y;
-							armamentSprite.width = entityData[armament.default].length / sprite.scale.x;
+							armamentSprite.height = entityData[armament.type].width / sprite.scale.y;
+							armamentSprite.width = entityData[armament.type].length / sprite.scale.x;
 
 							sprite.armaments[a] = armamentSprite;
 						}
@@ -284,7 +284,7 @@
 
 				// Markers/nametags
 				let oldColor = null, newColor = null;
-				switch (currentEntityData.type) {
+				switch (currentEntityData.kind) {
 				case 'weapon':
 					newColor = entity.friendly ? 0x3aff8c : 0xe74c3c;
 
@@ -336,7 +336,7 @@
 						// Quantize health to avoid frequent GUI updates
 						const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
 
-						if (currentEntityData.type === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
+						if (currentEntityData.kind === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
 							if (!sprite.healthBar) {
 								sprite.healthBar = new PIXI.Graphics();
 								viewport.addChild(sprite.healthBar);
@@ -416,12 +416,12 @@
 					const spriteData = entityData[sprite.type];
 
 					// Spawn destruction effect
-					if (!entity && spriteData && spriteData.type !== 'collectible') {
+					if (!entity && spriteData && spriteData.kind !== 'collectible') {
 						let animation;
 						let group;
 						let spriteSize;
 
-						if (['sam', 'shell', 'rocket', 'missile'].includes(spriteData.subtype)) {
+						if (['sam', 'shell', 'rocket', 'missile'].includes(spriteData.subkind)) {
 							animation = extrasSpritesheet.animations.explosion;
 							group = splashes;
 							spriteSize = 5;
@@ -689,7 +689,7 @@
 								armamentPosY = newArmamentPos.y;
 							}
 
-							const armamentEntityData = entityData[armament.default];
+							const armamentEntityData = entityData[armament.type];
 
 							const newArmamentPos = addTransforms(localSprite.position.x, localSprite.position.y, armamentPosX, armamentPosY, localSprite.rotation);
 							armamentPosX = newArmamentPos.x;
@@ -706,7 +706,7 @@
 
 							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, armamentDirectionTarget));
 
-							if (armament.airdrop || armament.vertical || ['aircraft', 'depositor', 'depthCharge', 'mine'].includes(armamentEntityData.subtype)) {
+							if (armament.airdrop || armament.vertical || ['aircraft', 'depositor', 'depthCharge', 'mine'].includes(armamentEntityData.subkind)) {
 								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
 							}
@@ -740,7 +740,7 @@
 							velocityTarget: localSprite.velocityTarget,
 							angVelTarget,
 							directionTarget: localSprite.directionTarget,
-							altitudeTarget: localEntityData.subtype === 'submarine' ? altitudeTarget : undefined,
+							altitudeTarget: localEntityData.subkind === 'submarine' ? altitudeTarget : undefined,
 							turretTarget: mousePosition,
 						});
 
@@ -776,8 +776,9 @@
 			}
 			let visualRange = maxVisualRange - 50; // don't show texture borders
 			if (localEntityData && localEntityData.sensors) {
-				for (const sensor of localEntityData.sensors) {
-					if (sensor.type === 'visual') {
+				for (const sensorType in localEntityData.sensors) {
+					const sensor = localEntityData.sensors[sensorType];
+					if (sensorType === 'visual') {
 						maxVisualRange = Math.max(maxVisualRange, sensor.range);
 						break;
 					}
@@ -810,7 +811,7 @@
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
 					let maxSpeed = (spriteData.speed || 20)
-					if (spriteData.subtype !== 'aircraft') {
+					if (spriteData.subkind !== 'aircraft') {
 						maxSpeed /= Math.max(Math.pow(angleDifference, 2), 1);
 						maxTurnSpeed *= Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1));
 					}
@@ -831,7 +832,7 @@
 				if (spriteDistance <= visualRange) {
 					let amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
 					let wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
-					if (spriteData.subtype === 'aircraft') {
+					if (spriteData.subkind === 'aircraft') {
 						amount *= 0.25;
 						wakeAngle *= 0.2;
 					}

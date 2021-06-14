@@ -16,9 +16,8 @@
 	}
 
 	export function getArmamentType(armamentData) {
-		const armamentType = armamentData.type || entityData[armamentData.default].type;
-		const armamentSubtype = armamentData.subtype || entityData[armamentData.default].subtype;
-		return `${armamentType}/${armamentSubtype}`;
+		const aED = entityData[armamentData.type];
+		return `${aED.kind}/${aED.subkind}`;
 	}
 
 	export function groupArmaments(armaments, consumptions) {
@@ -26,14 +25,11 @@
 		for (let i = 0; i < armaments.length; i++) {
 			const armament = armaments[i];
 
-			const armamentType = armament.type || entityData[armament.default].type;
-			const armamentSubtype = armament.subtype || entityData[armament.default].subtype;
-
 			const type = getArmamentType(armament);
 
 			let group = groups[type];
 			if (!group) {
-				group = {type: armament.default, ready: 0, deployed: 0, total: 0, reload: 0};
+				group = {type: armament.type, ready: 0, deployed: 0, total: 0, reload: 0};
 				groups[type] = group;
 			}
 			group.total++;
@@ -53,15 +49,11 @@
 
 	export function summarizeType(translation, type) {
 		const data = entityData[type];
-		let subtype = data.subtype;
-		if (subtype === 'MTB') {
-			// TODO: Temporary patch
-			subtype = 'mtb';
-		}
+		let subtype = data.subkind;
 		if (subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
 			subtype = 'rocketTorpedo';
 		}
-		return translation(`kind.${data.type}.${subtype}.name`);
+		return translation(`kind.${data.kind}.${subtype}.name`);
 	}
 </script>
 
@@ -117,10 +109,10 @@
 				<span class='consumption' title={(group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`) + (group.deployed === 0 ? '' : ` (${group.deployed} still deployed)`)}>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
-		{#if entityData[type].subtype === 'ram'}
+		{#if entityData[type].subkind === 'ram'}
 			<small>{$t('kind.boat.ram.hint')}</small>
-		{:else if entityData[type].subtype === 'submarine'}
-			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>Surface</div>
+		{:else if entityData[type].subkind === 'submarine'}
+			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>{$t('panel.ship.action.surface.label')}</div>
 		{/if}
 	</Section>
 </div>

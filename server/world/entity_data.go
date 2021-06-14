@@ -18,16 +18,14 @@ type (
 	// Armament is the description of an armament in an EntityData.
 	// Armaments are not only weapons but also countermeasures.
 	Armament struct {
-		Type            EntityKind    `json:"type"`
-		Subtype         EntitySubKind `json:"subtype"`
-		Default         EntityType    `json:"default"`
-		Vertical        bool          `json:"vertical"`
-		Length          float32       `json:"length"`
-		Width           float32       `json:"width"`
-		PositionForward float32       `json:"positionForward"`
-		PositionSide    float32       `json:"positionSide"`
-		Angle           Angle         `json:"angle"`
-		Turret          *int          `json:"turret,omitempty"` // If non-nil, index of turret
+		Type            EntityType `json:"type"`
+		Vertical        bool       `json:"vertical"`
+		Length          float32    `json:"length"`
+		Width           float32    `json:"width"`
+		PositionForward float32    `json:"positionForward"`
+		PositionSide    float32    `json:"positionSide"`
+		Angle           Angle      `json:"angle"`
+		Turret          *int       `json:"turret,omitempty"` // If non-nil, index of turret
 	}
 
 	// EntityKind is the kind of an entity one of: boat, collectible, obstacle, and weapon.
@@ -42,8 +40,8 @@ type (
 	// EntityTypeData is the description of an EntityType.
 	EntityTypeData struct {
 		// All units are SI (meters, seconds, etc.)
-		Kind         EntityKind    `json:"type"`
-		SubKind      EntitySubKind `json:"subtype"`
+		Kind         EntityKind    `json:"kind"`
+		SubKind      EntitySubKind `json:"subkind"`
 		Level        uint8         `json:"level"`
 		Limited      bool          `json:"limited"`
 		NPC          bool          `json:"npc"` // only bots can use
@@ -57,20 +55,23 @@ type (
 		Damage       float32       `json:"damage"`       // health of ship, or damage dealt by weapon
 		AntiAircraft float32       `json:"antiAircraft"` // chance aircraft is shot down per second
 		Stealth      float32       `json:"stealth"`
-		Sensors      []Sensor      `json:"sensors"`
+		Sensors      Sensors       `json:"sensors"`
 		Armaments    []Armament    `json:"armaments"`
 		Turrets      []Turret      `json:"turrets"`
 		Label        string        `json:"label"`
 	}
 
-	// Sensor the description of a sensor in an EntityType.
-	Sensor struct {
-		Type  SensorType `json:"type"`
-		Range float32    `json:"range"`
+	Sensors struct {
+		Visual Sensor `json:"visual"`
+		Radar  Sensor `json:"radar"`
+		Sonar  Sensor `json:"sonar"`
 	}
 
-	// SensorType is the type of a sensor one of: visual, radar, and sonar.
-	SensorType enumChoice
+	// Sensor the description of a sensor in an EntityType.
+	Sensor struct {
+		Range float32 `json:"range"`
+		// TODO: Azimuth limits, active/passive, etc.
+	}
 
 	// Turret is the description of a turret's relative transform in an EntityType.
 	Turret struct {
@@ -94,12 +95,12 @@ func (armament *Armament) TurretIndex() int {
 
 // Reload returns the time it takes to reload an Armament in seconds.
 func (armament *Armament) Reload() Ticks {
-	return armament.Default.Data().Reload
+	return armament.Type.Data().Reload
 }
 
 // Similar returns if the Armament is on the same turret and the same type as other.
 func (armament *Armament) Similar(other *Armament) bool {
-	return armament.Default == other.Default && armament.TurretIndex() == other.TurretIndex()
+	return armament.Type == other.Type && armament.TurretIndex() == other.TurretIndex()
 }
 
 // Returns true only if the parameter is within the turrets valid azimuth ranges
@@ -121,6 +122,14 @@ func (turret *Turret) CheckAzimuth(curr Angle) bool {
 		return false
 	}
 	return true
+}
+
+func (sensors Sensors) MaxRange() float32 {
+	return max(max(sensors.Visual.Range, sensors.Radar.Range), sensors.Sonar.Range)
+}
+
+func (sensors Sensors) Any() bool {
+	return sensors.Visual.Range != 0 || sensors.Radar.Range != 0 || sensors.Sonar.Range != 0
 }
 
 func (entityType EntityType) Data() *EntityTypeData {

@@ -25,7 +25,7 @@
 			const data = entityData[entityType];
 			// JS doesn't know if the auth is correct, so give user the benefit
 			// of the doubt (server will enforce)
-			if (data.type === 'boat' && ((data.level === 1 && !data.npc) || storage.auth)) {
+			if (data.kind === 'boat' && ((data.level === 1 && !data.npc) || storage.auth)) {
 				list.push(entityType);
 			}
 		}
