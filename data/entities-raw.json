@@ -833,14 +833,14 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": -90,
-				"azimuthB": 45
+				"angle": 100,
+				"azimuthB": 100
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
-				"angle": 90,
-				"azimuthB": 45
+				"angle": -90,
+				"azimuthB": 90
 			},
 			{
 				"type": "otoMelara76mm",

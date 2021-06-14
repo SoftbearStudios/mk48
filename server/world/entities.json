@@ -1559,16 +1559,16 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": -1.5707963267948966,
-				"azimuthBL": 0.7853981633974483,
-				"azimuthBR": 0.7853981633974483
+				"angle": 1.7453292519943295,
+				"azimuthBL": 1.7453292519943295,
+				"azimuthBR": 1.7453292519943295
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
-				"angle": 1.5707963267948966,
-				"azimuthBL": 0.7853981633974483,
-				"azimuthBR": 0.7853981633974483
+				"angle": -1.5707963267948966,
+				"azimuthBL": 1.5707963267948966,
+				"azimuthBR": 1.5707963267948966
 			},
 			{
 				"type": "otoMelara76mm",
