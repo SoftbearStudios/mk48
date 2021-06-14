@@ -52,7 +52,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 	seconds := ticks.Float()
 
 	if data.SubKind == EntitySubKindAircraft {
-		posTarget := entity.OwnerBoatTurretTarget()
+		posTarget := entity.OwnerBoatAimTarget()
 		posDiff := posTarget.Sub(entity.Position)
 
 		// Vary angle based on entity hash so aircraft doesn't clump as much.
@@ -250,7 +250,7 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 	for i := range angles {
 		turretData := data.Turrets[i]
 		directionTarget := turretData.Angle
-		if target := entity.TurretTarget(); target != (Vec2f{}) { // turret target lasts for 5 seconds
+		if target := entity.AimTarget(); target != (Vec2f{}) { // turret target lasts for 5 seconds
 			turretGlobalTransform := entity.Transform.Add(Transform{
 				Position: Vec2f{
 					X: turretData.PositionForward,

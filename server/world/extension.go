@@ -18,8 +18,8 @@ type extension interface {
 	turretAngles() []Angle // Read only
 	copyTurretAngles()     // Copy for writes
 
-	turretTarget() Vec2f // Where turret wants to point
-	setTurretTarget(target Vec2f)
+	aimTarget() Vec2f // Where turret wants to point
+	setAimTarget(target Vec2f)
 
 	altitude() float32
 	setAltitude(float32)
@@ -93,20 +93,20 @@ func (entity *Entity) TurretAngles() []Angle {
 	return entity.Owner.ext.turretAngles()
 }
 
-func (entity *Entity) TurretTarget() Vec2f {
+func (entity *Entity) AimTarget() Vec2f {
 	entity.mustBoat()
-	return entity.Owner.ext.turretTarget()
+	return entity.Owner.ext.aimTarget()
 }
 
 // When a weapon wants the turret target of the owner's ship
-func (entity *Entity) OwnerBoatTurretTarget() Vec2f {
+func (entity *Entity) OwnerBoatAimTarget() Vec2f {
 	if entity.Owner == nil {
 		return Vec2f{}
 	}
-	return entity.Owner.ext.turretTarget()
+	return entity.Owner.ext.aimTarget()
 }
 
-func (entity *Entity) SetTurretTarget(target Vec2f) {
+func (entity *Entity) SetAimTarget(target Vec2f) {
 	entity.mustBoat()
 
 	// Clamp to within visual radius.
@@ -120,7 +120,7 @@ func (entity *Entity) SetTurretTarget(target Vec2f) {
 		target = target.AddScaled(normal, visual-distance)
 	}
 
-	entity.Owner.ext.setTurretTarget(target)
+	entity.Owner.ext.setAimTarget(target)
 }
 
 // Call when accessing entity.Owner.ext, which is ONLY valid

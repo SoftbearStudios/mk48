@@ -266,7 +266,7 @@ func (bot *BotClient) Send(out Outbound) {
 		// Attack with weapons (regardless of pathfinding)
 		if closestEnemy.Found() {
 			// Aim
-			manual.TurretTarget = closestEnemy.Position
+			manual.AimTarget = closestEnemy.Position
 
 			// Fire
 			if prob(r, float64(bot.aggression*0.1)*probScale) {

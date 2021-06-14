@@ -741,7 +741,7 @@
 							angVelTarget,
 							directionTarget: localSprite.directionTarget,
 							altitudeTarget: localEntityData.subkind === 'submarine' ? altitudeTarget : undefined,
-							turretTarget: mousePosition,
+							aimTarget: mousePosition,
 						});
 
 						lastAltitudeTarget = altitudeTarget;
@@ -751,7 +751,7 @@
 						// NOTE: until the bug is fixed, must consider the case
 						// of a ship with an airborne aircraft upgrading into a
 						// ship without turrets/aircraft
-						send('aimTurrets', {
+						send('aim', {
 							target: mousePosition
 						});
 					}

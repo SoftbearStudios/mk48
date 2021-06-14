@@ -22,8 +22,8 @@ type (
 		PlayerID world.PlayerID `json:"playerID"`
 	}
 
-	// AimTurrets sets your ship's TurretTarget.
-	AimTurrets struct {
+	// Aim sets your ship's aim target  (for turrets, aircraft, etc.)
+	Aim struct {
 		Target world.Vec2f `json:"target"`
 	}
 
@@ -35,9 +35,8 @@ type (
 	// Fire fires an armament
 	Fire struct {
 		world.Guidance
-		PositionTarget world.Vec2f      `json:"positionTarget"`
-		Index          int              `json:"index"`
-		Type           world.EntityType `json:"type"`
+		PositionTarget world.Vec2f `json:"positionTarget"`
+		Index          int         `json:"index"` // Armament index
 	}
 
 	// InvalidInbound means invalid message type from client (possibly out of date).
@@ -52,7 +51,7 @@ type (
 		world.Guidance
 		AngularVelocityTarget *world.Angle   `json:"angVelTarget"` // angular velocity must be calculated on the server to avoid oscillations
 		AltitudeTarget        *float32       `json:"altitudeTarget"`
-		TurretTarget          world.Vec2f    `json:"turretTarget"`
+		AimTarget             world.Vec2f    `json:"aimTarget"`
 		EntityID              world.EntityID `json:"entityID"`
 	}
 
@@ -95,7 +94,7 @@ type (
 func init() {
 	registerInbound(
 		AddToTeam{},
-		AimTurrets{},
+		Aim{},
 		CreateTeam{},
 		Fire{},
 		Manual{},
@@ -353,13 +352,13 @@ func (data Upgrade) Process(h *Hub, _ Client, player *Player) {
 	})
 }
 
-func (data AimTurrets) Process(h *Hub, _ Client, player *Player) {
+func (data Aim) Process(h *Hub, _ Client, player *Player) {
 	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
 		}
 
-		entity.SetTurretTarget(data.Target)
+		entity.SetAimTarget(data.Target)
 		return
 	})
 }
@@ -462,7 +461,7 @@ func (data Manual) Process(h *Hub, c Client, player *Player) {
 			entity.SetAltitudeTarget(*data.AltitudeTarget)
 		}
 
-		entity.SetTurretTarget(data.TurretTarget)
+		entity.SetAimTarget(data.AimTarget)
 
 		return
 	})

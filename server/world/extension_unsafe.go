@@ -118,11 +118,11 @@ func (ext *unsafeExtension) setAltitudeTarget(a float32) {
 	ext.altTarget = a
 }
 
-func (ext *unsafeExtension) turretTarget() Vec2f {
+func (ext *unsafeExtension) aimTarget() Vec2f {
 	return ext.target
 }
 
-func (ext *unsafeExtension) setTurretTarget(target Vec2f) {
+func (ext *unsafeExtension) setAimTarget(target Vec2f) {
 	ext.target = target
 }
 

@@ -6,7 +6,7 @@ package world
 type safeExtension struct {
 	armaments       []Ticks // consumption of each armament
 	angles          []Angle // angle of each turret
-	target          Vec2f   // turret target position
+	target          Vec2f   // aim target position
 	alt             float32 // altitude (see entity.Altitude for meaning)
 	altTarget       float32 // desired altitude
 	spawnProtection Ticks   // remaining
@@ -54,11 +54,11 @@ func (ext *safeExtension) copyTurretAngles() {
 	ext.angles = copyAngles(ext.angles)
 }
 
-func (ext *safeExtension) turretTarget() Vec2f {
+func (ext *safeExtension) aimTarget() Vec2f {
 	return ext.target
 }
 
-func (ext *safeExtension) setTurretTarget(target Vec2f) {
+func (ext *safeExtension) setAimTarget(target Vec2f) {
 	ext.target = target
 }
 
