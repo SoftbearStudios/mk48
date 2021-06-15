@@ -2301,6 +2301,169 @@
 		"antiAircraft": 0.234,
 		"damage": 9.36
 	},
+	"movska": {
+		"label": "Movska",
+		"link": "https://en.wikipedia.org/wiki/Moskva-class_helicopter_carrier",
+		"kind": "boat",
+		"subkind": "carrier",
+		"level": 7,
+		"length": 189,
+		"width": 34,
+		"speed": 14.66167,
+		"sensors": {
+			"visual": {
+				"range": 1067
+			},
+			"radar": {
+				"range": 1378
+			},
+			"sonar": {
+				"range": 1189
+			}
+		},
+		"armaments": [
+			{
+				"type": "ka25",
+				"positionForward": -23.535,
+				"positionSide": -7.74318,
+				"external": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -38.6508,
+				"positionSide": 8.0173,
+				"external": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -51.5997,
+				"positionSide": 0.800947,
+				"external": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -64.7966,
+				"positionSide": -7.39509,
+				"external": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -84.7862,
+				"positionSide": 2.81806,
+				"external": true
+			},
+			{
+				"type": "set65",
+				"positionForward": -3.02179,
+				"positionSide": 10.358,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -3.02179,
+				"positionSide": -10.358,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -3.62179,
+				"positionSide": 10.358,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -3.62179,
+				"positionSide": -10.358,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -4.22179,
+				"positionSide": 10.358,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -4.22179,
+				"positionSide": -10.358,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -4.82179,
+				"positionSide": 10.358,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -4.82179,
+				"positionSide": -10.358,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -5.42179,
+				"positionSide": 10.358,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -5.42179,
+				"positionSide": -10.358,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": 1.30837,
+				"external": true,
+				"turret": 0
+			},
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": -1.30837,
+				"external": true,
+				"turret": 0
+			},
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": 1.30837,
+				"external": true,
+				"turret": 1
+			},
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": -1.30837,
+				"external": true,
+				"turret": 1
+			}
+		],
+		"turrets": [
+			{
+				"type": "shtorm",
+				"positionForward": 50.3038,
+				"positionSide": 0,
+				"angle": 0
+			},
+			{
+				"type": "shtorm",
+				"positionForward": 28.689,
+				"positionSide": 0,
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
+			}
+		],
+		"antiAircraft": 0.155,
+		"damage": 6.3
+	},
 	"ohio": {
 		"label": "Ohio",
 		"link": "https://en.wikipedia.org/wiki/Ohio-class_submarine",
@@ -4088,6 +4251,35 @@
 		"armaments": [],
 		"turrets": []
 	},
+	"ka25": {
+		"label": "KA-25",
+		"link": "https://en.wikipedia.org/wiki/Kamov_Ka-25",
+		"kind": "weapon",
+		"subkind": "aircraft",
+		"level": 5,
+		"length": 15.8,
+		"width": 15.8,
+		"speed": 53.50225,
+		"sensors": {
+			"visual": {
+				"range": 547.4
+			}
+		},
+		"armaments": [
+			{
+				"type": "82r",
+				"positionSide": 1
+			},
+			{
+				"type": "82r",
+				"positionSide": -1
+			}
+		],
+		"limited": true,
+		"lifespan": 93.4540136162498,
+		"reload": 10,
+		"turrets": []
+	},
 	"kingfisher": {
 		"label": "Kingfisher",
 		"link": "https://en.wikipedia.org/wiki/Vought_OS2U_Kingfisher",
@@ -4385,6 +4577,51 @@
 		"limited": true,
 		"lifespan": 66.57000701647874,
 		"reload": 10,
+		"turrets": []
+	},
+	"shtorm": {
+		"label": "Shtorm",
+		"link": "https://en.wikipedia.org/wiki/M-11_Shtorm",
+		"kind": "turret",
+		"subkind": "sam",
+		"length": 5.8,
+		"positionForward": 0.448823,
+		"width": 3.1265625,
+		"armaments": [
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": 1.30837,
+				"external": true
+			},
+			{
+				"type": "v611",
+				"angle": 0,
+				"positionForward": 0.14,
+				"positionSide": -1.30837,
+				"external": true
+			}
+		],
+		"turrets": []
+	},
+	"v611": {
+		"label": "Shtorm",
+		"link": "https://en.wikipedia.org/wiki/M-11_Shtorm",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 4,
+		"length": 6.15,
+		"width": 1.3453125,
+		"speed": 600,
+		"sensors": {
+			"radar": {
+				"range": 1012.3
+			}
+		},
+		"lifespan": 4.690393518518519,
+		"reload": 16,
+		"armaments": [],
 		"turrets": []
 	},
 	"mk70": {

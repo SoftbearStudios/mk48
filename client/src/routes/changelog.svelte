@@ -15,9 +15,10 @@
 
 	<h2>2021</h2>
 
-	<h3>6/13/2021</h3>
+	<h3>6/14/2021</h3>
 
 	<ul>
+		<li>Add "Movksa" helicopter carrier and associated aircraft/weapons.</li>
 		<li>Complete UI redesign.</li>
 		<li>Add ability deny team join requests.</li>
 		<li>Improve weapon guidance.</li>
