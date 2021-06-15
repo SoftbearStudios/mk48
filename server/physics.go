@@ -276,7 +276,11 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		switch {
 		case boat != nil && collectible != nil:
 			// Players can collect the collectibles they paid...
-			boat.Owner.Score += int(collectible.Data().Level)
+			score := int(collectible.Data().Level)
+			if boat.Data().SubKind == world.EntitySubKindTanker && collectible.EntityType == world.EntityTypeBarrel {
+				score *= 2
+			}
+			boat.Owner.Score += score
 
 			if boat.Owner != collectible.Owner {
 				// ...but they don't repair or replenish them to avoid abuse
@@ -418,8 +422,15 @@ func (h *Hub) boatDied(e *world.Entity) {
 
 	for i := 0; i < int(loot); i++ {
 		lootType := world.EntityTypeScrap
-		if data.SubKind == world.EntitySubKindPirate && rand.Float32() < 0.5 {
-			lootType = world.EntityTypeCoin
+		switch data.SubKind {
+		case world.EntitySubKindPirate:
+			if rand.Float32() < 0.5 {
+				lootType = world.EntityTypeCoin
+			}
+		case world.EntitySubKindTanker:
+			if rand.Float32() < 0.5 {
+				lootType = world.EntityTypeBarrel
+			}
 		}
 
 		crate := &world.Entity{

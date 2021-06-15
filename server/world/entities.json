@@ -2841,6 +2841,25 @@
 		"damage": 2.557,
 		"turrets": []
 	},
+	"tanker": {
+		"label": "Tanker",
+		"link": "https://en.wikipedia.org/wiki/Oil_tanker",
+		"kind": "boat",
+		"subkind": "tanker",
+		"level": 5,
+		"length": 179,
+		"width": 30.94,
+		"speed": 8.333333,
+		"sensors": {
+			"visual": {
+				"range": 1037
+			}
+		},
+		"armaments": [],
+		"antiAircraft": 0.147,
+		"damage": 5.966666666666667,
+		"turrets": []
+	},
 	"town": {
 		"label": "Town",
 		"link": "https://en.wikipedia.org/wiki/Town-class_cruiser_(1936)",

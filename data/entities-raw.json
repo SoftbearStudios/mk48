@@ -1515,6 +1515,20 @@
 			}
 		]
 	},
+	"tanker": {
+		"label": "Tanker",
+		"link": "https://en.wikipedia.org/wiki/Oil_tanker",
+		"kind": "boat",
+		"subkind": "tanker",
+		"level": 5,
+		"length": 179,
+		"width": 30.940,
+		"speed": 8.333333,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": []
+	},
 	"town": {
 		"label": "Town",
 		"link": "https://en.wikipedia.org/wiki/Town-class_cruiser_(1936)",

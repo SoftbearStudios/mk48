@@ -158,6 +158,7 @@ func init() {
 	EntitySubKindShell = ParseEntitySubKind("shell")
 	EntitySubKindSonar = ParseEntitySubKind("sonar")
 	EntitySubKindSubmarine = ParseEntitySubKind("submarine")
+	EntitySubKindTanker = ParseEntitySubKind("tanker")
 
 	EntityTypeBarrel = ParseEntityType("barrel")
 	EntityTypeCoin = ParseEntityType("coin")
@@ -207,6 +208,7 @@ var (
 	EntitySubKindShell       EntitySubKind
 	EntitySubKindSonar       EntitySubKind
 	EntitySubKindSubmarine   EntitySubKind
+	EntitySubKindTanker      EntitySubKind
 	EntitySubKindTorpedo     EntitySubKind
 
 	EntityTypeBarrel      EntityType

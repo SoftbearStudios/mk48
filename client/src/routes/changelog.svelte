@@ -19,6 +19,7 @@
 
 	<ul>
 		<li>Add "Movksa" helicopter carrier and associated aircraft/weapons.</li>
+		<li>Add "Tanker" oil tanker.</li>
 		<li>Complete UI redesign.</li>
 		<li>Add ability deny team join requests.</li>
 		<li>Improve weapon guidance.</li>

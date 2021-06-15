@@ -70,6 +70,10 @@
 				"submarine": {
 					"hint": "Your boat can deliver weapons from underwater!",
 					"name": "submarine"
+				},
+				"tanker": {
+					"hint": "Your boat gets double the value from oil barrels!",
+					"name": "oil tanker"
 				}
 			},
 			"decoy": {
@@ -313,6 +317,10 @@
 				"submarine": {
 					"hint": "¡Tu barco puede lanzar armas desde el agua!",
 					"name": "submarina"
+				},
+				"tanker": {
+					"hint": "¡Su barco obtiene el doble del valor de los barriles de petróleo!",
+					"name": "petrolero"
 				}
 			},
 			"decoy": {
@@ -556,6 +564,10 @@
 				"submarine": {
 					"hint": "Ваша лодка может доставлять оружие из-под воды!",
 					"name": "подводная лодка"
+				},
+				"tanker": {
+					"hint": "Ваша лодка получает вдвое большую ценность из-за нефтяных бочек!",
+					"name": "нефтяной танкер"
 				}
 			},
 			"decoy": {
@@ -799,6 +811,10 @@
 				"submarine": {
 					"hint": "Votre bateau peut livrer des armes sous l'eau!",
 					"name": "sous-marin"
+				},
+				"tanker": {
+					"hint": "Votre bateau obtient le double de la valeur des barils de pétrole!",
+					"name": "pétrolier"
 				}
 			},
 			"decoy": {
@@ -1042,6 +1058,10 @@
 				"submarine": {
 					"hint": "你的船可以从水下运送武器!",
 					"name": "潜艇"
+				},
+				"tanker": {
+					"hint": "您的船从油桶中获得两倍的价值!",
+					"name": "油船"
 				}
 			},
 			"decoy": {
@@ -1235,8 +1255,8 @@
 		"kind": {
 			"boat": {
 				"battleship": {
-					"hint": "Bork is a strong bork",
-					"name": "borkship"
+					"hint": "Bork is the strongest bork",
+					"name": "borkererer"
 				},
 				"carrier": {
 					"hint": "Bork launches airborks!",
@@ -1248,7 +1268,7 @@
 				},
 				"cruiser": {
 					"hint": "Bork is even gooder at borking other borks!",
-					"name": "cruise bork"
+					"name": "borkerer"
 				},
 				"destroyer": {
 					"hint": "Bork is good at borking other borks!",
@@ -1284,6 +1304,10 @@
 				"submarine": {
 					"hint": "Bork can bork other borks from underwater!",
 					"name": "underwater bork"
+				},
+				"tanker": {
+					"hint": "Bork good at drinking oil!",
+					"name": "oil borker"
 				}
 			},
 			"decoy": {
@@ -1402,6 +1426,9 @@
 				},
 				"full": "Team borked",
 				"label": "Borks"
+			},
+			"upgrade": {
+				"labelPrefix": "Bork to level"
 			}
 		}
 	}

@@ -109,10 +109,11 @@
 				<span class='consumption' title={(group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`) + (group.deployed === 0 ? '' : ` (${group.deployed} still deployed)`)}>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
-		{#if entityData[type].subkind === 'ram'}
-			<small>{$t('kind.boat.ram.hint')}</small>
-		{:else if entityData[type].subkind === 'submarine'}
+		{#if entityData[type].subkind === 'submarine'}
 			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>{$t('panel.ship.action.surface.label')}</div>
+		{/if}
+		{#if !armaments || armaments.length === 0}
+			<small>{$t(`kind.boat.${entityData[type].subkind}.hint`)}</small>
 		{/if}
 	</Section>
 </div>
