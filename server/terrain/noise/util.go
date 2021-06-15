@@ -3,6 +3,16 @@
 
 package noise
 
+func clamp(f, min, max float64) float64 {
+	if f < min {
+		return min
+	}
+	if f > max {
+		return max
+	}
+	return f
+}
+
 func clampToByte(f float64) byte {
 	if f < 0 {
 		return 0
@@ -11,4 +21,11 @@ func clampToByte(f float64) byte {
 		return 255
 	}
 	return byte(f)
+}
+
+func max(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }
