@@ -2842,7 +2842,7 @@
 		"turrets": []
 	},
 	"tanker": {
-		"label": "Tanker",
+		"label": "Oil Tanker",
 		"link": "https://en.wikipedia.org/wiki/Oil_tanker",
 		"kind": "boat",
 		"subkind": "tanker",
@@ -4271,7 +4271,7 @@
 		"turrets": []
 	},
 	"ka25": {
-		"label": "KA-25",
+		"label": "Ka-25",
 		"link": "https://en.wikipedia.org/wiki/Kamov_Ka-25",
 		"kind": "weapon",
 		"subkind": "aircraft",

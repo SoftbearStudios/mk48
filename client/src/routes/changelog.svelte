@@ -18,7 +18,7 @@
 	<h3>6/14/2021</h3>
 
 	<ul>
-		<li>Add "Movksa" helicopter carrier and associated aircraft/weapons.</li>
+		<li>Add "Movska" helicopter carrier and associated aircraft/weapons.</li>
 		<li>Add "Tanker" oil tanker.</li>
 		<li>Complete UI redesign.</li>
 		<li>Add ability deny team join requests.</li>

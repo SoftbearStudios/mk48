@@ -73,7 +73,7 @@
 				},
 				"tanker": {
 					"hint": "Your boat gets double the value from oil barrels!",
-					"name": "oil tanker"
+					"name": "tanker"
 				}
 			},
 			"decoy": {
