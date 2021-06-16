@@ -67,8 +67,9 @@
 	</ol>
 
 	<p>Once you earn enough points, you are able to <b>upgrade</b> your ship to the
-	next level. The upgrade choices are shown in the top left corner of the
-	screen, and are greyed out until they are available.</p>
+	next level. The upgrade choices are shown in top-middle of  the screen when an
+	upgrade is available. Be careful when upgrading, as becoming a larger
+	ship may lead to crashing into land or a reduction in mobility if the water is too shallow.</p>
 
 	<p>Enemies are more likely to detect larger ships. However, some modern ships have
 	a property known as <b>stealth</b> to help you evade detection.</p>
