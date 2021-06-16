@@ -132,7 +132,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 					}
 				}
 			} else if boat {
-				belowKeel := entity.Altitude()*altitudeScale - data.Draft - terrain.AltitudeAt(entity.Position)
+				belowKeel := entity.BelowKeel(terrain)
 
 				if belowKeel < 0 {
 					repairElligible = false
@@ -268,6 +268,11 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 func (entity *Entity) Hash() float32 {
 	const hashSize = 64
 	return float32(entity.EntityID&(hashSize-1)) * (1.0 / hashSize)
+}
+
+// Returns meters below keel
+func (entity *Entity) BelowKeel(terrain Terrain) float32 {
+	return entity.Altitude()*altitudeScale - entity.Data().Draft - terrain.AltitudeAt(entity.Position)
 }
 
 // Returns whether copied turret angles

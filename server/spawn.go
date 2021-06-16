@@ -139,8 +139,8 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 			entity.Position = center.Add(position)
 			entity.Direction = world.RandomAngle()
 
-			radius = min(radius*1.1, h.worldRadius*0.8)
-			threshold = 0.25 + threshold*0.75 // Approaches 1.0
+			radius = min(radius*1.1, h.worldRadius*0.9)
+			threshold = 0.15 + threshold*0.85 // Approaches 1.0
 
 			governor++
 			if governor > 128 {
@@ -153,7 +153,7 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		entity.DirectionTarget = entity.Direction
 	}
 
-	if !h.canSpawn(entity, 2) {
+	if !h.canSpawn(entity, 1) {
 		return world.EntityIDInvalid
 	}
 
@@ -185,6 +185,15 @@ func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
 
 		// Simply perform a terrain check against the current position (no slow conservative check)
 		return !h.terrain.Collides(entity, 0)
+	case world.EntityKindBoat:
+		// Be picky about spawning in appropriate depth water
+		// unless threshold is very low
+		if threshold > 1.5 {
+			belowKeel := entity.BelowKeel(h.terrain)
+			if belowKeel < 0 || belowKeel > 5 {
+				return false
+			}
+		}
 	}
 
 	// Slow, conservative check
