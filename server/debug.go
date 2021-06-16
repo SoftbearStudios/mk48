@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/SoftbearStudios/mk48/server/terrain"
-	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"image/png"
 	"runtime"
@@ -145,7 +144,7 @@ func (h *Hub) SnapshotTerrain() {
 		return
 	}
 
-	img := terrain.Render(h.terrain, compressed.Size/4)
+	img := h.terrain.Render(terrain.Size / 4)
 	var buf bytes.Buffer
 	err := png.Encode(&buf, img)
 	if err != nil {

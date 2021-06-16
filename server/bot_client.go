@@ -4,7 +4,6 @@
 package server
 
 import (
-	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/chewxy/math32"
 	"io"
@@ -355,7 +354,7 @@ func (bot *BotClient) isLandInDirection(pos world.Vec2f, length float32, angle w
 		return true
 	}
 
-	return terrain.LandAtPos(bot.Hub.terrain, inFront)
+	return bot.Hub.terrain.LandAt(inFront)
 }
 
 func randomType(r *rand.Rand, entityTypes []world.EntityType) world.EntityType {

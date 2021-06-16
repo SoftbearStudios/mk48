@@ -18,7 +18,7 @@ func (h *Hub) Physics(ticks world.Ticks) {
 	timeDeltaSeconds := min(ticks.Float(), 1.0)
 
 	{
-		terrain := world.Collider(h.terrain)
+		terrain := world.Terrain(h.terrain)
 
 		var outputWait sync.WaitGroup
 

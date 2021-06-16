@@ -18,7 +18,7 @@ var colors = [...]ColorVec{
 	Gray(220),
 }
 
-func Render(t Terrain, size int) image.Image {
+func (t *Terrain) Render(size int) image.Image {
 	o := float32(-size) * 0.5 * Scale
 	s := float32(size * Scale)
 	data := t.At(world.AABBFrom(o, o, s, s))

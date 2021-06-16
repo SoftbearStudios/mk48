@@ -26,7 +26,7 @@ type Entity struct {
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
 // by an amount of time. It only modifies itself so each one can be processed by a different goroutine.
 // seconds cannot be > 1.0.
-func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
+func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) (die bool) {
 	data := entity.Data()
 
 	if lifespan := data.Lifespan; lifespan != 0 {
@@ -127,7 +127,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
 		// Test collisions with stationary objects
-		if collider != nil && collider.Collides(entity, seconds) {
+		if terrain != nil && terrain.Collides(entity, seconds) {
 			if entity.Data().Kind != EntityKindBoat {
 				return true
 			}

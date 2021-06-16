@@ -6,7 +6,6 @@ package server
 import (
 	"fmt"
 	"github.com/SoftbearStudios/mk48/server/terrain"
-	"github.com/SoftbearStudios/mk48/server/terrain/compressed"
 	"github.com/SoftbearStudios/mk48/server/terrain/noise"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/SoftbearStudios/mk48/server/world/sector"
@@ -22,7 +21,7 @@ const (
 	spawnPeriod       = leaderboardPeriod
 	updatePeriod      = world.TickPeriod
 
-	// Must spawn atleast this many bots per real player,
+	// Must spawn at least this many bots per real player,
 	// to give low-level ships some easier targets
 	minBotRatio = 0.5
 
@@ -44,7 +43,7 @@ type (
 		// World state
 		world       *sector.World
 		worldRadius float32 // interpolated
-		terrain     terrain.Terrain
+		terrain     *terrain.Terrain
 		clients     ClientList // implemented as double-linked list
 		despawn     ClientList // clients that are being removed
 		teams       map[world.TeamID]*Team
@@ -89,7 +88,7 @@ func NewHub(options HubOptions) *Hub {
 	return &Hub{
 		cloud:             options.Cloud,
 		world:             sector.New(radius),
-		terrain:           compressed.New(noise.NewDefault()),
+		terrain:           terrain.New(noise.NewDefault()),
 		worldRadius:       radius,
 		teams:             make(map[world.TeamID]*Team),
 		minPlayers:        options.MinClients,
@@ -116,7 +115,7 @@ func (h *Hub) Register(client Client) {
 	}
 }
 
-func (h *Hub) GetTerrain() terrain.Terrain {
+func (h *Hub) GetTerrain() *terrain.Terrain {
 	return h.terrain
 }
 
@@ -149,7 +148,7 @@ func (h *Hub) Run() {
 		if r := recover(); r != nil {
 			panic(r)
 		}
-		println("That's it, I'm out -hub") // Don't waste time debugging hub exists
+		println("That's it, I'm out -hub") // Don't waste time debugging hub exits
 		os.Exit(1)
 	}()
 

@@ -50,6 +50,7 @@ type (
 		Speed        Velocity      `json:"speed"`
 		Length       float32       `json:"length"`
 		Width        float32       `json:"width"`
+		Draft        float32       `json:"draft"`
 		Radius       float32       `json:"-"`
 		InvSize      float32       `json:"-"`
 		Damage       float32       `json:"damage"`       // health of ship, or damage dealt by weapon
