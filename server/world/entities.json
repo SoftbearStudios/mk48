@@ -78,6 +78,7 @@
 		"level": 5,
 		"length": 113.3,
 		"width": 20.137,
+		"draft": 9.7,
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
@@ -182,6 +183,7 @@
 		"level": 4,
 		"length": 154,
 		"width": 20,
+		"draft": 9.3,
 		"speed": 17,
 		"stealth": 0.25,
 		"sensors": {
@@ -377,6 +379,7 @@
 		"level": 6,
 		"length": 241.6,
 		"width": 36,
+		"draft": 9.3,
 		"speed": 15.438478,
 		"sensors": {
 			"visual": {
@@ -525,6 +528,7 @@
 		"level": 4,
 		"length": 99,
 		"width": 16.5,
+		"draft": 6.4,
 		"speed": 8,
 		"sensors": {
 			"visual": {
@@ -556,6 +560,7 @@
 		"level": 6,
 		"length": 265.8,
 		"width": 42.5695,
+		"draft": 7,
 		"speed": 16.83333,
 		"sensors": {
 			"visual": {
@@ -720,6 +725,7 @@
 		"level": 1,
 		"length": 35,
 		"width": 6.35,
+		"draft": 1.45,
 		"speed": 15.9477,
 		"sensors": {
 			"visual": {
@@ -825,6 +831,7 @@
 		"level": 3,
 		"length": 114.8,
 		"width": 12,
+		"draft": 5.3,
 		"speed": 18.777,
 		"sensors": {
 			"visual": {
@@ -1052,6 +1059,7 @@
 		"level": 6,
 		"length": 115,
 		"width": 17.5,
+		"draft": 3.9,
 		"speed": 24.1789,
 		"stealth": 0.5,
 		"sensors": {
@@ -1219,6 +1227,7 @@
 		"level": 1,
 		"length": 18.85,
 		"width": 3.5,
+		"draft": 0.82,
 		"speed": 27.26557,
 		"sensors": {
 			"visual": {
@@ -1255,6 +1264,7 @@
 		"level": 3,
 		"length": 98.4,
 		"width": 8.2,
+		"draft": 8.5,
 		"speed": 8.7455,
 		"sensors": {
 			"visual": {
@@ -1325,6 +1335,7 @@
 		"level": 3,
 		"length": 52.8143,
 		"width": 13.6162,
+		"draft": 5,
 		"speed": 4,
 		"armaments": [
 			{
@@ -1416,6 +1427,7 @@
 		"level": 5,
 		"length": 163,
 		"width": 17.4,
+		"draft": 6.5,
 		"speed": 15.43334,
 		"stealth": 0.5,
 		"sensors": {
@@ -1590,6 +1602,7 @@
 		"level": 1,
 		"length": 25.4,
 		"width": 6.24,
+		"draft": 1.24,
 		"speed": 22.6,
 		"sensors": {
 			"visual": {
@@ -1686,6 +1699,7 @@
 		"level": 4,
 		"length": 169.1,
 		"width": 17.1,
+		"draft": 5.8,
 		"speed": 16.71945,
 		"sensors": {
 			"visual": {
@@ -1898,6 +1912,7 @@
 		"level": 3,
 		"length": 95.8,
 		"width": 10.8,
+		"draft": 2.38,
 		"speed": 8.5,
 		"sensors": {
 			"visual": {
@@ -1981,6 +1996,7 @@
 		"level": 2,
 		"length": 85.3,
 		"width": 7.9,
+		"draft": 2.4,
 		"speed": 18.52,
 		"sensors": {
 			"visual": {
@@ -2137,6 +2153,7 @@
 		"level": 7,
 		"length": 280.8,
 		"width": 36.93,
+		"draft": 10.97,
 		"speed": 14.404,
 		"sensors": {
 			"visual": {
@@ -2309,6 +2326,7 @@
 		"level": 7,
 		"length": 189,
 		"width": 34,
+		"draft": 7.7,
 		"speed": 14.66167,
 		"sensors": {
 			"visual": {
@@ -2332,12 +2350,6 @@
 				"type": "ka25",
 				"positionForward": -38.6508,
 				"positionSide": 8.0173,
-				"external": true
-			},
-			{
-				"type": "ka25",
-				"positionForward": -51.5997,
-				"positionSide": 0.800947,
 				"external": true
 			},
 			{
@@ -2472,6 +2484,7 @@
 		"level": 6,
 		"length": 170,
 		"width": 13,
+		"draft": 10.8,
 		"speed": 12.8611,
 		"sensors": {
 			"visual": {
@@ -2616,6 +2629,7 @@
 		"level": 1,
 		"length": 36.9,
 		"width": 5.5,
+		"draft": 1.25,
 		"speed": 16,
 		"sensors": {
 			"visual": {
@@ -2635,6 +2649,7 @@
 		"level": 3,
 		"length": 38.6,
 		"width": 7.64,
+		"draft": 1.73,
 		"speed": 21.6067,
 		"sensors": {
 			"visual": {
@@ -2719,6 +2734,7 @@
 		"level": 1,
 		"length": 23,
 		"width": 6.07,
+		"draft": 1.37,
 		"speed": 21.09,
 		"sensors": {
 			"visual": {
@@ -2771,6 +2787,7 @@
 		"level": 4,
 		"length": 76.71,
 		"width": 9.65,
+		"draft": 4.825,
 		"speed": 16.976667,
 		"sensors": {
 			"visual": {
@@ -2850,6 +2867,7 @@
 		"length": 179,
 		"width": 30.94,
 		"speed": 8.333333,
+		"draft": 11.6,
 		"sensors": {
 			"visual": {
 				"range": 1037
@@ -2868,6 +2886,7 @@
 		"level": 5,
 		"length": 180.3,
 		"width": 20.77676,
+		"draft": 6.28,
 		"speed": 16.59084,
 		"sensors": {
 			"visual": {
@@ -3104,6 +3123,7 @@
 		"level": 2,
 		"length": 67.1,
 		"width": 6.2,
+		"draft": 4.74,
 		"speed": 9.06,
 		"sensors": {
 			"visual": {
@@ -3183,6 +3203,7 @@
 		"level": 5,
 		"length": 72.7,
 		"width": 10.4,
+		"draft": 2.4,
 		"speed": 18.00556,
 		"stealth": 0.75,
 		"sensors": {
@@ -3354,6 +3375,7 @@
 		"level": 7,
 		"length": 130,
 		"width": 19.8046875,
+		"draft": 10,
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
@@ -3543,6 +3565,7 @@
 		"level": 2,
 		"length": 57,
 		"width": 21.15234375,
+		"draft": 1.6,
 		"speed": 28.29446,
 		"sensors": {
 			"visual": {
@@ -3683,6 +3706,7 @@
 		"level": 6,
 		"length": 190,
 		"width": 24.6,
+		"draft": 8.4,
 		"speed": 15.43333,
 		"stealth": 0.75,
 		"sensors": {
