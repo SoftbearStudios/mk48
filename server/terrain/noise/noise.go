@@ -53,7 +53,7 @@ func (g *Generator) Generate(px, py, width, height int) []byte {
 			x := (float64(i) + offX) * terrain.Scale
 			y := (float64(j) + offY) * terrain.Scale
 
-			h := g.landHi.Noise2D(x*frequency, y*frequency)*250 + terrain.OceanLevel - 50
+			h := g.landHi.Noise2D(x*frequency, y*frequency)*250 + terrain.SandLevel - 50
 
 			// Zone is very low frequency
 			zone := g.landLo.Noise2D(x*zoneFrequency, y*zoneFrequency)*2.0 + 0.4
@@ -62,7 +62,7 @@ func (g *Generator) Generate(px, py, width, height int) []byte {
 			}
 			h *= zone
 
-			depthFloor := clamp((g.waterLo.Noise2D(x*zoneFrequency, y*zoneFrequency)+0.3)*3, 0, 1) * terrain.OceanLevel
+			depthFloor := clamp((g.waterLo.Noise2D(x*zoneFrequency, y*zoneFrequency)+0.3)*4, 0, 1) * terrain.SandLevel
 
 			buf[i+j*width] = clampToByte(max(h, depthFloor))
 		}

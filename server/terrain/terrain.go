@@ -128,9 +128,9 @@ func (t *Terrain) Repair() {
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
 	// -6 is ludge offset to make math line up with client
-	threshold := byte(OceanLevel) - 6
+	threshold := byte(SandLevel)
 	if entity.Altitude() > 0 {
-		threshold = SandLevel
+		threshold = GrassLevel
 	}
 
 	normal := entity.Direction.Vec2f()
@@ -161,12 +161,12 @@ func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 
 	// Not worth doing multiple terrain samples for small, slow moving entities
 	if dimensions.X <= Scale/5 && dimensions.Y <= Scale/5 {
-		return t.AtPos(entity.Position) > threshold
+		return t.AtPos(entity.Position) >= threshold
 	}
 
 	for l := -dimensions.X; l <= dimensions.X; l += dx {
 		for w := -dimensions.Y; w <= dimensions.Y; w += dy {
-			if t.AtPos(position.AddScaled(normal, l).AddScaled(tangent, w)) > threshold {
+			if t.AtPos(position.AddScaled(normal, l).AddScaled(tangent, w)) >= threshold {
 				return true
 			}
 		}
@@ -244,10 +244,10 @@ func (t *Terrain) Sculpt(pos world.Vec2f, amount float32) {
 	// Set 2x2 grid
 	// 00 10
 	// 01 11
-	t.set(fx, fy, clampToGrassByte(float32(t.at(fx, fy)+0b0011)+amount*(2-delta.X-delta.Y)))
-	t.set(cx, fy, clampToGrassByte(float32(t.at(cx, fy)+0b0011)+amount*(1+delta.X-delta.Y)))
-	t.set(fx, cy, clampToGrassByte(float32(t.at(fx, cy)+0b0011)+amount*(1-delta.X+delta.Y)))
-	t.set(cx, cy, clampToGrassByte(float32(t.at(cx, cy)+0b0011)+amount*(delta.X+delta.Y)))
+	t.set(fx, fy, clampToByte(float32(t.at(fx, fy)+0b0011)+amount*(2-delta.X-delta.Y)))
+	t.set(cx, fy, clampToByte(float32(t.at(cx, fy)+0b0011)+amount*(1+delta.X-delta.Y)))
+	t.set(fx, cy, clampToByte(float32(t.at(fx, cy)+0b0011)+amount*(1-delta.X+delta.Y)))
+	t.set(cx, cy, clampToByte(float32(t.at(cx, cy)+0b0011)+amount*(delta.X+delta.Y)))
 }
 
 // at gets the height of the terrain given x and y unsigned terrain coords.

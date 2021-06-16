@@ -9,7 +9,6 @@ import (
 
 const (
 	altitudeScale   float32 = 50 // 1 unit of altitude is this many meters
-	keelClearance   float32 = 5  // full speed if this many meters below keel
 	spawnProtection Ticks   = 10 * TicksPerSecond
 )
 
@@ -76,7 +75,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		}
 	} else if data.SubKind == EntitySubKindSubmarine {
 		ext := &entity.Owner.ext
-		minAltitude := clamp((terrain.AltitudeAt(entity.Position)+data.Draft+keelClearance)/altitudeScale, -1, 0)
+		minAltitude := clamp((terrain.AltitudeAt(entity.Position)+data.Draft)/altitudeScale, -1, 0)
 		targetAltitude := clamp(ext.altitudeTarget(), minAltitude, 0)
 		altitudeSpeed := float32(0.25)
 		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
@@ -153,7 +152,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 			} else {
 				belowKeel := entity.Altitude()*altitudeScale - data.Draft - terrain.AltitudeAt(entity.Position)
 
-				speedFactor := mapRanges(belowKeel, -5, keelClearance, 0.5, 1, true)
+				speedFactor := mapRanges(belowKeel, -5, 0, 0.5, 1, true)
 
 				//fmt.Println(terrain.AltitudeAt(entity.Position), belowKeel, speedFactor)
 				velocityClamp = Velocity(speedFactor * float32(maxSpeed))

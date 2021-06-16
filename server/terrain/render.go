@@ -10,12 +10,10 @@ import (
 type ColorVec [3]float32
 
 var colors = [...]ColorVec{
-	RGB(0, 50, 115),
-	RGB(0, 75, 130),
-	RGB(194, 178, 128),
-	RGB(90, 180, 30),
-	RGB(105, 110, 115),
-	Gray(220),
+	RGB(0, 50, 115),    // Deep water
+	RGB(0, 75, 130),    // Shallow water
+	RGB(194, 178, 128), // Sand
+	RGB(90, 180, 30),   // Grass
 }
 
 func (t *Terrain) Render(size int) image.Image {
@@ -34,16 +32,15 @@ func (t *Terrain) Render(size int) image.Image {
 
 			h := raw[i+j*width]
 			switch {
-			case h <= OceanLevel:
-				c = colors[0].Lerp(colors[1], clamp(float32(h)/float32(OceanLevel)))
-			case h <= SandLevel:
+			case h < SandLevel:
+				// Water
+				c = colors[0].Lerp(colors[1], clamp(float32(h)/float32(SandLevel)))
+			case h < GrassLevel:
+				// Sand
 				c = colors[2]
-			case h <= GrassLevel:
-				c = colors[2].Lerp(colors[3], clamp(float32(h-SandLevel)*0.05))
-			case h <= RockLevel:
-				c = colors[3].Lerp(colors[4], clamp(float32(h-GrassLevel)*0.1))
 			default:
-				c = colors[4].Lerp(colors[5], clamp(float32(h-RockLevel)*0.07))
+				// Grass
+				c = colors[2].Lerp(colors[3], clamp(float32(h-GrassLevel)*0.05))
 			}
 
 			img.Set(i, j, c.Color())

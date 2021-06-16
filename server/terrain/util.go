@@ -7,12 +7,12 @@ import (
 	"github.com/SoftbearStudios/mk48/server/world"
 )
 
-func clampToGrassByte(f float32) byte {
+func clampToByte(f float32) byte {
 	if f < 0 {
 		return 0
 	}
-	if f > GrassLevel {
-		return GrassLevel
+	if f > 255 {
+		return 255
 	}
 	return byte(f)
 }
