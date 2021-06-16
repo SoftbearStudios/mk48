@@ -127,7 +127,6 @@ func (t *Terrain) Repair() {
 // Collides returns if an entity collides with the terrain given a time step in seconds.
 func (t *Terrain) Collides(entity *world.Entity, seconds float32) bool {
 	data := entity.Data()
-	// -6 is ludge offset to make math line up with client
 	threshold := byte(SandLevel)
 	if entity.Altitude() > 0 {
 		threshold = GrassLevel

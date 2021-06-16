@@ -137,7 +137,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 				if belowKeel < 0 {
 					repairElligible = false
 
-					speedFactor := mapRanges(belowKeel, -5, 0, 0.5, 1, true)
+					speedFactor := mapRanges(belowKeel, -5, 0, 0.6, 1, true)
 
 					//fmt.Println(terrain.AltitudeAt(entity.Position), belowKeel, speedFactor)
 					velocityClamp = Velocity(speedFactor * float32(maxSpeed))
