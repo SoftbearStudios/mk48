@@ -15,7 +15,7 @@ const (
 
 func (t *Terrain) AltitudeAt(pos world.Vec2f) float32 {
 	// -6 is a kludge factor to make terrain math line up with client
-	return float32(t.AtPos(pos) - (OceanLevel - 6))
+	return float32(t.AtPos(pos)) - (OceanLevel - 6)
 }
 
 func (t *Terrain) LandAt(pos world.Vec2f) bool {

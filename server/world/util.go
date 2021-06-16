@@ -48,6 +48,17 @@ func square(a float32) float32 {
 	return a * a
 }
 
+func mapRanges(number, oldMin, oldMax, newMin, newMax float32, clampToRange bool) float32 {
+	oldRange := oldMax - oldMin
+	newRange := newMax - newMin
+	numberNormalized := (number - oldMin) / oldRange
+	mapped := newMin + numberNormalized*newRange
+	if clampToRange {
+		mapped = clamp(mapped, newMin, newMax)
+	}
+	return mapped
+}
+
 func unixMillis() int64 {
 	return time.Now().UnixNano() / (time.Millisecond.Nanoseconds() / time.Nanosecond.Nanoseconds())
 }

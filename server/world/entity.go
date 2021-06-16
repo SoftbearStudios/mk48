@@ -7,7 +7,11 @@ import (
 	"github.com/chewxy/math32"
 )
 
-const spawnProtection Ticks = 10 * TicksPerSecond
+const (
+	altitudeScale   float32 = 50 // 1 unit of altitude is this many meters
+	keelClearance   float32 = 5  // full speed if this many meters below keel
+	spawnProtection Ticks   = 10 * TicksPerSecond
+)
 
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
 // Its size is 32 bytes for optimal efficiency.
@@ -72,7 +76,8 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		}
 	} else if data.SubKind == EntitySubKindSubmarine {
 		ext := &entity.Owner.ext
-		targetAltitude := clamp(ext.altitudeTarget(), -1, 0)
+		minAltitude := clamp((terrain.AltitudeAt(entity.Position)+data.Draft+keelClearance)/altitudeScale, -1, 0)
+		targetAltitude := clamp(ext.altitudeTarget(), minAltitude, 0)
 		altitudeSpeed := float32(0.25)
 		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
 		ext.setAltitude(entity.Altitude() + altitudeChange)
@@ -126,20 +131,35 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		}
 		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
-		// Test collisions with stationary objects
-		if terrain != nil && terrain.Collides(entity, seconds) {
-			if entity.Data().Kind != EntityKindBoat {
-				return true
-			}
-			entity.Velocity = entity.Velocity.ClampMagnitude(5 * MeterPerSecond)
-			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
-				if entity.KillIn(ticks, 4*TicksPerSecond) {
-					if owner := entity.Owner; owner != nil {
-						owner.DeathReason = DeathReason{Type: DeathTypeTerrain}
-					}
+		// Test collisions with terrain
+
+		if terrain != nil {
+			velocityClamp := Velocity(math32.MaxInt16)
+			if terrain.Collides(entity, seconds) {
+				if entity.Data().Kind != EntityKindBoat {
 					return true
 				}
+
+				velocityClamp = 5 * MeterPerSecond
+
+				if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
+					if entity.KillIn(ticks, 4*TicksPerSecond) {
+						if owner := entity.Owner; owner != nil {
+							owner.DeathReason = DeathReason{Type: DeathTypeTerrain}
+						}
+						return true
+					}
+				}
+			} else {
+				belowKeel := entity.Altitude()*altitudeScale - data.Draft - terrain.AltitudeAt(entity.Position)
+
+				speedFactor := mapRanges(belowKeel, -5, keelClearance, 0.5, 1, true)
+
+				//fmt.Println(terrain.AltitudeAt(entity.Position), belowKeel, speedFactor)
+				velocityClamp = Velocity(speedFactor * float32(maxSpeed))
 			}
+
+			entity.Velocity = entity.Velocity.ClampMagnitude(velocityClamp)
 		}
 	}
 
