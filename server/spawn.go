@@ -139,7 +139,7 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 			entity.Position = center.Add(position)
 			entity.Direction = world.RandomAngle()
 
-			radius = min(radius*1.1, h.worldRadius*0.9)
+			radius = min(radius*1.1, h.worldRadius*0.8)
 			threshold = 0.25 + threshold*0.75 // Approaches 1.0
 
 			governor++

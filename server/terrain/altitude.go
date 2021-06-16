@@ -18,8 +18,8 @@ const (
 
 // Returns altitude (in meters) above sea level
 func (t *Terrain) AltitudeAt(pos world.Vec2f) float32 {
-	// 0.5 is a kludge factor
-	return (float32(t.AtPos(pos)) - SandLevel) * 0.5
+	// 0.3 is a kludge factor
+	return (float32(t.AtPos(pos)) - SandLevel) * 0.3
 }
 
 // Returns whether the position lies in land (sand or higher)

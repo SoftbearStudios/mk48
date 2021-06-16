@@ -45,10 +45,10 @@ float noise(vec3 p){
 #define SAND 0.5
 #define GRASS 0.5608
 
-#define SHOAL (SAND - 0.01)
+#define SHOAL (SAND - 0.0075)
 #define DEEP 0.3
-#define SHARPNESS 1.1
-#define GRASS_SATURATION 2.25
+#define SHARPNESS 1.5
+#define GRASS_SATURATION 2.0
 
 void main() {
 	vec2 worldPos = vec2(iOffset.x + iScale.x * gl_FragCoord.x, iOffset.y - iScale.y * gl_FragCoord.y);
@@ -57,13 +57,13 @@ void main() {
 	float height = h + nHeight * 0.02 + 0.01;
 
 	if (height >= GRASS) {
-		gl_FragColor = vec4(mix(vec3(0.76, 0.7, 0.5), vec3(0.35, 0.6 + sin(worldPos.x * 0.075 + 0.5 * cos(worldPos.y * 0.05)) * 0.005, 0.25), min((height - GRASS) * GRASS_SATURATION / (1.0 - GRASS), 1.0)), 1.0); // Grass
+		gl_FragColor = vec4(mix(vec3(0.72, 0.65, 0.45), vec3(0.25, 0.6 + sin(worldPos.x * 0.075 + 0.5 * cos(worldPos.y * 0.05)) * 0.005, 0.2), min((height - GRASS) * GRASS_SATURATION / (1.0 - GRASS), 1.0)), 1.0); // Grass
 	} else if (height >= SAND) {
-		gl_FragColor = vec4(mix(vec3(0.63, 0.55, 0.4), vec3(0.76, 0.7, 0.5), min((height - SAND) * SHARPNESS / (GRASS - SAND), 1.0)), 1.0); // Sand
+		gl_FragColor = vec4(mix(vec3(0.67, 0.57, 0.44), vec3(0.72, 0.65, 0.45), min((height - SAND) * SHARPNESS / (GRASS - SAND), 1.0)), 1.0); // Sand
 	} else if (height > SHOAL) {
-		gl_FragColor = vec4(mix(vec3(0.0, 0.3, 0.5), vec3(0.63, 0.55, 0.4), (height - SHOAL) / (SAND - SHOAL)), 1.0); // Water to sand
+		gl_FragColor = vec4(mix(vec3(0.0, 0.3, 0.5), vec3(0.67, 0.57, 0.44), (height - SHOAL) / (SAND - SHOAL)), 1.0); // Water to sand
 	} else {
-		gl_FragColor = vec4(mix(vec3(0.0, 0.2, 0.45), vec3(0.0, 0.3, 0.5), max((height - DEEP) / (SHOAL - DEEP), -0.5)), 1.0); // Water
+		gl_FragColor = vec4(mix(vec3(0.0, 0.2, 0.45), vec3(0.0, 0.3, 0.5), max((height - DEEP) / (SHOAL - DEEP), -0.35)), 1.0); // Water
 	}
 
 	gl_FragColor = mix(gl_FragColor, vec4(1.0, 0.0, 0.0, 1.0), max(min((length(worldPos) - iBorderRange) * 0.5, 0.25), 0.0) * (mod(worldPos.x + worldPos.y + iTime * 20.0, 50.0) > 25.0 ? 1.0 : 0.75));

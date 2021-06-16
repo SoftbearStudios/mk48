@@ -37,7 +37,7 @@ func main() {
 func run() {
 	for i := int64(50); i < 200; i++ {
 		t := terrain.New(noise.New(i, 0, 0))
-		img := terrain.Render(t, terrain.Size)
+		img := t.Render(terrain.Size)
 
 		file, err := os.Create(fmt.Sprintf("out-%d.png", i))
 		if err != nil {

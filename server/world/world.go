@@ -18,7 +18,7 @@ const (
 	RadiusClearance = 1.1
 
 	// PlayerSpace Target space (square meters) per each
-	PlayerSpace   = 300000
+	PlayerSpace   = 350000
 	CrateSpace    = 30000
 	ObstacleSpace = 1000000
 )
