@@ -188,7 +188,8 @@ func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
 	case world.EntityKindBoat:
 		// Be picky about spawning in appropriate depth water
 		// unless threshold is very low
-		if threshold > 1.5 {
+		// Ignore if owner has a team or enough points to upgrade to bigger ship
+		if threshold > 1.5 && (entity.Owner == nil || (entity.Owner.TeamID == world.TeamIDInvalid && entity.Owner.Score < world.LevelToScore(2))) {
 			belowKeel := entity.BelowKeel(h.terrain)
 			if belowKeel < 0 || belowKeel > 5 {
 				return false
