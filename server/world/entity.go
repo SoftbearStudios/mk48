@@ -135,7 +135,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		if terrain != nil {
 			velocityClamp := Velocity(math32.MaxInt16)
 			if terrain.Collides(entity, seconds) {
-				if entity.Data().Kind != EntityKindBoat {
+				if !boat {
 					return true
 				}
 
@@ -149,7 +149,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 						return true
 					}
 				}
-			} else {
+			} else if boat {
 				belowKeel := entity.Altitude()*altitudeScale - data.Draft - terrain.AltitudeAt(entity.Position)
 
 				speedFactor := mapRanges(belowKeel, -5, 0, 0.5, 1, true)

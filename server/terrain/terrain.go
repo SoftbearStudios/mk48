@@ -217,7 +217,14 @@ func (t *Terrain) AtPos(pos world.Vec2f) byte {
 	}
 
 	delta := pos.Sub(fPos)
-	return blerp(c00, c10, c01, c11, delta.X, delta.Y)
+
+	// +6 to inconsistency between client and server
+	// uint16 to avoid overflow of byte
+	filtered := uint16(blerp(c00, c10, c01, c11, delta.X, delta.Y)) + 6
+	if filtered > 255 {
+		filtered = 255
+	}
+	return byte(filtered)
 }
 
 // Sculpt changes the terrain height at pos by an amount.

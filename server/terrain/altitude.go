@@ -18,7 +18,8 @@ const (
 
 // Returns altitude (in meters) above sea level
 func (t *Terrain) AltitudeAt(pos world.Vec2f) float32 {
-	// 0.3 is a kludge factor
+	// 0.3 is a kludge factor, with the goal of making shallow water approximately
+	// 6-8 meters deep
 	return (float32(t.AtPos(pos)) - SandLevel) * 0.3
 }
 
