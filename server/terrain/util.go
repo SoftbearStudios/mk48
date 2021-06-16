@@ -1,19 +1,18 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package compressed
+package terrain
 
 import (
-	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/world"
 )
 
-func clampToGrassByte(f float32) byte {
+func clampToByte(f float32) byte {
 	if f < 0 {
 		return 0
 	}
-	if f > terrain.GrassLevel {
-		return terrain.GrassLevel
+	if f > 255 {
+		return 255
 	}
 	return byte(f)
 }

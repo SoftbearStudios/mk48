@@ -40,6 +40,9 @@
 				{#if entityData.length}
 					<li>Length: {entityData.length.toFixed(1)}m</li>
 				{/if}
+				{#if entityData.draft}
+					<li>Draft: {entityData.draft.toFixed(1)}m</li>
+				{/if}
 				{#if entityData.speed}
 					<li>Speed: {entityData.speed.toFixed(1)}m/s ({toKnotsString(entityData.speed)})</li>
 				{/if}

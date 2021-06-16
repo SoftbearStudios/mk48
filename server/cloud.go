@@ -70,7 +70,7 @@ func (h *Hub) Cloud() {
 		if !client.Bot() {
 			playerCount++
 			player := &client.Data().Player
-			if player.Score > 0 {
+			if player.Score > playerScores[player.Name] {
 				playerScores[player.Name] = player.Score
 			}
 		}

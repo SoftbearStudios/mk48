@@ -7,10 +7,10 @@ import (
 	"github.com/chewxy/math32"
 )
 
-// Collider is anything that can collide with an Entity but can't be collided back such as terrain.
-// It also is required to not change while inside the world radius.
-type Collider interface {
+// Avoid import cycle by not importing terrain directly
+type Terrain interface {
 	Collides(entity *Entity, seconds float32) bool
+	AltitudeAt(Vec2f) float32
 }
 
 // Entities within this of eachother's altitudes can collide

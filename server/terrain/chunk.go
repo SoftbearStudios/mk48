@@ -1,11 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-package compressed
-
-import (
-	"github.com/SoftbearStudios/mk48/server/terrain"
-)
+package terrain
 
 const (
 	// chunkSizeBits is the chunk size in bits.
@@ -24,7 +20,7 @@ type chunk struct {
 }
 
 // If c passed in, it is partially regenerated (atomically)
-func generateChunk(generator terrain.Source, cx, cy uint, c *chunk) *chunk {
+func generateChunk(generator Source, cx, cy uint, c *chunk) *chunk {
 	heightmap := generator.Generate(int(cx*chunkSize), int(cy*chunkSize), chunkSize, chunkSize)
 
 	// Early bounds check

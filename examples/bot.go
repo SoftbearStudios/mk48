@@ -117,7 +117,7 @@ func (b *Bot) sendToHub(inbound server.Inbound) {
 // Red channel = enemy/danger
 // Green channel = obstacle/land
 // Blue channel = friendly/collectible
-func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terrain, scale float32, resolution int) image.Image {
+func rasterize(ship server.Contact, contacts []server.IDContact, t *terrain.Terrain, scale float32, resolution int) image.Image {
 	img := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
 	scale /= float32(resolution)
 
@@ -127,7 +127,7 @@ func rasterize(ship server.Contact, contacts []server.IDContact, t terrain.Terra
 			pos := ship.Position
 			pos.X += float32(x-resolution/2) * scale
 			pos.Y += float32(y-resolution/2) * scale
-			if terrain.LandAtPos(t, pos) {
+			if t.LandAt(pos) {
 				bg.G = 255
 			}
 			img.SetRGBA(x, y, bg)

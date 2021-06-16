@@ -130,27 +130,31 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 		center := entity.Position
 		threshold := float32(5.0)
 
-		// Always randomize on first iteration
 		governor := 0
-		for entity.Position == center || (entity.Data().Kind != world.EntityKindCollectible &&
-			entity.Data().Kind != world.EntityKindWeapon && h.nearAny(entity, threshold)) {
 
+		// Always randomize on first iteration
+		for entity.Position == center || !h.canSpawn(entity, threshold) {
+			// Pick a new position
 			position := world.RandomAngle().Vec2f().Mul(math32.Sqrt(rand.Float32()) * radius)
 			entity.Position = center.Add(position)
 			entity.Direction = world.RandomAngle()
 
 			radius = min(radius*1.1, h.worldRadius*0.9)
-			threshold = 0.25 + threshold*0.75 // Approaches 1.0
+			threshold = 0.15 + threshold*0.85 // Approaches 1.0
 
 			governor++
 			if governor > 128 {
 				// Don't take down the server just because cannnot
 				// spawn an entity
-				return world.EntityIDInvalid
+				break
 			}
 		}
 
 		entity.DirectionTarget = entity.Direction
+	}
+
+	if !h.canSpawn(entity, 1) {
+		return world.EntityIDInvalid
 	}
 
 	// Outside world
@@ -173,14 +177,36 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 }
 
 // nearAny Returns if any entities are within a threshold for spawning (or if colliding with terrain)
-func (h *Hub) nearAny(entity *world.Entity, threshold float32) bool {
+func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
+	switch entity.Data().Kind {
+	case world.EntityKindCollectible, world.EntityKindDecoy, world.EntityKindWeapon:
+		// Weapons spawn where the player shoots them regardless of entities,
+		// Collectibles don't care about colliding with entities while spawning
+
+		// Simply perform a terrain check against the current position (no slow conservative check)
+		return !h.terrain.Collides(entity, 0)
+	case world.EntityKindBoat:
+		// Be picky about spawning in appropriate depth water
+		// unless threshold is very low
+		// Ignore if owner has a team or enough points to upgrade to bigger ship
+		if threshold > 1.5 && (entity.Owner == nil || (entity.Owner.TeamID == world.TeamIDInvalid && entity.Owner.Score < world.LevelToScore(2))) {
+			belowKeel := entity.BelowKeel(h.terrain)
+			if belowKeel < 0 || belowKeel > 5 {
+				return false
+			}
+		}
+	}
+
+	// Slow, conservative check
+	if h.terrain.Collides(entity, -1) {
+		return false
+	}
+
 	// Extra space between entities
 	radius := entity.Data().Radius
 	maxT := (radius + world.EntityRadiusMax) * threshold
 
-	collides := h.terrain.Collides(entity, -1)
-
-	return collides || h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
+	return !h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
 		t := (radius + otherEntity.Data().Radius) * threshold
 		return r < t*t
 	})

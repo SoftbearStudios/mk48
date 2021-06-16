@@ -16,8 +16,13 @@ const (
 
 // Generator generates a heightmap using perlin noise.
 type Generator struct {
-	small  *perlin.Perlin // for smaller details
-	large  *perlin.Perlin // for larger details
+	// Land/coast heightmap noise
+	landHi *perlin.Perlin // for smaller/higher frequency details
+	landLo *perlin.Perlin // for larger/lower frequency details
+
+	// Open water depth floor heightmap noise
+	waterLo *perlin.Perlin
+
 	offset world.Vec2f
 }
 
@@ -28,9 +33,10 @@ func NewDefault() *Generator {
 // New creates a new Generator with a seed.
 func New(seed int64, offsetX, offsetY float32) *Generator {
 	return &Generator{
-		small:  perlin.NewPerlin(1.5, 2.0, 4, seed),
-		large:  perlin.NewPerlin(2.5, 3.0, 4, seed+1),
-		offset: world.Vec2f{X: offsetX, Y: offsetY}.Mul(1.0 / terrain.Scale), // Scale to terrain space
+		landHi:  perlin.NewPerlin(1.5, 2.0, 4, seed),
+		landLo:  perlin.NewPerlin(2.5, 3.0, 4, seed+1),
+		waterLo: perlin.NewPerlin(2, 3.0, 3, seed+2),
+		offset:  world.Vec2f{X: offsetX, Y: offsetY}.Mul(1.0 / terrain.Scale), // Scale to terrain space
 	}
 }
 
@@ -47,16 +53,18 @@ func (g *Generator) Generate(px, py, width, height int) []byte {
 			x := (float64(i) + offX) * terrain.Scale
 			y := (float64(j) + offY) * terrain.Scale
 
-			h := g.small.Noise2D(x*frequency, y*frequency)*250 + terrain.OceanLevel - 50
+			h := g.landHi.Noise2D(x*frequency, y*frequency)*250 + terrain.SandLevel - 50
 
 			// Zone is very low frequency
-			zone := g.large.Noise2D(x*zoneFrequency, y*zoneFrequency)*2.0 + 0.4
+			zone := g.landLo.Noise2D(x*zoneFrequency, y*zoneFrequency)*2.0 + 0.4
 			if zone > 1 {
 				zone = 1
 			}
 			h *= zone
 
-			buf[i+j*width] = clampToByte(h)
+			depthFloor := clamp((g.waterLo.Noise2D(x*zoneFrequency, y*zoneFrequency)+0.3)*4, 0, 1) * terrain.SandLevel
+
+			buf[i+j*width] = clampToByte(max(h, depthFloor))
 		}
 	}
 

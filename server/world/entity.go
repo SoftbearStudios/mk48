@@ -7,7 +7,10 @@ import (
 	"github.com/chewxy/math32"
 )
 
-const spawnProtection Ticks = 10 * TicksPerSecond
+const (
+	altitudeScale   float32 = 50 // 1 unit of altitude is this many meters
+	spawnProtection Ticks   = 10 * TicksPerSecond
+)
 
 // Entity is an object in the world such as a boat, torpedo, crate or oil platform.
 // Its size is 32 bytes for optimal efficiency.
@@ -26,7 +29,7 @@ type Entity struct {
 // Update updates all the variables of an Entity such as Position, Direction, ArmamentConsumption etc.
 // by an amount of time. It only modifies itself so each one can be processed by a different goroutine.
 // seconds cannot be > 1.0.
-func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider) (die bool) {
+func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) (die bool) {
 	data := entity.Data()
 
 	if lifespan := data.Lifespan; lifespan != 0 {
@@ -49,6 +52,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 
 	// The following movement-related code must match the client's code
 	maxSpeed := data.Speed
+	repairElligible := true
 	seconds := ticks.Float()
 
 	if data.SubKind == EntitySubKindAircraft {
@@ -72,33 +76,14 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		}
 	} else if data.SubKind == EntitySubKindSubmarine {
 		ext := &entity.Owner.ext
-		targetAltitude := clamp(ext.altitudeTarget(), -1, 0)
+		minAltitude := clamp((terrain.AltitudeAt(entity.Position)+data.Draft)/altitudeScale, -1, 0)
+		targetAltitude := clamp(ext.altitudeTarget(), minAltitude, 0)
 		altitudeSpeed := float32(0.25)
 		altitudeChange := clampMagnitude(targetAltitude-entity.Altitude(), altitudeSpeed*seconds)
 		ext.setAltitude(entity.Altitude() + altitudeChange)
 	}
 
 	boat := data.Kind == EntityKindBoat
-	if boat {
-		// Spawn protection
-		sp := entity.Owner.ext.getSpawnProtection()
-		toSubtract := ticks
-		// Avoid overflow of unsigned ticks
-		if toSubtract > sp {
-			toSubtract = sp
-		}
-		entity.Owner.ext.setSpawnProtection(sp - toSubtract)
-
-		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
-		if len(entity.ArmamentConsumption()) > 0 {
-			// If turrets were already copied and the extension
-			// copies everything armaments don't need to be copied
-			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
-			entity.replenish(ticks, armamentsCopied)
-		}
-
-		entity.Repair(ticks)
-	}
 
 	// Shells that have been added so far can't turn
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
@@ -126,26 +111,47 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 		}
 		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
-		// Test collisions with stationary objects
-		if collider != nil && collider.Collides(entity, seconds) {
-			if entity.Data().Kind != EntityKindBoat {
-				return true
-			}
-			entity.Velocity = entity.Velocity.ClampMagnitude(5 * MeterPerSecond)
-			if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
-				if entity.KillIn(ticks, 4*TicksPerSecond) {
-					if owner := entity.Owner; owner != nil {
-						owner.DeathReason = DeathReason{Type: DeathTypeTerrain}
-					}
+		// Test collisions with terrain
+
+		if terrain != nil {
+			velocityClamp := Velocity(math32.MaxInt16)
+			if terrain.Collides(entity, seconds) {
+				if !boat {
 					return true
 				}
+
+				repairElligible = false
+				velocityClamp = 5 * MeterPerSecond
+
+				if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
+					if entity.KillIn(ticks, 4*TicksPerSecond) {
+						if owner := entity.Owner; owner != nil {
+							owner.DeathReason = DeathReason{Type: DeathTypeTerrain}
+						}
+						return true
+					}
+				}
+			} else if boat {
+				belowKeel := entity.BelowKeel(terrain)
+
+				if belowKeel < 0 {
+					repairElligible = false
+
+					speedFactor := mapRanges(belowKeel, -5, 0, 0.6, 1, true)
+
+					//fmt.Println(terrain.AltitudeAt(entity.Position), belowKeel, speedFactor)
+					velocityClamp = Velocity(speedFactor * float32(maxSpeed))
+				}
 			}
+
+			entity.Velocity = entity.Velocity.ClampMagnitude(velocityClamp)
 		}
 	}
 
 	// Border (note: radius can shrink)
 	centerDist2 := entity.Position.LengthSquared()
 	if centerDist2 > square(worldRadius) {
+		repairElligible = false
 		dead := entity.KillIn(ticks, 1*TicksPerSecond)
 		entity.Velocity += ToVelocity(clampMagnitude(entity.Velocity.Float()-6*entity.Position.Dot(entity.Direction.Vec2f()), 15))
 		// Everything but boats is instantly killed by border
@@ -154,6 +160,29 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, collider Collider
 				owner.DeathReason = DeathReason{Type: DeathTypeBorder}
 			}
 			return true
+		}
+	}
+
+	if boat {
+		// Spawn protection
+		sp := entity.Owner.ext.getSpawnProtection()
+		toSubtract := ticks
+		// Avoid overflow of unsigned ticks
+		if toSubtract > sp {
+			toSubtract = sp
+		}
+		entity.Owner.ext.setSpawnProtection(sp - toSubtract)
+
+		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
+		if len(entity.ArmamentConsumption()) > 0 {
+			// If turrets were already copied and the extension
+			// copies everything armaments don't need to be copied
+			armamentsCopied := entity.Owner.ext.copiesAll() && turretsCopied
+			entity.replenish(ticks, armamentsCopied)
+		}
+
+		if repairElligible {
+			entity.Repair(ticks)
 		}
 	}
 
@@ -239,6 +268,11 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 func (entity *Entity) Hash() float32 {
 	const hashSize = 64
 	return float32(entity.EntityID&(hashSize-1)) * (1.0 / hashSize)
+}
+
+// Returns meters below keel
+func (entity *Entity) BelowKeel(terrain Terrain) float32 {
+	return entity.Altitude()*altitudeScale - entity.Data().Draft - terrain.AltitudeAt(entity.Position)
 }
 
 // Returns whether copied turret angles
