@@ -37,6 +37,8 @@ func (entity *Entity) ArmamentConsumption() []Ticks {
 func (entity *Entity) Altitude() float32 {
 	data := entity.Data()
 	switch data.Kind {
+	case EntityKindAircraft:
+		return 1.8 * AltitudeCollisionThreshold
 	case EntityKindBoat:
 		return entity.Owner.ext.altitude()
 	case EntityKindDecoy:
@@ -58,7 +60,7 @@ func (entity *Entity) Altitude() float32 {
 			return 0.9 * AltitudeCollisionThreshold
 		}
 		fallthrough // ASROC
-	case EntitySubKindAircraft, EntitySubKindSAM:
+	case EntitySubKindSAM:
 		return 1.8 * AltitudeCollisionThreshold
 	default:
 		return 0

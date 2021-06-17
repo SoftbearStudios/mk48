@@ -21,6 +21,8 @@
 				shipTypeCount++;
 				shipLevelMax = Math.max(shipLevelMax, data.level);
 				break;
+			case 'aircraft':
+			case 'decoy':
 			case 'weapon':
 				weaponSubTypes[data.subkind] = true;
 				break;

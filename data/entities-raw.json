@@ -2112,8 +2112,8 @@
 	"avenger": {
 		"label": "TBF Avenger",
 		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
-		"kind": "weapon",
-		"subkind": "aircraft",
+		"kind": "aircraft",
+		"subkind": "plane",
 		"level": 5,
 		"length": 12.45,
 		"width": 16.5143,
@@ -2318,8 +2318,8 @@
 	"ka25": {
 		"label": "Ka-25",
 		"link": "https://en.wikipedia.org/wiki/Kamov_Ka-25",
-		"kind": "weapon",
-		"subkind": "aircraft",
+		"kind": "aircraft",
+		"subkind": "heli",
 		"level": 5,
 		"length": 15.8,
 		"width": 15.8,
@@ -2340,8 +2340,8 @@
 	"kingfisher": {
 		"label": "Kingfisher",
 		"link": "https://en.wikipedia.org/wiki/Vought_OS2U_Kingfisher",
-		"kind": "weapon",
-		"subkind": "aircraft",
+		"kind": "aircraft",
+		"subkind": "plane",
 		"level": 5,
 		"length": 10.0853,
 		"width": 10.940,
@@ -2548,8 +2548,8 @@
 	"seahawk": {
 		"label": "Seahawk",
 		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
-		"kind": "weapon",
-		"subkind": "aircraft",
+		"kind": "aircraft",
+		"subkind": "heli",
 		"level": 5,
 		"length": 19.6,
 		"width": 16.078,

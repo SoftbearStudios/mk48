@@ -112,7 +112,8 @@ func (h *Hub) Physics(ticks world.Ticks) {
 		radius = entity.Data().Radius * 2
 
 		// Unless the entity needs to know about its neighbors
-		if entity.Data().Kind == world.EntityKindWeapon {
+		switch entity.Data().Kind {
+		case world.EntityKindAircraft, world.EntityKindWeapon:
 			radius = max(radius, entity.Data().Sensors.MaxRange())
 		}
 
@@ -144,9 +145,9 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			}
 		}
 
-		if entityData.Kind == world.EntityKindWeapon {
+		if entityData.Kind == world.EntityKindWeapon || entityData.Kind == world.EntityKindAircraft {
 			weapon = entity
-		} else if otherData.Kind == world.EntityKindWeapon {
+		} else if otherData.Kind == world.EntityKindWeapon || otherData.Kind == world.EntityKindAircraft {
 			weapon = other
 		}
 
@@ -210,54 +211,54 @@ func (h *Hub) Physics(ticks world.Ticks) {
 					if altitudeOverlap && entityData.Sensors.Any() {
 						entity.UpdateSensor(other)
 					}
+				}
 
-					// Aircraft/ASROC (simulate weapons and anti-aircraft)
-					asroc := entityData.SubKind == world.EntitySubKindRocket && len(entityData.Armaments) > 0
-					if (entityData.SubKind == world.EntitySubKindAircraft || asroc) && otherData.Kind == world.EntityKindBoat {
-						// Small window of opportunity to fire
-						// Uses lifespan as torpedo consumption
-						if (entity.Ticks > world.TicksPerSecond*3*world.Ticks(len(entityData.Armaments)) || asroc) && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
-							entity.Ticks = 0
+				// Aircraft/ASROC (simulate weapons and anti-aircraft)
+				asroc := entityData.SubKind == world.EntitySubKindRocket && len(entityData.Armaments) > 0
+				if (entityData.Kind == world.EntityKindAircraft || asroc) && otherData.Kind == world.EntityKindBoat {
+					// Small window of opportunity to fire
+					// Uses lifespan as torpedo consumption
+					if (entity.Ticks > world.TicksPerSecond*3*world.Ticks(len(entityData.Armaments)) || asroc) && entity.Collides(other, 1.7+otherData.Length*0.01+entity.Hash()*0.5) {
+						entity.Ticks = 0
 
-							armaments := entityData.Armaments
-							for i := range armaments {
-								armamentData := &armaments[i]
+						armaments := entityData.Armaments
+						for i := range armaments {
+							armamentData := &armaments[i]
 
-								armament := &world.Entity{
-									EntityType: armamentData.Type,
-									Owner:      entity.Owner,
-									Ticks:      armamentData.Type.ReducedLifespan(10 * world.TicksPerSecond),
-									Transform:  entity.ArmamentTransform(i),
-									Guidance: world.Guidance{
-										DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
-										VelocityTarget:  armamentData.Type.Data().Speed,
-									},
-								}
-
-								const maxDropVelocity = 40 * world.MeterPerSecond
-								if armament.Velocity > maxDropVelocity {
-									armament.Velocity = maxDropVelocity
-								}
-
-								h.spawnEntity(armament, 0)
+							armament := &world.Entity{
+								EntityType: armamentData.Type,
+								Owner:      entity.Owner,
+								Ticks:      armamentData.Type.ReducedLifespan(10 * world.TicksPerSecond),
+								Transform:  entity.ArmamentTransform(i),
+								Guidance: world.Guidance{
+									DirectionTarget: entity.DirectionTarget + world.ToAngle((rand.Float32()-0.5)*0.1),
+									VelocityTarget:  armamentData.Type.Data().Speed,
+								},
 							}
 
-							if asroc {
-								// ASROC expires when dropping torpedo
-								removeEntity(entity, world.DeathReason{})
+							const maxDropVelocity = 40 * world.MeterPerSecond
+							if armament.Velocity > maxDropVelocity {
+								armament.Velocity = maxDropVelocity
 							}
+
+							h.spawnEntity(armament, 0)
 						}
 
-						if otherData.AntiAircraft != 0 && entityData.SubKind == world.EntitySubKindAircraft {
-							d2 := entity.Position.DistanceSquared(other.Position)
-							r2 := square(otherData.Radius * 1.5)
+						if asroc {
+							// ASROC expires when dropping torpedo
+							removeEntity(entity, world.DeathReason{})
+						}
+					}
 
-							// In range of aa
-							if d2 < r2 {
-								chance := (1.0 - d2/r2) * otherData.AntiAircraft
-								if chance*timeDeltaSeconds > rand.Float32() {
-									removeEntity(entity, world.DeathReason{})
-								}
+					if otherData.AntiAircraft != 0 && entityData.Kind == world.EntityKindAircraft {
+						d2 := entity.Position.DistanceSquared(other.Position)
+						r2 := square(otherData.Radius * 1.5)
+
+						// In range of aa
+						if d2 < r2 {
+							chance := (1.0 - d2/r2) * otherData.AntiAircraft
+							if chance*timeDeltaSeconds > rand.Float32() {
+								removeEntity(entity, world.DeathReason{})
 							}
 						}
 					}

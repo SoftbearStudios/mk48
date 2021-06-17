@@ -136,21 +136,23 @@ func init() {
 		data.InvSize = 1.0 / min(1, data.Radius*(1.0/30.0)*square(1.0-data.Stealth))
 	}
 
+	EntityKindAircraft = ParseEntityKind("aircraft")
 	EntityKindBoat = ParseEntityKind("boat")
 	EntityKindCollectible = ParseEntityKind("collectible")
 	EntityKindDecoy = ParseEntityKind("decoy")
 	EntityKindObstacle = ParseEntityKind("obstacle")
 	EntityKindWeapon = ParseEntityKind("weapon")
 
-	EntitySubKindAircraft = ParseEntitySubKind("aircraft")
 	EntitySubKindBattleship = ParseEntitySubKind("battleship")
 	EntitySubKindDepositor = ParseEntitySubKind("depositor")
 	EntitySubKindDepthCharge = ParseEntitySubKind("depthCharge")
 	EntitySubKindDredger = ParseEntitySubKind("dredger")
+	EntitySubKindHeli = ParseEntitySubKind("heli")
 	EntitySubKindHovercraft = ParseEntitySubKind("hovercraft")
 	EntitySubKindMine = ParseEntitySubKind("mine")
 	EntitySubKindMissile = ParseEntitySubKind("missile")
 	EntitySubKindPirate = ParseEntitySubKind("pirate")
+	EntitySubKindPlane = ParseEntitySubKind("plane")
 	EntitySubKindTorpedo = ParseEntitySubKind("torpedo")
 	EntitySubKindRam = ParseEntitySubKind("ram")
 	EntitySubKindRocket = ParseEntitySubKind("rocket")
@@ -168,7 +170,6 @@ func init() {
 	EntityTypeMark18 = ParseEntityType("mark18")
 	EntityTypeOilPlatform = ParseEntityType("oilPlatform")
 	EntityTypeScrap = ParseEntityType("scrap")
-	EntityTypeSeahawk = ParseEntityType("seahawk")
 
 	// Spawn entities are boats that are level 1
 	for i, data := range entityTypeData {
@@ -187,21 +188,23 @@ func init() {
 // Enums used in code
 
 var (
+	EntityKindAircraft    EntityKind
 	EntityKindBoat        EntityKind
 	EntityKindCollectible EntityKind
 	EntityKindDecoy       EntityKind
 	EntityKindObstacle    EntityKind
 	EntityKindWeapon      EntityKind
 
-	EntitySubKindAircraft    EntitySubKind
 	EntitySubKindBattleship  EntitySubKind
 	EntitySubKindDepositor   EntitySubKind
 	EntitySubKindDepthCharge EntitySubKind
 	EntitySubKindDredger     EntitySubKind
+	EntitySubKindHeli        EntitySubKind
 	EntitySubKindHovercraft  EntitySubKind
 	EntitySubKindPirate      EntitySubKind
 	EntitySubKindMine        EntitySubKind
 	EntitySubKindMissile     EntitySubKind
+	EntitySubKindPlane       EntitySubKind
 	EntitySubKindRam         EntitySubKind
 	EntitySubKindRocket      EntitySubKind
 	EntitySubKindSAM         EntitySubKind
@@ -218,7 +221,6 @@ var (
 	EntityTypeMark18      EntityType
 	EntityTypeOilPlatform EntityType
 	EntityTypeScrap       EntityType
-	EntityTypeSeahawk     EntityType
 )
 
 // EntityKind helpers

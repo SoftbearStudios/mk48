@@ -285,6 +285,8 @@
 				// Markers/nametags
 				let oldColor = null, newColor = null;
 				switch (currentEntityData.kind) {
+				case 'aircraft':
+				case 'decoy':
 				case 'weapon':
 					newColor = entity.friendly ? 0x3aff8c : 0xe74c3c;
 
@@ -706,8 +708,8 @@
 
 							let diff = Math.abs(angleDiff(localEntity.direction + armamentAngle, armamentDirectionTarget));
 
-							if (armament.airdrop || armament.vertical || ['aircraft', 'depositor', 'depthCharge', 'mine'].includes(armamentEntityData.subkind)) {
-								// Air-dropped or vertically-launched armaments can fire in any horizontal direction
+							if (armament.vertical || ['aircraft'].includes(armamentEntityData.kind) || ['depositor', 'depthCharge', 'mine'].includes(armamentEntityData.subkind)) {
+								// Vertically-launched armaments can fire in any horizontal direction
 								diff = 0;
 							}
 							if (diff < bestArmamentAngleDiff) {
@@ -805,13 +807,13 @@
 				// Direction target of 0 may be invalid
 				if (entity.friendly || entity.directionTarget) {
 					let maxTurnSpeed = Math.PI / 4; // per second
-					if (entity.type === 'seahawk') {
+					if (spriteData.subkind === 'heli') {
 						maxTurnSpeed = Math.PI / 2;
 					}
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
 					let maxSpeed = (spriteData.speed || 20)
-					if (spriteData.subkind !== 'aircraft') {
+					if (spriteData.kind !== 'aircraft') {
 						maxSpeed /= Math.max(Math.pow(angleDifference, 2), 1);
 						maxTurnSpeed *= Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1));
 					}
@@ -832,7 +834,7 @@
 				if (spriteDistance <= visualRange) {
 					let amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
 					let wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
-					if (spriteData.subkind === 'aircraft') {
+					if (spriteData.kind === 'aircraft') {
 						amount *= 0.25;
 						wakeAngle *= 0.2;
 					}

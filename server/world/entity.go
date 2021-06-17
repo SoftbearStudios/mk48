@@ -55,7 +55,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 	repairElligible := true
 	seconds := ticks.Float()
 
-	if data.SubKind == EntitySubKindAircraft {
+	if data.Kind == EntityKindAircraft {
 		posTarget := entity.OwnerBoatAimTarget()
 		posDiff := posTarget.Sub(entity.Position)
 
@@ -64,7 +64,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		distance := posDiff.LengthSquared()
 
 		// Probably will have heli sub-kind in future.
-		if entity.EntityType == EntityTypeSeahawk {
+		if data.SubKind == EntitySubKindHeli {
 			if distance < 35*35 {
 				maxSpeed = 0
 			}
@@ -89,12 +89,12 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
 		// See #45 - automatically slow down to turn faster
 		turnRate := math32.Pi / 4
-		if entity.EntityType == EntityTypeSeahawk {
+		if data.SubKind == EntitySubKindHeli {
 			turnRate = math32.Pi / 2
 		}
 		deltaAngle := entity.DirectionTarget.Diff(entity.Direction)
 
-		if data.SubKind != EntitySubKindAircraft {
+		if data.Kind != EntityKindAircraft {
 			maxSpeed = ToVelocity(maxSpeed.Float() / max(square(deltaAngle.Float()), 1))
 			turnRate *= max(0.25, 1-math32.Abs(entity.Velocity.Float())/(maxSpeed.Float()+1))
 		}
@@ -230,7 +230,7 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	switch data.SubKind {
 	case EntitySubKindSAM:
 		baseHomingStrength = 10000
-		relevant = otherData.SubKind == EntitySubKindAircraft || otherData.SubKind == EntitySubKindMissile || otherData.SubKind == EntitySubKindRocket
+		relevant = otherData.Kind == EntityKindAircraft || otherData.SubKind == EntitySubKindMissile || otherData.SubKind == EntitySubKindRocket
 	default:
 		relevant = otherData.Kind == EntityKindBoat || otherData.Kind == EntityKindDecoy
 	}
@@ -441,14 +441,17 @@ func (entity *Entity) ArmamentTransform(index int) Transform {
 // Close is called when an Entity is removed from a World.
 func (entity *Entity) Close() {
 	data := entity.Data()
-	if data.Kind == EntityKindBoat && entity.Owner != nil {
-		if entity.Owner.EntityID == EntityIDInvalid {
-			panic("not player's entity")
+	switch data.Kind {
+	case EntityKindBoat:
+		if entity.Owner != nil {
+			if entity.Owner.EntityID == EntityIDInvalid {
+				panic("not player's entity")
+			}
+			entity.Owner.Died(entity)
+			entity.Owner.EntityID = EntityIDInvalid
+			entity.Owner.ext = unsafeExtension{}
 		}
-		entity.Owner.Died(entity)
-		entity.Owner.EntityID = EntityIDInvalid
-		entity.Owner.ext = unsafeExtension{}
-	} else if data.Kind == EntityKindWeapon {
+	case EntityKindAircraft, EntityKindDecoy, EntityKindWeapon:
 		// Regen limited armament
 		if data.Limited && entity.Owner != nil {
 			consumption := entity.Owner.ext.armamentConsumption()

@@ -34,35 +34,37 @@ for (const entityType of Object.keys(entityDatas)) {
 	if (entityData.range && entityType !== 'depositor') {
 		let maxRange = 1500;
 		let avgSpeed = entityData.speed
-		if (entityData.kind === 'weapon') {
-			switch (entityData.subkind) {
-				case 'shell':
-					maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
-					break;
-				case 'sam':
-					maxRange *= 0.5;
-				case 'rocket':
-				case 'missile':
-					maxRange = mapRanges(entityData.length, 1, 10, 500, 1200, true);
+		switch (entityData.kind) {
+			case 'weapon':
+				switch (entityData.subkind) {
+					case 'shell':
+						maxRange = mapRanges(entityData.length, 0.2, 2, 250, 850, true);
+						break;
+					case 'sam':
+						maxRange *= 0.5;
+					case 'rocket':
+					case 'missile':
+						maxRange = mapRanges(entityData.length, 1, 10, 500, 1200, true);
 
-					avgSpeed = 0;
-					let count = 0;
-					let speed = 0;
-					const seconds = 0.1;
-					for (let d = 0; d < maxRange; d += speed * seconds) {
-						let delta = entityData.speed - speed;
-						speed += Math.min(delta, 800 * seconds) * seconds;
-						avgSpeed += speed;
-						count++;
-					}
+						avgSpeed = 0;
+						let count = 0;
+						let speed = 0;
+						const seconds = 0.1;
+						for (let d = 0; d < maxRange; d += speed * seconds) {
+							let delta = entityData.speed - speed;
+							speed += Math.min(delta, 800 * seconds) * seconds;
+							avgSpeed += speed;
+							count++;
+						}
 
-					avgSpeed /= count;
-					//console.log(`${entityType}: ${entityData.speed} -> ${avgSpeed}`);
-					break;
-				case 'aircraft':
-					maxRange = 5000;
-					break;
-			}
+						avgSpeed /= count;
+						//console.log(`${entityType}: ${entityData.speed} -> ${avgSpeed}`);
+						break;
+				}
+				break;
+			case 'aircraft':
+				maxRange = 5000;
+				break;
 		}
 		entityData.range = Math.min(entityData.range, maxRange);
 		let rangeLifespan = Math.max(entityData.range / avgSpeed, 0.1);
@@ -130,9 +132,6 @@ for (const entityType of Object.keys(entityDatas)) {
 		switch (entityData.kind) {
 			case 'weapon':
 				switch (entityData.subkind) {
-					case 'aircraft':
-						entityData.reload = 10;
-						break;
 					case 'depositor':
 						entityData.reload = 1;
 						break;
@@ -167,6 +166,9 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 8;
 						break;
 				}
+				break;
+			case 'aircraft':
+				entityData.reload = 10;
 				break;
 			case 'decoy':
 				entityData.reload = 20;
@@ -299,16 +301,23 @@ for (const entityType of Object.keys(entityDatas)) {
 			return -8;
 		}
 		// Positive means closer to beginning
-		const typeRanks = {
-			'torpedo': 10,
-			'missile': 9,
-			'rocket': 8,
-			'shell': ['battleship', 'cruiser'].includes(entityData.subkind) ? 12 : 5,
-			'sam': -5,
-			// decoy: -8
-			'aircraft': entityData.subkind == 'carrier' ? 12 : -10,
+		const kindRanks = {
+			'weapon/torpedo': 10,
+			'weapon/missile': 9,
+			'weapon/rocket': 8,
+			'weapon/shell': ['battleship', 'cruiser'].includes(entityData.subkind) ? 12 : 5,
+			'weapon/sam': -5,
+			'decoy/': -8,
+			'aircraft/': entityData.subkind == 'carrier' ? 12 : -10,
 		}
-		return typeRanks[armamentEntityData.subkind] || 0;
+		const armamentKind = `${armamentEntityData.kind}/${armamentEntityData.subkind}`;
+		for (const kind in kindRanks) {
+			if (armamentKind.startsWith(kind)) {
+				// Match
+				return kindRanks[kind];
+			}
+		}
+		return 0;
 	}
 
 	entityData.armaments.sort((first, second) => {

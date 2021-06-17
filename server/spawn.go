@@ -179,7 +179,7 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 // nearAny Returns if any entities are within a threshold for spawning (or if colliding with terrain)
 func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
 	switch entity.Data().Kind {
-	case world.EntityKindCollectible, world.EntityKindDecoy, world.EntityKindWeapon:
+	case world.EntityKindAircraft, world.EntityKindCollectible, world.EntityKindDecoy, world.EntityKindWeapon:
 		// Weapons spawn where the player shoots them regardless of entities,
 		// Collectibles don't care about colliding with entities while spawning
 

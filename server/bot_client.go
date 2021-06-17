@@ -275,7 +275,7 @@ func (bot *BotClient) Send(out Outbound) {
 
 				for index, armament := range shipData.Armaments {
 					armamentType := armament.Type.Data().Kind
-					if armamentType != world.EntityKindWeapon {
+					if armamentType != world.EntityKindWeapon && armamentType != world.EntityKindAircraft {
 						continue
 					}
 
@@ -294,7 +294,7 @@ func (bot *BotClient) Send(out Outbound) {
 							}
 						}
 						diff := closestEnemyAngle.Diff(armamentTransform.Direction).Abs()
-						if armament.Vertical || armament.Type.Data().SubKind == world.EntitySubKindAircraft {
+						if armament.Vertical || armament.Type.Data().Kind == world.EntityKindAircraft {
 							diff = 0
 						}
 						if diff < bestArmamentAngleDiff {

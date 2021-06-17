@@ -19,6 +19,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "helicopter"
+				},
+				"plane": {
+					"name": "plane"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "Your ship has powerful guns and plenty of armor!",
@@ -82,9 +90,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "aircraft"
-				},
 				"depositor": {
 					"name": "depositor"
 				},
@@ -266,6 +271,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "helicóptero"
+				},
+				"plane": {
+					"name": "avión"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "¡Tu barco tiene armas poderosas y mucha armadura!",
@@ -329,9 +342,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "aeronave"
-				},
 				"depositor": {
 					"name": "transportadora"
 				},
@@ -449,8 +459,7 @@
 					}
 				},
 				"connectionLost": "La batalla ha terminado. Intente comenzar de nuevo en breve.",
-				"invitePrefix": "Usando el código de invitación",
-				"label": "mk48.io"
+				"invitePrefix": "Usando el código de invitación"
 			},
 			"status": {
 				"score": "punto",
@@ -513,6 +522,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "вертолет"
+				},
+				"plane": {
+					"name": "самолет"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "У вашего корабля мощные орудия и много брони!",
@@ -576,9 +593,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "самолеты"
-				},
 				"depositor": {
 					"name": "депозитор"
 				},
@@ -696,8 +710,7 @@
 					}
 				},
 				"connectionLost": "Битва окончена. Попробуйте начать снова в ближайшее время.",
-				"invitePrefix": "Использование инвайт-кода",
-				"label": "mk48.io"
+				"invitePrefix": "Использование инвайт-кода"
 			},
 			"status": {
 				"score": "балл",
@@ -760,6 +773,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "hélicoptère"
+				},
+				"plane": {
+					"name": "avion"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "Votre vaisseau a des canons puissants et beaucoup d'armures!",
@@ -823,9 +844,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "avion"
-				},
 				"depositor": {
 					"name": "déposant"
 				},
@@ -943,8 +961,7 @@
 					}
 				},
 				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
-				"invitePrefix": "Utiliser le code d'invitation",
-				"label": "mk48.io"
+				"invitePrefix": "Utiliser le code d'invitation"
 			},
 			"status": {
 				"score": "point",
@@ -1007,6 +1024,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "直升机"
+				},
+				"plane": {
+					"name": "机"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "你的船有强大的枪支和大量的装甲!",
@@ -1070,9 +1095,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "飞机"
-				},
 				"depositor": {
 					"name": "储户"
 				},
@@ -1253,6 +1275,14 @@
 			}
 		},
 		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "borkopter"
+				},
+				"plane": {
+					"name": "flying bork"
+				}
+			},
 			"boat": {
 				"battleship": {
 					"hint": "Bork is the strongest bork",
@@ -1316,9 +1346,6 @@
 				}
 			},
 			"weapon": {
-				"aircraft": {
-					"name": "flying bork"
-				},
 				"depositor": {
 					"name": "land borker"
 				},
@@ -1391,7 +1418,8 @@
 					}
 				},
 				"connectionLost": "Your connection was borked. Try again later!",
-				"invitePrefix": "Joining other borks with code"
+				"invitePrefix": "Joining other borks with code",
+				"label": "bork.io"
 			},
 			"status": {
 				"score": "bork",
