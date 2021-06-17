@@ -293,8 +293,9 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 
 		entity.Initialize(data.Type)
 		spawnRadius := h.worldRadius * 0.75
+		canTeam := player.CanRespawnWithTeam()
 
-		if team := h.teams[player.TeamID]; team != nil && player.CanRespawnWithTeam() {
+		if team := h.teams[player.TeamID]; team != nil {
 			// Spawn near the first other team member with a ship
 			for _, member := range team.Members {
 				if member == &player.Player {
@@ -305,6 +306,9 @@ func (data Spawn) Process(h *Hub, client Client, player *Player) {
 
 				h.world.EntityByID(member.EntityID, func(memberShip *world.Entity) (_ bool) {
 					if memberShip == nil {
+						return
+					}
+					if memberShip.Position.DistanceSquared(player.DeathPos) < 1250*1250 && !canTeam {
 						return
 					}
 					entity.Position = memberShip.Position
