@@ -21,6 +21,12 @@ type extension interface {
 	aimTarget() Vec2f // Where turret wants to point
 	setAimTarget(target Vec2f)
 
+	active() bool
+	setActive(bool)
+
+	activeTicks() Ticks
+	setActiveTicks(Ticks)
+
 	altitude() float32
 	setAltitude(float32)
 
@@ -123,6 +129,16 @@ func (entity *Entity) SetAimTarget(target Vec2f) {
 	}
 
 	entity.Owner.ext.setAimTarget(target)
+}
+
+func (entity *Entity) Active() bool {
+	entity.mustBoat()
+	return entity.Owner.ext.active() || entity.Owner.ext.activeTicks() > 0
+}
+
+func (entity *Entity) SetActive(val bool) {
+	entity.mustBoat()
+	entity.Owner.ext.setActive(val)
 }
 
 // Call when accessing entity.Owner.ext, which is ONLY valid

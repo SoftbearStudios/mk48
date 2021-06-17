@@ -177,11 +177,9 @@
 			},
 			"ship": {
 				"action": {
-					"activeRadar": {
-						"label": "Active Radar"
-					},
-					"activeSonar": {
-						"label": "Active Sonar"
+					"active": {
+						"hint": "Active {sensors} helps you see more, but may also give away your position",
+						"label": "Active sensors"
 					},
 					"surface": {
 						"label": "Surface"
@@ -248,6 +246,14 @@
 			"upgrade": {
 				"labelMiddle": "to level",
 				"labelPrefix": "Upgrade to level"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Radar"
+			},
+			"sonar": {
+				"label": "Sonar"
 			}
 		}
 	},
@@ -429,11 +435,9 @@
 			},
 			"ship": {
 				"action": {
-					"activeRadar": {
-						"label": "Radar activo"
-					},
-					"activeSonar": {
-						"label": "Sonar activo"
+					"active": {
+						"hint": "Los {sensors} activos te ayudan a ver más, pero también pueden revelar tu posición",
+						"label": "Sensores activos"
 					},
 					"surface": {
 						"label": "Superficie"
@@ -499,6 +503,14 @@
 			"upgrade": {
 				"labelMiddle": "a nivel",
 				"labelPrefix": "Actualizar a nivel"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Radar"
+			},
+			"sonar": {
+				"label": "Sonar"
 			}
 		}
 	},
@@ -680,11 +692,9 @@
 			},
 			"ship": {
 				"action": {
-					"activeRadar": {
-						"label": "Активный радар"
-					},
-					"activeSonar": {
-						"label": "Активный сонар"
+					"active": {
+						"hint": "Активные {sensors} помогают вам видеть больше, но также могут выдавать ваше местоположение",
+						"label": "Активные датчики"
 					},
 					"surface": {
 						"label": "Поверхность"
@@ -750,6 +760,14 @@
 			"upgrade": {
 				"labelMiddle": "до уровня",
 				"labelPrefix": "Перейти на уровень"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Радар"
+			},
+			"sonar": {
+				"label": "Сонар"
 			}
 		}
 	},
@@ -931,11 +949,9 @@
 			},
 			"ship": {
 				"action": {
-					"activeRadar": {
-						"label": "Radar actif"
-					},
-					"activeSonar": {
-						"label": "Sonar actif"
+					"active": {
+						"hint": "Les {sensors} actifs vous aident à voir plus, mais peuvent également révéler votre position",
+						"label": "Capteurs actifs"
 					},
 					"surface": {
 						"label": "Surface"
@@ -1001,6 +1017,14 @@
 			"upgrade": {
 				"labelMiddle": "à niveau",
 				"labelPrefix": "Passer au niveau"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Radar"
+			},
+			"sonar": {
+				"label": "Sonar"
 			}
 		}
 	},
@@ -1182,11 +1206,9 @@
 			},
 			"ship": {
 				"action": {
-					"activeRadar": {
-						"label": "主動雷達"
-					},
-					"activeSonar": {
-						"label": "主動聲納"
+					"active": {
+						"hint": "活跃的 {sensors} 可以帮助您看到更多，但也可能会泄露您的位置",
+						"label": "有源传感器"
 					},
 					"surface": {
 						"label": "表面"
@@ -1252,6 +1274,14 @@
 			"upgrade": {
 				"labelMiddle": "至",
 				"labelPrefix": "升级到"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "雷达"
+			},
+			"sonar": {
+				"label": "声纳"
 			}
 		}
 	},
@@ -1409,6 +1439,14 @@
 					"single/all": "All-time Leaderbork",
 					"single/day": "Daily Leaderbork",
 					"single/week": "Weekly Leaderbork"
+				}
+			},
+			"ship": {
+				"action": {
+					"active": {
+						"hint": "Active {sensors} helps bork see but also helps others see bork",
+						"label": "Sensors go brrr"
+					}
 				}
 			},
 			"splash": {

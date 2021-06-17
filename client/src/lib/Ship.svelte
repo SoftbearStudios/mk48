@@ -55,6 +55,30 @@
 		}
 		return translation(`kind.${data.kind}.${subtype}.name`);
 	}
+
+	// Returns null if no sensors
+	function getActiveSensorHint(translate, type, altitude = 0) {
+		const data = entityData[type];
+		const sensors = data.sensors;
+		if (!sensors) {
+			return null;
+		}
+		let list = [];
+		if (sensors.radar && sensors.radar.range > 0 && altitude >= 0) {
+			list.push('radar');
+		}
+		if (sensors.sonar && sensors.sonar.range > 0) {
+			list.push('sonar');
+		}
+		if (list.length == 0) {
+			return null;
+		}
+
+		list = list.map(type => translate(`sensor.${type}.label`));
+		let hint = translate('panel.ship.action.active.hint');
+		hint = hint.replace('{sensors}', list.join(' / '));
+		return hint;
+	}
 </script>
 
 <script>
@@ -62,9 +86,11 @@
 	import entityData from '../data/entities.json';
 
 	export let type;
+	export let altitude;
 	export let consumption;
 	export let selection = null;
 	export let altitudeTarget = 0;
+	export let active = true;
 
 	$: armaments = entityData[type].armaments;
 	$: armaments && incrementSelection(0); // make sure a valid armament is selected
@@ -92,6 +118,10 @@
 		}
 	}
 
+	export function toggleActive() {
+		active = !active;
+	}
+
 	export function toggleAltitudeTarget() {
 		if (altitudeTarget === 0) {
 			altitudeTarget = -1;
@@ -112,6 +142,9 @@
 		{#if entityData[type].subkind === 'submarine'}
 			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>{$t('panel.ship.action.surface.label')}</div>
 		{/if}
+		{#if getActiveSensorHint($t, type, altitude)}
+			<div class='button' class:selected={active} on:click={toggleActive} title={getActiveSensorHint($t, type, altitude)}>{$t(`panel.ship.action.active.label`)}</div>
+		{/if}
 		{#if !armaments || armaments.length === 0}
 			<small>{$t(`kind.boat.${entityData[type].subkind}.hint`)}</small>
 		{/if}
@@ -123,18 +156,18 @@
 		max-width: 25%;
 	}
 
-	div.button {
+	.button {
 		padding: 5px;
 		filter: brightness(0.8);
 		user-select: none;
 	}
 
-	div.button:hover {
+	.button:hover {
 		background-color: #44444440;
 		filter: brightness(0.9);
 	}
 
-	div.button.selected {
+	.button.selected {
 		background-color: #44444480;
 		filter: brightness(1.2);
 		padding: 5px;

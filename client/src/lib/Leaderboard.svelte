@@ -34,6 +34,12 @@
 		width: 100%;
 	}
 
+	@media (max-height: 500px) {
+		table {
+			font-size: 0.5em;
+		}
+	}
+
 	td.name {
 		font-weight: bold;
 	}

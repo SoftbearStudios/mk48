@@ -17,6 +17,8 @@ type (
 		alt             float32
 		altTarget       float32
 		spawnProtection Ticks
+		actTicks        Ticks
+		act             bool
 		typ             EntityType
 	}
 )
@@ -132,4 +134,20 @@ func (ext *unsafeExtension) getSpawnProtection() Ticks {
 
 func (ext *unsafeExtension) setSpawnProtection(val Ticks) {
 	ext.spawnProtection = val
+}
+
+func (ext *unsafeExtension) active() bool {
+	return ext.act
+}
+
+func (ext *unsafeExtension) setActive(val bool) {
+	ext.act = val
+}
+
+func (ext *unsafeExtension) activeTicks() Ticks {
+	return ext.actTicks
+}
+
+func (ext *unsafeExtension) setActiveTicks(val Ticks) {
+	ext.actTicks = val
 }

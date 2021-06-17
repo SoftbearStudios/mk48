@@ -82,10 +82,10 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 839.9
+				"range": 783.25
 			},
 			"sonar": {
-				"range": 1113.3
+				"range": 406.65
 			}
 		},
 		"armaments": [
@@ -188,13 +188,13 @@
 		"stealth": 0.25,
 		"sensors": {
 			"visual": {
-				"range": 962
+				"range": 885
 			},
 			"radar": {
-				"range": 1308
+				"range": 1231
 			},
 			"sonar": {
-				"range": 1154
+				"range": 427
 			}
 		},
 		"armaments": [
@@ -383,10 +383,10 @@
 		"speed": 15.438478,
 		"sensors": {
 			"visual": {
-				"range": 1224.8
+				"range": 1104
 			},
 			"radar": {
-				"range": 1483.2
+				"range": 1362.4
 			}
 		},
 		"armaments": [
@@ -532,7 +532,7 @@
 		"speed": 8,
 		"sensors": {
 			"visual": {
-				"range": 797
+				"range": 747.5
 			}
 		},
 		"armaments": [
@@ -564,10 +564,10 @@
 		"speed": 16.83333,
 		"sensors": {
 			"visual": {
-				"range": 1297.4
+				"range": 1164.5
 			},
 			"radar": {
-				"range": 1531.6
+				"range": 1398.7
 			}
 		},
 		"armaments": [
@@ -729,7 +729,7 @@
 		"speed": 15.9477,
 		"sensors": {
 			"visual": {
-				"range": 605
+				"range": 587.5
 			}
 		},
 		"armaments": [
@@ -835,13 +835,13 @@
 		"speed": 18.777,
 		"sensors": {
 			"visual": {
-				"range": 844.4
+				"range": 787
 			},
 			"radar": {
-				"range": 1229.6
+				"range": 1172.2
 			},
 			"sonar": {
-				"range": 1114.8
+				"range": 407.4
 			}
 		},
 		"armaments": [
@@ -1064,13 +1064,13 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 845
+				"range": 787.5
 			},
 			"radar": {
-				"range": 1230
+				"range": 1172.5
 			},
 			"sonar": {
-				"range": 1115
+				"range": 407.5
 			}
 		},
 		"armaments": [
@@ -1231,7 +1231,7 @@
 		"speed": 27.26557,
 		"sensors": {
 			"visual": {
-				"range": 556.55
+				"range": 547.125
 			}
 		},
 		"armaments": [
@@ -1268,10 +1268,10 @@
 		"speed": 8.7455,
 		"sensors": {
 			"visual": {
-				"range": 795.2
+				"range": 746
 			},
 			"sonar": {
-				"range": 1098.4
+				"range": 399.2
 			}
 		},
 		"armaments": [
@@ -1411,7 +1411,7 @@
 		],
 		"sensors": {
 			"visual": {
-				"range": 658.4429
+				"range": 632.03575
 			}
 		},
 		"antiAircraft": 0.039,
@@ -1432,13 +1432,13 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 989
+				"range": 907.5
 			},
 			"radar": {
-				"range": 1326
+				"range": 1244.5
 			},
 			"sonar": {
-				"range": 1163
+				"range": 431.5
 			}
 		},
 		"armaments": [
@@ -1606,10 +1606,10 @@
 		"speed": 22.6,
 		"sensors": {
 			"visual": {
-				"range": 576.2
+				"range": 563.5
 			},
 			"radar": {
-				"range": 1050.8
+				"range": 1038.1
 			}
 		},
 		"armaments": [
@@ -1703,10 +1703,10 @@
 		"speed": 16.71945,
 		"sensors": {
 			"visual": {
-				"range": 1007.3
+				"range": 922.75
 			},
 			"radar": {
-				"range": 1338.2
+				"range": 1253.65
 			}
 		},
 		"armaments": [
@@ -1916,10 +1916,10 @@
 		"speed": 8.5,
 		"sensors": {
 			"visual": {
-				"range": 787.4
+				"range": 739.5
 			},
 			"radar": {
-				"range": 1191.6
+				"range": 1143.7
 			}
 		},
 		"armaments": [
@@ -2000,10 +2000,10 @@
 		"speed": 18.52,
 		"sensors": {
 			"visual": {
-				"range": 755.9
+				"range": 713.25
 			},
 			"radar": {
-				"range": 1170.6
+				"range": 1127.95
 			}
 		},
 		"armaments": [
@@ -2157,10 +2157,10 @@
 		"speed": 14.404,
 		"sensors": {
 			"visual": {
-				"range": 1342.4
+				"range": 1202
 			},
 			"radar": {
-				"range": 1561.6
+				"range": 1421.2
 			}
 		},
 		"armaments": [
@@ -2330,13 +2330,13 @@
 		"speed": 14.66167,
 		"sensors": {
 			"visual": {
-				"range": 1067
+				"range": 972.5
 			},
 			"radar": {
-				"range": 1378
+				"range": 1283.5
 			},
 			"sonar": {
-				"range": 1189
+				"range": 444.5
 			}
 		},
 		"armaments": [
@@ -2488,13 +2488,13 @@
 		"speed": 12.8611,
 		"sensors": {
 			"visual": {
-				"range": 1010
+				"range": 925
 			},
 			"radar": {
-				"range": 1340
+				"range": 1255
 			},
 			"sonar": {
-				"range": 1170
+				"range": 435
 			}
 		},
 		"armaments": [
@@ -2633,7 +2633,7 @@
 		"speed": 16,
 		"sensors": {
 			"visual": {
-				"range": 610.7
+				"range": 592.25
 			}
 		},
 		"antiAircraft": 0.026,
@@ -2653,10 +2653,10 @@
 		"speed": 21.6067,
 		"sensors": {
 			"visual": {
-				"range": 615.8
+				"range": 596.5
 			},
 			"radar": {
-				"range": 1077.2
+				"range": 1057.9
 			}
 		},
 		"armaments": [
@@ -2738,7 +2738,7 @@
 		"speed": 21.09,
 		"sensors": {
 			"visual": {
-				"range": 569
+				"range": 557.5
 			}
 		},
 		"armaments": [
@@ -2791,13 +2791,13 @@
 		"speed": 16.976667,
 		"sensors": {
 			"visual": {
-				"range": 730.13
+				"range": 691.775
 			},
 			"radar": {
-				"range": 1153.42
+				"range": 1115.065
 			},
 			"sonar": {
-				"range": 1076.71
+				"range": 388.355
 			}
 		},
 		"armaments": [
@@ -2870,7 +2870,7 @@
 		"draft": 11.6,
 		"sensors": {
 			"visual": {
-				"range": 1037
+				"range": 947.5
 			}
 		},
 		"armaments": [],
@@ -2890,10 +2890,10 @@
 		"speed": 16.59084,
 		"sensors": {
 			"visual": {
-				"range": 1040.9
+				"range": 950.75
 			},
 			"radar": {
-				"range": 1360.6
+				"range": 1270.45
 			}
 		},
 		"armaments": [
@@ -3127,10 +3127,10 @@
 		"speed": 9.06,
 		"sensors": {
 			"visual": {
-				"range": 701.3
+				"range": 667.75
 			},
 			"sonar": {
-				"range": 1067.1
+				"range": 383.55
 			}
 		},
 		"armaments": [
@@ -3208,13 +3208,13 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 718.1
+				"range": 681.75
 			},
 			"radar": {
-				"range": 1145.4
+				"range": 1109.05
 			},
 			"sonar": {
-				"range": 1072.7
+				"range": 386.35
 			}
 		},
 		"armaments": [
@@ -3379,13 +3379,13 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 890
+				"range": 825
 			},
 			"radar": {
-				"range": 1260
+				"range": 1195
 			},
 			"sonar": {
-				"range": 1130
+				"range": 415
 			}
 		},
 		"armaments": [
@@ -3569,10 +3569,10 @@
 		"speed": 28.29446,
 		"sensors": {
 			"visual": {
-				"range": 671
+				"range": 642.5
 			},
 			"radar": {
-				"range": 1114
+				"range": 1085.5
 			}
 		},
 		"armaments": [
@@ -3711,13 +3711,13 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 1070
+				"range": 975
 			},
 			"radar": {
-				"range": 1380
+				"range": 1285
 			},
 			"sonar": {
-				"range": 1190
+				"range": 445
 			}
 		},
 		"armaments": [
@@ -4017,7 +4017,7 @@
 		"speed": 23,
 		"sensors": {
 			"sonar": {
-				"range": 1003.275
+				"range": 351.6375
 			}
 		},
 		"lifespan": 65.21739130434783,
@@ -4037,7 +4037,7 @@
 		"speed": 96.1136,
 		"sensors": {
 			"visual": {
-				"range": 537.35
+				"range": 531.125
 			}
 		},
 		"armaments": [
@@ -4062,7 +4062,7 @@
 		"damage": 0,
 		"sensors": {
 			"radar": {
-				"range": 1009
+				"range": 1006.75
 			}
 		},
 		"armaments": [
@@ -4086,7 +4086,7 @@
 		"speed": 662.6,
 		"sensors": {
 			"radar": {
-				"range": 1009
+				"range": 1006.75
 			}
 		},
 		"lifespan": 4.290123456790123,
@@ -4189,7 +4189,7 @@
 		"speed": 993.9,
 		"sensors": {
 			"radar": {
-				"range": 1016.8
+				"range": 1012.6
 			}
 		},
 		"lifespan": 5.073375262054507,
@@ -4247,7 +4247,7 @@
 		"speed": 1000,
 		"sensors": {
 			"radar": {
-				"range": 1007.32
+				"range": 1005.49
 			}
 		},
 		"lifespan": 4.109819121447028,
@@ -4266,7 +4266,7 @@
 		"speed": 240,
 		"sensors": {
 			"radar": {
-				"range": 1007.6
+				"range": 1005.7
 			}
 		},
 		"lifespan": 4.5563634318853135,
@@ -4286,7 +4286,7 @@
 		"speed": 570,
 		"sensors": {
 			"radar": {
-				"range": 1003.148
+				"range": 1002.361
 			}
 		},
 		"lifespan": 3.5831871345029236,
@@ -4305,7 +4305,7 @@
 		"speed": 53.50225,
 		"sensors": {
 			"visual": {
-				"range": 547.4
+				"range": 539.5
 			}
 		},
 		"armaments": [
@@ -4334,7 +4334,7 @@
 		"speed": 67.9067,
 		"sensors": {
 			"visual": {
-				"range": 530.2559
+				"range": 525.21325
 			}
 		},
 		"armaments": [
@@ -4496,7 +4496,7 @@
 		"speed": 28.2944,
 		"sensors": {
 			"sonar": {
-				"range": 1005.8
+				"range": 352.9
 			}
 		},
 		"lifespan": 53.01402397647591,
@@ -4545,7 +4545,7 @@
 		"speed": 22.63557,
 		"sensors": {
 			"sonar": {
-				"range": 1002.72
+				"range": 351.36
 			}
 		},
 		"lifespan": 66.26738359140062,
@@ -4565,7 +4565,7 @@
 		"speed": 300,
 		"sensors": {
 			"radar": {
-				"range": 1007.9
+				"range": 1005.925
 			}
 		},
 		"lifespan": 4.284693816410552,
@@ -4585,7 +4585,7 @@
 		"speed": 680,
 		"sensors": {
 			"radar": {
-				"range": 1005.58
+				"range": 1004.185
 			}
 		},
 		"lifespan": 3.8976964769647693,
@@ -4604,7 +4604,7 @@
 		"speed": 75.1089,
 		"sensors": {
 			"visual": {
-				"range": 558.8
+				"range": 549
 			}
 		},
 		"armaments": [
@@ -4659,7 +4659,7 @@
 		"speed": 600,
 		"sensors": {
 			"radar": {
-				"range": 1012.3
+				"range": 1009.225
 			}
 		},
 		"lifespan": 4.690393518518519,
@@ -4823,7 +4823,7 @@
 		"speed": 325.85,
 		"sensors": {
 			"radar": {
-				"range": 1011.6
+				"range": 1008.7
 			}
 		},
 		"lifespan": 4.697630031549474,
@@ -4843,7 +4843,7 @@
 		"speed": 300,
 		"sensors": {
 			"radar": {
-				"range": 1008.66
+				"range": 1006.495
 			}
 		},
 		"lifespan": 4.391191073943132,
@@ -4864,7 +4864,7 @@
 		"damage": 0,
 		"sensors": {
 			"radar": {
-				"range": 1013
+				"range": 1009.75
 			}
 		},
 		"armaments": [
@@ -4947,7 +4947,7 @@
 		"speed": 20.577778,
 		"sensors": {
 			"sonar": {
-				"range": 1007.9
+				"range": 353.95
 			}
 		},
 		"lifespan": 72.89416767932865,
@@ -4967,7 +4967,7 @@
 		"speed": 245.872,
 		"sensors": {
 			"radar": {
-				"range": 1011.12
+				"range": 1008.34
 			}
 		},
 		"lifespan": 5.096210582734502,
@@ -4987,7 +4987,7 @@
 		"speed": 20.57779,
 		"sensors": {
 			"sonar": {
-				"range": 1002.85
+				"range": 351.425
 			}
 		},
 		"lifespan": 72.89412517087598,

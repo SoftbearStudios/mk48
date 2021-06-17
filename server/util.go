@@ -47,6 +47,17 @@ func max(a, b float32) float32 {
 	return b
 }
 
+func mapRanges(number, oldMin, oldMax, newMin, newMax float32, clampToRange bool) float32 {
+	oldRange := oldMax - oldMin
+	newRange := newMax - newMin
+	numberNormalized := (number - oldMin) / oldRange
+	mapped := newMin + numberNormalized*newRange
+	if clampToRange {
+		mapped = clamp(mapped, newMin, newMax)
+	}
+	return mapped
+}
+
 func clamp(val, minimum, maximum float32) float32 {
 	return min(max(val, minimum), maximum)
 }

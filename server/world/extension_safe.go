@@ -10,6 +10,8 @@ type safeExtension struct {
 	alt             float32 // altitude (see entity.Altitude for meaning)
 	altTarget       float32 // desired altitude
 	spawnProtection Ticks   // remaining
+	actTicks        Ticks   // remaining ticks of active (serves as rate limiter)
+	act             bool    // active sensors
 }
 
 var _ = extension(&safeExtension{})
@@ -17,8 +19,8 @@ var _ = extension(&safeExtension{})
 func (ext *safeExtension) setType(entityType EntityType) {
 	data := entityType.Data()
 
-	// Only keep target and target time
-	*ext = safeExtension{target: ext.target, altTarget: ext.altTarget, spawnProtection: ext.spawnProtection}
+	// Only keep certain fields
+	*ext = safeExtension{target: ext.target, altTarget: ext.altTarget, spawnProtection: ext.spawnProtection, act: ext.act}
 
 	// Replenish all
 	ext.armaments = make([]Ticks, len(data.Armaments))
@@ -84,4 +86,20 @@ func (ext *safeExtension) getSpawnProtection() Ticks {
 
 func (ext *safeExtension) setSpawnProtection(val Ticks) {
 	ext.spawnProtection = val
+}
+
+func (ext *safeExtension) active() bool {
+	return ext.act
+}
+
+func (ext *safeExtension) setActive(val bool) {
+	ext.act = val
+}
+
+func (ext *safeExtension) activeTicks() Ticks {
+	return ext.actTicks
+}
+
+func (ext *safeExtension) setActiveTicks(val Ticks) {
+	ext.actTicks = val
 }

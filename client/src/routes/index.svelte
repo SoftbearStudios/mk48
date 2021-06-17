@@ -22,7 +22,7 @@
 	import {connect, connected, disconnect, send, contacts as socketContacts, entityID as socketEntityID, terrain, leaderboard, worldRadius} from '../lib/socket.js';
 	import backgroundShader from '../lib/background.js';
 	import {startRecording, stopRecording} from '../lib/recording.js';
-	import {onMount} from 'svelte'
+	import {onMount, onDestroy} from 'svelte'
 
 	// Spritesheet data
 	import entitiesTPS from '../data/entities.tps.json';
@@ -41,7 +41,9 @@
 	let overlay = {};
 	let viewportPositionCache = {x: 0, y: 0};
 	let armamentSelection;
+	let active; // active sensors
 	let altitudeTarget;
+	let lastActive; // last active sent to server
 	let lastAltitudeTarget; // last altitudeTarget sent to server
 	let lastSend = 0; // secondsTotal of last manual/aim
 	let perf = 0.5; // performance level in interval [0,1]
@@ -83,9 +85,32 @@
 		overlay = overlay; // reactivity
 	}
 
+	// May be called anywhere (not just component init)
+	const customOnDestroyFuncs = [];
+	let destroying = false;
+	function customOnDestroy(func) {
+		if (destroying) {
+			func();
+		} else {
+			customOnDestroyFuncs.push(func);
+		}
+	}
+
+	onDestroy(() => {
+		console.log(`on destroy (${customOnDestroyFuncs.length})`);
+		destroying = true;
+		for (const func of customOnDestroyFuncs) {
+			func();
+		}
+	});
+
 	onMount(async () => {
 		const PIXI = await import('pixi.js');
 		const {Viewport} = await import('pixi-viewport');
+
+		if (destroying) {
+			return;
+		}
 
 		PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.ON;
 
@@ -136,9 +161,9 @@
 		viewport.addChild(backgroundContainer);
 		backgroundContainer.filterArea = app.screen;
 		backgroundContainer.filters = [background];
-		const unsubscribeWorldRadius = worldRadius.subscribe(newRadius => {
+		customOnDestroy(worldRadius.subscribe(newRadius => {
 			background.uniforms.iBorderRange = newRadius;
-		});
+		}));
 
 		// For unknown reasons, PIXI.js does not render things in the order
 		// they were added to viewport. Some things must be added in reverse.
@@ -200,10 +225,7 @@
 			for (const entityID of Object.keys(newContacts)) {
 				const entity = newContacts[entityID];
 
-				if (!entity.type) {
-					continue; // radar contacts, etc.
-				}
-
+				// Can be undefined (for unkown contacts)
 				const currentEntityData = entityData[entity.type];
 
 				let sprite = entitySprites[entityID];
@@ -214,169 +236,175 @@
 						removeSprite(entityID, sprite);
 					}
 
-					sprite = PIXI.Sprite.from(entitiesSpritesheet.textures[entity.type]);
+					const texture = entity.type && entity.type in entitiesSpritesheet.textures ? entitiesSpritesheet.textures[entity.type] : extrasSpritesheet.textures.contact;
+					sprite = PIXI.Sprite.from(texture);
 					entitySprites[entityID] = sprite;
 
 					sprite.type = entity.type;
 
 					sprite.anchor.set(0.5);
-					sprite.height = currentEntityData.width;
-					sprite.width = currentEntityData.length;
+					sprite.height = currentEntityData ? currentEntityData.width : 10;
+					sprite.width = currentEntityData ? currentEntityData.length : 10;
 					entityContainer.addChild(sprite);
 
-					const turrets = currentEntityData.turrets;
+					if (currentEntityData) {
+						const turrets = currentEntityData.turrets;
 
-					if (turrets) {
-						sprite.turrets = [];
+						if (turrets) {
+							sprite.turrets = [];
 
-						for (let t = 0; t < turrets.length; t++) {
-							const turret = turrets[t];
+							for (let t = 0; t < turrets.length; t++) {
+								const turret = turrets[t];
 
-							let turretContainer;
-							if (turret.type) {
-								turretContainer = PIXI.Sprite.from(entitiesSpritesheet.textures[turret.type]);
-								//turretContainer.anchor.set(entityData[turret.type].positionForward / entityData[turret.type].width, 0.5);
-								turretContainer.height = entityData[turret.type].width / sprite.scale.y;
-								turretContainer.width = entityData[turret.type].length / sprite.scale.x;
-								turretContainer.anchor.set(0.5 - (entityData[turret.type].positionForward || 0) / entityData[turret.type].length, 0.5 - (entityData[turret.type].positionSide || 0) / entityData[turret.type].width);
-							} else {
-								turretContainer = new PIXI.Container();
+								let turretContainer;
+								if (turret.type) {
+									turretContainer = PIXI.Sprite.from(entitiesSpritesheet.textures[turret.type]);
+									//turretContainer.anchor.set(entityData[turret.type].positionForward / entityData[turret.type].width, 0.5);
+									turretContainer.height = entityData[turret.type].width / sprite.scale.y;
+									turretContainer.width = entityData[turret.type].length / sprite.scale.x;
+									turretContainer.anchor.set(0.5 - (entityData[turret.type].positionForward || 0) / entityData[turret.type].length, 0.5 - (entityData[turret.type].positionSide || 0) / entityData[turret.type].width);
+								} else {
+									turretContainer = new PIXI.Container();
+								}
+								turretContainer.position.set(turret.positionForward / sprite.scale.x, turret.positionSide / sprite.scale.y);
+								turretContainer.rotation = turret.angle || 0;
+								sprite.addChild(turretContainer);
+
+								sprite.turrets[t] = turretContainer;
 							}
-							turretContainer.position.set(turret.positionForward / sprite.scale.x, turret.positionSide / sprite.scale.y);
-							turretContainer.rotation = turret.angle || 0;
-							sprite.addChild(turretContainer);
-
-							sprite.turrets[t] = turretContainer;
 						}
-					}
 
-					const armaments = currentEntityData.armaments;
+						const armaments = currentEntityData.armaments;
 
-					if (armaments) {
-						sprite.armaments = [];
+						if (armaments) {
+							sprite.armaments = [];
 
-						for (let a = 0; a < armaments.length; a++) {
-							const armament = armaments[a];
+							for (let a = 0; a < armaments.length; a++) {
+								const armament = armaments[a];
 
-							// For now, vertically-launched armaments are hidden
-							// TODO: Create top-down sprites
-							if (armament.hidden || armament.vertical || !(entity.external || entity.friendly)) {
-								continue;
+								// For now, vertically-launched armaments are hidden
+								// TODO: Create top-down sprites
+								if (armament.hidden || armament.vertical || !(entity.external || entity.friendly)) {
+									continue;
+								}
+
+								const armamentSprite = PIXI.Sprite.from(entitiesSpritesheet.textures[armament.type]);
+								armamentSprite.position.set((armament.positionForward || 0) / sprite.scale.x, (armament.positionSide || 0) / sprite.scale.y);
+								armamentSprite.anchor.set(0.5);
+								armamentSprite.rotation = armament.angle || 0;
+								if (armament.turret != undefined) {
+									sprite.turrets[armament.turret].addChild(armamentSprite);
+								} else {
+									sprite.addChild(armamentSprite);
+								}
+
+								armamentSprite.height = entityData[armament.type].width / sprite.scale.y;
+								armamentSprite.width = entityData[armament.type].length / sprite.scale.x;
+
+								sprite.armaments[a] = armamentSprite;
 							}
-
-							const armamentSprite = PIXI.Sprite.from(entitiesSpritesheet.textures[armament.type]);
-							armamentSprite.position.set((armament.positionForward || 0) / sprite.scale.x, (armament.positionSide || 0) / sprite.scale.y);
-							armamentSprite.anchor.set(0.5);
-							armamentSprite.rotation = armament.angle || 0;
-							if (armament.turret != undefined) {
-								sprite.turrets[armament.turret].addChild(armamentSprite);
-							} else {
-								sprite.addChild(armamentSprite);
-							}
-
-							armamentSprite.height = entityData[armament.type].width / sprite.scale.y;
-							armamentSprite.width = entityData[armament.type].length / sprite.scale.x;
-
-							sprite.armaments[a] = armamentSprite;
 						}
 					}
 				}
 
 				// Markers/nametags
-				let oldColor = null, newColor = null;
-				switch (currentEntityData.kind) {
-				case 'aircraft':
-				case 'decoy':
-				case 'weapon':
-					newColor = entity.friendly ? 0x3aff8c : 0xe74c3c;
+				if (currentEntityData) {
+					let oldColor = null, newColor = null;
 
-					if (sprite.triangle) {
-						oldColor = sprite.triangle.tint;
-					}
+					switch (currentEntityData.kind) {
+					case 'aircraft':
+					case 'decoy':
+					case 'weapon':
+						newColor = entity.friendly ? 0x3aff8c : 0xe74c3c;
 
-					if (newColor !== oldColor) {
-						if (!sprite.triangle) {
-							sprite.triangle = new PIXI.Sprite(extrasSpritesheet.textures.triangle);
-							sprite.triangle.anchor.set(0.5);
-							viewport.addChild(sprite.triangle);
+						if (sprite.triangle) {
+							oldColor = sprite.triangle.tint;
 						}
 
-						sprite.triangle.tint = newColor;
-					}
-					break;
-				case 'boat':
-					let newName = null;
-					if (entity.name) {
-						newName = entity.team ? `[${entity.team}] ${entity.name}` : entity.name;
-					}
-					newColor = entity.friendly ? 0x3aff8c : 0xffffff;
-
-					let oldName = null;
-					if (sprite.nameText) {
-						oldName = sprite.nameText.text;
-						oldColor = sprite.nameText.fillColor;
-					}
-
-					if (newName !== oldName || newColor !== oldColor) {
-						if (sprite.nameText) {
-							sprite.removeChild(sprite.nameText);
-							sprite.nameText.destroy();
-							delete sprite.nameText;
-						}
-
-						if (newName) {
-							sprite.nameText = new PIXI.Text(newName, {fontFamily: 'Arial', fontSize: 32, align: 'center', fill: newColor});
-							sprite.nameText.fillColor = newColor; // for our purposes, not PIXI
-							sprite.nameText.anchor.set(0.5);
-							sprite.nameText.alpha = 0.75;
-							sprite.nameText.scale.set(0.1);
-							viewport.addChild(sprite.nameText);
-						}
-					}
-
-					if (sprite.nameText) {
-						// Quantize health to avoid frequent GUI updates
-						const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
-
-						if (currentEntityData.kind === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
-							if (!sprite.healthBar) {
-								sprite.healthBar = new PIXI.Graphics();
-								viewport.addChild(sprite.healthBar);
+						if (newColor !== oldColor) {
+							if (!sprite.triangle) {
+								sprite.triangle = new PIXI.Sprite(extrasSpritesheet.textures.triangle);
+								sprite.triangle.anchor.set(0.5);
+								viewport.addChild(sprite.triangle);
 							}
 
-							sprite.healthBar.health = health;
-
-							const BAR_LENGTH = 15;
-							const BAR_HEIGHT = 1;
-
-							sprite.healthBar.clear();
-							sprite.healthBar.beginFill(0xaaaaaa, 0.5);
-							sprite.healthBar.drawRect(-BAR_LENGTH / 2, -BAR_HEIGHT / 2, BAR_LENGTH, BAR_HEIGHT);
-							sprite.healthBar.endFill();
-
-							sprite.healthBar.beginFill(newColor, 0.5);
-							sprite.healthBar.drawRect(-BAR_LENGTH / 2, -BAR_HEIGHT / 2, health * BAR_LENGTH, BAR_HEIGHT);
-							sprite.healthBar.endFill();
+							sprite.triangle.tint = newColor;
 						}
-					} else if (sprite.healthBar) {
-						viewport.removeChild(sprite.healthBar);
-						sprite.healthBar.destroy();
-						delete sprite.healthBar;
-					}
-
-					if (entityID === localEntityID) {
-						setOverlay('score', entity.score);
-
-						// If player has a good score, prompt them before leaving page
-						if (entity.score >= 50) {
-							window.onbeforeunload = function() {
-								return true;
-							};
-						} else {
-							window.onbeforeunload = null;
+						break;
+					case 'boat':
+						let newName = null;
+						if (entity.name) {
+							newName = entity.team ? `[${entity.team}] ${entity.name}` : entity.name;
 						}
+						newColor = entity.friendly ? 0x3aff8c : 0xffffff;
+
+						let oldName = null;
+						if (sprite.nameText) {
+							oldName = sprite.nameText.text;
+							oldColor = sprite.nameText.fillColor;
+						}
+
+						if (newName !== oldName || newColor !== oldColor) {
+							if (sprite.nameText) {
+								sprite.removeChild(sprite.nameText);
+								sprite.nameText.destroy();
+								delete sprite.nameText;
+							}
+
+							if (newName) {
+								sprite.nameText = new PIXI.Text(newName, {fontFamily: 'Arial', fontSize: 32, align: 'center', fill: newColor});
+								sprite.nameText.fillColor = newColor; // for our purposes, not PIXI
+								sprite.nameText.anchor.set(0.5);
+								sprite.nameText.alpha = 0.75;
+								sprite.nameText.scale.set(0.1);
+								viewport.addChild(sprite.nameText);
+							}
+						}
+
+						if (sprite.nameText) {
+							// Quantize health to avoid frequent GUI updates
+							const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
+
+							if (currentEntityData.kind === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
+								if (!sprite.healthBar) {
+									sprite.healthBar = new PIXI.Graphics();
+									viewport.addChild(sprite.healthBar);
+								}
+
+								sprite.healthBar.health = health;
+
+								const BAR_LENGTH = 15;
+								const BAR_HEIGHT = 1;
+
+								sprite.healthBar.clear();
+								sprite.healthBar.beginFill(0xaaaaaa, 0.5);
+								sprite.healthBar.drawRect(-BAR_LENGTH / 2, -BAR_HEIGHT / 2, BAR_LENGTH, BAR_HEIGHT);
+								sprite.healthBar.endFill();
+
+								sprite.healthBar.beginFill(newColor, 0.5);
+								sprite.healthBar.drawRect(-BAR_LENGTH / 2, -BAR_HEIGHT / 2, health * BAR_LENGTH, BAR_HEIGHT);
+								sprite.healthBar.endFill();
+							}
+						} else if (sprite.healthBar) {
+							viewport.removeChild(sprite.healthBar);
+							sprite.healthBar.destroy();
+							delete sprite.healthBar;
+						}
+
+						if (entityID === localEntityID) {
+							setOverlay('score', entity.score);
+
+							// If player has a good score, prompt them before leaving page
+							if (entity.score >= 50) {
+								window.onbeforeunload = function() {
+									return true;
+								};
+							} else {
+								window.onbeforeunload = null;
+							}
+						}
+						break;
 					}
-					break;
 				}
 
 				if (entity.altitude != undefined) {
@@ -459,13 +487,13 @@
 		}
 
 		// Update sprites whenever contacts change
-		const unsubscribeSocketContacts = socketContacts.subscribe(reconcileContacts);
+		customOnDestroy(socketContacts.subscribe(reconcileContacts));
 
 		// Terrain
 		let terrainTexture = null;
 		let terrainDimensions = [0, 0, 0, 0]; // x, y, width, height
 
-		const unsubscribeTerrain = terrain.subscribe(data => {
+		customOnDestroy(terrain.subscribe(data => {
 			if (!data) {
 				return;
 			}
@@ -501,7 +529,7 @@
 			terrainDimensions[1] = data.y;
 			terrainDimensions[2] = data.width || 1;
 			terrainDimensions[3] = data.height || 1;
-		});
+		}));
 
 		async function updateGlobalLeaderboard() {
 			try {
@@ -521,7 +549,12 @@
 
 		updateGlobalLeaderboard();
 
-		app.ticker.add(delta => {
+		const frame = delta => {
+			if (destroying) {
+				console.log('ticker fired after destroying');
+				return;
+			}
+
 			// Update canvas/renderer size
 			app.renderer.resize(width, height);
 			viewport.resize(width, height, WORLD_SIZE, WORLD_SIZE)
@@ -558,7 +591,7 @@
 
 				keyEvent |= keyboard.forward || keyboard.backward || keyboard.right || keyboard.left || keyboard.stop;
 				let angVelTarget = undefined;
-				if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
+				if (mouseDownNotClick() || keyEvent || active != lastActive || altitudeTarget != lastAltitudeTarget) {
 					if (mouseDownNotClick()) {
 						localSprite.directionTarget = mouseAngle;
 						localSprite.velocityTarget = mapRanges(mouseDistance / localSprite.width, THROTTLE_START, THROTTLE_END, 0, entityData[localEntity.type].speed, true);
@@ -736,16 +769,18 @@
 						}
 					}
 
-					if (mouseDownNotClick() || keyEvent || altitudeTarget != lastAltitudeTarget) {
+					if (mouseDownNotClick() || keyEvent || active != lastActive || altitudeTarget != lastAltitudeTarget) {
 						send('manual', {
 							entityID: localEntityID,
 							velocityTarget: localSprite.velocityTarget,
 							angVelTarget,
 							directionTarget: localSprite.directionTarget,
+							active,
 							altitudeTarget: localEntityData.subkind === 'submarine' ? altitudeTarget : undefined,
 							aimTarget: mousePosition,
 						});
 
+						lastActive = active;
 						lastAltitudeTarget = altitudeTarget;
 					} else {
 						// TODO: Some ships don't need to aim turrets, in which
@@ -805,14 +840,14 @@
 				sprite.rotation += mapRanges(seconds, 0, 0.25, 0, interpolateAngle, true);
 
 				// Direction target of 0 may be invalid
-				if (entity.friendly || entity.directionTarget) {
+				if (spriteData && (entity.friendly || entity.directionTarget)) {
 					let maxTurnSpeed = Math.PI / 4; // per second
 					if (spriteData.subkind === 'heli') {
 						maxTurnSpeed = Math.PI / 2;
 					}
 
 					let angleDifference = angleDiff(sprite.rotation, entity.directionTarget || 0);
-					let maxSpeed = (spriteData.speed || 20)
+					let maxSpeed = spriteData.speed || 20;
 					if (spriteData.kind !== 'aircraft') {
 						maxSpeed /= Math.max(Math.pow(angleDifference, 2), 1);
 						maxTurnSpeed *= Math.max(0.25, 1 - Math.abs(sprite.velocity || 0) / (maxSpeed + 1));
@@ -831,7 +866,7 @@
 
 				const spriteDistance = dist(sprite.position, viewport.center);
 
-				if (spriteDistance <= visualRange) {
+				if (spriteData && spriteDistance <= visualRange) {
 					let amount =  0.03 * sprite.width * Math.log(sprite.velocity) * perf;
 					let wakeAngle = 2 * Math.atan(sprite.height / (Math.max(1, sprite.velocity)));
 					if (spriteData.kind === 'aircraft') {
@@ -914,19 +949,26 @@
 					setViewPosition(newCenter, true);
 				}
 			}
-		});
+		};
 
-		// start receiving leaderboard, background
+		app.ticker.add(frame);
+
+		// start receiving leaderboard, background, etc.
 		// do this after we are actually ready for data, to be safe
 		connect();
 
-		return () => {
+		// Cannot use 'return' method of setting onDestroy, since this is an
+		// async function
+		customOnDestroy(() => {
 			disconnect();
-			unsubscribeSocketContacts();
-			unsubscribeTerrain();
-			unsubscribeWorldRadius();
-			app.destroy.bind(app);
-		};
+			console.log('destroying app')
+			// Cannot delete system/shared ticker since they're protected
+			// so settle for removing frame handler
+			app.ticker.remove(frame);
+			app.loader.reset();
+			app.destroy(false, {children: true, texture: true, baseTexture: true});
+			PIXI.utils.destroyTextureCache();
+		});
 	});
 
 	function updateMouseLeftDown(leftDown) {
@@ -1034,9 +1076,12 @@
 			}
 
 			// Last 3 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
-			if (shipRef &&  shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
+			if (shipRef && shipRef.toggleActive && shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
 				// tab
 				keys[9] = shipRef.incrementSelection.bind(shipRef);
+
+				// z
+				keys[90] = shipRef.toggleActive.bind(shipRef);
 
 				// r
 				keys[82] = shipRef.toggleAltitudeTarget.bind(shipRef);
@@ -1115,7 +1160,7 @@
 	</div>
 	<div class='bottom bar'>
 		{#if spawned}
-			<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
+			<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} altitude={contacts[localEntityID].altitude} bind:active bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
 			<Status {overlay} {recording} type={contacts[localEntityID].type}/>
 			<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
 		{/if}

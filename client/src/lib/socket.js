@@ -137,8 +137,10 @@ export async function connect(callback) {
 }
 
 export function disconnect() {
-	if (socket && socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN) {
+	if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+		console.log('disconnecting from server...');
 		socket.close();
+		socket = null;
 	}
 }
 

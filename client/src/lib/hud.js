@@ -39,12 +39,13 @@ export function drawHud(hud, entity, sprite, contacts) {
 
 		const angle = Math.atan2(contact.position.y - sprite.position.y, contact.position.x - sprite.position.x);
 		const scaledDistance = scale * mapRanges(distance, 0, 2000, 1.05, 1.5, true);
+		const data = entityData[contact.type];
 
 		let color = 0xee6666;
 
 		if (contact.friendly) {
 			color = 0x2ecc71; // green
-		} else if (['collectible', 'obstacle'].includes(entityData[contact.type].kind)) {
+		} else if (data && ['collectible', 'obstacle'].includes(data.kind)) {
 			color = 0xf1c40f; // yellow
 		} else if (contact.altitude < 0) {
 			color = 0x3498db; // blue

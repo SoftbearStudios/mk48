@@ -78,11 +78,17 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 		var radarRange float32
 		var sonarRange float32
 		var position world.Vec2f
+		var active bool
+		var absVel float32
 
-		if ship != nil {
-			position, visualRange, radarRange, sonarRange = ship.Camera()
-		} else {
+		if ship == nil {
+			active = true
 			position, visualRange, radarRange, sonarRange = p.Camera()
+		} else {
+			active = ship.Active()
+
+			absVel = math32.Abs(ship.Velocity.Float())
+			position, visualRange, radarRange, sonarRange = ship.Camera()
 		}
 
 		maxRange := max(visualRange, max(radarRange, sonarRange))
@@ -93,7 +99,8 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 		sonarRangeInv := invSquare(sonarRange)
 
 		h.world.ForEntitiesInRadius(position, maxRange, func(distanceSquared float32, entity *world.Entity) (_ bool) {
-			known := entity.Owner == player || (distanceSquared < 800*800 && entity.Owner.Friendly(player))
+			friendly := entity.Owner.Friendly(player)
+			known := entity.Owner == player || (distanceSquared < 800*800 && friendly)
 			alt := entity.Altitude()
 			data := entity.Data()
 
@@ -106,25 +113,63 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 				invSize := data.InvSize // cached 1.0 / min(1, data.Radius*(1.0/50.0)*(1-data.Stealth))
 				defaultRatio := distanceSquared * invSize
 				uncertainty = 1.0
+				contactAbsVel := math32.Abs(entity.Velocity.Float())
 
 				if radarRangeInv != 0 && alt >= -0.1 {
 					radarRatio := defaultRatio * radarRangeInv
 
-					// Radar can see moving targets easier
-					radarRatio *= 32 / (32 + math32.Abs(entity.Velocity.Float()))
+					if active {
+						// Active radar can see moving targets easier
+						uncertainty = min(uncertainty, radarRatio*15/(15+contactAbsVel))
+					}
 
-					uncertainty = min(uncertainty, radarRatio*2)
+					// Passive radar
+					emission := float32(5)
+					if data.Kind == world.EntityKindBoat {
+						emission += 5
+						if entity.Active() && data.Sensors.Radar.Range > 0 {
+							// Active radar gives away entity's position
+							emission += 20
+						}
+					} else if data.SubKind == world.EntitySubKindMissile {
+						emission += 30
+					}
+
+					radarRatio *= 25 / emission
+
+					uncertainty = min(uncertainty, radarRatio)
 				}
 
 				if sonarRangeInv != 0 && alt <= 0 {
 					sonarRatio := defaultRatio * sonarRangeInv
-					uncertainty = min(uncertainty, sonarRatio*3)
+					if active {
+						// Active sonar
+						uncertainty = min(uncertainty, sonarRatio)
+					}
+
+					// Passive sonar
+					if data.Kind == world.EntityKindBoat || data.Kind == world.EntityKindWeapon || data.Kind == world.EntityKindDecoy {
+						// Can hear moving targets easier
+						noise := max(contactAbsVel-5, 10)
+
+						if data.Kind != world.EntityKindBoat {
+							noise += 100
+						} else if entity.Active() && data.Sensors.Sonar.Range > 0 {
+							// Active sonar gives away entity's position
+							noise += 20
+						}
+						sonarRatio /= noise
+					}
+					// Making noise of your own reduces the performance of
+					// passive sonar
+					sonarRatio *= 10 + absVel
+					uncertainty = min(uncertainty, sonarRatio)
 				}
 
 				if visualRangeInv != 0 {
 					visualRatio := defaultRatio * visualRangeInv
 					if alt < 0.0 {
-						visualRatio /= clamp(alt+1.0, 0.05, 1)
+						visualRatio /= mapRanges(alt, -0.5, 1, 0.025, 0.8, true)
 					}
 					visible = visualRatio < 1
 					uncertainty = min(uncertainty, visualRatio)
@@ -148,7 +193,9 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 			c.Uncertainty = uncertainty
 			c.Transform = entity.Transform
 			c.EntityID = entity.EntityID
-			c.EntityType = entity.EntityType
+			if data.Kind == world.EntityKindCollectible || friendly || c.Uncertainty < 0.5 || distanceSquared < 100*100 {
+				c.EntityType = entity.EntityType
+			}
 			c.Altitude = alt
 
 			if known || visible {
@@ -166,7 +213,7 @@ func (h *Hub) updateClient(client Client, forceSendTerrain bool) {
 				}
 			}
 
-			if c.Uncertainty < 0.75 && entity.Owner != nil {
+			if c.Uncertainty < 0.5 && entity.Owner != nil {
 				c.Friendly = entity.Owner.Friendly(player)
 				if data.Kind == world.EntityKindBoat {
 					c.IDPlayerData = entity.Owner.IDPlayerData()

@@ -49,6 +49,7 @@ type (
 	// TODO embed AimTurrets
 	Manual struct {
 		world.Guidance
+		Active                bool           `json:"active"`
 		AngularVelocityTarget *world.Angle   `json:"angVelTarget"` // angular velocity must be calculated on the server to avoid oscillations
 		AltitudeTarget        *float32       `json:"altitudeTarget"`
 		AimTarget             world.Vec2f    `json:"aimTarget"`
@@ -461,6 +462,7 @@ func (data Manual) Process(h *Hub, c Client, player *Player) {
 			entity.SetAltitudeTarget(*data.AltitudeTarget)
 		}
 
+		entity.SetActive(data.Active)
 		entity.SetAimTarget(data.AimTarget)
 
 		return

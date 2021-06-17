@@ -15,9 +15,12 @@
 
 	<h2>2021</h2>
 
-	<h3>6/15/2021</h3>
+
+	<h3>6/17/2021</h3>
 
 	<ul>
+		<li>Add active mode for radar and sonar, which allows better vision at
+		the cost of giving away your position.</li>
 		<li>Add shallow water, which reduces the speed and health regeneration of
 		larger boats (and the maximum depth of submarines). Small boats that are
 		not in a team are likely to spawn in these areas.</li>

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	altitudeScale   float32 = 50 // 1 unit of altitude is this many meters
+	altitudeScale   float32 = 40 // 1 unit of altitude is this many meters
 	spawnProtection Ticks   = 10 * TicksPerSecond
 )
 
@@ -173,6 +173,13 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		}
 		entity.Owner.ext.setSpawnProtection(sp - toSubtract)
 
+		// Active ticks
+		if entity.Owner.ext.active() {
+			entity.Owner.ext.setActiveTicks(TicksPerSecond / 2)
+		} else if remaining := entity.Owner.ext.activeTicks(); remaining > 0 {
+			entity.Owner.ext.setActiveTicks(remaining - 1)
+		}
+
 		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
 		if len(entity.ArmamentConsumption()) > 0 {
 			// If turrets were already copied and the extension
@@ -255,9 +262,9 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	}
 
 	size := otherData.Radius
-	if otherData.Kind == EntityKindDecoy {
+	if otherData.Kind == EntityKindDecoy || (otherData.Kind == EntityKindBoat && otherEntity.Active()) {
 		// Decoys appear very large to weapons
-		size = 100
+		size += 100
 	}
 
 	homingStrength := size * baseHomingStrength / (1 + diff.LengthSquared() + 1000*square(square(angleDiff)))

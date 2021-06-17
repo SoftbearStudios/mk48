@@ -44,7 +44,7 @@
 	$: isOwner = $teamMembers && $teamMembers[0] && $socketPlayerID == $teamMembers[0].playerID;
 </script>
 
-<Section name={myTeamID || $t('panel.team.label')} emblem={$teamJoinRequests ? ($teamJoinRequests).length : null} open={false}>
+<Section name={myTeamID || $t('panel.team.label')} emblem={$teamJoinRequests ? ($teamJoinRequests).length : null}>
 	{#if myTeamID}
 		<table>
 			{#if $teamMembers}

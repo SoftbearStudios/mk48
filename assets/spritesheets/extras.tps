@@ -224,6 +224,7 @@
             <key type="filename">splash/splash034.png</key>
             <key type="filename">splash/splash037.png</key>
             <key type="filename">splash/splash040.png</key>
+            <key type="filename">splash/splash043.png</key>
             <key type="filename">splash/splash046.png</key>
             <key type="filename">splash/splash049.png</key>
             <key type="filename">splash/splash052.png</key>
@@ -256,6 +257,21 @@
                 <rect>16,16,32,32</rect>
                 <key>scale9Paddings</key>
                 <rect>16,16,32,32</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/contact.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>8,8,16,16</rect>
+                <key>scale9Paddings</key>
+                <rect>8,8,16,16</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
@@ -296,6 +312,7 @@
             <filename>splash</filename>
             <filename>../../client/static/triangle.png</filename>
             <filename>../../client/static/wake.png</filename>
+            <filename>../../client/static/contact.png</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>

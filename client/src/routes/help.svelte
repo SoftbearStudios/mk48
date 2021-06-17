@@ -121,6 +121,12 @@
 		<li><b>Sonar</b> tracks underwater targets.</li>
 	</ol>
 
+	<p>There are two modes for sensors, <b>active</b> and <b>passive</b>. Passive
+	mode listens for emissions (e.g. sound in the case of sonar) from other entities.
+	Active mode emits a signal and resolves contacts based on the signals that bounce
+	back. In general, active mode allows you to see more, but has the potential
+	to give away your position.</p>
+
 	<p>To visualize sensor data, look at the dots surrounding the outer circle
 	around your ship:</p>
 

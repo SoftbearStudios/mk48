@@ -196,6 +196,7 @@ func (bot *BotClient) Send(out Outbound) {
 		// Prepare a manual steering command to send
 		manual := Manual{
 			EntityID: update.EntityID,
+			Active:   ship.Damage < bot.aggression,
 		}
 
 		if shipData.SubKind == world.EntitySubKindSubmarine {
