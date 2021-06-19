@@ -28,8 +28,9 @@
 	import entitiesTPS from '../data/entities.tps.json';
 	import extrasTPS from '../data/extras.tps.json';
 
-	// Entity Data
+	// Entity/sound/etc. Data
 	import entityData from '../data/entities.json';
+	import soundData from '../data/sounds.json';
 
 	let canvas, chatRef, shipRef, heightFract, widthFract;
 	$: height = Math.floor(heightFract);
@@ -107,6 +108,7 @@
 	onMount(async () => {
 		const PIXI = await import('pixi.js');
 		const {Viewport} = await import('pixi-viewport');
+		const {sound: Sounds} = await import('@pixi/sound');
 
 		if (destroying) {
 			return;
@@ -154,6 +156,13 @@
 		const extrasSpritesheet = new PIXI.Spritesheet(extrasTexture, extrasTPS);
 		entitiesSpritesheet.parse(() => {});
 		extrasSpritesheet.parse(() => {});
+
+		// Load sounds
+		for (const name of soundData) {
+			Sounds.add(name, `/sounds/${name}.mp3`);
+		}
+
+		Sounds.play('ocean', {loop: true, volume: 0.25});
 
 		// Background (water + land)
 		const background = new PIXI.Filter(null, backgroundShader);
@@ -779,6 +788,17 @@
 							altitudeTarget: localEntityData.subkind === 'submarine' ? altitudeTarget : undefined,
 							aimTarget: mousePosition,
 						});
+
+						if (lastAltitudeTarget == 0 && altitudeTarget < 0) {
+							Sounds.play('dive');
+						} else if (lastAltitudeTarget < 0 && altitudeTarget == 0) {
+							Sounds.play('surface');
+						}
+						if (!lastActive && active) {
+							if (localEntityData && localEntityData.sensors && localEntityData.sensors.sonar && localEntityData.sensors.sonar.range) {
+								Sounds.play('sonar1');
+							}
+						}
 
 						lastActive = active;
 						lastAltitudeTarget = altitudeTarget;

@@ -118,7 +118,7 @@
 	}
 
 	// Link target
-	$: target = false && $outboundEnabled ? '_blank' : null;
+	$: target = $outboundEnabled ? '_blank' : null;
 </script>
 
 <div class='splash' in:fade="{{delay: 2000, duration: 500}}">
