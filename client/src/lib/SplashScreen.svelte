@@ -179,7 +179,7 @@
 		color: black;
 		height: min-content;
 		margin: auto;
-		padding: 1em;
+		padding: 0.8em;
 		position: absolute;
 		text-align: center;
 		width: min-content;
@@ -192,8 +192,8 @@
 	}
 
 	div.translation {
-		right: 10px;
-		bottom: 10px;
+		right: 1em;
+		bottom: 1em;
 	}
 
 	h2, h3 {
@@ -201,17 +201,21 @@
 	}
 
 	form {
-		padding-bottom: 10px;
+		padding-bottom: 1em;
+	}
+
+	button {
+		font-weight: bold;
 	}
 
 	input, select {
 		border: 1px solid gray;
 		color: black;
 		cursor: pointer;
-		margin-top: 5px;
-		min-width: 200px;
-		outline: 0px;
-		padding: 8px;
+		margin-top: 0.5em;
+		min-width: 18em;
+		outline: 0;
+		padding: 0.7em;
 		width: 100%;
 	}
 
@@ -220,7 +224,7 @@
 	}
 
 	input[type=checkbox] {
-		margin-top: 10px;
+		margin-top: 1em;
 		min-width: unset;
 		width: unset;
 	}

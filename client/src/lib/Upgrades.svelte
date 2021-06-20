@@ -72,9 +72,9 @@
 	}
 
 	div.upgrades {
-		padding: 10px;
+		padding: 1em;
 		display: grid;
-		grid-gap: 10px 10px;
+		grid-gap: 1em 1em;
 		grid-template-columns: repeat(1, 1fr);
 	}
 
@@ -85,8 +85,8 @@
 	}
 
 	h2 {
-		margin-bottom: 0px;
-		margin-top: 0px;
+		margin-bottom: 0;
+		margin-top: 0;
 	}
 
 	img {

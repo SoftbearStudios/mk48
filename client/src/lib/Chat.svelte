@@ -95,8 +95,8 @@
 	}
 
 	h2 {
-		margin-bottom: 10px;
-		margin-top: 0px;
+		margin-bottom: 1em;
+		margin-top: 0;
 	}
 
 	table {

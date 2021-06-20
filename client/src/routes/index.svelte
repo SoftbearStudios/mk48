@@ -1333,7 +1333,7 @@
 	div.bar > :global(div) {
 		height: min-content;
 		pointer-events: all;
-		margin: 10px;
+		margin: 1em;
 	}
 
 	main {
@@ -1350,18 +1350,19 @@
 	}
 
 	:global(input), :global(select) {
-		border-radius: 5px;
+		border-radius: 0.25em;
 		box-sizing: border-box;
 		cursor: pointer;
+		font-size: 1em;
 		font-weight: bold;
-		outline: 0px;
-		padding: 8px;
+		outline: 0;
+		padding: 0.7em;
 		pointer-events: all;
 		white-space: nowrap;
 		margin-top: 0.25em;
 
 		background-color: #00000025;
-		border: 0px;
+		border: 0;
 		color: white;
 	}
 
@@ -1374,13 +1375,13 @@
 	:global(button) {
 		background-color: #2980b9;
 		border: 1px solid #2980b9;
-		border-radius: 5px;
+		border-radius: 0.25em;
 		box-sizing: border-box;
 		color: white;
 		cursor: pointer;
-		font-size: 18px;
-		margin-top: 5px;
-		padding: 5px 7px;
+		font-size: 1em;
+		margin-top: 0.5em;
+		padding: 0.5em 0.6em;
 		text-decoration: none;
 		white-space: nowrap;
 		width: 100%;
@@ -1396,5 +1397,10 @@
 
 	:global(button:active:not(:disabled)) {
 		filter: brightness(0.9);
+	}
+
+	:global(html) {
+		font-size: 1.4vmin;
+		font-size: calc(5px + 0.9vmin);
 	}
 </style>

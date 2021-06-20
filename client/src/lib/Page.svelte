@@ -18,7 +18,6 @@
 		background-size: cover;
 		color: white;
 		font-family: sans-serif;
-		font-size: 18px;
 		overflow-y: scroll;
 		position: absolute;
 		inset: 0;

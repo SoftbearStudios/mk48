@@ -18,14 +18,14 @@
 	div.meter {
 		background-color: #bbbbbb;
 		border: 1px solid #dddddd;
-		border-radius: 5px;
+		border-radius: 0.5em;
 		box-sizing: border-box;
 		color: white;
 		font-weight: bold;
 		height: min-content;
-		min-height: 11px;
+		min-height: 1.1em;
 		overflow: hidden;
-		padding: 2px;
+		padding: 0.2em;
 		text-align: center;
 		transition: background-size 0.5s;
 		user-select: none;

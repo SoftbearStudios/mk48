@@ -35,7 +35,7 @@
 	h2 {
 		cursor: pointer;
 		font-weight: bold;
-		margin: 0px;
+		margin: 0;
 		user-select: none;
 		text-align: center;
 		transition: filter 0.1s;

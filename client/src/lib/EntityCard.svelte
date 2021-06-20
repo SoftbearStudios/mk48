@@ -86,9 +86,8 @@
 		background-color: #2c3e50;
 		color: white;
 		font-family: sans-serif;
-		font-size: 20px;
 		overflow-y: scroll;
-		padding: 10px;
+		padding: 1em;
 		position: absolute;
 		inset: 0;
 	}

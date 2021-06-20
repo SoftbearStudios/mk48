@@ -90,8 +90,8 @@
 
 <style>
 	h2 {
-		margin-bottom: 10px;
-		margin-top: 0px;
+		margin-bottom: 1em;
+		margin-top: 0;
 	}
 
 	table {
@@ -121,7 +121,7 @@
 
 	button {
 		background-color: transparent;
-		border: 0px;
+		border: 0;
 		width: min-content;
 		padding: 0.1em 0.5em;
 	}

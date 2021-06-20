@@ -157,7 +157,7 @@
 	}
 
 	.button {
-		padding: 5px;
+		padding: 0.5em;
 		filter: brightness(0.8);
 		user-select: none;
 	}
@@ -170,7 +170,7 @@
 	.button.selected {
 		background-color: #44444480;
 		filter: brightness(1.2);
-		padding: 5px;
+		padding: 0.5em;
 	}
 
 	div.button:not(.selected) {
@@ -178,18 +178,18 @@
 	}
 
 	h2 {
-		margin-bottom: 10px;
-		margin-top: 0px;
+		margin-bottom: 1em;
+		margin-top: 0;
 	}
 
 	table {
 		width: 100%;
-		border-spacing: 10px;
+		border-spacing: 1em;
 	}
 
 	img {
-		max-height: 40px;
-		max-width: 100px;
+		max-height: 4em;
+		max-width: 10em;
 	}
 
 	img.consumed {
