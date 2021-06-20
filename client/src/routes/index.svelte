@@ -315,8 +315,7 @@
 										}
 										break;
 									case 'shell':
-										const n = Math.round(mapRanges(currentEntityData.length, 0.5, 1.5, 0, 2, true));
-										playSoundSafe(`shell${n}`, {volume});
+										playSoundSafe(`shell`, {volume: volume * mapRanges(currentEntityData.length, 0.5, 1.5, 0.5, 1, true)});
 										break;
 								}
 								break;
