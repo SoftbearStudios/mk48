@@ -130,6 +130,10 @@ var sounds = map[string]Sound{
 		Source: "freesound.org/416079__davidlay1__shaving-cream-can-release.wav",
 		End:    2,
 	},
+	"splash": {
+		Source: "freesound.org/398032__swordofkings128__splash.wav",
+		Volume: -2,
+	},
 	"torpedoLaunch": {
 		Source: "freesound.org/367125__jofae__air-hiss.mp3",
 		Pitch:  -0.25,

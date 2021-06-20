@@ -16,6 +16,7 @@ Sounds are licensed under CC0/public domain
  - sonar0: [sonar.wav](https://freesound.org/s/90340/) by digit-al
  - sonar1: [submarine-sonar.wav](https://freesound.org/s/493162/) by breviceps
  - sonar2: [archi-sonar-03.wav](https://freesound.org/s/38702/) by elanhickler
+ - splash: [splash.wav](https://freesound.org/s/398032/) by swordofkings128
  - surface: [shaving-cream-can-release.wav](https://freesound.org/s/416079/) by davidlay1
  - torpedoLaunch: [air-hiss.mp3](https://freesound.org/s/367125/) by jofae
  - upgrade: [metal-boom.aiff](https://freesound.org/s/209772/) by johnnyfarmer

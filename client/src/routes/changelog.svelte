@@ -15,6 +15,11 @@
 
 	<h2>2021</h2>
 
+	<h3>6/19/2021</h3>
+
+	<ul>
+		<li>Add support for sound effects.</li>
+	</ul>
 
 	<h3>6/17/2021</h3>
 
