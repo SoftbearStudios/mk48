@@ -89,6 +89,11 @@
 					"name": "sonar decoy"
 				}
 			},
+			"obstacle": {
+				"structure": {
+					"name": "structure"
+				}
+			},
 			"weapon": {
 				"depositor": {
 					"name": "depositor"
@@ -182,6 +187,7 @@
 						"label": "Active sensors"
 					},
 					"surface": {
+						"hint": "You can surface your ship whenever you want, but diving is sometimes limited by the depth of the water.",
 						"label": "Surface"
 					}
 				}
@@ -347,6 +353,11 @@
 					"name": "señuelo de sonar"
 				}
 			},
+			"obstacle": {
+				"structure": {
+					"name": "estructura"
+				}
+			},
 			"weapon": {
 				"depositor": {
 					"name": "transportadora"
@@ -440,6 +451,7 @@
 						"label": "Sensores activos"
 					},
 					"surface": {
+						"hint": "Puede salir a la superficie de su barco cuando lo desee, pero el buceo a veces está limitado por la profundidad del agua.",
 						"label": "Superficie"
 					}
 				}
@@ -503,6 +515,269 @@
 			"upgrade": {
 				"labelMiddle": "a nivel",
 				"labelPrefix": "Actualizar a nivel"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Radar"
+			},
+			"sonar": {
+				"label": "Sonar"
+			}
+		}
+	},
+	"fr": {
+		"boat": "navire",
+		"death": {
+			"border": {
+				"message": "S'est écrasé à la frontière!"
+			},
+			"collision": {
+				"message": "Crash dans {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Battu par {player}!"
+			},
+			"sinking": {
+				"message": "Coulé par {player} avec un {entityKind}!"
+			},
+			"terrain": {
+				"message": "Enfoncé dans le sol!"
+			}
+		},
+		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "hélicoptère"
+				},
+				"plane": {
+					"name": "avion"
+				}
+			},
+			"boat": {
+				"battleship": {
+					"hint": "Votre vaisseau a des canons puissants et beaucoup d'armures!",
+					"name": "bataille navale"
+				},
+				"carrier": {
+					"hint": "Votre vaisseau peut lancer des avions avec leurs propres armes!",
+					"name": "porte-avions"
+				},
+				"corvette": {
+					"hint": "Votre vaisseau est petit et difficile à toucher!",
+					"name": "corvette"
+				},
+				"cruiser": {
+					"hint": "Votre navire est équipé d'armes anti-navire et anti-sous-marine!",
+					"name": "croiseur"
+				},
+				"destroyer": {
+					"hint": "Votre vaisseau est équipé d'une variété d'armes!",
+					"name": "destructeur"
+				},
+				"dredger": {
+					"hint": "Votre navire peut créer et détruire des terres!",
+					"name": "dragueur"
+				},
+				"hovercraft": {
+					"hint": "Votre bateau peut voyager aussi bien sur terre que sur l'eau!",
+					"name": "aéroglisseur"
+				},
+				"lcs": {
+					"hint": "Votre bateau peut déchaîner des armes mortelles au sein de petits groupes d'îles!",
+					"name": "navire de combat côtier"
+				},
+				"minelayer": {
+					"hint": "Votre bateau peut poser des mines magnétiques mortelles!",
+					"name": "mouilleur de mines"
+				},
+				"mtb": {
+					"hint": "Votre bateau a des armes pour couler d'autres bateaux!",
+					"name": "bateau lance-torpilles"
+				},
+				"pirate": {
+					"name": "pirate"
+				},
+				"ram": {
+					"hint": "Votre bateau est conçu pour éperonner d'autres bateaux!",
+					"name": "bélier"
+				},
+				"submarine": {
+					"hint": "Votre bateau peut livrer des armes sous l'eau!",
+					"name": "sous-marin"
+				},
+				"tanker": {
+					"hint": "Votre bateau obtient le double de la valeur des barils de pétrole!",
+					"name": "pétrolier"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "leurre sonar"
+				}
+			},
+			"obstacle": {
+				"structure": {
+					"name": "structure"
+				}
+			},
+			"weapon": {
+				"depositor": {
+					"name": "déposant"
+				},
+				"depthCharge": {
+					"name": "grenade sous-marine"
+				},
+				"mine": {
+					"name": "mine"
+				},
+				"missile": {
+					"name": "missile"
+				},
+				"rocket": {
+					"name": "fusée"
+				},
+				"rocketTorpedo": {
+					"name": "torpille de fusée"
+				},
+				"sam": {
+					"name": "missile sol-air"
+				},
+				"shell": {
+					"name": "obus"
+				},
+				"torpedo": {
+					"name": "torpille"
+				}
+			}
+		},
+		"label": "French",
+		"page": {
+			"about": {
+				"title": "À propos de Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Avertissement: Ce journal des modifications peut ne pas être toujours à jour",
+				"title": "Journal des modifications de Mk48.io"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io est un jeu de combat naval multijoueur. Vous démarrez un petit navire et consommez des <b>caisses</b> pour augmenter votre score (pour améliorer votre navire). Alors qu'une petite quantité de caisses apparaît naturellement, couler d'autres navires augmente directement votre score et génère beaucoup plus de caisses.</p>",
+					"title": "Notions de base"
+				},
+				"title": "Guide d'aide Mk48.io"
+			},
+			"privacy": {
+				"title": "Politique de confidentialité de Mk48.io"
+			},
+			"ships": {
+				"intro": "Ce qui suit est une liste de tous les navires du jeu et de leurs armes. Notez que certaines valeurs sont approximatives et peuvent être affectées par d'autres facteurs. Par exemple, les dégâts de l'arme dépendent de l'emplacement de l'impact.",
+				"title": "Navires Mk48.io"
+			},
+			"terms": {
+				"title": "Conditions d'utilisation de Mk48.io"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Appuyez sur Entrée pour envoyer",
+						"hintTeam": "Appuyez sur Entrée pour envoyer ou sur Maj+Entrée pour envoyer à l'équipe uniquement",
+						"label": "Message"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Cliquez et maintenez pour vous déplacer, cliquez pour tirer des torpilles",
+					"zoom": "Faites défiler pour dézoomer pour une meilleure vue"
+				},
+				"touch": {
+					"movement": "Touchez dans une direction pour vous déplacer, touchez pour tirer des torpilles",
+					"zoom": "Pincez pour dézoomer pour une meilleure vue"
+				}
+			},
+			"leaderboard": {
+				"label": "Classement",
+				"type": {
+					"single/all": "Classement de tous les temps",
+					"single/day": "Classement quotidien",
+					"single/week": "Classement hebdomadaire"
+				}
+			},
+			"ship": {
+				"action": {
+					"active": {
+						"hint": "Les {sensors} actifs vous aident à voir plus, mais peuvent également révéler votre position",
+						"label": "Capteurs actifs"
+					},
+					"surface": {
+						"hint": "Vous pouvez faire surfacer votre bateau quand vous le souhaitez, mais la plongée est parfois limitée par la profondeur de l'eau.",
+						"label": "Surface"
+					}
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "À propos"
+					},
+					"help": {
+						"label": "Aide"
+					},
+					"privacy": {
+						"label": "Confidentialité"
+					},
+					"spawn": {
+						"label": "Démarrer"
+					},
+					"terms": {
+						"label": "Termes"
+					}
+				},
+				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
+				"invitePrefix": "Utiliser le code d'invitation"
+			},
+			"status": {
+				"score": "point",
+				"scorePlural": "points"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "J'accepte"
+					},
+					"create": {
+						"label": "Créer"
+					},
+					"deny": {
+						"label": "Refuser"
+					},
+					"invite": {
+						"hint": "Donnez ce lien aux joueurs qui ne sont pas encore en jeu, pour leur permettre de rejoindre directement votre équipe",
+						"label": "Copier l'invitation"
+					},
+					"kick": {
+						"label": "Coup"
+					},
+					"leave": {
+						"label": "Quitter"
+					},
+					"name": {
+						"label": "Nom de la flotte"
+					},
+					"request": {
+						"label": "Demande d'adhésion"
+					}
+				},
+				"full": "Equipe au complet",
+				"label": "Flotte"
+			},
+			"upgrade": {
+				"labelMiddle": "à niveau",
+				"labelPrefix": "Passer au niveau"
 			}
 		},
 		"sensor": {
@@ -604,6 +879,11 @@
 					"name": "гидролокатор-ловушка"
 				}
 			},
+			"obstacle": {
+				"structure": {
+					"name": "состав"
+				}
+			},
 			"weapon": {
 				"depositor": {
 					"name": "депозитор"
@@ -697,6 +977,7 @@
 						"label": "Активные датчики"
 					},
 					"surface": {
+						"hint": "Вы можете всплыть на поверхность своего корабля, когда захотите, но погружение иногда ограничивается глубиной воды.",
 						"label": "Поверхность"
 					}
 				}
@@ -768,263 +1049,6 @@
 			},
 			"sonar": {
 				"label": "Сонар"
-			}
-		}
-	},
-	"fr": {
-		"boat": "navire",
-		"death": {
-			"border": {
-				"message": "S'est écrasé à la frontière!"
-			},
-			"collision": {
-				"message": "Crash dans {playerOrEntityLabel}!"
-			},
-			"ramming": {
-				"message": "Battu par {player}!"
-			},
-			"sinking": {
-				"message": "Coulé par {player} avec un {entityKind}!"
-			},
-			"terrain": {
-				"message": "Enfoncé dans le sol!"
-			}
-		},
-		"kind": {
-			"aircraft": {
-				"heli": {
-					"name": "hélicoptère"
-				},
-				"plane": {
-					"name": "avion"
-				}
-			},
-			"boat": {
-				"battleship": {
-					"hint": "Votre vaisseau a des canons puissants et beaucoup d'armures!",
-					"name": "bataille navale"
-				},
-				"carrier": {
-					"hint": "Votre vaisseau peut lancer des avions avec leurs propres armes!",
-					"name": "porte-avions"
-				},
-				"corvette": {
-					"hint": "Votre vaisseau est petit et difficile à toucher!",
-					"name": "corvette"
-				},
-				"cruiser": {
-					"hint": "Votre navire est équipé d'armes anti-navire et anti-sous-marine!",
-					"name": "croiseur"
-				},
-				"destroyer": {
-					"hint": "Votre vaisseau est équipé d'une variété d'armes!",
-					"name": "destructeur"
-				},
-				"dredger": {
-					"hint": "Votre navire peut créer et détruire des terres!",
-					"name": "dragueur"
-				},
-				"hovercraft": {
-					"hint": "Votre bateau peut voyager aussi bien sur terre que sur l'eau!",
-					"name": "aéroglisseur"
-				},
-				"lcs": {
-					"hint": "Votre bateau peut déchaîner des armes mortelles au sein de petits groupes d'îles!",
-					"name": "navire de combat côtier"
-				},
-				"minelayer": {
-					"hint": "Votre bateau peut poser des mines magnétiques mortelles!",
-					"name": "mouilleur de mines"
-				},
-				"mtb": {
-					"hint": "Votre bateau a des armes pour couler d'autres bateaux!",
-					"name": "bateau lance-torpilles"
-				},
-				"pirate": {
-					"name": "pirate"
-				},
-				"ram": {
-					"hint": "Votre bateau est conçu pour éperonner d'autres bateaux!",
-					"name": "bélier"
-				},
-				"submarine": {
-					"hint": "Votre bateau peut livrer des armes sous l'eau!",
-					"name": "sous-marin"
-				},
-				"tanker": {
-					"hint": "Votre bateau obtient le double de la valeur des barils de pétrole!",
-					"name": "pétrolier"
-				}
-			},
-			"decoy": {
-				"sonar": {
-					"name": "leurre sonar"
-				}
-			},
-			"weapon": {
-				"depositor": {
-					"name": "déposant"
-				},
-				"depthCharge": {
-					"name": "grenade sous-marine"
-				},
-				"mine": {
-					"name": "mine"
-				},
-				"missile": {
-					"name": "missile"
-				},
-				"rocket": {
-					"name": "fusée"
-				},
-				"rocketTorpedo": {
-					"name": "torpille de fusée"
-				},
-				"sam": {
-					"name": "missile sol-air"
-				},
-				"shell": {
-					"name": "obus"
-				},
-				"torpedo": {
-					"name": "torpille"
-				}
-			}
-		},
-		"label": "French",
-		"page": {
-			"about": {
-				"title": "À propos de Mk48.io"
-			},
-			"changelog": {
-				"disclaimer": "Avertissement: Ce journal des modifications peut ne pas être toujours à jour",
-				"title": "Journal des modifications de Mk48.io"
-			},
-			"help": {
-				"basics": {
-					"html": "<p>Mk48.io est un jeu de combat naval multijoueur. Vous démarrez un petit navire et consommez des <b>caisses</b> pour augmenter votre score (pour améliorer votre navire). Alors qu'une petite quantité de caisses apparaît naturellement, couler d'autres navires augmente directement votre score et génère beaucoup plus de caisses.</p>",
-					"title": "Notions de base"
-				},
-				"title": "Guide d'aide Mk48.io"
-			},
-			"privacy": {
-				"title": "Politique de confidentialité de Mk48.io"
-			},
-			"ships": {
-				"intro": "Ce qui suit est une liste de tous les navires du jeu et de leurs armes. Notez que certaines valeurs sont approximatives et peuvent être affectées par d'autres facteurs. Par exemple, les dégâts de l'arme dépendent de l'emplacement de l'impact.",
-				"title": "Navires Mk48.io"
-			},
-			"terms": {
-				"title": "Conditions d'utilisation de Mk48.io"
-			}
-		},
-		"panel": {
-			"chat": {
-				"action": {
-					"send": {
-						"hint": "Appuyez sur Entrée pour envoyer",
-						"hintTeam": "Appuyez sur Entrée pour envoyer ou sur Maj+Entrée pour envoyer à l'équipe uniquement",
-						"label": "Message"
-					}
-				},
-				"label": "Radio"
-			},
-			"instruction": {
-				"mouse": {
-					"movement": "Cliquez et maintenez pour vous déplacer, cliquez pour tirer des torpilles",
-					"zoom": "Faites défiler pour dézoomer pour une meilleure vue"
-				},
-				"touch": {
-					"movement": "Touchez dans une direction pour vous déplacer, touchez pour tirer des torpilles",
-					"zoom": "Pincez pour dézoomer pour une meilleure vue"
-				}
-			},
-			"leaderboard": {
-				"label": "Classement",
-				"type": {
-					"single/all": "Classement de tous les temps",
-					"single/day": "Classement quotidien",
-					"single/week": "Classement hebdomadaire"
-				}
-			},
-			"ship": {
-				"action": {
-					"active": {
-						"hint": "Les {sensors} actifs vous aident à voir plus, mais peuvent également révéler votre position",
-						"label": "Capteurs actifs"
-					},
-					"surface": {
-						"label": "Surface"
-					}
-				}
-			},
-			"splash": {
-				"action": {
-					"about": {
-						"label": "À propos"
-					},
-					"help": {
-						"label": "Aide"
-					},
-					"privacy": {
-						"label": "Confidentialité"
-					},
-					"spawn": {
-						"label": "Démarrer"
-					},
-					"terms": {
-						"label": "Termes"
-					}
-				},
-				"connectionLost": "La bataille est terminée. Essayez de recommencer sous peu.",
-				"invitePrefix": "Utiliser le code d'invitation"
-			},
-			"status": {
-				"score": "point",
-				"scorePlural": "points"
-			},
-			"team": {
-				"action": {
-					"accept": {
-						"label": "J'accepte"
-					},
-					"create": {
-						"label": "Créer"
-					},
-					"deny": {
-						"label": "Refuser"
-					},
-					"invite": {
-						"hint": "Donnez ce lien aux joueurs qui ne sont pas encore en jeu, pour leur permettre de rejoindre directement votre équipe",
-						"label": "Copier l'invitation"
-					},
-					"kick": {
-						"label": "Coup"
-					},
-					"leave": {
-						"label": "Quitter"
-					},
-					"name": {
-						"label": "Nom de la flotte"
-					},
-					"request": {
-						"label": "Demande d'adhésion"
-					}
-				},
-				"full": "Equipe au complet",
-				"label": "Flotte"
-			},
-			"upgrade": {
-				"labelMiddle": "à niveau",
-				"labelPrefix": "Passer au niveau"
-			}
-		},
-		"sensor": {
-			"radar": {
-				"label": "Radar"
-			},
-			"sonar": {
-				"label": "Sonar"
 			}
 		}
 	},
@@ -1116,6 +1140,11 @@
 			"decoy": {
 				"sonar": {
 					"name": "声纳诱饵"
+				}
+			},
+			"obstacle": {
+				"structure": {
+					"name": "结构"
 				}
 			},
 			"weapon": {
@@ -1211,6 +1240,7 @@
 						"label": "有源传感器"
 					},
 					"surface": {
+						"hint": "您可以随时浮出水面，但潜水有时会受到水深的限制。",
 						"label": "表面"
 					}
 				}
@@ -1446,6 +1476,9 @@
 					"active": {
 						"hint": "Active {sensors} helps bork see but also helps others see bork",
 						"label": "Sensors go brrr"
+					},
+					"surface": {
+						"hint": "Bork can go up and down, except if the water is too shallow..."
 					}
 				}
 			},

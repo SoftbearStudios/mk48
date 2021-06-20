@@ -1,0 +1,23 @@
+[
+	"aircraft",
+	"alarmFast",
+	"alarmSlow",
+	"collect",
+	"dive",
+	"explosionLong",
+	"explosionShort",
+	"horn",
+	"impact",
+	"ocean",
+	"rocket",
+	"shell0",
+	"shell1",
+	"shell2",
+	"sonar0",
+	"sonar1",
+	"sonar2",
+	"sonar3",
+	"surface",
+	"torpedoLaunch",
+	"upgrade"
+]

@@ -140,7 +140,7 @@
 			</div>
 		{/each}
 		{#if entityData[type].subkind === 'submarine'}
-			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget}>{$t('panel.ship.action.surface.label')}</div>
+			<div class='button' class:selected={altitudeTarget === 0} on:click={toggleAltitudeTarget} title={$t(`panel.ship.action.surface.hint`)}>{$t('panel.ship.action.surface.label')}</div>
 		{/if}
 		{#if getActiveSensorHint($t, type, altitude)}
 			<div class='button' class:selected={active} on:click={toggleActive} title={getActiveSensorHint($t, type, altitude)}>{$t(`panel.ship.action.active.label`)}</div>

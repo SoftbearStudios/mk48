@@ -28,8 +28,9 @@
 	import entitiesTPS from '../data/entities.tps.json';
 	import extrasTPS from '../data/extras.tps.json';
 
-	// Entity Data
+	// Entity/sound/etc. Data
 	import entityData from '../data/entities.json';
+	import soundData from '../data/sounds.json';
 
 	let canvas, chatRef, shipRef, heightFract, widthFract;
 	$: height = Math.floor(heightFract);
@@ -107,6 +108,7 @@
 	onMount(async () => {
 		const PIXI = await import('pixi.js');
 		const {Viewport} = await import('pixi-viewport');
+		const {sound: Sounds} = await import('@pixi/sound');
 
 		if (destroying) {
 			return;
@@ -154,6 +156,28 @@
 		const extrasSpritesheet = new PIXI.Spritesheet(extrasTexture, extrasTPS);
 		entitiesSpritesheet.parse(() => {});
 		extrasSpritesheet.parse(() => {});
+
+		// Load sounds
+		for (const name of soundData) {
+			Sounds.add(name, {
+				url: `/sounds/${name}.mp3`,
+				preload: name !== 'ocean'
+			});
+		}
+
+		// Calling play twice before a sound is loaded will crash (see
+		// https://github.com/pixijs/sound/issues/71)
+		function playSoundSafe(name, options) {
+			const sound = Sounds.find(name);
+			if (!sound.isPlayable) {
+				console.warn('sound not playable')
+				return;
+			}
+			sound.play(options);
+		}
+
+		// Only playing this once, so no need for playSoundSafe
+		Sounds.play('ocean', {loop: true, volume: 0.25});
 
 		// Background (water + land)
 		const background = new PIXI.Filter(null, backgroundShader);
@@ -219,6 +243,11 @@
 			delete(entitySprites[entityID]);
 		}
 
+		function volumeAt(point) {
+			const distance = dist(viewport.center, point);
+			return 1 / (1 + 0.05 * distance);
+		}
+
 		function reconcileContacts(newContacts) {
 			contacts = newContacts;
 
@@ -241,6 +270,7 @@
 					entitySprites[entityID] = sprite;
 
 					sprite.type = entity.type;
+					sprite.uncertainty = entity.uncertainty;
 
 					sprite.anchor.set(0.5);
 					sprite.height = currentEntityData ? currentEntityData.width : 10;
@@ -248,6 +278,58 @@
 					entityContainer.addChild(sprite);
 
 					if (currentEntityData) {
+						// Sounds
+						const volume = volumeAt(entity.position);
+						const direction = Math.atan2(entity.position.y - viewport.center.y, entity.position.x - viewport.center.x);
+						const inbound = Math.abs(angleDiff(entity.direction, direction + Math.PI)) < Math.PI / 2;
+						switch (currentEntityData.kind) {
+							case 'boat':
+								if (!entity.friendly && inbound && localEntityID) {
+									playSoundSafe('alarmSlow', {volume: 0.25 * Math.max(volume, 0.5)});
+								}
+							case 'weapon':
+								switch (currentEntityData.subkind) {
+									case 'torpedo':
+										if (entity.friendly) {
+											playSoundSafe('torpedoLaunch', {volume: Math.min(volume, 0.5)});
+										}
+										if (currentEntityData.sensors && currentEntityData.sensors.sonar && currentEntityData.sensors.sonar.range) {
+											setTimeout(() => {
+												playSoundSafe('sonar3', {volume});
+											}, entity.friendly ? 1000 : 0);
+										}
+										break;
+									case 'missile':
+									case 'rocket':
+										if (!entity.friendly && inbound && localEntityID) {
+											playSoundSafe('alarmFast', {volume: Math.max(volume, 0.5)});
+										}
+										// Fallthrough
+									case 'sam':
+										playSoundSafe('rocket', {volume});
+										break;
+									case 'depthCharge':
+									case 'mine':
+										if (!entity.friendly && localEntityID) {
+											playSoundSafe('alarmSlow', {volume: Math.max(volume, 0.5)});
+										}
+										break;
+									case 'shell':
+										const n = Math.round(mapRanges(currentEntityData.length, 0.5, 1.5, 0, 2, true));
+										playSoundSafe(`shell${n}`, {volume});
+										break;
+								}
+								break;
+							case 'aircraft':
+								if (!entity.friendly && inbound && localEntityID) {
+									playSoundSafe('alarmSlow', {volume: 0.1 * Math.max(volume, 0.5)});
+								}
+								break;
+							case 'decoy':
+								playSoundSafe('sonar3', {volume});
+								break;
+						}
+
 						const turrets = currentEntityData.turrets;
 
 						if (turrets) {
@@ -384,6 +466,8 @@
 								sprite.healthBar.beginFill(newColor, 0.5);
 								sprite.healthBar.drawRect(-BAR_LENGTH / 2, -BAR_HEIGHT / 2, health * BAR_LENGTH, BAR_HEIGHT);
 								sprite.healthBar.endFill();
+
+								sprite.healthBar.visible = entity.damage ? true : false;
 							}
 						} else if (sprite.healthBar) {
 							viewport.removeChild(sprite.healthBar);
@@ -446,38 +530,49 @@
 					const spriteData = entityData[sprite.type];
 
 					// Spawn destruction effect
-					if (!entity && spriteData && spriteData.kind !== 'collectible') {
-						let animation;
-						let group;
-						let spriteSize;
-
-						if (['sam', 'shell', 'rocket', 'missile'].includes(spriteData.subkind)) {
-							animation = extrasSpritesheet.animations.explosion;
-							group = splashes;
-							spriteSize = 5;
+					if (!entity && spriteData && !(sprite.uncertainty > 0.75)) {
+						const volume = Math.min(0.25, volumeAt(sprite.position));
+						if (spriteData.kind === 'collectible') {
+							playSoundSafe('collect', {volume});
 						} else {
-							animation = extrasSpritesheet.animations.splash;
-							group = explosions;
-							spriteSize = 2;
-						}
+							let animation;
+							let group;
+							let spriteSize;
 
-						const destruction = new PIXI.AnimatedSprite(animation);
-						destruction.position.set(sprite.position.x, sprite.position.y);
-						destruction.anchor.set(0.5);
-						destruction.rotation = Math.random() * Math.PI * 2;
+							if (['sam', 'shell', 'rocket', 'missile'].includes(spriteData.subkind)) {
+								animation = extrasSpritesheet.animations.explosion;
+								group = splashes;
+								spriteSize = 5;
+							} else {
+								animation = extrasSpritesheet.animations.splash;
+								group = explosions;
+								spriteSize = 2;
+							}
 
-						const size = clamp(sprite.width * spriteSize, 5, 15);
-						destruction.width = size;
-						destruction.height = size;
-						destruction.loop = false;
-						destruction.animationSpeed = 0.5;
-						group.addChild(destruction);
+							if (spriteData.kind === 'boat') {
+								playSoundSafe('explosionLong', {volume});
+							} else {
+								playSoundSafe('explosionShort', {volume});
+							}
 
-						destruction.gotoAndPlay(0);
+							const destruction = new PIXI.AnimatedSprite(animation);
+							destruction.position.set(sprite.position.x, sprite.position.y);
+							destruction.anchor.set(0.5);
+							destruction.rotation = Math.random() * Math.PI * 2;
 
-						destruction.onComplete = () => {
-							group.removeChild(destruction);
-							destruction.destroy();
+							const size = clamp(sprite.width * spriteSize, 5, 15);
+							destruction.width = size;
+							destruction.height = size;
+							destruction.loop = false;
+							destruction.animationSpeed = 0.5;
+							group.addChild(destruction);
+
+							destruction.gotoAndPlay(0);
+
+							destruction.onComplete = () => {
+								group.removeChild(destruction);
+								destruction.destroy();
+							}
 						}
 					}
 
@@ -780,6 +875,17 @@
 							aimTarget: mousePosition,
 						});
 
+						if (lastAltitudeTarget == 0 && altitudeTarget < 0) {
+							playSoundSafe('dive');
+						} else if (lastAltitudeTarget < 0 && altitudeTarget == 0) {
+							playSoundSafe('surface');
+						}
+						if (!lastActive && active) {
+							if (localEntityData && localEntityData.sensors && localEntityData.sensors.sonar && localEntityData.sensors.sonar.range) {
+								playSoundSafe('sonar1');
+							}
+						}
+
 						lastActive = active;
 						lastAltitudeTarget = altitudeTarget;
 					} else {
@@ -825,6 +931,7 @@
 			// Bigger boats can zoom out wider
 			// Use max range to not zoom in and out when diving sub
 			viewport.clampZoom({minScale: 600 / maxVisualRange, maxScale: 6000 / maxVisualRange});
+			Sounds.volume('ocean', 0.15 * viewport.scale.x)
 
 			for (const entityID of Object.keys(entitySprites)) {
 				const entity = contacts[entityID];
@@ -962,6 +1069,7 @@
 		customOnDestroy(() => {
 			disconnect();
 			console.log('destroying app')
+			Sounds.removeAll();
 			// Cannot delete system/shared ticker since they're protected
 			// so settle for removing frame handler
 			app.ticker.remove(frame);
