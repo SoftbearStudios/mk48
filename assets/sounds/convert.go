@@ -17,6 +17,9 @@ type Sound struct {
 	// Source file relative path
 	Source string
 
+	// Internet location
+	URL string
+
 	// Trimming
 	Start float64
 	End   float64
@@ -140,9 +143,10 @@ var sounds = map[string]Sound{
 		Volume: -2,
 	},
 	"upgrade": {
-		Source: "freesound.org/209772__johnnyfarmer__metal-boom.aiff",
-		Start:  0.2,
-		End:    1.66,
+		Source: "opengameart.org/Rise05.aif",
+		URL: "https://opengameart.org/content/level-up-power-up-coin-get-13-sounds",
+		Start:  0.809,
+		End:    1.4,
 	},
 }
 
@@ -163,24 +167,21 @@ func main() {
 	}
 
 	var credits bytes.Buffer
-	credited := map[string]struct{}{}
 
 	fmt.Fprintf(&credits, "# Sound Credits\n\nSounds are licensed under CC0/public domain\n\n")
 
 	for _, name := range manifest {
 		sound := sounds[name]
+		segments := strings.Split(sound.Source, "/")
 		if strings.HasPrefix(sound.Source, "freesound.org") {
-			segments := strings.Split(sound.Source, "/")
 			parts := strings.Split(segments[1], "__")
-			if _, already := credited[parts[2]]; already {
-				continue
-			}
-			credited[parts[2]] = struct{}{}
 			t := "s" // sound
 			if len(segments) > 2 {
 				t = "p" // pack
 			}
 			fmt.Fprintf(&credits, " - %s: [%s](https://freesound.org/%s/%s/) by %s\n", name, parts[2], t, parts[0], parts[1])
+		} else {
+			fmt.Fprintf(&credits, " - %s: [%s](%s)\n", name, segments[1], sound.URL)
 		}
 	}
 

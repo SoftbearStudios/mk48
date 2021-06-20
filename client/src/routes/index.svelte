@@ -273,6 +273,10 @@
 						removeSprite(entityID, sprite);
 					}
 
+					if (entityID === localEntityID) {
+						playSoundSafe('upgrade');
+					}
+
 					const texture = entity.type && entity.type in entitiesSpritesheet.textures ? entitiesSpritesheet.textures[entity.type] : extrasSpritesheet.textures.contact;
 					sprite = PIXI.Sprite.from(texture);
 					entitySprites[entityID] = sprite;
@@ -463,7 +467,7 @@
 									sprite.healthBar = new PIXI.Graphics();
 									viewport.addChild(sprite.healthBar);
 								} else if (entityID === localEntityID && health < sprite.healthBar.health) {
-									Sounds.play('damage');
+									playSoundSafe('damage');
 								}
 
 								sprite.healthBar.health = health;
