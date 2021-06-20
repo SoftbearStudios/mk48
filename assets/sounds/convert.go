@@ -48,7 +48,7 @@ var sounds = map[string]Sound{
 	},
 	"alarmSlow": {
 		Source: "freesound.org/165504__ryanconway__missile-lock-detected.mp3",
-		End:    2.1,
+		End:    1.243,
 	},
 	"alarmFast": {
 		Source: "freesound.org/189327__alxy__missile-lock-on-sound.mp3",
@@ -98,6 +98,7 @@ var sounds = map[string]Sound{
 		Source: "freesound.org/4366__qubodup__military-sounds/67541__qubodup__bgm-71-tow-missile-launch-1.flac",
 		Volume: -1,
 	},
+	/*
 	"shell0": {
 		Source: "freesound.org/4366__qubodup__military-sounds/168707__qubodup__tank-firing.flac",
 		Start:  0.045,
@@ -108,11 +109,12 @@ var sounds = map[string]Sound{
 		Source: "freesound.org/4366__qubodup__military-sounds/175430__qubodup__excalibur-howitzer-shot.flac",
 		Start:  0.047,
 	},
-	"shell2": {
+	*/
+	"shell": {
 		Source: "freesound.org/4366__qubodup__military-sounds/162365__qubodup__navy-battleship-soundscape-turret-gunshots-mechanical-engine-humm-radio-chatter-officer-command-voices.flac",
 		Start:  0.057,
 		End:    2,
-		Volume: -0.5,
+		Volume: -1.5,
 	},
 	"sonar0": {
 		Source: "freesound.org/90340__digit-al__sonar.wav",
