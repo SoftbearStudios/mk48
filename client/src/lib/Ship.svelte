@@ -111,9 +111,9 @@
 
 	export function setSelectionIndex(index) {
 		const groups = groupArmaments(armaments, consumption);
-		if (index < 0 || index >= groups.length) {
+		if (index < 0) {
 			selection = null;
-		} else {
+		} else if (index < groups.length) {
 			selection = groups[index][0];
 		}
 	}
