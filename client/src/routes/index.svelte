@@ -301,7 +301,7 @@
 										if (entity.friendly) {
 											playSoundSafe('torpedoLaunch', {volume: Math.min(volume, 0.5)});
 											setTimeout(() => {
-												playSoundSafe('splash', {volume: Math.min(volume, 0.5)});
+												playSoundSafe('splash', {volume});
 											}, 100);
 										}
 										if (currentEntityData.sensors && currentEntityData.sensors.sonar && currentEntityData.sensors.sonar.range) {
@@ -321,6 +321,7 @@
 										break;
 									case 'depthCharge':
 									case 'mine':
+										playSoundSafe('splash', {volume});
 										if (!entity.friendly && localEntityID) {
 											playSoundSafe('alarmSlow', {volume: Math.max(volume, 0.5)});
 										}
