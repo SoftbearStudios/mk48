@@ -11,7 +11,7 @@
 	import Instructions from '../lib/Instructions.svelte';
 	import Leaderboard from '../lib/Leaderboard.svelte';
 	import Status from '../lib/Status.svelte';
-	import SplashScreen from '../lib/SplashScreen.svelte';
+	import SplashScreen, {sfx} from '../lib/SplashScreen.svelte';
 	import Hint from '../lib/Hint.svelte';
 	import Teams from '../lib/Teams.svelte';
 	import t from '../lib/translation.js';
@@ -178,6 +178,14 @@
 
 		// Only playing this once, so no need for playSoundSafe
 		Sounds.play('ocean', {loop: true, volume: 0.25});
+
+		sfx.subscribe(val => {
+			if (val) {
+				Sounds.unmuteAll();
+			} else {
+				Sounds.muteAll();
+			}
+		});
 
 		// Background (water + land)
 		const background = new PIXI.Filter(null, backgroundShader);
