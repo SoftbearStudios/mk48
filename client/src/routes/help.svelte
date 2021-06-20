@@ -136,6 +136,10 @@
 		<li><b>Blue</b> dots are enemies (sonar).</li>
 		<li><b>Yellow</b> dots are collectibles that increase your health, ammunition, and score.</li>
 	</ol>
+
+	<p>If a contact is on the border of your sensor range, it will
+	appear as an arrow. In this case, you know something is there, but not what
+	it is.</p>
 </Page>
 
 <style>

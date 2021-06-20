@@ -90,6 +90,8 @@ var sounds = map[string]Sound{
 	"impact": {
 		Source: "freesound.org/4366__qubodup__military-sounds/67468__qubodup__howitzer-gun-impacts-1.flac",
 		End:    0,
+		Volume: -2,
+		Pitch: -1,
 	},
 	"ocean": {
 		Source: "freesound.org/372181__amholma__ocean-noise-surf.wav",
@@ -97,6 +99,10 @@ var sounds = map[string]Sound{
 	"rocket": {
 		Source: "freesound.org/4366__qubodup__military-sounds/67541__qubodup__bgm-71-tow-missile-launch-1.flac",
 		Volume: -1,
+	},
+	"damage": {
+		Source: "freesound.org/321485__dslrguide__rough-metal-scrape-textured.wav",
+		Pitch: -0.5,
 	},
 	"shell": {
 		Source: "freesound.org/4366__qubodup__military-sounds/162365__qubodup__navy-battleship-soundscape-turret-gunshots-mechanical-engine-humm-radio-chatter-officer-command-voices.flac",

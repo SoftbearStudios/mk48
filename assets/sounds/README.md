@@ -6,6 +6,7 @@ Sounds are licensed under CC0/public domain
  - alarmFast: [missile-lock-on-sound.mp3](https://freesound.org/s/189327/) by alxy
  - alarmSlow: [missile-lock-detected.mp3](https://freesound.org/s/165504/) by ryanconway
  - collect: [coins.mp3](https://freesound.org/s/512216/) by saviraz
+ - damage: [rough-metal-scrape-textured.wav](https://freesound.org/s/321485/) by dslrguide
  - dive: [r18-31-old-car-ahooga-horn.wav](https://freesound.org/s/480002/) by craigsmith
  - explosionLong: [explosion-01.wav](https://freesound.org/s/235968/) by tommccann
  - explosionShort: [03-gran-explosion.wav](https://freesound.org/s/514647/) by david2317

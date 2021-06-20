@@ -3,6 +3,7 @@
 	"alarmFast",
 	"alarmSlow",
 	"collect",
+	"damage",
 	"dive",
 	"explosionLong",
 	"explosionShort",

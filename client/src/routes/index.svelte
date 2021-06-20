@@ -273,8 +273,8 @@
 					sprite.uncertainty = entity.uncertainty;
 
 					sprite.anchor.set(0.5);
-					sprite.height = currentEntityData ? currentEntityData.width : 10;
-					sprite.width = currentEntityData ? currentEntityData.length : 10;
+					sprite.height = currentEntityData ? currentEntityData.width : 15;
+					sprite.width = currentEntityData ? currentEntityData.length : 15;
 					entityContainer.addChild(sprite);
 
 					if (currentEntityData) {
@@ -450,6 +450,8 @@
 								if (!sprite.healthBar) {
 									sprite.healthBar = new PIXI.Graphics();
 									viewport.addChild(sprite.healthBar);
+								} else if (entityID === localEntityID && health < sprite.healthBar.health) {
+									Sounds.play('damage');
 								}
 
 								sprite.healthBar.health = health;
