@@ -50,7 +50,7 @@
 			{#if $teamMembers}
 				{#each $teamMembers as {playerID, name}, i}
 					<tr>
-						<td class='name'>{name}</td>
+						<td class='name' class:owner={i == 0}>{name}</td>
 						{#if isOwner}
 							<td class='hidden'><button class:hidden={i == 0}>✔</button></td>
 							<td><button class:hidden={i == 0} on:click={() => send('removeFromTeam', {playerID})} title={$t('panel.team.action.kick.label')}>✘</button></td>
@@ -105,6 +105,10 @@
 
 	td.name {
 		font-weight: bold;
+	}
+
+	td.owner {
+		text-decoration: underline;
 	}
 
 	td.name.pending {
