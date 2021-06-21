@@ -153,7 +153,7 @@ var sounds = map[string]Sound{
 	"torpedoLaunch": {
 		Source: "freesound.org/367125__jofae__air-hiss.mp3",
 		Pitch:  -0.25,
-		Volume: -3,
+		Volume: -4,
 	},
 	"upgrade": {
 		Source: "opengameart.org/Rise05.aif",

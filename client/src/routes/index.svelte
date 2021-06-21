@@ -11,8 +11,9 @@
 	import Instructions from '../lib/Instructions.svelte';
 	import Leaderboard from '../lib/Leaderboard.svelte';
 	import Status from '../lib/Status.svelte';
-	import SplashScreen, {sfx} from '../lib/SplashScreen.svelte';
+	import SplashScreen from '../lib/SplashScreen.svelte';
 	import Hint from '../lib/Hint.svelte';
+	import Sidebar from '../lib/Sidebar.svelte';
 	import Teams from '../lib/Teams.svelte';
 	import t from '../lib/translation.js';
 	import Upgrades, {canUpgrade} from '../lib/Upgrades.svelte';
@@ -22,6 +23,7 @@
 	import {connect, connected, disconnect, send, contacts as socketContacts, entityID as socketEntityID, terrain, leaderboard, worldRadius} from '../lib/socket.js';
 	import backgroundShader from '../lib/background.js';
 	import {startRecording, stopRecording} from '../lib/recording.js';
+	import {volume} from '../lib/settings.js';
 	import {onMount, onDestroy} from 'svelte'
 
 	// Spritesheet data
@@ -32,7 +34,7 @@
 	import entityData from '../data/entities.json';
 	import soundData from '../data/sounds.json';
 
-	let canvas, chatRef, shipRef, heightFract, widthFract;
+	let canvas, chatRef, shipRef, heightFract, widthFract, viewport;
 	$: height = Math.floor(heightFract);
 	$: width = Math.floor(widthFract);
 
@@ -129,7 +131,7 @@
 		// Relatively meaningless, as does not seem to limit size
 		const WORLD_SIZE = 10;
 
-		const viewport = new Viewport({
+		viewport = new Viewport({
 			screenWidth: width,
 			screenHeight: height,
 			worldWidth: WORLD_SIZE,
@@ -179,9 +181,10 @@
 		// Only playing this once, so no need for playSoundSafe
 		Sounds.play('ocean', {loop: true, volume: 0.25});
 
-		sfx.subscribe(val => {
-			if (val) {
+		volume.subscribe(val => {
+			if (val > 0) {
 				Sounds.unmuteAll();
+				Sounds.volumeAll = val;
 			} else {
 				Sounds.muteAll();
 			}
@@ -892,10 +895,12 @@
 							aimTarget: mousePosition,
 						});
 
-						if (lastAltitudeTarget == 0 && altitudeTarget < 0) {
-							playSoundSafe('dive');
-						} else if (lastAltitudeTarget < 0 && altitudeTarget == 0) {
-							playSoundSafe('surface');
+						if (localEntityData.subkind === 'submarine') {
+							if (lastAltitudeTarget == 0 && altitudeTarget < 0) {
+								playSoundSafe('dive');
+							} else if (lastAltitudeTarget < 0 && altitudeTarget == 0) {
+								playSoundSafe('surface');
+							}
 						}
 						if (!lastActive && active) {
 							if (localEntityData && localEntityData.sensors && localEntityData.sensors.sonar && localEntityData.sensors.sonar.range) {
@@ -1295,6 +1300,7 @@
 	{:else}
 		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
 	{/if}
+	<Sidebar zoom={amount => viewport && viewport.setZoom(viewport.scale.x + amount, true)}/>
 </main>
 
 <svelte:window on:keydown={handleKey} on:keyup={handleKey}/>

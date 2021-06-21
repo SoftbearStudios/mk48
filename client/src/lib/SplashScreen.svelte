@@ -3,16 +3,9 @@
 	SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-<script context='module'>
-	import storage from '../util/storage.js';
-	import {writable} from 'svelte/store';
-
-	export const sfx = writable(storage.sfx === 'false' ? false : true);
-	sfx.subscribe(val => storage.sfx = val);
-</script>
-
 <script>
 	import entityData from '../data/entities.json';
+	import storage from '../util/storage.js';
 	import {getInvite} from './teams.js';
 	import {deathReason} from './socket.js';
 	import {onMount} from 'svelte';
@@ -157,7 +150,7 @@
 </div>
 
 <div class='translation' in:fade="{{delay: 2000, duration: 500}}">
-	<h3>Settings</h3>
+	<h3>Language</h3>
 	<select value={storage.language} on:change={e => setLanguage(e.target.value)}>
 		{#each Object.keys(strings) as lang}
 			{#if Object.keys(strings[lang]).length > 0}
@@ -165,8 +158,6 @@
 			{/if}
 		{/each}
 	</select>
-	<br/>
-	<label for='sfx'><input id='sfx' type='checkbox' bind:checked={$sfx}/> Sound Effects</label>
 </div>
 
 <svelte:window on:message={handleMessage} on:hashchange={() => invite = parseInviteCode(getInvite())}/>
@@ -213,9 +204,9 @@
 		color: black;
 		cursor: pointer;
 		margin-top: 0.5em;
-		min-width: 18em;
+		min-width: 16em;
 		outline: 0;
-		padding: 0.7em;
+		padding: 0.5em;
 		width: 100%;
 	}
 
