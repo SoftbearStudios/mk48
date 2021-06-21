@@ -88,6 +88,10 @@
 		overlay = overlay; // reactivity
 	}
 
+	function zoom(amount) {
+		viewport && viewport.setZoom(viewport.scale.x + amount, true);
+	}
+
 	// May be called anywhere (not just component init)
 	const customOnDestroyFuncs = [];
 	let destroying = false;
@@ -1165,60 +1169,70 @@
 
 		const down = {keydown: true, keyup: false}[type];
 
-		if (down && target && (ctrlKey || (target instanceof HTMLInputElement))) {
+		if (down && target && (target instanceof HTMLInputElement)) {
 			return;
 		}
 
 		if (down !== undefined) {
-			const keys = {
-				32: 'shoot', // space
-				67: () => {
-					keyboard.pay = true; // only once per keypress
-				}, // c (coin)
-				69: 'shoot', // e
-				88: 'stop', // x
-				86: () => {
-					if (recording) {
-						stopRecording();
-						recording = false;
-					} else if (event.shiftKey) { // See #80
-						startRecording(canvas);
-						recording = true;
+			const keys = {};
+
+			if (down && ctrlKey) {
+				Object.assign(keys, {
+					// Zoom in and out (see #57)
+					187: () => zoom(1), // +
+					189: () => zoom(-1) // -
+				});
+			} else {
+				Object.assign(keys, {
+					32: 'shoot', // space
+					67: () => {
+						keyboard.pay = true; // only once per keypress
+					}, // c (coin)
+					69: 'shoot', // e
+					88: 'stop', // x
+					86: () => {
+						if (recording) {
+							stopRecording();
+							recording = false;
+						} else if (event.shiftKey) { // See #80
+							startRecording(canvas);
+							recording = true;
+						}
+					}, // v
+
+					// WASD
+					65: 'left',
+					87: 'forward',
+					68: 'right',
+					83: 'backward',
+
+					// arrows
+					37: 'left',
+					38: 'forward',
+					39: 'right',
+					40: 'backward',
+				});
+
+				if (chatRef && chatRef.focus) {
+					// enter
+					keys[13] = chatRef.focus.bind(chatRef);
+				}
+
+				// Last 3 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
+				if (shipRef && shipRef.toggleActive && shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
+					// tab
+					keys[9] = shipRef.incrementSelection.bind(shipRef);
+
+					// z
+					keys[90] = shipRef.toggleActive.bind(shipRef);
+
+					// r
+					keys[82] = shipRef.toggleAltitudeTarget.bind(shipRef);
+
+					// numbers
+					for (let i = 0; i < 5; i++) {
+						keys[49 + i] = shipRef.setSelectionIndex.bind(shipRef, i);
 					}
-				}, // v
-
-				// WASD
-				65: 'left',
-				87: 'forward',
-				68: 'right',
-				83: 'backward',
-
-				// arrows
-				37: 'left',
-				38: 'forward',
-				39: 'right',
-				40: 'backward',
-			};
-
-			if (chatRef && chatRef.focus) {
-				// enter
-				keys[13] = chatRef.focus.bind(chatRef);
-			}
-
-			// Last 3 checks to prevent https://github.com/SoftbearStudios/mk48/issues/26
-			if (shipRef && shipRef.toggleActive && shipRef.toggleAltitudeTarget && shipRef.incrementSelection && shipRef.setSelectionIndex) {
-				// tab
-				keys[9] = shipRef.incrementSelection.bind(shipRef);
-
-				// z
-				keys[90] = shipRef.toggleActive.bind(shipRef);
-
-				// r
-				keys[82] = shipRef.toggleAltitudeTarget.bind(shipRef);
-
-				// numbers
-				for (let i = 0; i < 5; i++) {
-					keys[49 + i] = shipRef.setSelectionIndex.bind(shipRef, i);
 				}
 			}
 
@@ -1300,7 +1314,7 @@
 	{:else}
 		<SplashScreen callback={onStart} connectionLost={$connected === false}/>
 	{/if}
-	<Sidebar zoom={amount => viewport && viewport.setZoom(viewport.scale.x + amount, true)}/>
+	<Sidebar {zoom}/>
 </main>
 
 <svelte:window on:keydown={handleKey} on:keyup={handleKey}/>
