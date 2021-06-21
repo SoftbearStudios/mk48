@@ -53,7 +53,8 @@
 		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">server</Link> is written in <Link href="https://golang.org/">Go</Link>.</li>
 		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/client">client</Link> is written in the <Link href="https://kit.svelte.dev/">SvelteKit</Link> JavaScript framework, and
 		uses <Link href="https://www.pixijs.com/">PIXI.js</Link> for the 2D graphics.</li>
-		<li>The assets were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</li>
+		<li>The textures were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</li>
+		<li>The sounds are from <Link href='https://github.com/SoftbearStudios/mk48/blob/main/assets/sounds/README.md'>these sources.</Link></li>
 		<li>You can contribute to the translations at <Link href="https://crowdl.io/mk48/entries">crowdl.io</Link>.</li>
 	</ul>
 
