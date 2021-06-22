@@ -262,6 +262,37 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 
+func (entity *Entity) CanLand(parent *Entity) bool {
+	armaments := parent.Data().Armaments
+	for i := range armaments {
+		armament := armaments[i]
+		if armament.Type != entity.EntityType {
+			continue
+		}
+
+		minimum := Ticks(1)
+		if armament.Type.Data().Limited {
+			minimum = TicksMax
+		}
+		if parent.ArmamentConsumption()[i] < minimum {
+			continue
+		}
+
+		transform := parent.ArmamentTransform(i)
+		data := entity.Data()
+		if dis := entity.Position.DistanceSquared(transform.Position); dis < square(data.Radius) {
+			if data.SubKind == EntitySubKindHeli {
+				return true
+			} else {
+				if rot := entity.Direction.Diff(transform.Direction); rot.ClampMagnitude(Pi/4) == rot {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // Hash returns a float in range [0, 1) based on the entity's id.
 func (entity *Entity) Hash() float32 {
 	const hashSize = 64
@@ -459,7 +490,13 @@ func (entity *Entity) Close() {
 			for i := range armaments {
 				a := &armaments[i]
 				if a.Type == entity.EntityType && consumption[i] == TicksMax {
-					consumption[i] = a.Reload()
+					// If landed dont consume.
+					if entity.Ticks == 0 {
+						consumption[i] = 0
+					} else {
+						consumption[i] = a.Reload()
+					}
+
 					return
 				}
 			}
@@ -485,6 +522,11 @@ func (entity *Entity) ConsumeArmament(index int) {
 	}
 
 	entity.ArmamentConsumption()[index] = reload
+}
+
+func (entity *Entity) ReloadArmament(index int) {
+	entity.Owner.ext.copyArmamentConsumption()
+	entity.ArmamentConsumption()[index] = 0
 }
 
 // Initialize is called whenever a boat's type is set/changed.

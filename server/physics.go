@@ -263,6 +263,15 @@ func (h *Hub) Physics(ticks world.Ticks) {
 						}
 					}
 				}
+			} else {
+				if boat != nil && weapon != nil && boat.Owner == weapon.Owner &&
+					weapon.Data().Kind == world.EntityKindAircraft &&
+					weapon.Ticks > world.TicksPerSecond*5 && weapon.CanLand(boat) {
+
+					// 0 ticks signals reload instantly.
+					weapon.Ticks = 0
+					removeEntity(weapon, world.DeathReason{})
+				}
 			}
 
 			return
