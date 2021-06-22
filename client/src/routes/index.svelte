@@ -104,7 +104,6 @@
 	}
 
 	onDestroy(() => {
-		console.log(`on destroy (${customOnDestroyFuncs.length})`);
 		destroying = true;
 		for (const func of customOnDestroyFuncs) {
 			func();
