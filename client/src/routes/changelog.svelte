@@ -15,6 +15,12 @@
 
 	<h2>2021</h2>
 
+	<h3>6/22/2021</h3>
+
+	<ul>
+		<li>Add offline mode (must enable Beta program at bottom of Help page for now).</li>
+	</ul>
+
 	<h3>6/19/2021</h3>
 
 	<ul>
