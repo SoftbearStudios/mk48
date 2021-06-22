@@ -1,6 +1,7 @@
 import {clamp, mapRanges} from '../util/math.js';
 import storage from '../util/storage.js';
 import {writable} from 'svelte/store';
+import {browser} from '$app/env';
 
 const settingStore = function(name, defaultValue, minValue, maxValue) {
 	if (typeof defaultValue === 'number') {
@@ -41,6 +42,20 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 	store.subscribe(newValue => {
 		storage[name] = newValue;
 	});
+	if (browser) {
+		window.addEventListener('storage', () => {
+			console.log('storage event');
+			if (typeof defaultValue === 'string') {
+				store.set(storage[name]);
+			} else {
+				try {
+					store.set(JSON.parse(storage[name]));
+				} catch (err) {
+					console.warn(err);
+				}
+			}
+		});
+	}
 
 	if (typeof defaultValue === 'number') {
 		// levels of 5 would mean the possible integers 0, 1, 2, 3, and 4
@@ -54,4 +69,5 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 	return store;
 };
 
+export const beta = settingStore('beta', false);
 export const volume = settingStore('volume', 1.0);

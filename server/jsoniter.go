@@ -50,6 +50,9 @@ var json = func() jsoniter.API {
 	}.Froze()
 }()
 
+// Export temporarily
+var JSON = json
+
 func encodeMessage(ptr unsafe.Pointer, stream *jsoniter.Stream) {
 	message := (*Message)(ptr)
 	stream.WriteVal(message.messageJSON())

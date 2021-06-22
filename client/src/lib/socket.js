@@ -19,76 +19,84 @@ export const deathReason = writable(null);
 export const terrain = writable(null);
 export const serverID = writable(null);
 
-let socket = null;
+let backend = null; // can either be a WebSocket or Worker
 let connecting = false;
 
-// Connect opens a websocket if needed, and calls the callback when a socket is sopen
+// Connect opens a WebSocket if needed, and calls the callback when a backend is sopen
 export async function connect(callback) {
-	if (connecting || (socket && socket.readyState === WebSocket.CONNECTING)) {
+	if (connecting || (backend instanceof WebSocket && backend.readyState === WebSocket.CONNECTING)) {
+		// Never happens for Worker case
 		return;
 	}
 
-	if (!socket || socket.readyState !== WebSocket.OPEN) {
-		connecting = true;
-		let server = 'ws://localhost:8192/ws';
-		if (typeof storage.server === 'string') {
-			server = storage.server;
-		} else if (!location.host.startsWith('localhost') || storage.noLocalServer) {
-			server = null;
-			const region = 'us-east-1';
-			const slots = 4;
+	if (!backend || (backend instanceof WebSocket && backend.readyState !== WebSocket.OPEN)) {
+		if (storage.offline === 'true') {
+			backend = new Worker('/server_worker.js');
 
-			const inviteServerIndex = parseInviteServerIndex(getInvite());
-
-			// -1 stands for inviteServerIndex
-			for (let iter = inviteServerIndex ? -1 : 0; iter < slots; iter++) {
-				const i = iter == -1 ? inviteServerIndex : iter;
-				const httpServer = `https://cf-${region}-${i}.mk48.io`;
-				try {
-					const response = await fetch(httpServer);
-					if (!response.ok) {
-						throw new Error('response not ok');
-					}
-					server = `wss://cf-${region}-${i}.mk48.io/ws`;
-					serverID.set(`cf-${region}-${i}`);
-					const json = await response.json();
-					console.log(`server ${region} #${i}: ${json}`);
-					if (json.players > 40) {
-						console.log(`server ${region} #${i} is full, looking for others`);
-					} else {
-						break;
-					}
-				} catch (err) {
-					console.log(`Could not connect to ${httpServer}`);
-				}
-			}
-		}
-		connecting = false;
-
-		socket = new WebSocket(server);
-
-		socket.onopen = () => {
-			console.log("socket - Connected to server.");
 			connected.set(true);
 			callback && callback();
-		};
+		} else {
+			connecting = true;
+			let server = 'ws://localhost:8192/ws';
+			if (typeof storage.server === 'string') {
+				server = storage.server;
+			} else if (!location.host.startsWith('localhost') || storage.noLocalServer) {
+				server = null;
+				const region = 'us-east-1';
+				const slots = 4;
 
-		socket.onclose = event => {
-			socket = null;
-			connected.set(false);
-			contacts.set({});
-			chats.set([]);
-			entityID.set(null);
-			serverID.set(null);
-			console.log(`socket - Disconnected from server with code ${event.code} due to '${event.reason}'.`);
-		};
+				const inviteServerIndex = parseInviteServerIndex(getInvite());
 
-		socket.onmessage = messageRaw => {
+				// -1 stands for inviteServerIndex
+				for (let iter = inviteServerIndex ? -1 : 0; iter < slots; iter++) {
+					const i = iter == -1 ? inviteServerIndex : iter;
+					const httpServer = `https://cf-${region}-${i}.mk48.io`;
+					try {
+						const response = await fetch(httpServer);
+						if (!response.ok) {
+							throw new Error('response not ok');
+						}
+						server = `wss://cf-${region}-${i}.mk48.io/ws`;
+						serverID.set(`cf-${region}-${i}`);
+						const json = await response.json();
+						console.log(`server ${region} #${i}: ${json}`);
+						if (json.players > 40) {
+							console.log(`server ${region} #${i} is full, looking for others`);
+						} else {
+							break;
+						}
+					} catch (err) {
+						console.log(`Could not connect to ${httpServer}`);
+					}
+				}
+			}
+			connecting = false;
+
+			backend = new WebSocket(server);
+
+			backend.onopen = () => {
+				console.log("backend - Connected to server.");
+				connected.set(true);
+				callback && callback();
+			};
+
+			backend.onclose = event => {
+				backend = null;
+				connected.set(false);
+				contacts.set({});
+				chats.set([]);
+				entityID.set(null);
+				serverID.set(null);
+				console.log(`backend - Disconnected from server with code ${event.code} due to '${event.reason}'.`);
+			};
+		}
+
+		backend.onmessage = messageRaw => {
 			let message = null;
 			try {
 				message = JSON.parse(messageRaw.data);
 			} catch (err) {
-				console.log(`Error parsing JSON on socket: ${err}`);
+				console.log(`Error parsing JSON on backend: ${err}`);
 				console.log(messageRaw.data);
 				return;
 			}
@@ -137,18 +145,22 @@ export async function connect(callback) {
 }
 
 export function disconnect() {
-	if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
-		console.log('disconnecting from server...');
-		socket.close();
-		socket = null;
+	if (backend) {
+		if (backend instanceof Worker) {
+			backend.terminate();
+		} else if (backend.readyState === WebSocket.CONNECTING || backend.readyState === WebSocket.OPEN) {
+			console.log('disconnecting from server...');
+			backend.close();
+		}
+		backend = null;
 	}
 }
 
 export function send(type, data = {}) {
-	if (!socket || socket.readyState !== WebSocket.OPEN) {
+	if (!backend || (backend instanceof WebSocket && backend.readyState !== WebSocket.OPEN)) {
 		return;
 	}
-	socket.send(JSON.stringify({type, data}));
+	backend[backend instanceof WebSocket ? 'send' : 'postMessage'](JSON.stringify({type, data}));
 }
 
 function readTerrain(base64, length) {

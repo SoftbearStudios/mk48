@@ -7,6 +7,7 @@
 	import Link from '../lib/Link.svelte';
 	import Page from '../lib/Page.svelte';
 	import t from '../lib/translation.js';
+	import {beta} from '../lib/settings.js';
 </script>
 
 <Page>
@@ -140,6 +141,19 @@
 	<p>If a contact is on the border of your sensor range, it will
 	appear as an arrow. In this case, you know something is there, but not what
 	it is.</p>
+
+	<h2>Beta Program</h2>
+
+	<p>If you want to try experimental features (at your own risk), enable the
+	Beta program.</p>
+
+	<ul>
+		<li>Ability to play offline, against bots.</li>
+	</ul>
+
+	<label for='beta'>
+		<input type='checkbox' id='beta' bind:checked={$beta}/> Beta program
+	</label>
 </Page>
 
 <style>
