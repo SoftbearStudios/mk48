@@ -10,7 +10,7 @@
 
 </script>
 
-<div class=meter style={`background: linear-gradient(90deg, ${color} 0%, ${color} 1%, ${_BACKGROUND_COLOR} 1%, ${_BACKGROUND_COLOR} 100%); background-size: ${Math.max(percentage, 1) * 100}%;`}>
+<div class=meter style={`background: linear-gradient(90deg, ${color} 0%, ${color} 1%, ${_BACKGROUND_COLOR} 1%, ${_BACKGROUND_COLOR} 100%); background-origin: border-box; background-size: ${Math.max(percentage, 1) * 100}%;`}>
 	<slot/>
 </div>
 
