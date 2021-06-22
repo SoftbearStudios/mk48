@@ -483,13 +483,15 @@ func (entity *Entity) Close() {
 	case EntityKindAircraft, EntityKindDecoy, EntityKindWeapon:
 		// Regen limited armament
 		if data.Limited && entity.Owner != nil {
-			consumption := entity.Owner.ext.armamentConsumption()
 			armaments := entity.Owner.ext.typ.Data().Armaments
 
 			// Reload 1 limited armament of its type.
 			for i := range armaments {
 				a := &armaments[i]
-				if a.Type == entity.EntityType && consumption[i] == TicksMax {
+				if a.Type == entity.EntityType && entity.Owner.ext.armamentConsumption()[i] == TicksMax {
+					entity.Owner.ext.copyArmamentConsumption()
+					consumption := entity.Owner.ext.armamentConsumption()
+
 					// If landed dont consume.
 					if entity.Ticks == 0 {
 						consumption[i] = 0
@@ -522,11 +524,6 @@ func (entity *Entity) ConsumeArmament(index int) {
 	}
 
 	entity.ArmamentConsumption()[index] = reload
-}
-
-func (entity *Entity) ReloadArmament(index int) {
-	entity.Owner.ext.copyArmamentConsumption()
-	entity.ArmamentConsumption()[index] = 0
 }
 
 // Initialize is called whenever a boat's type is set/changed.
