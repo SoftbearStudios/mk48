@@ -50,9 +50,9 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		return true
 	}
 
-	// The following movement-related code must match the client's code
+	// The following movement-related code must match the client's code.
 	maxSpeed := data.Speed
-	repairElligible := true
+	repairEligible := true
 	seconds := ticks.Float()
 
 	if data.Kind == EntityKindAircraft {
@@ -85,9 +85,9 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 
 	boat := data.Kind == EntityKindBoat
 
-	// Shells that have been added so far can't turn
+	// Shells that have been added so far can't turn.
 	if data.SubKind != EntitySubKindShell && data.SubKind != EntitySubKindRocket {
-		// See #45 - automatically slow down to turn faster
+		// See #45 - automatically slow down to turn faster.
 		turnRate := math32.Pi / 4
 		if data.SubKind == EntitySubKindHeli {
 			turnRate = math32.Pi / 2
@@ -111,8 +111,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 		}
 		entity.Position = entity.Position.AddScaled(entity.Direction.Vec2f(), seconds*entity.Velocity.Float())
 
-		// Test collisions with terrain
-
+		// Test collisions with terrain.
 		if terrain != nil {
 			velocityClamp := Velocity(math32.MaxInt16)
 			if terrain.Collides(entity, seconds) {
@@ -120,7 +119,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 					return true
 				}
 
-				repairElligible = false
+				repairEligible = false
 				velocityClamp = 5 * MeterPerSecond
 
 				if !(data.SubKind == EntitySubKindDredger || data.SubKind == EntitySubKindHovercraft) {
@@ -135,11 +134,8 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 				belowKeel := entity.BelowKeel(terrain)
 
 				if belowKeel < 0 {
-					repairElligible = false
-
+					repairEligible = false
 					speedFactor := mapRanges(belowKeel, -5, 0, 0.6, 1, true)
-
-					//fmt.Println(terrain.AltitudeAt(entity.Position), belowKeel, speedFactor)
 					velocityClamp = Velocity(speedFactor * float32(maxSpeed))
 				}
 			}
@@ -151,7 +147,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 	// Border (note: radius can shrink)
 	centerDist2 := entity.Position.LengthSquared()
 	if centerDist2 > square(worldRadius) {
-		repairElligible = false
+		repairEligible = false
 		dead := entity.KillIn(ticks, 1*TicksPerSecond)
 		entity.Velocity += ToVelocity(clampMagnitude(entity.Velocity.Float()-6*entity.Position.Dot(entity.Direction.Vec2f()), 15))
 		// Everything but boats is instantly killed by border
@@ -164,20 +160,15 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 	}
 
 	if boat {
-		// Spawn protection
+		// Update spawn protection.
 		sp := entity.Owner.ext.getSpawnProtection()
-		toSubtract := ticks
-		// Avoid overflow of unsigned ticks
-		if toSubtract > sp {
-			toSubtract = sp
-		}
-		entity.Owner.ext.setSpawnProtection(sp - toSubtract)
+		entity.Owner.ext.setSpawnProtection(sp.SaturatingSub(ticks))
 
-		// Active ticks
+		// Update active ticks.
 		if entity.Owner.ext.active() {
 			entity.Owner.ext.setActiveTicks(TicksPerSecond / 2)
-		} else if remaining := entity.Owner.ext.activeTicks(); remaining > 0 {
-			entity.Owner.ext.setActiveTicks(remaining - 1)
+		} else if remaining := entity.Owner.ext.activeTicks(); remaining != 0 {
+			entity.Owner.ext.setActiveTicks(remaining.SaturatingSub(ticks))
 		}
 
 		turretsCopied := entity.updateTurretAim(ToAngle(seconds * (math32.Pi / 3)))
@@ -188,7 +179,7 @@ func (entity *Entity) Update(ticks Ticks, worldRadius float32, terrain Terrain) 
 			entity.replenish(ticks, armamentsCopied)
 		}
 
-		if repairElligible {
+		if repairEligible {
 			entity.Repair(ticks)
 		}
 	}
@@ -271,18 +262,18 @@ func (entity *Entity) UpdateSensor(otherEntity *Entity) {
 	entity.DirectionTarget = entity.DirectionTarget.Lerp(angle, min(0.95, max(0.01, homingStrength)))
 }
 
-// Returns a float in range [0, 1) based on the entity's id.
+// Hash returns a float in range [0, 1) based on the entity's id.
 func (entity *Entity) Hash() float32 {
 	const hashSize = 64
 	return float32(entity.EntityID&(hashSize-1)) * (1.0 / hashSize)
 }
 
-// Returns meters below keel
+// BelowKeel returns meters below keel.
 func (entity *Entity) BelowKeel(terrain Terrain) float32 {
 	return entity.Altitude()*altitudeScale - entity.Data().Draft - terrain.AltitudeAt(entity.Position)
 }
 
-// Returns whether copied turret angles
+// updateTurretAim returns whether copied turret angles.
 func (entity *Entity) updateTurretAim(amount Angle) bool {
 	turretsCopied := false
 	data := entity.Data()

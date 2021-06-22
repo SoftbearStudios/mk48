@@ -100,7 +100,7 @@ var sounds = map[string]Sound{
 		Source: "freesound.org/4366__qubodup__military-sounds/67468__qubodup__howitzer-gun-impacts-1.flac",
 		End:    0,
 		Volume: -3,
-		Pitch: -1,
+		Pitch:  -1,
 	},
 	"ocean": {
 		Source: "freesound.org/372181__amholma__ocean-noise-surf.wav",
@@ -112,7 +112,7 @@ var sounds = map[string]Sound{
 	},
 	"damage": {
 		Source: "freesound.org/321485__dslrguide__rough-metal-scrape-textured.wav",
-		Pitch: -0.5,
+		Pitch:  -0.5,
 		Volume: -3,
 	},
 	"shell": {
@@ -157,7 +157,7 @@ var sounds = map[string]Sound{
 	},
 	"upgrade": {
 		Source: "opengameart.org/Rise05.aif",
-		URL: "https://opengameart.org/content/level-up-power-up-coin-get-13-sounds",
+		URL:    "https://opengameart.org/content/level-up-power-up-coin-get-13-sounds",
 		Start:  0.809,
 		End:    1.4,
 		Volume: -2,

@@ -44,6 +44,13 @@ func (ticks Ticks) ClampMin(m Ticks) Ticks {
 	return ticks
 }
 
+func (ticks Ticks) SaturatingSub(t Ticks) Ticks {
+	if t > ticks {
+		return 0
+	}
+	return ticks - t
+}
+
 func (ticks *Ticks) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ticks.Float())
 }
