@@ -226,7 +226,10 @@ func (h *Hub) Run() {
 			h.world.Resize(h.worldRadius)
 		case <-h.debugTicker.C:
 			h.Debug()
-			h.SnapshotTerrain()
+			if _, offline := h.cloud.(Offline); !offline {
+				// High overhead, don't do when offline and the data has nowhere to go
+				h.SnapshotTerrain()
+			}
 		case <-h.botsTicker.C:
 			// There are two reasons to add bots:
 			// - When minPlayers is not met by bots + clients

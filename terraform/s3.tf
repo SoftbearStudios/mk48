@@ -53,19 +53,6 @@ resource "aws_s3_bucket" "static" {
 	website {
 		index_document = "index.html"
 		error_document = "404.html"
-
-		routing_rules = jsonencode(
-			[
-				{
-					Condition = {
-						KeyPrefixEquals = "server"
-					}
-					Redirect  = {
-						ReplaceKeyWith = "index.html"
-					}
-				},
-			]
-		)
 	}
 }
 

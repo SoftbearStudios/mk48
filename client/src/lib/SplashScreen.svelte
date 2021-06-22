@@ -15,6 +15,7 @@
 	import {browser} from '$app/env';
 	import Link, {outboundEnabled} from './Link.svelte';
 	import {summarizeType} from './Ship.svelte';
+	import {beta} from './settings.js';
 
 	export let callback;
 	export let connectionLost = false;
@@ -122,7 +123,7 @@
 </script>
 
 <div class='splash' in:fade="{{delay: 2000, duration: 500}}">
-	<h2>{$t('panel.splash.label')}</h2>
+	<h2>{$t('panel.splash.label') + (storage.offline === 'true' ? ' OFFLINE' : '')}</h2>
 	{#if connectionLost}
 		<p>{$t('panel.splash.connectionLost')}</p>
 	{:else if $deathReason}
@@ -158,6 +159,14 @@
 			{/if}
 		{/each}
 	</select>
+	{#if $beta || storage.offline === 'true'}
+		<button on:click={() => {storage.offline = storage.offline !== 'true'; location.reload();}}>Reload in {storage.offline === 'true' ? 'online' : 'OFFLINE'} mode</button>
+		{#if storage.offline === 'true'}
+			{#each Object.keys(entityData) as entityType}
+				<link rel='preload' as='image' href={`/entities/${entityType}.png`}/>
+			{/each}
+		{/if}
+	{/if}
 </div>
 
 <svelte:window on:message={handleMessage} on:hashchange={() => invite = parseInviteCode(getInvite())}/>
