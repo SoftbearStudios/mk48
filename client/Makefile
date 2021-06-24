@@ -15,7 +15,7 @@ src/data/entities.json: ../server/world/entities.json
 	cp ../server/world/entities.json src/data/entities.json
 
 static/server.wasm: ../server_wasm/*.go ../server/*.go ../server/*/*.go ../server/*/*/*.go ../server/world/entities.json
-	( cd ../server_wasm; GOOS=js GOARCH=wasm go build -o static/server.wasm; )
+	( cd ../server_wasm; GOOS=js GOARCH=wasm go build -o ../client/static/server.wasm; )
 
 build: src/*/*.js src/*/*.svelte src/* node_modules src/data/entities.json static/server.wasm
 	npm run build
