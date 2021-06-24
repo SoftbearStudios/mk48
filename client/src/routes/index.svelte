@@ -139,7 +139,8 @@
 			screenHeight: height,
 			worldWidth: WORLD_SIZE,
 			worldHeight: WORLD_SIZE,
-			interaction: app.renderer.plugins.interaction
+			interaction: app.renderer.plugins.interaction,
+			passiveWheel: false // make sure preventDefault is called (helps with iframes)
 		});
 		app.stage.addChild(viewport);
 
