@@ -59,9 +59,9 @@ void main() {
 	if (height >= GRASS) {
 		gl_FragColor = vec4(mix(vec3(0.73, 0.65, 0.45), vec3(0.25, 0.6 + sin(worldPos.x * 0.075 + 0.5 * cos(worldPos.y * 0.05)) * 0.005, 0.2), min((height - GRASS) * GRASS_SATURATION / (1.0 - GRASS), 1.0)), 1.0); // Grass
 	} else if (height >= SAND) {
-		gl_FragColor = vec4(mix(vec3(0.7, 0.66, 0.40), vec3(0.73, 0.65, 0.45), min((height - SAND) * SHARPNESS / (GRASS - SAND), 1.0)), 1.0); // Sand
+		gl_FragColor = vec4(mix(vec3(0.6, 0.56, 0.40), vec3(0.73, 0.65, 0.45), min((height - SAND) * SHARPNESS / (GRASS - SAND), 1.0)), 1.0); // Sand
 	} else if (height > SHOAL) {
-		gl_FragColor = vec4(mix(vec3(0.0, 0.3, 0.5), vec3(0.7, 0.66, 0.45), (height - SHOAL) / (SAND - SHOAL)), 1.0); // Water to sand
+		gl_FragColor = vec4(mix(vec3(0.0, 0.3, 0.5), vec3(0.6, 0.56, 0.45), (height - SHOAL) / (SAND - SHOAL)), 1.0); // Water to sand
 	} else {
 		gl_FragColor = vec4(mix(vec3(0.0, 0.2, 0.45), vec3(0.0, 0.3, 0.5), max((height - DEEP) / (SHOAL - DEEP), -0.35)), 1.0); // Water
 	}
