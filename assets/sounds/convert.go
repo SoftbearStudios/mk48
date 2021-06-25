@@ -108,7 +108,7 @@ var sounds = map[string]Sound{
 	},
 	"rocket": {
 		Source: "freesound.org/4366__qubodup__military-sounds/67541__qubodup__bgm-71-tow-missile-launch-1.flac",
-		Volume: -3,
+		Volume: -3.5,
 	},
 	"damage": {
 		Source: "freesound.org/321485__dslrguide__rough-metal-scrape-textured.wav",
@@ -119,7 +119,7 @@ var sounds = map[string]Sound{
 		Source: "freesound.org/4366__qubodup__military-sounds/162365__qubodup__navy-battleship-soundscape-turret-gunshots-mechanical-engine-humm-radio-chatter-officer-command-voices.flac",
 		Start:  0.057,
 		End:    2,
-		Volume: -4,
+		Volume: -3.5,
 	},
 	"sonar0": {
 		Source: "freesound.org/90340__digit-al__sonar.wav",
