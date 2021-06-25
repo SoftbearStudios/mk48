@@ -4070,7 +4070,6 @@
 				"type": "mark54"
 			}
 		],
-		"limited": true,
 		"lifespan": 5.211645949126277,
 		"reload": 20,
 		"turrets": []
@@ -4872,7 +4871,6 @@
 				"type": "82r"
 			}
 		],
-		"limited": true,
 		"lifespan": 5.991584504002548,
 		"reload": 20,
 		"turrets": []
