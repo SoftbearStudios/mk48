@@ -76,6 +76,8 @@
 		display: grid;
 		grid-gap: 1em 1em;
 		grid-template-columns: repeat(1, 1fr);
+		user-select: none;
+		-webkit-user-drag: none;
 	}
 
 	@media(min-width: 1000px) {
@@ -92,6 +94,8 @@
 	img {
 		height: auto;
 		width: 100%;
+		user-select: none;
+		-webkit-user-drag: none;
 	}
 
 	p {

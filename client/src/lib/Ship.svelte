@@ -190,6 +190,8 @@
 	img {
 		max-height: 4em;
 		max-width: 10em;
+		user-select: none;
+		-webkit-user-drag: none;
 	}
 
 	img.consumed {
