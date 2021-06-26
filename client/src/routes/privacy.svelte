@@ -45,14 +45,14 @@
 				<td>Team panel</td>
 				<td>Don't make team</td>
 				<td>Differentiate between teams</td>
-				<td>Until logs are refreshed</td>
+				<td>Temporary, until logs are rotated</td>
 			</tr>
 			<tr>
 				<td>Chat messages</td>
 				<td>Radio panel</td>
 				<td>Don't send any</td>
 				<td>Allow and moderate player communication</td>
-				<td>Until logs are refreshed</td>
+				<td>Forever, until manually deleted</td>
 			</tr>
 			<tr>
 				<td>Game status, including player-built terrain</td>
@@ -62,11 +62,18 @@
 				<td>Forever, until manually deleted</td>
 			</tr>
 			<tr>
+				<td>IP address</td>
+				<td>Game server</td>
+				<td>Use a VPN</td>
+				<td>Limit number of connections per client</td>
+				<td>Temporary, until logs are rotated</td>
+			</tr>
+			<tr>
 				<td>Anonymous computer details and approximate location</td>
 				<td>AWS CloudFront</td>
 				<td>N/A</td>
 				<td>Gain better understanding of audience</td>
-				<td>Forever</td>
+				<td>Forever, as determined by AWS</td>
 			</tr>
 		</tbody>
 	</table>

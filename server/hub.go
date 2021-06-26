@@ -10,6 +10,7 @@ import (
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/SoftbearStudios/mk48/server/world/sector"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -47,6 +48,10 @@ type (
 		clients     ClientList // implemented as double-linked list
 		despawn     ClientList // clients that are being removed
 		teams       map[world.TeamID]*Team
+
+		// IP address info (must hold ipMu)
+		ipConns map[string]int // key is stringified IP (IP, being a slice, is not a valid map key type)
+		ipMu    sync.RWMutex
 
 		// Flags
 		minPlayers       int
@@ -91,6 +96,7 @@ func NewHub(options HubOptions) *Hub {
 		terrain:           terrain.New(noise.NewDefault()),
 		worldRadius:       radius,
 		teams:             make(map[world.TeamID]*Team),
+		ipConns:           make(map[string]int),
 		minPlayers:        options.MinClients,
 		botMaxSpawnLevel:  options.MaxBotSpawnLevel,
 		auth:              options.Auth,

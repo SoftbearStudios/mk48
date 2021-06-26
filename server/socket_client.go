@@ -6,6 +6,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -53,13 +54,15 @@ type SocketClient struct {
 	conn    *websocket.Conn
 	send    chan Outbound
 	once    sync.Once
+	ip      net.IP
 	counter int // counts up every send
 }
 
 // Create a SocketClient from a connection
-func NewSocketClient(conn *websocket.Conn) *SocketClient {
+func NewSocketClient(conn *websocket.Conn, ip net.IP) *SocketClient {
 	return &SocketClient{
 		conn: conn,
+		ip:   ip,
 		send: make(chan Outbound, socketBufferSize),
 	}
 }
@@ -81,6 +84,16 @@ func (client *SocketClient) Destroy() {
 		client.Hub.Unregister(client)
 
 		_ = client.conn.Close()
+
+		if client.ip != nil {
+			client.Hub.ipMu.Lock()
+			defer client.Hub.ipMu.Unlock()
+			str := client.ip.String()
+			client.Hub.ipConns[str]--
+			if client.Hub.ipConns[str] <= 0 {
+				delete(client.Hub.ipConns, str)
+			}
+		}
 	})
 }
 

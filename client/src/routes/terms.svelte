@@ -33,7 +33,7 @@
 	<ol>
 		<li>Disclosing any personal information (full name, contact information, etc.), by any means, if you are under 13 years of age.</li>
 		<li>Using inappropriate or offensive language for a player nickname, team name, in game chat, or in any comments section corresponding to the game.</li>
-		<li>Placing a higher burden on the game's server(s) than a single instance of the official game client would (opening more than one connection at a time, sending messages at a higher frequency, or otherwise compromising the integrity of the server(s)).</li>
+		<li>Placing a higher burden on the game's server(s) than two instances of the official game client would (opening more than two connections at a time, sending messages at a higher frequency, or otherwise compromising the integrity of the server(s)).</li>
 		<li>Using any part of the game assets for any other purpose than explicitly allowed or licensed.</li>
 		<li>Violating any applicable law, or violating the rights or privacy of others.</li>
 		<li>Claiming to offer a downloadable version of the game (as one does not exist).</li>

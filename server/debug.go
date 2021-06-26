@@ -24,27 +24,25 @@ func (h *Hub) Debug() {
 	fmt.Printf(" - memstats: %dM/%dM\n", stats.HeapInuse/1e6, stats.NextGC/1e6)
 
 	var (
-		botCount    int
-		realPlayers []*Player
-		fps         float32
-		fpsCount    int // Can be less than len(realPlayers) for players that haven't sent a trace yet
+		botCount          int
+		realPlayerClients []Client
+		fps               float32
+		fpsCount          int // Can be less than len(realPlayers) for players that haven't sent a trace yet
 	)
 
 	for client := h.clients.First; client != nil; client = client.Data().Next {
 		if client.Bot() {
 			botCount++
 		} else {
-			player := &client.Data().Player
-			realPlayers = append(realPlayers, player)
-			if player.FPS != 0 {
-				fps += player.FPS
-				fpsCount++
-			}
+			realPlayerClients = append(realPlayerClients, client)
 		}
 	}
 
-	sort.Slice(realPlayers, func(i, j int) bool {
-		a, b := realPlayers[i], realPlayers[j]
+	sort.Slice(realPlayerClients, func(i, j int) bool {
+		a, b := &realPlayerClients[i].Data().Player, &realPlayerClients[j].Data().Player
+		if (a.EntityID == world.EntityIDInvalid) != (b.EntityID == world.EntityIDInvalid) {
+			return a.EntityID == world.EntityIDInvalid
+		}
 		if a.TeamID != b.TeamID {
 			return a.TeamID < b.TeamID
 		}
@@ -54,11 +52,20 @@ func (h *Hub) Debug() {
 		return a.Score < b.Score
 	})
 
-	fmt.Printf(" - clients: %d, bots: %d, teams: %d, world radius: %.02f\n", len(realPlayers), botCount, len(h.teams), h.worldRadius)
-	for _, realPlayer := range realPlayers {
-		fmt.Printf("   - %s", realPlayer.String())
-		if realPlayer.EntityID == world.EntityIDInvalid {
+	fmt.Printf(" - clients: %d, bots: %d, teams: %d, world radius: %.02f\n", len(realPlayerClients), botCount, len(h.teams), h.worldRadius)
+	for _, client := range realPlayerClients {
+		player := &client.Data().Player
+		if player.FPS != 0 {
+			fps += player.FPS
+			fpsCount++
+		}
+
+		fmt.Printf("   - %s", player.String())
+		if player.EntityID == world.EntityIDInvalid {
 			fmt.Print(" {spawning}")
+		}
+		if sc, ok := client.(*SocketClient); ok && sc.ip != nil {
+			fmt.Printf(" <%s>", sc.ip)
 		}
 		fmt.Println()
 	}
@@ -98,7 +105,7 @@ func (h *Hub) Debug() {
 
 	_ = AppendLog("/tmp/mk48.log", []interface{}{
 		unixMillis(),
-		len(realPlayers),
+		len(realPlayerClients),
 		botCount,
 		fps,
 	})
