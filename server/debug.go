@@ -64,8 +64,8 @@ func (h *Hub) Debug() {
 		if player.EntityID == world.EntityIDInvalid {
 			fmt.Print(" {spawning}")
 		}
-		if sc, ok := client.(*SocketClient); ok && sc.ip != nil {
-			fmt.Printf(" <%s>", sc.ip)
+		if sc, ok := client.(*SocketClient); ok && sc.ipStr != "" {
+			fmt.Printf(" <%s>", sc.ipStr)
 		}
 		fmt.Println()
 	}
