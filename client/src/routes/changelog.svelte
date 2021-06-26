@@ -18,7 +18,7 @@
 	<h3>6/25/2021</h3>
 
 	<ul>
-		<li>Add "Type 055" destroyer in level 7, move "Zumwalt" to level 7.</li>
+		<li>Add "Type 055" destroyer in level 6, move "Zumwalt" to level 7.</li>
 		<li>Clarify turret angles by limiting turret rotation.</li>
 		<li>Fix rocket torpedo reload bug.</li>
 	</ul>
