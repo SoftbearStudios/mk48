@@ -80,10 +80,6 @@ func (client *SocketClient) Data() *ClientData {
 
 func (client *SocketClient) Destroy() {
 	client.once.Do(func() {
-		client.Hub.Unregister(client)
-
-		_ = client.conn.Close()
-
 		if client.ipStr != "" {
 			client.Hub.ipMu.Lock()
 			defer client.Hub.ipMu.Unlock()
@@ -92,6 +88,11 @@ func (client *SocketClient) Destroy() {
 				delete(client.Hub.ipConns, client.ipStr)
 			}
 		}
+
+		// NOTE: This may clear client.Hub
+		client.Hub.Unregister(client)
+
+		_ = client.conn.Close()
 	})
 }
 

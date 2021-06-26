@@ -53,6 +53,11 @@ func (h *Hub) Debug() {
 	})
 
 	fmt.Printf(" - clients: %d, bots: %d, teams: %d, world radius: %.02f\n", len(realPlayerClients), botCount, len(h.teams), h.worldRadius)
+
+	h.ipMu.RLock()
+	fmt.Println(" - ip conns:", h.ipConns)
+	h.ipMu.RUnlock()
+
 	for _, client := range realPlayerClients {
 		player := &client.Data().Player
 		if player.FPS != 0 {
