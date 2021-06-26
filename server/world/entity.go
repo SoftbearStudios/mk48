@@ -328,7 +328,8 @@ func (entity *Entity) updateTurretAim(amount Angle) bool {
 		if amount < Pi {
 			deltaAngle = deltaAngle.ClampMagnitude(amount)
 		}
-		if deltaAngle != 0 {
+		// Allow turning throuh, but not stopping in, restricted angles
+		if deltaAngle != 0 && (turretData.CheckAzimuth(angles[i]+deltaAngle) || turretData.CheckAzimuth(directionTarget)) {
 			// Copy on write
 			if !turretsCopied {
 				turretsCopied = true
