@@ -15,6 +15,13 @@
 
 	<h2>2021</h2>
 
+	<h3>6/25/2021</h3>
+
+	<ul>
+		<li>Add "Type 055" destroyer in level 7, move "Zumwalt" to level 7.</li>
+		<li>Fix rocket torpedo reload bug.</li>
+	</ul>
+
 	<h3>6/23/2021</h3>
 
 	<ul>

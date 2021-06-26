@@ -1571,16 +1571,16 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": 1.7453292519943295,
-				"azimuthBL": 1.7453292519943295,
-				"azimuthBR": 1.7453292519943295
+				"angle": 1.5707963267948966,
+				"azimuthBL": 2.705260340591211,
+				"azimuthBR": 2.705260340591211
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
 				"angle": -1.5707963267948966,
-				"azimuthBL": 1.5707963267948966,
-				"azimuthBR": 1.5707963267948966
+				"azimuthBL": 2.705260340591211,
+				"azimuthBR": 2.705260340591211
 			},
 			{
 				"type": "otoMelara76mm",
@@ -2874,7 +2874,6 @@
 			}
 		},
 		"armaments": [],
-		"antiAircraft": 0.147,
 		"damage": 5.966666666666667,
 		"turrets": []
 	},
@@ -3114,6 +3113,164 @@
 		],
 		"antiAircraft": 0.148,
 		"damage": 6.010000000000001
+	},
+	"type055": {
+		"label": "Type 055",
+		"link": "https://en.wikipedia.org/wiki/Type_055_destroyer",
+		"kind": "boat",
+		"subkind": "destroyer",
+		"level": 6,
+		"length": 180,
+		"width": 20,
+		"draft": 6.6,
+		"speed": 15.43334,
+		"stealth": 0.75,
+		"sensors": {
+			"visual": {
+				"range": 950
+			},
+			"radar": {
+				"range": 1270
+			},
+			"sonar": {
+				"range": 440
+			}
+		},
+		"armaments": [
+			{
+				"type": "82r",
+				"positionForward": -39.8359,
+				"positionSide": 8,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "82r",
+				"positionForward": -39.8359,
+				"positionSide": -8,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "82r",
+				"positionForward": -40.4359,
+				"positionSide": 8,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "82r",
+				"positionForward": -40.4359,
+				"positionSide": -8,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true
+			},
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"type": "hq9",
+				"positionForward": 44,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": 44,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": 44,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": 44,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": -33.8354,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": -33.8354,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": -33.8354,
+				"positionSide": 2,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": -33.8354,
+				"positionSide": -2,
+				"vertical": true
+			},
+			{
+				"type": "harbin",
+				"positionForward": -79.8795,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "hpj38",
+				"positionForward": 58.9931,
+				"positionSide": 0,
+				"angle": 0,
+				"azimuthBL": 0.2617993877991494,
+				"azimuthBR": 0.2617993877991494
+			}
+		],
+		"antiAircraft": 0.148,
+		"damage": 6
 	},
 	"typeVIIC": {
 		"label": "Type VII C",
@@ -3703,7 +3860,7 @@
 		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 6,
+		"level": 7,
 		"length": 190,
 		"width": 24.6,
 		"draft": 8.4,
@@ -4045,8 +4202,8 @@
 				"type": "mark18"
 			}
 		],
-		"limited": true,
 		"lifespan": 52.02177423382331,
+		"limited": true,
 		"reload": 10,
 		"turrets": []
 	},
@@ -4274,6 +4431,89 @@
 		"armaments": [],
 		"turrets": []
 	},
+	"hpj38": {
+		"label": "H/PJ-38",
+		"link": "https://en.wikipedia.org/wiki/H/PJ-38_130mm_naval_gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 12.2,
+		"positionForward": 3,
+		"width": 3.621875,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"turrets": []
+	},
+	"130x720mmR": {
+		"label": "130 x 720 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"positionForward": 1,
+		"length": 0.72,
+		"width": 0.13,
+		"speed": 637.5,
+		"lifespan": 0.6640522875816994,
+		"damage": 0.4805714285714286,
+		"reload": 10.14857142857143,
+		"armaments": [],
+		"turrets": []
+	},
+	"harbin": {
+		"label": "Harbin Z-9",
+		"link": "https://en.wikipedia.org/wiki/Harbin_Z-9",
+		"kind": "aircraft",
+		"subkind": "heli",
+		"level": 5,
+		"length": 14.2143,
+		"width": 13.1038,
+		"speed": 72.02226,
+		"sensors": {
+			"visual": {
+				"range": 535.53575
+			}
+		},
+		"armaments": [
+			{
+				"type": "82r",
+				"positionForward": 1,
+				"positionSide": 1
+			},
+			{
+				"type": "82r",
+				"positionForward": 1,
+				"positionSide": -1
+			}
+		],
+		"lifespan": 69.42298117276519,
+		"limited": true,
+		"reload": 10,
+		"turrets": []
+	},
+	"hq9": {
+		"label": "HQ-9",
+		"link": "https://en.wikipedia.org/wiki/HQ-9",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 4,
+		"length": 6.8,
+		"width": 0.9562,
+		"speed": 950,
+		"sensors": {
+			"radar": {
+				"range": 1010.2
+			}
+		},
+		"lifespan": 4.7555555555555555,
+		"reload": 16,
+		"armaments": [],
+		"turrets": []
+	},
 	"igla": {
 		"label": "Igla",
 		"link": "https://en.wikipedia.org/wiki/9K38_Igla",
@@ -4317,8 +4557,8 @@
 				"positionSide": -1
 			}
 		],
-		"limited": true,
 		"lifespan": 93.4540136162498,
+		"limited": true,
 		"reload": 10,
 		"turrets": []
 	},
@@ -4341,8 +4581,8 @@
 				"type": "mark18"
 			}
 		],
-		"limited": true,
 		"lifespan": 73.63043705554827,
+		"limited": true,
 		"reload": 10,
 		"turrets": []
 	},
@@ -4616,8 +4856,8 @@
 				"positionSide": -1
 			}
 		],
-		"limited": true,
 		"lifespan": 66.57000701647874,
+		"limited": true,
 		"reload": 10,
 		"turrets": []
 	},
@@ -5020,6 +5260,26 @@
 		"lifespan": 900,
 		"damage": 1.5,
 		"reload": 30,
+		"armaments": [],
+		"turrets": []
+	},
+	"yj18": {
+		"label": "YJ-18",
+		"link": "https://en.wikipedia.org/wiki/YJ-18",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 5,
+		"length": 8.1,
+		"width": 4.11328,
+		"speed": 265.04,
+		"sensors": {
+			"radar": {
+				"range": 1012.15
+			}
+		},
+		"lifespan": 5.665362543672178,
+		"damage": 0.8,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	}

@@ -845,14 +845,14 @@
 			{
 				"positionForward": -2.5,
 				"positionSide": 2.5,
-				"angle": 100,
-				"azimuthB": 100
+				"angle": 90,
+				"azimuthB": 155
 			},
 			{
 				"positionForward": -5.3,
 				"positionSide": -2.5,
 				"angle": -90,
-				"azimuthB": 90
+				"azimuthB": 155
 			},
 			{
 				"type": "otoMelara76mm",
@@ -1648,6 +1648,76 @@
 			}
 		]
 	},
+	"type055": {
+		"label": "Type 055",
+		"link": "https://en.wikipedia.org/wiki/Type_055_destroyer",
+		"kind": "boat",
+		"subkind": "destroyer",
+		"level": 6,
+		"length": 180,
+		"width": 20,
+		"draft": 6.6,
+		"speed": 15.43334,
+		"stealth": 0.75,
+		"sensors": {
+			"visual": {},
+			"radar": {},
+			"sonar": {}
+		},
+		"armaments": [
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"count": 3,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"type": "82r",
+				"positionForward": -39.8359,
+				"positionSide": 8,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "82r",
+				"positionForward": -40.4359,
+				"positionSide": 8,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": 44,
+				"positionSide": 2,
+				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"type": "hq9",
+				"positionForward": -33.8354,
+				"positionSide": 2,
+				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"type": "harbin",
+				"positionForward": -79.8795,
+				"positionSide": 0
+			}
+		],
+		"turrets": [
+			{
+				"type": "hpj38",
+				"positionForward": 58.9931,
+				"positionSide": 0,
+				"azimuthB": 15
+			}
+		]
+	},
 	"typeVIIC": {
 		"label": "Type VII C",
 		"link": "https://en.wikipedia.org/wiki/Type_VII_submarine",
@@ -1918,7 +1988,7 @@
 		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 6,
+		"level": 7,
 		"length": 190,
 		"width": 24.6,
 		"draft": 8.4,
@@ -2126,8 +2196,7 @@
 			{
 				"type": "mark18"
 			}
-		],
-		"limited": true
+		]
 	},
 	"asroc": {
 		"label": "ASROC",
@@ -2300,6 +2369,71 @@
 			"radar": {}
 		}
 	},
+	"hpj38": {
+		"label": "H/PJ-38",
+		"link": "https://en.wikipedia.org/wiki/H/PJ-38_130mm_naval_gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 12.2,
+		"positionForward": 3,
+		"width": 3.621875,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"130x720mmR": {
+		"label": "130 x 720 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"positionForward": 1,
+		"length": 0.720,
+		"width": 0.130,
+		"speed": 850,
+		"range": 75000
+	},
+	"harbin": {
+		"label": "Harbin Z-9",
+		"link": "https://en.wikipedia.org/wiki/Harbin_Z-9",
+		"kind": "aircraft",
+		"subkind": "heli",
+		"level": 5,
+		"length": 14.2143,
+		"width": 13.1038,
+		"speed": 72.02226,
+		"range": 1000000,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [
+			{
+				"type": "82r",
+				"positionForward": 1,
+				"positionSide": 1,
+				"symmetrical": true
+			}
+		]
+	},
+	"hq9": {
+		"label": "HQ-9",
+		"link": "https://en.wikipedia.org/wiki/HQ-9",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 4,
+		"length": 6.8,
+		"width": 0.9562,
+		"speed": 950,
+		"range": 250000,
+		"sensors": {
+			"radar": {}
+		}
+	},
 	"igla": {
 		"label": "Igla",
 		"link": "https://en.wikipedia.org/wiki/9K38_Igla",
@@ -2333,8 +2467,7 @@
 				"positionSide": 1,
 				"symmetrical": true
 			}
-		],
-		"limited": true
+		]
 	},
 	"kingfisher": {
 		"label": "Kingfisher",
@@ -2353,8 +2486,7 @@
 			{
 				"type": "mark18"
 			}
-		],
-		"limited": true
+		]
 	},
 	"mark7": {
 		"label": "Mark 7",
@@ -2563,8 +2695,7 @@
 				"positionSide": 1,
 				"symmetrical": true
 			}
-		],
-		"limited": true
+		]
 	},
 	"shtorm": {
 		"label": "Shtorm",
@@ -2831,5 +2962,19 @@
 		"length": 1.0725,
 		"width": 1.32,
 		"lifespan": 900
+	},
+	"yj18": {
+		"label": "YJ-18",
+		"link": "https://en.wikipedia.org/wiki/YJ-18",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 5,
+		"length": 8.1,
+		"width": 4.11328,
+		"speed": 265.04,
+		"range": 540000,
+		"sensors": {
+			"radar": {}
+		}
 	}
 }

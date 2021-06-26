@@ -70,7 +70,7 @@
             </struct>
         </struct>
         <key>shapePadding</key>
-        <uint>4</uint>
+        <uint>2</uint>
         <key>jpgQuality</key>
         <uint>80</uint>
         <key>pngOptimizationLevel</key>
@@ -182,6 +182,7 @@
         <key>individualSpriteSettings</key>
         <map type="IndividualSpriteSettingsMap">
             <key type="filename">../../client/static/entities/127x680mmR.png</key>
+            <key type="filename">../../client/static/entities/130x720mmR.png</key>
             <key type="filename">../../client/static/entities/25x129mmR.png</key>
             <key type="filename">../../client/static/entities/380x1700mmR.png</key>
             <key type="filename">../../client/static/entities/57x441mmR.png</key>
@@ -251,6 +252,7 @@
                 <false/>
             </struct>
             <key type="filename">../../client/static/entities/82r.png</key>
+            <key type="filename">../../client/static/entities/hq9.png</key>
             <key type="filename">../../client/static/entities/mk70.png</key>
             <key type="filename">../../client/static/entities/torped45.png</key>
             <struct type="IndividualSpriteSettings">
@@ -617,6 +619,36 @@
                 <rect>256,29,512,57</rect>
                 <key>scale9Paddings</key>
                 <rect>256,29,512,57</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/harbin.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,30,64,59</rect>
+                <key>scale9Paddings</key>
+                <rect>32,30,64,59</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/hpj38.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,10,64,19</rect>
+                <key>scale9Paddings</key>
+                <rect>32,10,64,19</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
@@ -1062,6 +1094,21 @@
                 <key>scale9FromFile</key>
                 <false/>
             </struct>
+            <key type="filename">../../client/static/entities/type055.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>256,31,512,61</rect>
+                <key>scale9Paddings</key>
+                <rect>256,31,512,61</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
             <key type="filename">../../client/static/entities/typeVIIC.png</key>
             <struct type="IndividualSpriteSettings">
                 <key>pivotPoint</key>
@@ -1134,6 +1181,21 @@
                 <rect>256,39,512,78</rect>
                 <key>scale9Paddings</key>
                 <rect>256,39,512,78</rect>
+                <key>scale9FromFile</key>
+                <false/>
+            </struct>
+            <key type="filename">../../client/static/entities/yj18.png</key>
+            <struct type="IndividualSpriteSettings">
+                <key>pivotPoint</key>
+                <point_f>0,0</point_f>
+                <key>spriteScale</key>
+                <double>1</double>
+                <key>scale9Enabled</key>
+                <false/>
+                <key>scale9Borders</key>
+                <rect>32,16,64,33</rect>
+                <key>scale9Paddings</key>
+                <rect>32,16,64,33</rect>
                 <key>scale9FromFile</key>
                 <false/>
             </struct>

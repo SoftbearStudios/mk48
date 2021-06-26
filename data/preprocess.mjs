@@ -74,21 +74,27 @@ for (const entityType of Object.keys(entityDatas)) {
 		delete(entityData.range);
 	}
 
-	if (entityData.kind === 'boat') {
-		// Anti-aircraft power
-		switch (entityData.subkind) {
-			case 'dredger':
-			case 'submarine':
-				break;
-			default:
-				entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
-		}
+	switch (entityData.kind ) {
+		case 'aircraft':
+			entityData.limited = true;
+			break;
+		case 'boat':
+			// Anti-aircraft power
+			switch (entityData.subkind) {
+				case 'dredger':
+				case 'submarine':
+				case 'tanker':
+					break;
+				default:
+					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
+			}
 
-		switch (entityData.subkind) {
-			case 'pirate':
-				entityData.npc = true;
-				break;
-		}
+			switch (entityData.subkind) {
+				case 'pirate':
+					entityData.npc = true;
+					break;
+			}
+			break;
 	}
 
 	if (entityData.damage == undefined) {
