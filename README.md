@@ -21,7 +21,7 @@
 0. Install `NodeJS 14` or higher
 1. Enter `/client`
 2. `npm install`
-3. `make` or `npm run dev`
+3. `make`
 4. Navigate to http://localhost:3000
 
 ### Server
