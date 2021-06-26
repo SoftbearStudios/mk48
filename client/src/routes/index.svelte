@@ -24,6 +24,7 @@
 	import backgroundShader from '../lib/background.js';
 	import {startRecording, stopRecording} from '../lib/recording.js';
 	import {volume} from '../lib/settings.js';
+	import storage from '../util/storage.js';
 	import {onMount, onDestroy} from 'svelte'
 
 	// Spritesheet data
@@ -1283,7 +1284,7 @@
 			<!-- Render this div even without contents, as it causes the flex
 			box to shift the other contents to the right side -->
 			<div>
-				{#if globalLeaderboard}
+				{#if globalLeaderboard && storage.offline !== 'true'}
 					{#if globalLeaderboard['single/all']}
 						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={globalLeaderboard['single/all']} headerAlign='left'/>
 						<br/>
@@ -1298,15 +1299,21 @@
 				{/if}
 			</div>
 		{/if}
-		{#if $leaderboard}
+		{#if $leaderboard && storage.offline !== 'true'}
 			<Leaderboard leaderboard={$leaderboard} headerAlign='right'/>
+		{:else}
+			<div><!--placeholder--></div>
 		{/if}
 	</div>
 	<div class='bottom bar'>
 		{#if spawned}
 			<Ship type={contacts[localEntityID].type} consumption={contacts[localEntityID].armamentConsumption} altitude={contacts[localEntityID].altitude} bind:active bind:altitudeTarget bind:selection={armamentSelection} bind:this={shipRef}/>
 			<Status {overlay} {recording} type={contacts[localEntityID].type}/>
-			<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
+			{#if storage.offline !== 'true'}
+				<Chat callback={data => send('sendChat', data)} bind:this={chatRef}/>
+			{:else}
+				<div><!--placeholder--></div>
+			{/if}
 		{/if}
 	</div>
 	{#if spawned}
