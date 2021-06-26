@@ -167,17 +167,17 @@ func (bot *BotClient) Send(out Outbound) {
 				closestHazard.Closest(contact, distanceSquared)
 			}
 
-			if contactData.Kind == world.EntityKindBoat {
-				if contact.Friendly {
+			if contact.Friendly {
+				if contactData.Kind == world.EntityKindBoat {
 					friendDistance := distanceSquared
 					if len(update.TeamMembers) > 0 && contact.Name == update.TeamMembers[0].Name {
 						// Prioritize team leader
 						friendDistance = 0
 					}
 					closestFriendly.Closest(contact, friendDistance)
-				} else {
-					closestEnemy.Closest(contact, distanceSquared)
 				}
+			} else if contactData.Kind == world.EntityKindBoat || contactData.Kind == world.EntityKindAircraft || contactData.SubKind == world.EntitySubKindMissile {
+				closestEnemy.Closest(contact, distanceSquared)
 			}
 
 			// Favor joining teams that have more score for protection.
@@ -274,6 +274,9 @@ func (bot *BotClient) Send(out Outbound) {
 				bestArmamentIndex := -1
 				bestArmamentAngleDiff := float32(math32.MaxFloat32)
 
+				closestEnemyData := closestEnemy.EntityType.Data()
+				useSAM := closestEnemyData.Kind == world.EntityKindAircraft || closestEnemyData.SubKind == world.EntitySubKindMissile
+
 				for index, armament := range shipData.Armaments {
 					armamentType := armament.Type.Data().Kind
 					if armamentType != world.EntityKindWeapon && armamentType != world.EntityKindAircraft {
@@ -281,8 +284,7 @@ func (bot *BotClient) Send(out Outbound) {
 					}
 
 					armamentSubtype := armament.Type.Data().SubKind
-					if armamentSubtype == world.EntitySubKindSAM {
-						// TODO: Teach bots how to use SAMs
+					if useSAM != (armamentSubtype == world.EntitySubKindSAM) {
 						continue
 					}
 
