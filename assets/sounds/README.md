@@ -2,7 +2,7 @@
 
 Sounds are licensed under CC0/public domain
 
- - aircraft: [r03-04-airplane-engine-steady.wav](https://freesound.org/s/479512/) by craigsmith
+ - aircraft: [helicopter-flying-overhead.wav](https://freesound.org/s/513397/) by shelbyshark
  - alarmFast: [missile-lock-on-sound.mp3](https://freesound.org/s/189327/) by alxy
  - alarmSlow: [missile-lock-detected.mp3](https://freesound.org/s/165504/) by ryanconway
  - collect: [coins.mp3](https://freesound.org/s/512216/) by saviraz

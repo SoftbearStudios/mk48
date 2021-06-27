@@ -44,12 +44,6 @@ var sounds = map[string]Sound{
 			End: 0,
 		},
 	*/
-	"aircraft": {
-		Source: "freesound.org/479512__craigsmith__r03-04-airplane-engine-steady.wav",
-		Start:  3.745,
-		End:    6.420,
-		Volume: -1,
-	},
 	"alarmSlow": {
 		Source: "freesound.org/165504__ryanconway__missile-lock-detected.mp3",
 		End:    1.243,
@@ -90,6 +84,12 @@ var sounds = map[string]Sound{
 		End:    6,
 		Volume: -5,
 	},
+	"aircraft": {
+		Source: "freesound.org/513397__shelbyshark__helicopter-flying-overhead.wav",
+		Start:  1,
+		End:    2,
+		Volume: -1,
+	},
 	"horn": {
 		Source: "freesound.org/532339__reznik-krkovicka__horn-mild.mp3",
 		Start:  1.328,
@@ -115,6 +115,15 @@ var sounds = map[string]Sound{
 		Pitch:  -0.5,
 		Volume: -3,
 	},
+	/*
+		"plane": {
+			Source: "freesound.org/479512__craigsmith__r03-04-airplane-engine-steady.wav",
+			Pitch: -0.5,
+			Start: 10,
+			End: 11,
+			Volume: -2,
+		},
+	*/
 	"shell": {
 		Source: "freesound.org/4366__qubodup__military-sounds/162365__qubodup__navy-battleship-soundscape-turret-gunshots-mechanical-engine-humm-radio-chatter-officer-command-voices.flac",
 		Start:  0.057,
@@ -139,7 +148,7 @@ var sounds = map[string]Sound{
 	},
 	"sonar3": {
 		Source: "freesound.org/70299__kizilsungur__sonar.wav",
-		Volume: -2,
+		Volume: -3,
 	},
 	"surface": {
 		Source: "freesound.org/416079__davidlay1__shaving-cream-can-release.wav",

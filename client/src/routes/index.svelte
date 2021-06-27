@@ -267,6 +267,8 @@
 		function reconcileContacts(newContacts) {
 			contacts = newContacts;
 
+			let aircraftVolume = 0;
+
 			for (const entityID of Object.keys(newContacts)) {
 				const entity = newContacts[entityID];
 
@@ -275,6 +277,11 @@
 
 				let sprite = entitySprites[entityID];
 				const isNew = !sprite || entity.type != sprite.type;
+
+				const volume = volumeAt(entity.position);
+				if (currentEntityData && currentEntityData.kind === 'aircraft') {
+					aircraftVolume += volume;
+				}
 
 				if (isNew) {
 					if (sprite) {
@@ -299,7 +306,6 @@
 
 					if (currentEntityData) {
 						// Sounds
-						const volume = volumeAt(entity.position);
 						const direction = Math.atan2(entity.position.y - viewport.center.y, entity.position.x - viewport.center.x);
 						const inbound = Math.abs(angleDiff(entity.direction, direction + Math.PI)) < Math.PI / 2;
 						switch (currentEntityData.kind) {
@@ -545,6 +551,10 @@
 						sprite.turrets[i].rotation = entity.turretAngles[i] || 0;
 					}
 				}
+			}
+
+			if (aircraftVolume > 0.01) {
+				playSoundSafe('aircraft', {volume: Math.log(1 + aircraftVolume)});
 			}
 
 			for (const entityID of Object.keys(entitySprites)) {
