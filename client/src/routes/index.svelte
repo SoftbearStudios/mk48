@@ -310,6 +310,7 @@
 				if (currentEntityData && currentEntityData.kind === 'aircraft') {
 					aircraftVolume += volume;
 				}
+				const distance = dist(viewport.center, entity.position);
 				const direction = Math.atan2(entity.position.y - viewport.center.y, entity.position.x - viewport.center.x);
 				const inbound = Math.abs(angleDiff(entity.direction, direction + Math.PI)) < Math.PI / 2;
 
@@ -446,11 +447,12 @@
 					}
 				}
 
-				if (currentEntityData && localEntityID) {
+				if (currentEntityData && localEntityID && distance < 250) {
+					const distanceScale = 1000 / (500 + distance);
 					switch (currentEntityData.kind) {
 						case 'boat':
 							if (!entity.friendly && inbound && currentEntityData.subkind === 'ram') {
-								needToDodge += 2;
+								needToDodge += 2 * distanceScale;
 							}
 							break;
 						case 'weapon':
@@ -463,7 +465,7 @@
 								case 'depthCharge':
 								case 'mine':
 									if (!entity.friendly) {
-										needToDodge++;
+										needToDodge += distanceScale;
 									}
 									break;
 							}
