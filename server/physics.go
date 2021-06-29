@@ -62,13 +62,18 @@ func (h *Hub) Physics(ticks world.Ticks) {
 				} else if data.Kind == world.EntityKindWeapon && (data.SubKind == world.EntitySubKindTorpedo || data.SubKind == world.EntitySubKindMissile || data.SubKind == world.EntitySubKindShell) {
 					// This torpedo died of "natural" causes, affect the
 					// terrain (see #49)
-					if rand.Float32()*2 < data.Damage {
-						// conserve land by adding some further along the path
-						sculptOutput <- sculpt{
-							position: e.Position.AddScaled(e.Direction.Vec2f(), 20),
-							delta:    32 * data.Damage,
+
+					// it's dangerous to add land at weapon impact point, as it may
+					// be under an enemy ship, unfairly killing them
+					/*
+						if rand.Float32()*2 < data.Damage {
+							// conserve land by adding some further along the path
+							sculptOutput <- sculpt{
+								position: e.Position.AddScaled(e.Direction.Vec2f(), 20),
+								delta:    32 * data.Damage,
+							}
 						}
-					}
+					*/
 
 					if rand.Float32() < data.Damage {
 						sculptOutput <- sculpt{
