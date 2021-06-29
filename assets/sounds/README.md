@@ -1,17 +1,20 @@
 # Sound Credits
 
-Sounds are licensed under CC0/public domain
+Sounds are either licensed under CC0/public domain or via transfer of Copyright
 
+ - achievement: [Mk48.io OST - Epic Moments1_Short2.mp3](timbeek.com) by Tim Beek
  - aircraft: [helicopter-flying-overhead.wav](https://freesound.org/s/513397/) by shelbyshark
  - alarmFast: [missile-lock-on-sound.mp3](https://freesound.org/s/189327/) by alxy
  - alarmSlow: [missile-lock-detected.mp3](https://freesound.org/s/165504/) by ryanconway
  - collect: [coins.mp3](https://freesound.org/s/512216/) by saviraz
  - damage: [rough-metal-scrape-textured.wav](https://freesound.org/s/321485/) by dslrguide
  - dive: [r18-31-old-car-ahooga-horn.wav](https://freesound.org/s/480002/) by craigsmith
+ - dodge: [Mk48.io OST - Epic Moments2.mp3](timbeek.com) by Tim Beek
  - explosionLong: [explosion-01.wav](https://freesound.org/s/235968/) by tommccann
  - explosionShort: [03-gran-explosion.wav](https://freesound.org/s/514647/) by david2317
  - horn: [horn-mild.mp3](https://freesound.org/s/532339/) by reznik-krkovicka
  - impact: [military-sounds](https://freesound.org/p/4366/) by qubodup
+ - intense: [Mk48.io OST - Epic Moments4_B_Short1.mp3](timbeek.com) by Tim Beek
  - ocean: [ocean-noise-surf.wav](https://freesound.org/s/372181/) by amholma
  - rocket: [military-sounds](https://freesound.org/p/4366/) by qubodup
  - shell: [military-sounds](https://freesound.org/p/4366/) by qubodup

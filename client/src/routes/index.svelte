@@ -50,6 +50,7 @@
 	let lastActive; // last active sent to server
 	let lastAltitudeTarget; // last altitudeTarget sent to server
 	let lastSend = 0; // secondsTotal of last manual/aim
+	let scoreIncreaseAccumulator = 0; // incremented when score increases by a lot, slowly faded out
 	let perf = 0.5; // performance level in interval [0,1]
 
 	// Global leaderboard
@@ -165,20 +166,46 @@
 		extrasSpritesheet.parse(() => {});
 
 		// Load sounds
+		const music = ['achievement', 'dodge', 'intense']; // in priority order
 		for (const name of soundData) {
 			Sounds.add(name, {
 				url: `/sounds/${name}.mp3`,
-				preload: name !== 'ocean'
+				preload: name !== 'ocean',
+				singleInstance: music.includes(name)
 			});
 		}
 
 		// Calling play twice before a sound is loaded will crash (see
 		// https://github.com/pixijs/sound/issues/71)
-		function playSoundSafe(name, options) {
+		function playSoundSafe(name, options, playIfPlaying = true) {
 			const sound = Sounds.find(name);
 			if (!sound.isPlayable) {
 				console.warn('sound not playable')
 				return;
+			}
+			if (sound.isPlaying && !playIfPlaying) {
+				return;
+			}
+			let isMusic = false;
+			let musicPriority = 0;
+			for (let i = 0; i < music.length; i++) {
+				if (music[i] === name) {
+					isMusic = true;
+					musicPriority = i;
+					break;
+				}
+			}
+			if (isMusic) {
+				for (let i = 0; i < musicPriority; i++) {
+					if (Sounds.find(music[i]).isPlaying) {
+						// preempted by higher priority music
+						return;
+					}
+				}
+				for (const musicName of music) {
+					const otherMusic = Sounds.find(musicName);
+					otherMusic.stop();
+				}
 			}
 			sound.play(options);
 		}
@@ -268,6 +295,7 @@
 			contacts = newContacts;
 
 			let aircraftVolume = 0;
+			let needToDodge = 0; // number of new weapons to dodge
 
 			for (const entityID of Object.keys(newContacts)) {
 				const entity = newContacts[entityID];
@@ -282,6 +310,8 @@
 				if (currentEntityData && currentEntityData.kind === 'aircraft') {
 					aircraftVolume += volume;
 				}
+				const direction = Math.atan2(entity.position.y - viewport.center.y, entity.position.x - viewport.center.x);
+				const inbound = Math.abs(angleDiff(entity.direction, direction + Math.PI)) < Math.PI / 2;
 
 				if (isNew) {
 					if (sprite) {
@@ -306,8 +336,6 @@
 
 					if (currentEntityData) {
 						// Sounds
-						const direction = Math.atan2(entity.position.y - viewport.center.y, entity.position.x - viewport.center.x);
-						const inbound = Math.abs(angleDiff(entity.direction, direction + Math.PI)) < Math.PI / 2;
 						switch (currentEntityData.kind) {
 							case 'boat':
 								if (!entity.friendly && inbound && localEntityID) {
@@ -418,6 +446,30 @@
 					}
 				}
 
+				if (currentEntityData && localEntityID) {
+					switch (currentEntityData.kind) {
+						case 'boat':
+							if (!entity.friendly && inbound && currentEntityData.subkind === 'ram') {
+								needToDodge += 2;
+							}
+							break;
+						case 'weapon':
+							switch (currentEntityData.subkind) {
+								case 'torpedo':
+									if (!inbound) {
+										break;
+									}
+									// fallthrough
+								case 'depthCharge':
+								case 'mine':
+									if (!entity.friendly) {
+										needToDodge++;
+									}
+									break;
+							}
+					}
+				}
+
 				// Markers/nametags
 				if (currentEntityData) {
 					let oldColor = null, newColor = null;
@@ -472,16 +524,21 @@
 							}
 						}
 
-						if (sprite.nameText) {
-							// Quantize health to avoid frequent GUI updates
-							const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
+						// Quantize health to avoid frequent GUI updates
+						const health = Math.ceil((1 - (entity.damage || 0)) * 10) / 10;
 
+						if (sprite.nameText) {
 							if (currentEntityData.kind === 'boat' && (!sprite.healthBar || sprite.healthBar.health !== health || newColor !== oldColor)) {
 								if (!sprite.healthBar) {
 									sprite.healthBar = new PIXI.Graphics();
 									viewport.addChild(sprite.healthBar);
 								} else if (entityID === localEntityID && health < sprite.healthBar.health) {
 									playSoundSafe('damage');
+
+									const damage = sprite.healthBar.health - health;
+									if (damage * 1.5 > health) {
+										playSoundSafe('intense');
+									}
 								}
 
 								sprite.healthBar.health = health;
@@ -507,10 +564,30 @@
 						}
 
 						if (entityID === localEntityID) {
-							setOverlay('score', entity.score);
+							const currentScore = entity.score || 0;
+							const previousScore = overlay.score || 0;
+
+							let scoreDelta = currentScore - previousScore
+
+							// Fade
+							scoreIncreaseAccumulator *= 0.999;
+							if (scoreDelta > 10) { // 10 is highest collectible value
+								scoreDelta /= health; // low health means more chance of sound
+
+								const relativeChange = scoreDelta / previousScore;
+								if (scoreDelta >= 50 || relativeChange >= 0.25) {
+									// Score just increased by a lot
+									scoreIncreaseAccumulator++;
+								}
+								if (scoreDelta >= 200 || relativeChange > 0.5 || scoreIncreaseAccumulator >= 2) {
+									playSoundSafe('achievement');
+									scoreIncreaseAccumulator = 0;
+								}
+							}
+							setOverlay('score', currentScore);
 
 							// If player has a good score, prompt them before leaving page
-							if (entity.score >= 50) {
+							if (entity.score >= 100) {
 								window.onbeforeunload = function() {
 									return true;
 								};
@@ -555,6 +632,10 @@
 
 			if (aircraftVolume > 0.01) {
 				playSoundSafe('aircraft', {volume: Math.log(1 + aircraftVolume)});
+			}
+
+			if (needToDodge >= 3) {
+				playSoundSafe('dodge', undefined, false);
 			}
 
 			for (const entityID of Object.keys(entitySprites)) {

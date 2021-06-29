@@ -17,8 +17,9 @@ type Sound struct {
 	// Source file relative path
 	Source string
 
-	// Internet location
-	URL string
+	// For credit purposes
+	Author string
+	URL    string
 
 	// Trimming
 	Start float64
@@ -44,6 +45,10 @@ var sounds = map[string]Sound{
 			End: 0,
 		},
 	*/
+	"achievement": {
+		Source: "timbeek.com/Mk48.io OST - Epic Moments1_Short2.mp3",
+		Volume: -3,
+	},
 	"alarmSlow": {
 		Source: "freesound.org/165504__ryanconway__missile-lock-detected.mp3",
 		End:    1.243,
@@ -73,6 +78,10 @@ var sounds = map[string]Sound{
 			End:    4.4,
 		},
 	*/
+	"dodge": {
+		Source: "timbeek.com/Mk48.io OST - Epic Moments2.mp3",
+		Volume: -4,
+	},
 	"explosionShort": {
 		Source: "freesound.org/514647__david2317__03-gran-explosion.wav",
 		Start:  2.471,
@@ -101,6 +110,10 @@ var sounds = map[string]Sound{
 		End:    0,
 		Volume: -3,
 		Pitch:  -1,
+	},
+	"intense": {
+		Source: "timbeek.com/Mk48.io OST - Epic Moments4_B_Short1.mp3",
+		Volume: -4,
 	},
 	"ocean": {
 		Source: "freesound.org/372181__amholma__ocean-noise-surf.wav",
@@ -191,21 +204,43 @@ func main() {
 
 	var credits bytes.Buffer
 
-	fmt.Fprintf(&credits, "# Sound Credits\n\nSounds are licensed under CC0/public domain\n\n")
+	fmt.Fprintf(&credits, "# Sound Credits\n\nSounds are either licensed under CC0/public domain or via transfer of Copyright\n\n")
 
 	for _, name := range manifest {
 		sound := sounds[name]
+
 		segments := strings.Split(sound.Source, "/")
+
+		var sourceName string = segments[1]
+
 		if strings.HasPrefix(sound.Source, "freesound.org") {
 			parts := strings.Split(segments[1], "__")
+			sourceName = parts[2]
+			sound.Author = parts[1]
+
 			t := "s" // sound
 			if len(segments) > 2 {
 				t = "p" // pack
 			}
-			fmt.Fprintf(&credits, " - %s: [%s](https://freesound.org/%s/%s/) by %s\n", name, parts[2], t, parts[0], parts[1])
-		} else {
-			fmt.Fprintf(&credits, " - %s: [%s](%s)\n", name, segments[1], sound.URL)
+			sound.URL = fmt.Sprintf("https://freesound.org/%s/%s/", t, parts[0])
+		} else if strings.HasPrefix(sound.Source, "timbeek.com") {
+			sourceName = segments[1]
+			sound.Author = "Tim Beek"
 		}
+
+		fmt.Fprintf(&credits, " - %s:", name)
+
+		if sound.URL == "" {
+			// Link to the site, if not the specific sound
+			sound.URL = segments[0]
+		}
+		fmt.Fprintf(&credits, " [%s](%s)", sourceName, sound.URL)
+
+		if sound.Author != "" {
+			fmt.Fprintf(&credits, " by %s", sound.Author)
+		}
+
+		fmt.Fprintf(&credits, "\n")
 	}
 
 	err = os.WriteFile("./README.md", credits.Bytes(), 0644)

@@ -15,6 +15,12 @@
 
 	<h2>2021</h2>
 
+	<h3>6/28/2021</h3>
+
+	<ul>
+		<li>Begin adding music (so far only during epic moments).</li>
+	</ul>
+
 	<h3>6/27/2021</h3>
 
 	<ul>
