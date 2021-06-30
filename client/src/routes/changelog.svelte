@@ -19,6 +19,7 @@
 
 	<ul>
 		<li>Add "Kirov" cruiser and associated weapons and aircraft.</li>
+		<li>Money can't buy happiness, and it <i>definitely</i> can't stop torpedoes (anymore).</li>
 	</ul>
 
 	<h3>6/28/2021</h3>

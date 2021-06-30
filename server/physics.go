@@ -407,6 +407,11 @@ func (h *Hub) Physics(ticks world.Ticks) {
 			}
 		case boat != nil && decoy != nil:
 			// No-op
+		case weapon != nil && collectible != nil && collectible.EntityType == world.EntityTypeCoin:
+			// No-op
+			//
+			// Don't allow coins (possibly placed by players) to interfere
+			// with enemy weapons
 		case !friendly:
 			// Other ex weapon vs. weapon collision
 			if entityData.Kind != world.EntityKindObstacle {
