@@ -108,7 +108,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				// Damage means damage dealt
 				switch (entityData.subkind) {
 					case 'torpedo':
-						entityData.damage = mapRanges(entityData.length, 3, 7, 0.6, 1.1, true);
+						entityData.damage = 0.27 * Math.pow(entityData.length, 0.7);
 						// NOTE: This makes homing torpedoes do less damage.
 						/*
 						if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
@@ -121,10 +121,10 @@ for (const entityType of Object.keys(entityDatas)) {
 						break;
 					case 'rocket':
 					case 'missile':
-						entityData.damage = mapRanges(entityData.length, 1, 6, 0.15, 0.8, true);
+						entityData.damage = 0.19 * Math.pow(entityData.length, 0.7);
 						break;
 					case 'shell':
-						entityData.damage =  mapRanges(entityData.length, 0.25, 2, 0.4, 0.7, true);
+						entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
 						break;
 					case 'depthCharge':
 						entityData.damage = 0.8;

@@ -779,6 +779,97 @@
 			"visual": {}
 		}
 	},
+	"kirov": {
+		"label": "Kirov",
+		"link": "https://en.wikipedia.org/wiki/Kirov-class_battlecruiser",
+		"kind": "boat",
+		"subkind": "cruiser",
+		"level": 7,
+		"length": 252,
+		"width": 28.793,
+		"draft": 9.1,
+		"speed": 16.46223,
+		"sensors": {
+			"visual": {},
+			"radar": {},
+			"sonar": {}
+		},
+		"armaments": [
+			{
+				"type": "set65",
+				"positionForward": -50.5471,
+				"positionSide": 10,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.0471,
+				"positionSide": 10,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.5471,
+				"positionSide": 10,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.0471,
+				"positionSide": 10,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.5471,
+				"positionSide": 10,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": 3.5,
+				"count": 4,
+				"symmetrical": true,
+				"hidden": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": 3,
+				"count": 4,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -112.4,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "ak130",
+				"positionForward": -66.6097,
+				"positionSide": 0,
+				"angle": 180,
+				"azimuthB": 30
+			},
+			{
+				"type": "ak130",
+				"positionForward": -79.1108,
+				"positionSide": 0,
+				"angle": 180,
+				"azimuthB": 20
+			}
+		]
+	},
 	"kolkata": {
 		"label": "Kolkata",
 		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
@@ -2179,6 +2270,21 @@
 			"sonar": {}
 		}
 	},
+	"ak130": {
+		"label": "AK-130",
+		"link": "https://en.wikipedia.org/wiki/AK-130",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 8.45,
+		"positionForward": 1,
+		"width": 3.235,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0
+			}
+		]
+	},
 	"avenger": {
 		"label": "TBF Avenger",
 		"link": "https://en.wikipedia.org/wiki/Grumman_TBF_Avenger",
@@ -2676,6 +2782,20 @@
 			"radar": {}
 		}
 	},
+	"s300": {
+		"label": "S-300",
+		"link": "https://en.wikipedia.org/wiki/S-300_missile_system",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 6.6,
+		"width": 1.03125,
+		"speed": 950,
+		"range": 250000,
+		"sensors": {
+			"radar": {}
+		}
+	},
 	"seahawk": {
 		"label": "Seahawk",
 		"link": "https://en.wikipedia.org/wiki/Sikorsky_SH-60_Seahawk",
@@ -2845,6 +2965,20 @@
 		"width": 2.084375,
 		"speed": 325.85,
 		"range": 40000,
+		"sensors": {
+			"radar": {}
+		}
+	},
+	"p700": {
+		"label": "P-700 Granit",
+		"link": "https://en.wikipedia.org/wiki/P-700_Granit",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 4,
+		"length": 10,
+		"width": 2.96875,
+		"speed": 530.08,
+		"range": 625000,
 		"sensors": {
 			"radar": {}
 		}

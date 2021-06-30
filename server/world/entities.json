@@ -1419,6 +1419,222 @@
 		"damage": 1.7604766666666667,
 		"turrets": []
 	},
+	"kirov": {
+		"label": "Kirov",
+		"link": "https://en.wikipedia.org/wiki/Kirov-class_battlecruiser",
+		"kind": "boat",
+		"subkind": "cruiser",
+		"level": 7,
+		"length": 252,
+		"width": 28.793,
+		"draft": 9.1,
+		"speed": 16.46223,
+		"sensors": {
+			"visual": {
+				"range": 1130
+			},
+			"radar": {
+				"range": 1378
+			},
+			"sonar": {
+				"range": 476
+			}
+		},
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"turret": 0
+			},
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"turret": 1
+			},
+			{
+				"type": "set65",
+				"positionForward": -50.5471,
+				"positionSide": 10,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -50.5471,
+				"positionSide": -10,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.0471,
+				"positionSide": 10,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.0471,
+				"positionSide": -10,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.5471,
+				"positionSide": 10,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -51.5471,
+				"positionSide": -10,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.0471,
+				"positionSide": 10,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.0471,
+				"positionSide": -10,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.5471,
+				"positionSide": 10,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "set65",
+				"positionForward": -52.5471,
+				"positionSide": -10,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": 3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": -3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": 3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": -3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": 3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": -3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": 3.5,
+				"hidden": true
+			},
+			{
+				"type": "p700",
+				"positionForward": 41,
+				"positionSide": -3.5,
+				"hidden": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": 3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": -3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": 3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": -3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": 3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": -3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": 3,
+				"vertical": true
+			},
+			{
+				"type": "s300",
+				"positionForward": 60,
+				"positionSide": -3,
+				"vertical": true
+			},
+			{
+				"type": "ka25",
+				"positionForward": -112.4,
+				"positionSide": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "ak130",
+				"positionForward": -66.6097,
+				"positionSide": 0,
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
+			},
+			{
+				"type": "ak130",
+				"positionForward": -79.1108,
+				"positionSide": 0,
+				"angle": 3.141592653589793,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
+			}
+		],
+		"antiAircraft": 0.209,
+		"damage": 8.4
+	},
 	"kolkata": {
 		"label": "Kolkata",
 		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
@@ -4062,7 +4278,7 @@
 		"length": 0.1295,
 		"speed": 675,
 		"lifespan": 0.37037037037037035,
-		"damage": 0.4,
+		"damage": 0.29788156030885266,
 		"reload": 8,
 		"armaments": [],
 		"turrets": []
@@ -4105,7 +4321,7 @@
 		"width": 0.38,
 		"speed": 615,
 		"lifespan": 1.2195121951219512,
-		"damage": 0.6485714285714286,
+		"damage": 0.6449074083498981,
 		"reload": 14.628571428571428,
 		"armaments": [],
 		"turrets": []
@@ -4139,7 +4355,7 @@
 		"width": 0.57,
 		"speed": 639.75,
 		"lifespan": 0.5163475315878598,
-		"damage": 0.43274285714285715,
+		"damage": 0.4302236359802337,
 		"reload": 8.873142857142858,
 		"armaments": [],
 		"turrets": []
@@ -4178,9 +4394,25 @@
 			}
 		},
 		"lifespan": 65.21739130434783,
-		"damage": 0.634375,
+		"damage": 0.6194577306589099,
 		"reload": 12,
 		"armaments": [],
+		"turrets": []
+	},
+	"ak130": {
+		"label": "AK-130",
+		"link": "https://en.wikipedia.org/wiki/AK-130",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 8.45,
+		"positionForward": 1,
+		"width": 3.235,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0
+			}
+		],
 		"turrets": []
 	},
 	"avenger": {
@@ -4349,7 +4581,7 @@
 			}
 		},
 		"lifespan": 5.073375262054507,
-		"damage": 0.8,
+		"damage": 0.8428476906183171,
 		"reload": 16,
 		"armaments": [],
 		"turrets": []
@@ -4376,7 +4608,7 @@
 		"length": 0.091,
 		"speed": 329.18399999999997,
 		"lifespan": 0.759453679401186,
-		"damage": 0.4,
+		"damage": 0.26796317021247873,
 		"reload": 8,
 		"armaments": [],
 		"turrets": []
@@ -4426,7 +4658,7 @@
 			}
 		},
 		"lifespan": 4.5563634318853135,
-		"damage": 0.514,
+		"damage": 0.48372899338458225,
 		"reload": 10.719999999999999,
 		"armaments": [],
 		"turrets": []
@@ -4459,7 +4691,7 @@
 		"width": 0.13,
 		"speed": 637.5,
 		"lifespan": 0.6640522875816994,
-		"damage": 0.4805714285714286,
+		"damage": 0.4983821031071073,
 		"reload": 10.14857142857143,
 		"armaments": [],
 		"turrets": []
@@ -4629,7 +4861,7 @@
 		"width": 0.406,
 		"speed": 570,
 		"lifespan": 1.2725146198830408,
-		"damage": 0.6358857142857143,
+		"damage": 0.6363541077327811,
 		"reload": 14.290285714285714,
 		"armaments": [],
 		"turrets": []
@@ -4704,7 +4936,7 @@
 		"width": 0.127,
 		"speed": 592.5,
 		"lifespan": 0.6919831223628692,
-		"damage": 0.47371428571428575,
+		"damage": 0.4899089384728208,
 		"reload": 9.965714285714286,
 		"armaments": [],
 		"turrets": []
@@ -4719,7 +4951,7 @@
 		"width": 0.533,
 		"speed": 14.9189,
 		"lifespan": 100.5436057618189,
-		"damage": 1,
+		"damage": 0.9683624639651887,
 		"reload": 8,
 		"armaments": [],
 		"turrets": []
@@ -4739,7 +4971,7 @@
 			}
 		},
 		"lifespan": 53.01402397647591,
-		"damage": 0.95,
+		"damage": 0.9241944574495458,
 		"reload": 12,
 		"armaments": [],
 		"turrets": []
@@ -4769,7 +5001,7 @@
 		"speed": 618.75,
 		"reload": 6,
 		"lifespan": 1.3737373737373737,
-		"damage": 0.7,
+		"damage": 0.7061241099028986,
 		"armaments": [],
 		"turrets": []
 	},
@@ -4788,7 +5020,7 @@
 			}
 		},
 		"lifespan": 66.26738359140062,
-		"damage": 0.6,
+		"damage": 0.5439537773905669,
 		"reload": 12,
 		"armaments": [],
 		"turrets": []
@@ -4808,7 +5040,7 @@
 			}
 		},
 		"lifespan": 4.284693816410552,
-		"damage": 0.5335000000000001,
+		"damage": 0.49701737110115,
 		"reload": 11.080000000000002,
 		"armaments": [],
 		"turrets": []
@@ -4828,6 +5060,25 @@
 			}
 		},
 		"lifespan": 3.8976964769647693,
+		"reload": 16,
+		"armaments": [],
+		"turrets": []
+	},
+	"s300": {
+		"label": "S-300",
+		"link": "https://en.wikipedia.org/wiki/S-300_missile_system",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 6.6,
+		"width": 1.03125,
+		"speed": 950,
+		"sensors": {
+			"radar": {
+				"range": 1009.9
+			}
+		},
+		"lifespan": 4.773242630385488,
 		"reload": 16,
 		"armaments": [],
 		"turrets": []
@@ -5013,7 +5264,7 @@
 		"width": 0.29883,
 		"speed": 200,
 		"lifespan": 3.899839624046184,
-		"damage": 0.16625,
+		"damage": 0.20632904434825974,
 		"reload": 2.5,
 		"armaments": [],
 		"turrets": []
@@ -5046,7 +5297,7 @@
 		"width": 0.76,
 		"speed": 686.25,
 		"lifespan": 0.5760777170613237,
-		"damage": 0.46617142857142857,
+		"damage": 0.48017530862921753,
 		"reload": 9.76457142857143,
 		"armaments": [],
 		"turrets": []
@@ -5066,8 +5317,28 @@
 			}
 		},
 		"lifespan": 4.697630031549474,
-		"damage": 0.774,
+		"damage": 0.6503590626496802,
 		"reload": 15.52,
+		"armaments": [],
+		"turrets": []
+	},
+	"p700": {
+		"label": "P-700 Granit",
+		"link": "https://en.wikipedia.org/wiki/P-700_Granit",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 4,
+		"length": 10,
+		"width": 2.96875,
+		"speed": 530.08,
+		"sensors": {
+			"radar": {
+				"range": 1015
+			}
+		},
+		"lifespan": 5.357142857142857,
+		"damage": 0.9522557438918172,
+		"reload": 16,
 		"armaments": [],
 		"turrets": []
 	},
@@ -5086,7 +5357,7 @@
 			}
 		},
 		"lifespan": 4.391191073943132,
-		"damage": 0.5829000000000001,
+		"damage": 0.5300235033840559,
 		"reload": 11.992,
 		"armaments": [],
 		"turrets": []
@@ -5189,7 +5460,7 @@
 			}
 		},
 		"lifespan": 72.89416767932865,
-		"damage": 1.1,
+		"damage": 1.1473679862215587,
 		"reload": 12,
 		"armaments": [],
 		"turrets": []
@@ -5209,7 +5480,7 @@
 			}
 		},
 		"lifespan": 5.096210582734502,
-		"damage": 0.7428,
+		"damage": 0.6314020026905378,
 		"reload": 14.943999999999999,
 		"armaments": [],
 		"turrets": []
@@ -5229,7 +5500,7 @@
 			}
 		},
 		"lifespan": 72.89412517087598,
-		"damage": 0.6,
+		"damage": 0.5620243941962166,
 		"reload": 12,
 		"armaments": [],
 		"turrets": []
@@ -5244,7 +5515,7 @@
 		"width": 0.533,
 		"speed": 23.2,
 		"lifespan": 64.65517241379311,
-		"damage": 1.1,
+		"damage": 1.0752179639948185,
 		"reload": 8,
 		"armaments": [],
 		"turrets": []
@@ -5278,7 +5549,7 @@
 			}
 		},
 		"lifespan": 5.665362543672178,
-		"damage": 0.8,
+		"damage": 0.8216618332486386,
 		"reload": 16,
 		"armaments": [],
 		"turrets": []

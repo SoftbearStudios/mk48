@@ -15,6 +15,12 @@
 
 	<h2>2021</h2>
 
+	<h3>6/29/2021</h3>
+
+	<ul>
+		<li>Add "Kirov" cruiser and associated weapons and aircraft.</li>
+	</ul>
+
 	<h3>6/28/2021</h3>
 
 	<ul>
