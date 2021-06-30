@@ -80,6 +80,8 @@ func (angle *Angle) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &f); err != nil {
 		return err
 	}
-	*angle = ToAngle(f)
+	// Use nextafter to always round down (important as 3.141592653589793 must
+	// not round to 3.1415927, which exceeds PI, and wraps to a -PI angle)
+	*angle = ToAngle(math32.Nextafter(f, 0))
 	return nil
 }

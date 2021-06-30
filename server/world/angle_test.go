@@ -42,6 +42,21 @@ func BenchmarkAngle_Vec2f(b *testing.B) {
 	_ = acc
 }
 
+func TestAngle_EdgeCase(t *testing.T) {
+	var angle Angle
+	angle.UnmarshalJSON([]byte("-3.141592653589793"))
+	float := angle.Float()
+	if float > 0 {
+		t.Errorf("expected negative pi, found %f", float)
+	}
+
+	angle.UnmarshalJSON([]byte("3.141592653589793"))
+	float = angle.Float()
+	if float < 0 {
+		t.Errorf("expected positive pi, found %f", float)
+	}
+}
+
 func TestAngle_Diff(t *testing.T) {
 	errs := 0
 
