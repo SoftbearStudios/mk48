@@ -138,6 +138,10 @@ func (client *SocketClient) readPump() {
 	})
 
 	for {
+		// This additional read deadline effectively makes it ok for clients to not send
+		// pong messages if they send other messages.
+		_ = client.conn.SetReadDeadline(time.Now().Add(pongWait))
+
 		_, r, err := client.conn.NextReader()
 		if err != nil {
 			if debugSocket {

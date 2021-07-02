@@ -27,7 +27,7 @@ type (
 		TurretAngles        []world.Angle    `json:"turretAngles,omitempty"`
 		Friendly            bool             `json:"friendly,omitempty"`
 		TeamFull            bool             `json:"teamFull,omitempty"`
-		EntityType          world.EntityType `json:"type"`
+		EntityType          world.EntityType `json:"type,omitempty"`
 		Altitude            float32          `json:"altitude,omitempty"`
 		Damage              float32          `json:"damage,omitempty"`
 		Uncertainty         float32          `json:"uncertainty"`
