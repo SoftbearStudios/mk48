@@ -9,7 +9,9 @@ import (
 	"github.com/SoftbearStudios/mk48/server/terrain"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"image/png"
+	"os"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -156,6 +158,8 @@ func (h *Hub) SnapshotTerrain() {
 		return
 	}
 
+	defer h.timeFunction("snapshot", time.Now())
+
 	img := h.terrain.Render(terrain.Size / 4)
 	var buf bytes.Buffer
 	err := png.Encode(&buf, img)
@@ -163,23 +167,37 @@ func (h *Hub) SnapshotTerrain() {
 		return
 	}
 	_ = h.cloud.UploadTerrainSnapshot(buf.Bytes())
+}
 
-	// TODO: Will fill disk space
-	/*
-		const path = "/tmp/mk48-terrain"
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			os.Mkdir(path, 0744)
-		}
-		file, err := os.Create(fmt.Sprintf("%s/%d.png", path, unixMillis()))
-		if err != nil {
-			fmt.Println(err)
-		}
-		defer file.Close()
+// Logs and saves the panic info, exits
+func DebugExit() {
+	if r := recover(); r != nil {
+		stack := debug.Stack()
 
-		if err = png.Encode(file, img); err != nil {
-			fmt.Println(err)
+		var buf bytes.Buffer
+		fmt.Fprintf(&buf, "panic: %v\n", r)
+		fmt.Fprintf(&buf, "time: %s\n", time.Now())
+		fmt.Fprintln(&buf)
+		fmt.Fprintln(&buf, string(stack))
+
+		b := buf.Bytes()
+
+		// Prints to stderr (hopefully unbuffered)
+		println(string(b))
+
+		name := fmt.Sprintf("/tmp/mk48-crash-%d.txt", unixMillis())
+		err := os.WriteFile(name, b, 0644)
+		if err == nil {
+			fmt.Println("Wrote to", name)
+		} else {
+			fmt.Printf("Error writing to %s: %v\n", name, err)
 		}
-	*/
+
+		// Give some time for systemd to record output without cutting it off
+		time.Sleep(time.Second)
+	}
+
+	os.Exit(1)
 }
 
 // funcBench is a benchmark of a core function.

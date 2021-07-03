@@ -9,7 +9,6 @@ import (
 	"github.com/SoftbearStudios/mk48/server/terrain/noise"
 	"github.com/SoftbearStudios/mk48/server/world"
 	"github.com/SoftbearStudios/mk48/server/world/sector"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -150,13 +149,7 @@ func (h *Hub) ReceiveSigned(in SignedInbound, important bool) {
 }
 
 func (h *Hub) Run() {
-	defer func() {
-		if r := recover(); r != nil {
-			panic(r)
-		}
-		println("That's it, I'm out -hub") // Don't waste time debugging hub exits
-		os.Exit(1)
-	}()
+	defer DebugExit()
 
 	h.Cloud()
 
@@ -232,10 +225,6 @@ func (h *Hub) Run() {
 			h.world.Resize(h.worldRadius)
 		case <-h.debugTicker.C:
 			h.Debug()
-			if _, offline := h.cloud.(Offline); !offline {
-				// High overhead, don't do when offline and the data has nowhere to go
-				h.SnapshotTerrain()
-			}
 		case <-h.botsTicker.C:
 			// There are two reasons to add bots:
 			// - When minPlayers is not met by bots + clients

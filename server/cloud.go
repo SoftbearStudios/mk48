@@ -99,4 +99,9 @@ func (h *Hub) Cloud() {
 	if err != nil {
 		fmt.Println("Error updating server:", err)
 	}
+
+	if _, offline := h.cloud.(Offline); !offline {
+		// High overhead, don't do when offline and the data has nowhere to go
+		h.SnapshotTerrain()
+	}
 }
