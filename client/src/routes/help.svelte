@@ -142,6 +142,15 @@
 	appear as an arrow. In this case, you know something is there, but not what
 	it is.</p>
 
+	<h2>Fleets</h2>
+
+	<p>You can join up to five other players to form a fleet, using the panel
+	in the top left corner of the screen. Once you have a fleet, other players
+	can request to join it. You can then approve or deny them. Members of a fleet
+	cannot hurt each other with weapons. Importantly, you cannot request to join
+	a fleet until you are close enough to see one of its members, and the fleet
+	has slots remaining.</p>
+
 	<h2>Beta Program</h2>
 
 	<p>If you want to try experimental features (at your own risk), enable the
