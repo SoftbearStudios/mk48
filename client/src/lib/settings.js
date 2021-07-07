@@ -70,4 +70,5 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 };
 
 export const beta = settingStore('beta', false);
+export const chatOpen = settingStore('chat', true);
 export const volume = settingStore('volume', 1.0);

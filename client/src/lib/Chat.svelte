@@ -6,10 +6,11 @@
 <script context='module'>
 	import {teamMembers} from './socket.js';
 	import t from './translation.js';
+	import {chatOpen} from './settings.js';
 	import {writable} from 'svelte/store';
 	// Store message in module context to persist it between
 	// player deaths (See #22)
-	let message = writable('');
+	const message = writable('');
 </script>
 
 <script>
@@ -76,7 +77,7 @@
 </script>
 
 <div>
-	<Section name={$t('panel.chat.label')} headerAlign='right'>
+	<Section name={$t('panel.chat.label')} headerAlign='right' bind:open={$chatOpen}>
 		{#each $chats as {name, team, teamOnly, message}}
 			<p class='message' class:teamOnly>
 				<span class='name' on:click={() => populateReply(name)}>{team ? `[${team}] ${name}` : name}</span>&nbsp;{message}
