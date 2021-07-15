@@ -178,11 +178,23 @@ func (h *Hub) spawnEntity(entity *world.Entity, initialRadius float32) world.Ent
 
 // nearAny Returns if any entities are within a threshold for spawning (or if colliding with terrain)
 func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
-	switch entity.Data().Kind {
-	case world.EntityKindAircraft, world.EntityKindCollectible, world.EntityKindDecoy, world.EntityKindWeapon:
-		// Weapons spawn where the player shoots them regardless of entities,
-		// Collectibles don't care about colliding with entities while spawning
+	// Extra space between entities
+	radius := entity.Data().Radius
+	maxT := (radius + world.EntityRadiusMax) * threshold
 
+	switch entity.Data().Kind {
+	case world.EntityKindDecoy, world.EntityKindWeapon:
+		// Weapons spawn where the player shoots them regardless of entities,
+		// except if they would hit an obstacle (see #138)
+		if h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
+			return otherEntity.Data().Kind == world.EntityKindObstacle && entity.Collides(otherEntity, 0)
+		}) {
+			// Colliding with an obstacle
+			return false
+		}
+		fallthrough
+	case world.EntityKindCollectible, world.EntityKindAircraft:
+		// Collectibles/aircraft don't care about colliding with entities while spawning
 		// Simply perform a terrain check against the current position (no slow conservative check)
 		return !h.terrain.Collides(entity, 0)
 	case world.EntityKindBoat:
@@ -201,10 +213,6 @@ func (h *Hub) canSpawn(entity *world.Entity, threshold float32) bool {
 	if h.terrain.Collides(entity, -1) {
 		return false
 	}
-
-	// Extra space between entities
-	radius := entity.Data().Radius
-	maxT := (radius + world.EntityRadiusMax) * threshold
 
 	return !h.world.ForEntitiesInRadius(entity.Position, maxT, func(r float32, otherEntity *world.Entity) (stop bool) {
 		t := (radius + otherEntity.Data().Radius) * threshold
