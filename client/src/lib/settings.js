@@ -66,6 +66,7 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 			store.set(mapRanges(value, 0, levels - 1, minValue, maxValue));
 		};
 	}
+	store.setDefault = () => store.set(defaultValue);
 	return store;
 };
 

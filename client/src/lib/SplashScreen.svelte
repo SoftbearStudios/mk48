@@ -15,7 +15,7 @@
 	import {browser} from '$app/env';
 	import Link, {outboundEnabled} from './Link.svelte';
 	import {summarizeType} from './Ship.svelte';
-	import {beta} from './settings.js';
+	import {beta, volume} from './settings.js';
 
 	export let callback;
 	export let connectionLost = false;
@@ -64,6 +64,12 @@
 				break;
 			case 'unpause':
 				paused = false;
+				break;
+			case 'mute':
+				volume.set(0);
+				break;
+			case 'unmute':
+				volume.setDefault();
 				break;
 			case 'disableOutbound':
 				outboundEnabled.set(false);
