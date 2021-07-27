@@ -15,6 +15,7 @@
 	import Hint from '../lib/Hint.svelte';
 	import Sidebar from '../lib/Sidebar.svelte';
 	import Teams from '../lib/Teams.svelte';
+	import {outboundEnabled} from '../lib/Link.svelte';
 	import t from '../lib/translation.js';
 	import Upgrades, {canUpgrade} from '../lib/Upgrades.svelte';
 	import {drawHud, THROTTLE_END, THROTTLE_START} from '../lib/hud.js';
@@ -92,6 +93,23 @@
 
 	function zoom(amount) {
 		viewport && viewport.setZoom(viewport.scale.x + amount, true);
+	}
+
+	// Originates from iframe parent.
+	// Also handled by SplashScreen.svelte
+	function handleMessage(event) {
+		console.log(`game received message: ${event.data}`);
+		switch (event.data) {
+			case 'mute':
+				volume.set(0);
+				break;
+			case 'unmute':
+				volume.setDefault();
+				break;
+			case 'disableOutbound':
+				outboundEnabled.set(false);
+				break;
+		}
 	}
 
 	// May be called anywhere (not just component init)
@@ -1417,7 +1435,7 @@
 	<Sidebar {zoom}/>
 </main>
 
-<svelte:window on:keydown={handleKey} on:keyup={handleKey}/>
+<svelte:window on:keydown={handleKey} on:keyup={handleKey} on:message={handleMessage}/>
 
 <style>
 	:root {

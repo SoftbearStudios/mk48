@@ -15,7 +15,7 @@
 	import {browser} from '$app/env';
 	import Link, {outboundEnabled} from './Link.svelte';
 	import {summarizeType} from './Ship.svelte';
-	import {beta, volume} from './settings.js';
+	import {beta} from './settings.js';
 
 	export let callback;
 	export let connectionLost = false;
@@ -60,24 +60,15 @@
 		sendToParent('splash');
 	});
 
-	// Message originates from iframe parent
+	// Message originates from iframe parent.
+	// Also handled by index.svelte
 	function handleMessage(event) {
-		console.log(`game received message: ${event.data}`);
 		switch (event.data) {
 			case 'pause':
 				paused = true;
 				break;
 			case 'unpause':
 				paused = false;
-				break;
-			case 'mute':
-				volume.set(0);
-				break;
-			case 'unmute':
-				volume.setDefault();
-				break;
-			case 'disableOutbound':
-				outboundEnabled.set(false);
 				break;
 		}
 	}
