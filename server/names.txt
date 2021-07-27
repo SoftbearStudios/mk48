@@ -1,5 +1,6 @@
 Alexa
 Android
+Ava
 Baymax
 Bender
 Bixby
@@ -24,13 +25,17 @@ IG99
 iRobot
 IronGiant
 Johnny5
+K-2SO
 KITT
 Megatron
+MQ-1
+MQ-9
 Otto
 R2-D2
 Robot
 Roomba
 Siri
+Speedy
 T-1000
 T-800
 Talos
