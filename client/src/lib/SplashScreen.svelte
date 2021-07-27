@@ -43,16 +43,21 @@
 	let invite = undefined;
 	let paused = false;
 
-	onMount(() => {
-		invite = parseInviteCode(getInvite());
-
+	// Sends a message to the parent of this iframe, usually
+	// a game distribution website shim.
+	function sendToParent(msg) {
 		if (window.parent && window.parent.postMessage) {
 			try {
-				window.parent.postMessage('splash', '*');
+				window.parent.postMessage(msg, '*');
 			} catch (err) {
 				console.warn(err);
 			}
 		}
+	}
+
+	onMount(() => {
+		invite = parseInviteCode(getInvite());
+		sendToParent('splash');
 	});
 
 	// Message originates from iframe parent
@@ -105,6 +110,8 @@
 		if (storage.join == undefined) {
 			storage.join = Date.now();
 		}
+
+		sendToParent('play');
 	}
 
 	function fmtDeathReason(t, reason) {

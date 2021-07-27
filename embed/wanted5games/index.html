@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+		<style>
+			html {
+				height: 100%;
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				overflow: hidden;
+			}
+
+			#container {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 0;
+				height: 0;
+				overflow: hidden;
+				max-width: 100%;
+				max-height: 100%;
+				min-width: 100%;
+				min-height: 100%;
+				box-sizing: border-box;
+			}
+		</style>
+		<script type="text/javascript" src="https://wanted5games.com/js/game.js"></script>
+	</head>
+	<body>
+		<iframe
+			id="frame"
+			allowfullscreen
+			frameborder="0"
+			height="100%"
+			referrerpolicy="origin"
+			sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts"
+			src="https://mk48.io"
+			title="Mk48.io"
+			width="100%"
+		></iframe>
+		<script>
+			const frame = document.getElementById('frame');
+			const frameWindow = frame.contentWindow;
+			function sendToGame(msg) {
+				frameWindow.postMessage(msg, 'https://mk48.io');
+			}
+
+			CloudAPI.init({
+				'id': 1064,
+				'splash': false
+			});
+
+			CloudAPI.mute = () => {
+				sendToGame('mute');
+				return true;
+			}
+
+			CloudAPI.unmute = () => {
+				sendToGame('unmute');
+				return true;
+			}
+
+			function updateOutbound() {
+				if (!CloudAPI.links.active()) {
+					sendToGame('disableOutbound');
+				}
+			}
+
+			// Make sure this gets through (possibly unecessary, but harmless).
+			updateOutbound();
+			setTimeout(updateOutbound, 500);
+			setTimeout(updateOutbound, 2000);
+
+			// Messages from the game
+			window.addEventListener('message', event => {
+				//console.log(`iframe received message: ${event.data}`);
+				switch (event.data) {
+					case 'splash':
+						console.log('iframe received message: splash');
+						CloudAPI.gameOver();
+						break;
+					case 'play':
+						console.log('iframe received message: play');
+						CloudAPI.play();
+						break;
+				}
+			}, false);
+		</script>
+	</body>
+</html>
