@@ -53,7 +53,7 @@ type (
 		AngularVelocityTarget *world.Angle   `json:"angVelTarget"` // angular velocity must be calculated on the server to avoid oscillations
 		AltitudeTarget        *float32       `json:"altitudeTarget"`
 		AimTarget             world.Vec2f    `json:"aimTarget"`
-		EntityID              world.EntityID `json:"entityID"` // This may be used in the future to allow you to drive your weapons manually.
+		EntityID              world.EntityID `json:"entityID"` // Ignored for now, and completely optional. This may be used in the future to allow you to drive your weapons manually.
 	}
 
 	// Drop gold coins to transfer score (within limits)
@@ -450,7 +450,9 @@ func (data Fire) Process(h *Hub, _ Client, player *Player) {
 }
 
 func (data Manual) Process(h *Hub, c Client, player *Player) {
-	h.world.EntityByID(data.EntityID, func(entity *world.Entity) (_ bool) {
+	// TODO: In the future, check data.EntityID (if controlling weapons is allowed).
+
+	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
 		if entity == nil || entity.Owner != &player.Player {
 			return
 		}
