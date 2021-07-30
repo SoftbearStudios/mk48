@@ -513,48 +513,56 @@ func (data Pay) Process(h *Hub, _ Client, player *Player) {
 }
 
 func (data SendChat) Process(h *Hub, client Client, player *Player) {
-	if len(data.Message) > 128 {
-		return
-	}
-
-	name := player.Name
-
-	// Allow spamming ones own team, since you can get kicked
-	msg, ok := player.ChatHistory.Update(data.Message, data.Team)
-
-	t := "user"
-	if client.Bot() {
-		t = "bot"
-	}
-
-	_ = AppendLog("/tmp/mk48-chat.log", []interface{}{
-		time.Now().UnixNano() / 1e6,
-		!ok,
-		name,
-		t,
-		data.Message,
-		msg,
-	})
-
-	if !ok {
-		return
-	}
-
-	msg, ok = sanitize(msg, false, 1, 128)
-	if !ok {
-		return
-	}
-
-	chat := Chat{Message: msg, PlayerData: player.PlayerData}
-	if data.Team {
-		team := h.teams[player.TeamID]
-		if team == nil {
+	h.world.EntityByID(player.EntityID, func(entity *world.Entity) (_ bool) {
+		if entity == nil || entity.Owner != &player.Player {
+			// You must have an alive ship to chat (at least until #124).
 			return
 		}
-		team.Chats = append(team.Chats, chat)
-	} else {
-		h.chats = append(h.chats, chat)
-	}
+
+		if len(data.Message) > 128 {
+			return
+		}
+
+		name := player.Name
+
+		// Allow spamming ones own team, since you can get kicked
+		msg, ok := player.ChatHistory.Update(data.Message, data.Team)
+
+		t := "user"
+		if client.Bot() {
+			t = "bot"
+		}
+
+		_ = AppendLog("/tmp/mk48-chat.log", []interface{}{
+			time.Now().UnixNano() / 1e6,
+			!ok,
+			name,
+			t,
+			data.Message,
+			msg,
+		})
+
+		if !ok {
+			return
+		}
+
+		msg, ok = sanitize(msg, false, 1, 128)
+		if !ok {
+			return
+		}
+
+		chat := Chat{Message: msg, PlayerData: player.PlayerData}
+		if data.Team {
+			team := h.teams[player.TeamID]
+			if team == nil {
+				return
+			}
+			team.Chats = append(team.Chats, chat)
+		} else {
+			h.chats = append(h.chats, chat)
+		}
+		return
+	})
 }
 
 func (trace Trace) Process(_ *Hub, _ Client, p *Player) {
