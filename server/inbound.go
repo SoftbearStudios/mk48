@@ -53,7 +53,7 @@ type (
 		AngularVelocityTarget *world.Angle   `json:"angVelTarget"` // angular velocity must be calculated on the server to avoid oscillations
 		AltitudeTarget        *float32       `json:"altitudeTarget"`
 		AimTarget             world.Vec2f    `json:"aimTarget"`
-		EntityID              world.EntityID `json:"entityID"`
+		EntityID              world.EntityID `json:"entityID"` // This may be used in the future to allow you to drive your weapons manually.
 	}
 
 	// Drop gold coins to transfer score (within limits)

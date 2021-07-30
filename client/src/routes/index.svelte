@@ -990,7 +990,6 @@
 
 							if (bestArmamentAngleDiff <= requiredAngle || keyboard.shoot) {
 								send('fire', {
-									entityID: localEntityID,
 									index: bestArmamentIndex,
 									positionTarget: mousePosition
 								});
