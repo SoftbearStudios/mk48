@@ -68,10 +68,15 @@ func (player *Player) Died(entity *Entity) {
 	player.DeathTime = unixMillis()
 }
 
+// Returns how long a player has been dead for in millis. Only valid for dead players.
+func (player *Player) DeathDuration() int64 {
+	return unixMillis() - player.DeathTime
+}
+
 // Respawning returns if player is currently in the respawn animation
 func (player *Player) Respawning() bool {
 	if player.DeathVisual != 0 {
-		if unixMillis()-player.DeathTime > int64(playerDeathTime/time.Millisecond) {
+		if player.DeathDuration() > int64(playerDeathTime/time.Millisecond) {
 			player.ClearRespawn()
 		} else {
 			return true
@@ -113,8 +118,14 @@ func (player *Player) Camera() (pos Vec2f, visual, radar, sonar float32) {
 		sonar = player.DeathVisual
 		radar = player.DeathVisual
 	} else {
-		// Center of world for title screen
-		visual = 1000
+		// Center of world (pos = 0,0) for title screen
+
+		if player.DeathTime != 0 && player.DeathDuration() > 1000*60 {
+			// Save (expensive) bandwidth.
+			visual = 300
+		} else {
+			visual = 600
+		}
 	}
 	return
 }

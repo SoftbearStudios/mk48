@@ -11,6 +11,25 @@ import (
 	"time"
 )
 
+func (h *Hub) shouldForceSendTerrain(client Client) bool {
+	player := &client.Data().Player
+	mod := 10
+
+	// Save bandwidth for dead players
+	if player.DeathTime != 0 {
+		duration := player.DeathDuration()
+		if duration > 5*60*1000 {
+			mod = 500
+		} else if duration > 60*1000 {
+			mod = 100
+		} else {
+			mod = 20
+		}
+	}
+
+	return (h.updateCounter+int(player.PlayerID()))%mod == 0
+}
+
 // Update sends an Update message to each Client.
 // It's run in parallel because it doesn't write to World
 func (h *Hub) Update() {
@@ -27,7 +46,7 @@ func (h *Hub) Update() {
 				j := 0
 				for c := range in {
 					// 1/8 of clients get a forced terrain update each time
-					hub.updateClient(c, (hub.updateCounter+j)%8 == 0)
+					hub.updateClient(c, h.shouldForceSendTerrain(c))
 					j++
 				}
 				wg.Done()
@@ -45,7 +64,7 @@ func (h *Hub) Update() {
 	} else {
 		j := 0
 		for client := h.clients.First; client != nil; client = client.Data().Next {
-			h.updateClient(client, (h.updateCounter+j)%8 == 0)
+			h.updateClient(client, h.shouldForceSendTerrain(client))
 			j++
 		}
 	}
