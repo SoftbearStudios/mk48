@@ -15,6 +15,12 @@
 
 	<h2>2021</h2>
 
+	<h3>8/8/2021</h3>
+
+	<ul>
+		<li>Aircraft can no longer drop weapons through oil platforms.</li>
+	</ul>
+
 	<h3>6/29/2021</h3>
 
 	<ul>
