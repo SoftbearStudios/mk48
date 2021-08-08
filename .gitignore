@@ -1,3 +1,4 @@
 .idea
 out.png
 .ssh
+server_rust/

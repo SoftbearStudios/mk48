@@ -52,7 +52,7 @@
 		slightly more powerful guns.</li>
 		<li><b>Cruisers</b> are a compromise between destroyers and battleships.</li>
 		<li><b>Battleships</b> are very formidable ships, having extremely
-		powerful main cannons. They can call in airstrikes to defend against submarines.</li>
+		powerful main cannons. They may carry a minimal amount of planes for submarine defense.</li>
 		<li><b>Submarines</b> travel underwater, making them immune to certain
 		types of weapons, but must surface to fire certain types of weapons and regenerate others at a normal rate.</li>
 		<li><b>Hovercraft</b> can travel on land and water.</li>
