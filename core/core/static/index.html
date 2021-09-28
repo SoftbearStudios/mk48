@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Core Server Diagnostic</title>
+  <script type="text/javascript">
+    window.onload = function () {
+        const token = Math.floor((Math.random() * 999999) + 1).toString(16);
+        const path = location.host + location.pathname;
+        const xhr = new XMLHttpRequest();
+
+        let client_conn, server_conn;
+        let echoMsg = document.getElementById("echo_msg");
+        let serverMsg = document.getElementById("server_msg");
+        let clientMsg = document.getElementById("client_msg");
+        let log = document.getElementById("log");
+
+        function appendLog(item) {
+            let doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
+            log.appendChild(item);
+            if (doScroll) {
+                log.scrollTop = log.scrollHeight - log.clientHeight;
+            }
+        }
+
+        document.getElementById("echo_form").onsubmit = function () {
+            if (!client_conn) {
+                return false;
+            }
+            const msg = "echo " + new Date().getTime();
+            client_conn.send(msg);
+            clientMsg.value = "";
+            return false;
+        };
+
+
+        // FUTURE
+        let cpf = document.getElementById("client_post_form");
+        if (cpf) {
+            cpf.onsubmit = function () {
+                if (document.location.hostname == "localhost") {
+                    url = "http://" + path;
+                } else {
+                    url = "https://" + path;
+                }
+                if (!clientMsg.value) {
+                    return false;
+                }
+                xhr.open("post", url);
+                xhr.send([clientMsg.value]);
+                clientMsg.value = "";
+                return false;
+            };
+        }
+
+        document.getElementById("client_send_form").onsubmit = function () {
+            if (!client_conn) {
+                return false;
+            }
+            if (!clientMsg.value) {
+                return false;
+            }
+            client_conn.send(clientMsg.value);
+            clientMsg.value = "";
+            return false;
+        };
+
+        document.getElementById("server_send_form").onsubmit = function () {
+            if (!server_conn) {
+                return false;
+            }
+            if (!serverMsg.value) {
+                return false;
+            }
+            server_conn.send(serverMsg.value);
+            serverMsg.value = "";
+            return false;
+        };
+
+        if (window["WebSocket"]) {
+            if (document.location.hostname == "localhost" || document.location.href.startsWith("http://")) {
+                client_conn = new WebSocket("ws://" + path + "client/");
+                server_conn = new WebSocket("ws://" + path + "server/");
+            } else {
+                client_conn = new WebSocket("wss://" + path + "client/");
+                server_conn = new WebSocket("wss://" + path + "server/");
+            }
+            client_conn.onclose = function (evt) {
+                let item = document.createElement("div");
+                item.innerHTML = "<b>Client connection closed.</b>";
+                appendLog(item);
+            };
+            client_conn.onmessage = function (evt) {
+                if (evt.data && evt.data.startsWith("echo ")) {
+                    const startTime = parseInt(evt.data.substring(5))
+                    const endTime = new Date().getTime();
+                    const durationMillis = endTime - startTime;
+                    let item = document.createElement("pre");
+                    item.innerText = durationMillis + "ms elapsed (round trip)";
+                    appendLog(item);
+                } else {
+                    let item = document.createElement("pre");
+                    let formatted = evt.data ? evt.data : "[EMPTY]"
+                    try {
+                        formatted = JSON.stringify(JSON.parse(formatted), null, 4);
+                    } catch (err) {}
+                    item.innerText = formatted;
+                    appendLog(item);
+                }
+            };
+            if (server_conn) {
+                server_conn.onclose = function (evt) {
+                    let item = document.createElement("div");
+                    item.innerHTML = "<b>Server connection closed.</b>";
+                    appendLog(item);
+                };
+                server_conn.onmessage = client_conn.onmessage;
+            }
+        } else {
+            let item = document.createElement("div");
+            item.innerHTML = "<b>Your browser does not support WebSockets.</b>";
+            appendLog(item);
+        }
+    };
+  </script>
+  <style type="text/css">
+    html {
+        overflow: hidden;
+    }
+
+    body {
+        overflow: hidden;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: gray;
+    }
+
+    #log {
+        background: white;
+        margin: 0;
+        padding: 0.5em 0.5em 0.5em 0.5em;
+        position: absolute;
+        top: 0.5em;
+        left: 0.5em;
+        right: 0.5em;
+        bottom: 3em;
+        overflow: auto;
+    }
+
+    #echo_form {
+        padding: 0 0.5em 0 0.5em;
+        margin: 0;
+        position: absolute;
+        bottom: 1em;
+        right: 0px;
+        width: 10%;
+        overflow: hidden;
+    }
+
+    #server_send_form {
+        padding: 0 0.5em 0 0.5em;
+        margin: 0;
+        position: absolute;
+        bottom: 1em;
+        right: 12%;
+        width: 35%;
+        overflow: hidden;
+    }
+
+    #client_send_form {
+        padding: 0 0.5em 0 0.5em;
+        margin: 0;
+        position: absolute;
+        bottom: 1em;
+        left: 0px;
+        width: 50%;
+        overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="log"></div>
+  <form id="client_send_form">
+      <input type="submit" value="Client Send"/>
+      <input id="client_msg" size="64" type="text"/>
+  </form>
+  <form id="server_send_form" action="/client/" enctype="text/plain" method="post">
+      <input id="server_msg" size="64" type="text"/>
+      <input type="submit" value="Server Send"/>
+  </form>
+  <form id="echo_form" enctype="text/plain" method="post">
+      <input id="echo_msg" type="submit" value="Echo"/>
+  </form>
+</body>
+</html>
