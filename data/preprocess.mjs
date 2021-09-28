@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import fs from 'fs';
-import {mapRanges} from '../client/src/util/math.js';
 
 /*
 	This file applies basic operations on the raw entity data, such
@@ -12,6 +11,21 @@ import {mapRanges} from '../client/src/util/math.js';
 	This type of data is not dynamic at runtime, but it would be redundant
 	to hardcode it into the raw entity data
 */
+
+export function clamp(number, min, max) {
+	return Math.min(max, Math.max(min, number));
+}
+
+function mapRanges(number, oldMin, oldMax, newMin, newMax, clampToRange = false) {
+	const oldRange = oldMax - oldMin;
+	const newRange = newMax - newMin;
+	const numberNormalized = (number - oldMin) / oldRange;
+	let mapped = newMin + numberNormalized * newRange;
+	if (clampToRange) {
+		mapped = clamp(mapped, newMin, newMax);
+	}
+	return mapped;
+}
 
 const entityDatas = JSON.parse(fs.readFileSync('./entities-raw.json'));
 
@@ -195,6 +209,18 @@ for (const entityType of Object.keys(entityDatas)) {
 			// Degrees to radians
 			turret.angle = (turret.angle || 0) * Math.PI / 180;
 
+			switch (turret.speed) {
+			    case 'fast':
+                    turret.speed = Math.PI * 0.6;
+			        break;
+			    case 'slow':
+			        turret.speed = Math.PI * 0.3;
+			        break;
+			    default:
+			        turret.speed = Math.PI * 0.45;
+			        break;
+			}
+
 			// Apply azimuth abbreviations
 			if (turret.azimuth != undefined) {
 				turret.azimuthB = turret.azimuth;
@@ -277,8 +303,8 @@ for (const entityType of Object.keys(entityDatas)) {
 				let factor = 0;
 				switch (sensorType) {
 					case 'visual':
-						base = 500;
-						factor = 2.5;
+						base = 520;
+						factor = 2.0;
 						break;
 					case 'radar':
 						base = 1000;
@@ -331,4 +357,4 @@ for (const entityType of Object.keys(entityDatas)) {
 	});
 }
 
-fs.writeFileSync('../server/world/entities.json', JSON.stringify(entityDatas, null, '\t'));
+fs.writeFileSync('../js/src/data/entities.json', JSON.stringify(entityDatas, null, '\t'));

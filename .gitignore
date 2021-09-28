@@ -1,4 +1,10 @@
-.idea
-out.png
-.ssh
-server_rust/
+*.idea/
+*.iml
+target
+terrain.png
+core/*
+*.data
+*.data.old
+serde-test/*
+terraform/kubernetes/*
+.ssh/*

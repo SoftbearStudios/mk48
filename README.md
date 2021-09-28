@@ -1,14 +1,10 @@
 # Mk48.io Game
 
-[![Go](https://github.com/SoftbearStudios/mk48/actions/workflows/go.yml/badge.svg)](https://github.com/SoftbearStudios/mk48/actions/workflows/go.yml)
 <a href='https://discord.gg/YMheuFQWTX'>
   <img src='https://img.shields.io/badge/Mk48.io-%23announcements-blue.svg' alt='Mk48.io Discord' />
 </a>
-<a href='https://discord.gg/UQmcwM9NGr'>
-  <img src='https://img.shields.io/badge/Discord%20Gophers-%23mk48io-blue.svg' alt='Discord Gophers' />
-</a>
 
-![Logo](/client/static/logo-712.png)
+![Logo](/js/public/logo-712.png)
 
 [Mk48.io](https://mk48.io) is an online multiplayer naval combat game, in which you take command of a ship and sail your way to victory. Watch out for torpedoes!
 
@@ -18,27 +14,18 @@
 
 ### Client
 
-0. Install `NodeJS 14` or higher
-1. Enter `/client`
+0. Install `NodeJS 14` or higher and `rust nightly`
+1. Enter `/js`
 2. `npm install`
 3. `make`
-4. Navigate to http://localhost:3000
+4. Deploy the server to host the client
 
 ### Server
 
-0. Install `go1.16` or higher
-1. Enter `/server_main`
+0. Install `rust nightly`
+1. Enter `/server`
 2. `make`
-3. Profile with `make pprof` and optionally specify `seconds=<number>` and/or `profile=heap`
-
-### Docker
-
-Docker infrastructure is also available, that runs the client and server.
-
-0. Install `docker` and `docker-compose`
-1. `docker-compose build`
-2. `docker-compose up`
-3. Navigate to http://localhost:3000
+3. Navigate to `localhost:8000`
 
 ## Contributing
 See [Contributing](https://github.com/SoftbearStudios/mk48/wiki/Contributing) Wiki page.

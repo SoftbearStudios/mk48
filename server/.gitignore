@@ -1,8 +1,1 @@
-server
-server_arm
-server_race
-server_test
-*.log
-*.csv
-out.txt
-err.txt
+terrain_test/

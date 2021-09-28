@@ -67,6 +67,7 @@
 		"length": 113.3,
 		"width": 20.137,
 		"draft": 9.7,
+		"depth": 480,
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {},
@@ -214,17 +215,20 @@
 			{
 				"positionForward": -15.25,
 				"positionSide": 9.4,
-				"azimuthBL": 180
+				"speed": "medium",
+				"azimuthBR": 180
 			},
 			{
 				"positionForward": -15.25,
 				"positionSide": -9.4,
-				"azimuthBR": 180
+				"speed": "medium",
+				"azimuthBL": 180
 			},
 			{
 				"type": "mark12",
 				"positionForward": 51,
 				"positionSide": 0,
+				"speed": "fast",
 				"azimuthB": 20
 			}
 		]
@@ -257,12 +261,14 @@
 				"type": "38cmSKC34",
 				"positionForward": 67.9856,
 				"positionSide": 0,
+				"speed": "slow",
 				"azimuthB": 20
 			},
 			{
 				"type": "38cmSKC34",
 				"positionForward": 50.672,
 				"positionSide": 0,
+				"speed": "slow",
 				"azimuthB": 30
 			},
 			{
@@ -270,6 +276,7 @@
 				"positionForward": -55.405,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "slow",
 				"azimuthB": 30
 			},
 			{
@@ -277,6 +284,7 @@
 				"positionForward": -73.124,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "slow",
 				"azimuthB": 20
 			}
 		]
@@ -305,7 +313,8 @@
 		"turrets": [
 			{
 				"positionForward": 43.75,
-				"positionSide": 0
+				"positionSide": 0,
+				"speed": "medium"
 			}
 		]
 	},
@@ -365,27 +374,31 @@
 			{
 				"type": "mark12x2",
 				"positionForward": 46.25,
-				"positionSide": 12.75,
+				"positionSide": -12.75,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": 38,
-				"positionSide": 12.75,
+				"positionSide": -12.75,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -23.5,
-				"positionSide": 12.75,
+				"positionSide": -12.75,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark12x2",
 				"positionForward": -31.5,
-				"positionSide": 12.75,
+				"positionSide": -12.75,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -440,13 +453,15 @@
 			{
 				"type": "6pounder",
 				"positionForward": 8,
-				"positionSide": 0
+				"positionSide": 0,
+				"speed": "fast"
 			},
 			{
 				"type": "6pounder",
 				"positionForward": -11.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"speed": "fast"
 			}
 		]
 	},
@@ -563,23 +578,27 @@
 			{
 				"positionForward": 2.75,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuth": 45
 			},
 			{
 				"positionForward": -13,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuth": 45
 			},
 			{
 				"type": "mark12",
 				"positionForward": 37.75,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30.24,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -587,6 +606,7 @@
 				"positionForward": -31.07,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -594,6 +614,7 @@
 				"positionForward": -38.61,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -644,13 +665,15 @@
 				"type": "bofors57mmMK3",
 				"positionForward": 33,
 				"positionSide": 0,
+				"speed": "fast",
 				"azimuthB": 35
 			},
 			{
 				"type": "mark49",
 				"positionForward": -22.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"speed": "fast"
 			}
 		]
 	},
@@ -688,6 +711,7 @@
 		"length": 98.4,
 		"width": 8.2,
 		"draft": 8.5,
+		"depth": 260,
 		"speed": 8.7455,
 		"sensors": {
 			"visual": {},
@@ -859,6 +883,7 @@
 				"positionForward": -66.6097,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -866,6 +891,7 @@
 				"positionForward": -79.1108,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -935,20 +961,23 @@
 		"turrets": [
 			{
 				"positionForward": -2.5,
-				"positionSide": 2.5,
-				"angle": 90,
+				"positionSide": -2.5,
+				"angle": -90,
+				"speed": "medium",
 				"azimuthB": 155
 			},
 			{
 				"positionForward": -5.3,
-				"positionSide": -2.5,
-				"angle": -90,
+				"positionSide": 2.5,
+				"angle": 90,
+				"speed": "medium",
 				"azimuthB": 155
 			},
 			{
 				"type": "otoMelara76mm",
 				"positionForward": 54,
 				"positionSide": 0,
+				"speed": "fast",
 				"azimuthB": 20
 			}
 		]
@@ -998,14 +1027,16 @@
 			{
 				"type": "2m3m",
 				"positionForward": 3.4,
-				"positionSide": -0.8,
-				"angle": 0
+				"positionSide": 0.8,
+				"angle": 0,
+				"speed": "fast"
 			},
 			{
 				"type": "2m3m",
 				"positionForward": -8.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"speed": "fast"
 			}
 		]
 	},
@@ -1070,24 +1101,28 @@
 				"positionForward": -3.41018,
 				"positionSide": 6.52922,
 				"angle": 180,
-				"azimuthBR": 180
+				"speed": "medium",
+				"azimuthFL": 180
 			},
 			{
 				"positionForward": -3.41018,
 				"positionSide": -6.52922,
 				"angle": 180,
-				"azimuthBL": 180
+				"speed": "medium",
+				"azimuthFR": 180
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 52.7746,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "bl6MkXXIII",
 				"positionForward": 43.2429,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -1095,6 +1130,7 @@
 				"positionForward": -45.3247,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -1102,6 +1138,7 @@
 				"positionForward": -56.3283,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -1214,17 +1251,20 @@
 			{
 				"positionForward": 22.15,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuth": 45
 			},
 			{
 				"positionForward": -13.85,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuth": 45
 			},
 			{
 				"type": "mark12",
 				"positionForward": 30,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
@@ -1232,6 +1272,7 @@
 				"positionForward": 1.5,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuth": 30
 			},
 			{
@@ -1239,6 +1280,7 @@
 				"positionForward": -22.5,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -1271,12 +1313,14 @@
 				"type": "mark7",
 				"positionForward": 74.62,
 				"positionSide": 0,
+				"speed": "slow",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark7",
 				"positionForward": 52.50,
 				"positionSide": 0,
+				"speed": "slow",
 				"azimuthB": 30
 			},
 			{
@@ -1284,6 +1328,7 @@
 				"positionForward": -47.90,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "slow",
 				"azimuthB": 30
 			},
 			{
@@ -1291,12 +1336,13 @@
 				"positionForward": -69.49,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "slow",
 				"azimuthB": 20
 			}
 		]
 	},
-	"movska": {
-		"label": "Movska",
+	"moskva": {
+		"label": "Moskva",
 		"link": "https://en.wikipedia.org/wiki/Moskva-class_helicopter_carrier",
 		"kind": "boat",
 		"subkind": "carrier",
@@ -1314,25 +1360,25 @@
 			{
 				"type": "ka25",
 				"positionForward": -23.535,
-				"positionSide": -7.74318,
+				"positionSide": 7.74318,
 				"external": true
 			},
 			{
 				"type": "ka25",
 				"positionForward": -38.6508,
-				"positionSide": 8.0173,
+				"positionSide": -8.0173,
 				"external": true
 			},
 			{
 				"type": "ka25",
 				"positionForward": -64.7966,
-				"positionSide": -7.39509,
+				"positionSide": 7.39509,
 				"external": true
 			},
 			{
 				"type": "ka25",
 				"positionForward": -84.7862,
-				"positionSide": 2.81806,
+				"positionSide": -2.81806,
 				"external": true
 			},
 			{
@@ -1375,12 +1421,14 @@
 			{
 				"type": "shtorm",
 				"positionForward": 50.3038,
-				"positionSide": 0
+				"positionSide": 0,
+				"speed": "medium"
 			},
 			{
 				"type": "shtorm",
 				"positionForward": 28.689,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 30
 			}
 		]
@@ -1394,6 +1442,7 @@
 		"length": 170,
 		"width": 13,
 		"draft": 10.8,
+		"depth": 400,
 		"speed": 12.8611,
 		"sensors": {
 			"visual": {},
@@ -1425,7 +1474,8 @@
 				"positionSide": 5,
 				"angle": 0,
 				"symmetrical": false,
-				"external": false
+				"external": false,
+				"hidden": true
 			},
 			{
 				"type": "tomahawk",
@@ -1527,13 +1577,15 @@
 				"type": "2m3m",
 				"positionForward": 10,
 				"positionSide": 0,
-				"angle": 0
+				"angle": 0,
+				"speed": "fast"
 			},
 			{
 				"type": "2m3m",
 				"positionForward": -16.5,
 				"positionSide": 0,
-				"angle": 180
+				"angle": 180,
+				"speed": "fast"
 			}
 		]
 	},
@@ -1580,6 +1632,7 @@
 		"length": 76.71,
 		"width": 9.65,
 		"draft": 4.825,
+		"depth": 210,
 		"speed": 16.976667,
 		"sensors": {
 			"visual": {},
@@ -1611,7 +1664,8 @@
 				"positionSide": 0.7,
 				"angle": 0,
 				"symmetrical": false,
-				"external": false
+				"external": false,
+				"hidden": true
 			},
 			{
 				"type": "harpoon",
@@ -1702,25 +1756,27 @@
 			{
 				"positionForward": -20.2181,
 				"positionSide": 8.41364,
-				"angle": 180,
+				"speed": "medium",
 				"azimuthBR": 180
 			},
 			{
 				"positionForward": -20.2181,
 				"positionSide": -8.41364,
-				"angle": 180,
+				"speed": "medium",
 				"azimuthBL": 180
 			},
 			{
 				"type": "bl6MkXXIIIx3",
 				"positionForward": 59.4418,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "bl6MkXXIIIx3",
 				"positionForward": 48.659,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -1728,6 +1784,7 @@
 				"positionForward": -47.9432,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 30
 			},
 			{
@@ -1735,6 +1792,7 @@
 				"positionForward": -59.1084,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -1805,6 +1863,7 @@
 				"type": "hpj38",
 				"positionForward": 58.9931,
 				"positionSide": 0,
+				"speed": "fast",
 				"azimuthB": 15
 			}
 		]
@@ -1818,6 +1877,7 @@
 		"length": 67.1,
 		"width": 6.2,
 		"draft": 4.74,
+		"depth": 180,
 		"speed": 9.06,
 		"sensors": {
 			"visual": {},
@@ -1858,6 +1918,7 @@
 				"positionForward": -4.35,
 				"positionSide": 0,
 				"angle": 180,
+				"speed": "medium",
 				"azimuthB": 20
 			}
 		]
@@ -1961,17 +2022,20 @@
 			{
 				"positionForward": -22,
 				"positionSide": 4.5,
-				"azimuthBL": 180
+				"speed": "medium",
+				"azimuthBR": 180
 			},
 			{
 				"positionForward": -22,
 				"positionSide": -4.5,
-				"azimuthBR": 180
+				"speed": "medium",
+				"azimuthBL": 180
 			},
 			{
 				"type": "bofors57mmMK3",
 				"positionForward": 20,
 				"positionSide": 0,
+				"speed": "fast",
 				"azimuthB": 30
 			}
 		]
@@ -1985,6 +2049,7 @@
 		"length": 130,
 		"width": 19.8046875,
 		"draft": 10,
+		"depth": 450,
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {},
@@ -2063,13 +2128,15 @@
 			{
 				"type": "ogon",
 				"positionSide": 0,
-				"positionForward": 15.2
+				"positionForward": 15.2,
+				"speed": "fast"
 			},
 			{
 				"type": "2m3m",
 				"positionForward": 10,
 				"positionSide": 6.25,
 				"angle": 0,
+				"speed": "fast",
 				"symmetrical": true
 			}
 		]
@@ -2142,12 +2209,14 @@
 				"type": "mark51",
 				"positionForward": 49.5963,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 20
 			},
 			{
 				"type": "mark51",
 				"positionForward": 25.2885,
 				"positionSide": 0,
+				"speed": "medium",
 				"azimuthB": 30
 			}
 		]
@@ -2234,7 +2303,7 @@
 		"subkind": "shell",
 		"positionForward": 0.5,
 		"length": 0.441,
-		"width": 0.57,
+		"width": 0.057,
 		"speed": 853,
 		"range": 1510
 	},
@@ -2953,7 +3022,7 @@
 		"subkind": "shell",
 		"positionForward": 1,
 		"length": 0.636,
-		"width": 0.76,
+		"width": 0.076,
 		"speed": 915,
 		"range": 16000
 	},
