@@ -177,7 +177,7 @@ impl<'de> Deserialize<'de> for Velocity {
 
 #[cfg(test)]
 mod tests {
-    use crate::altitude::Velocity;
+    // use crate::velocity::Velocity;
 
     // TODO: Test velocity.
 }

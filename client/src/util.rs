@@ -15,8 +15,22 @@ macro_rules! console_log {
     ($($t:tt)*) => (crate::util::log(&format_args!($($t)*).to_string()))
 }
 
+/// e.g. foo.mk48.io
 pub fn host() -> String {
     web_sys::window().unwrap().location().host().unwrap()
+}
+
+/// e.g. mk48.io
+pub fn domain_name() -> String {
+    let h = host();
+    let mut split: Vec<_> = h.split('.').collect();
+    if split.len() > 2 {
+        let tld = split.pop().unwrap();
+        let domain = split.pop().unwrap();
+        domain.to_owned() + "." + tld
+    } else {
+        h
+    }
 }
 
 pub fn ws_protocol() -> &'static str {

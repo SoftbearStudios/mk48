@@ -11,9 +11,9 @@ use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
 use core::core::{Core, ParametrizedServerRequest, ServerState};
-use core_protocol::dto::RulesDto;
-use core_protocol::id::{ArenaId, GameId, PlayerId, RegionId, SessionId};
-use core_protocol::name::{Location, ServerAddr};
+use core_protocol::dto::{InvitationDto, RulesDto};
+use core_protocol::id::*;
+use core_protocol::name::Location;
 use core_protocol::rpc::{ServerRequest, ServerUpdate};
 use log::{debug, error, info, trace, warn};
 use rayon::prelude::*;
@@ -35,6 +35,7 @@ pub struct Server {
     /// Bot players.
     pub bots: Vec<(Bot, SharedData)>,
     pub world: World,
+    server_id: ServerId,
     counter: Ticks,
     min_players: usize,
 }
@@ -59,6 +60,8 @@ impl PartialEq for CoreStatus {
 pub struct SharedData {
     pub player: Arc<PlayerTuple>,
     pub session_id: SessionId,
+    /// If invited by a player, will store their id. Taken on the next spawn.
+    pub invitation: Option<InvitationDto>,
     pub last_status: Option<CoreStatus>, // None == not playing.
 }
 
@@ -78,13 +81,14 @@ impl Server {
     const LIMBO: Duration = Duration::from_secs(6);
 
     /// new returns a game server with the specified parameters.
-    pub fn new(min_players: usize, core: Addr<Core>) -> Self {
+    pub fn new(server_id: ServerId, min_players: usize, core: Addr<Core>) -> Self {
         Self {
             core,
             world: World::new(World::target_radius(min_players, World::BOAT_DENSITY)),
             clients: HashMap::new(),
             bots: Vec::new(),
             counter: Ticks::ZERO,
+            server_id,
             min_players,
             arena_id: None,
         }
@@ -283,10 +287,11 @@ impl Actor for Server {
                             rules: Some(RulesDto {
                                 bot_min: self2.min_players as u32,
                                 bot_percent: 50,
+                                show_bots_on_liveboard: false,
                                 team_size_max: 6,
                             }),
                             saved_arena_id: None,
-                            server_addr: ServerAddr::new("localhost"),
+                            server_id: self2.server_id,
                         },
                     })
                     .into_actor(self2)
@@ -309,7 +314,7 @@ impl Actor for Server {
 }
 
 impl Handler<Authenticate> for Server {
-    type Result = ResponseActFuture<Self, Option<PlayerId>>;
+    type Result = ResponseActFuture<Self, Option<(PlayerId, Option<InvitationDto>)>>;
 
     fn handle(&mut self, msg: Authenticate, _ctx: &mut Context<Self>) -> Self::Result {
         Box::pin(
@@ -327,7 +332,11 @@ impl Handler<Authenticate> for Server {
                     match res {
                         Ok(res) => match res {
                             Ok(update) => match update {
-                                ServerUpdate::SessionValid { player_id, .. } => Some(player_id),
+                                ServerUpdate::SessionValid {
+                                    player_id,
+                                    invitation,
+                                    ..
+                                } => Some((player_id, invitation)),
                                 _ => panic!("incorrect response type"),
                             },
                             Err(_) => None,
@@ -339,12 +348,14 @@ impl Handler<Authenticate> for Server {
     }
 }
 
-impl Handler<ObserverMessage<Command, Update, (SessionId, PlayerId)>> for Server {
+impl Handler<ObserverMessage<Command, Update, (SessionId, PlayerId, Option<InvitationDto>)>>
+    for Server
+{
     type Result = ();
 
     fn handle(
         &mut self,
-        msg: ObserverMessage<Command, Update, (SessionId, PlayerId)>,
+        msg: ObserverMessage<Command, Update, (SessionId, PlayerId, Option<InvitationDto>)>,
         _ctx: &mut Context<Self>,
     ) -> Self::Result {
         match msg {
@@ -383,6 +394,7 @@ impl Handler<ObserverMessage<Command, Update, (SessionId, PlayerId)>> for Server
                                 session_id: payload.0,
                                 player: Arc::new(PlayerTuple::new(payload.1)),
                                 last_status: None,
+                                invitation: payload.2,
                             },
                             loaded_entities: HashMap::new(),
                             loaded_chunks: ChunkSet::new(),
@@ -459,6 +471,7 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
                         player: Arc::new(PlayerTuple::new(player_id)),
                         session_id,
                         last_status: None,
+                        invitation: None,
                     },
                 )),
             },

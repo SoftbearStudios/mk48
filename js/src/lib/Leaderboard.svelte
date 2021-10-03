@@ -11,6 +11,7 @@
 	export let label = null;
 	export let open = true;
 	export let headerAlign = 'left';
+	export let footer;
 </script>
 
 <Section name={label || $t('panel.leaderboard.label')} {headerAlign} {open}>
@@ -22,6 +23,9 @@
 			</tr>
 		{/each}
 	</table>
+	{#if footer}
+		<p>{footer}</p>
+	{/if}
 </Section>
 
 <style>
@@ -36,5 +40,12 @@
 
 	td.score {
 		text-align: right;
+	}
+
+	p {
+		color: white;
+		text-align: center;
+		margin: 0.5em;
+		font-style: italic;
 	}
 </style>

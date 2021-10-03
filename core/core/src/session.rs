@@ -4,11 +4,12 @@
 use crate::arena::Arena;
 use crate::chat::ChatHistory;
 use crate::generate_id::{generate_id, generate_id_64};
+use crate::invitation::Invitation;
 use crate::notify_set::NotifySet;
 use crate::repo::Repo;
-use core_protocol::dto::MessageDto;
+use core_protocol::dto::{MessageDto, InvitationDto};
 use core_protocol::id::*;
-use core_protocol::name::{Location, PlayerAlias, Referer, ServerAddr};
+use core_protocol::name::{Location, PlayerAlias, Referer};
 use core_protocol::UnixTime;
 use core_protocol::*;
 use log::{debug, info, trace};
@@ -33,7 +34,6 @@ pub struct Session {
     pub alias: PlayerAlias,
     pub arena_id: ArenaId,
     pub bot: bool,
-    // Whether this session is the player's first.
     pub chat_history: ChatHistory,
     pub date_created: UnixTime,
     pub date_drop: Option<UnixTime>,
@@ -42,8 +42,14 @@ pub struct Session {
     pub date_terminated: Option<UnixTime>,
     pub game_id: GameId,
     pub language: LanguageId,
-    pub location: Option<Location>, // e.g. (001, 215, 912)
-    pub inbox: Vec<Rc<MessageDto>>, // For recipient (even if NOT playing).
+    /// e.g. (001, 215, 912)
+    pub location: Option<Location>,
+    // For recipient (even if NOT playing).
+    pub inbox: Vec<Rc<MessageDto>>,
+    /// Inbound invitation to consume (accept) when starting the next play.
+    pub invitation: Option<Invitation>,
+    /// Previously created outbound invitation id (useful to prevent creating multiple).
+    pub invitation_id: Option<InvitationId>,
     pub muted: HashSet<PlayerId>,
     pub live: bool,
     pub player_id: PlayerId,
@@ -51,7 +57,8 @@ pub struct Session {
     pub previous_id: Option<SessionId>,
     pub referer: Option<Referer>,
     pub region_id: RegionId,
-    pub server_addr: ServerAddr,
+    pub server_id: ServerId,
+    pub user_agent: Option<UserAgentId>,
     pub whisper_muted: NotifySet<PlayerId>, // For muter (even if NOT playing).
 }
 
@@ -93,7 +100,8 @@ impl Session {
         previous_id: Option<SessionId>,
         referer: Option<Referer>,
         region_id: RegionId,
-        server_addr: ServerAddr,
+        server_id: ServerId,
+        user_agent: Option<UserAgentId>,
     ) -> Self {
         let date_created = get_unix_time_now();
         Self {
@@ -107,6 +115,8 @@ impl Session {
             date_terminated: None,
             game_id,
             inbox: Vec::new(),
+            invitation: None,
+            invitation_id: None,
             language,
             live: false,
             location: None,
@@ -116,17 +126,18 @@ impl Session {
             player_id,
             plays: Vec::new(),
             previous_id,
-            server_addr,
+            server_id,
+            user_agent,
             whisper_muted: NotifySet::new(),
         }
     }
 
-    pub fn get_mut<'a>(
-        sessions: &'a mut HashMap<SessionId, Session>,
-        session_id: &'a SessionId,
-    ) -> Option<&'a mut Session> {
+    pub fn get_mut(
+        sessions: &mut HashMap<SessionId, Session>,
+        session_id: SessionId,
+    ) -> Option<&mut Session> {
         let mut result = None;
-        if let Some(session) = sessions.get_mut(session_id) {
+        if let Some(session) = sessions.get_mut(&session_id) {
             if session.date_terminated.is_none() {
                 result = Some(session);
             }
@@ -212,19 +223,38 @@ impl Repo {
         }
     }
 
-    /// Creates a session or renews a saved session.  Assumes saved session put into cache if possible.
+    /// Creates a session, or renews a saved session, and returns `session_id`
+    /// and related values.  If the `invitation_id` or preferences is incompatible
+    /// with all available arenas on the server, then no session is created an `None`
+    /// is returned.  Assumes saved session put into cache if possible.
     pub fn create_session(
         &mut self,
         alias: Option<PlayerAlias>,
         game_id: GameId,
-        // TODO: invitation_id: Option<InvitationId>,
+        invitation_id: Option<InvitationId>,
         language_pref: Option<LanguageId>,
         referer: Option<Referer>,
         region_pref: Option<RegionId>,
         saved_session_tuple: Option<(ArenaId, SessionId)>,
-    ) -> Option<(ArenaId, LanguageId, RegionId, SessionId, ServerAddr)> {
-        // TODO: if invitation_id is present, then use invitation.arena_id, and join invitation.team_id.
-        info!("entering create_session");
+        user_agent: Option<UserAgentId>,
+    ) -> Option<(ArenaId, LanguageId, RegionId, SessionId, ServerId)> {
+        trace!(
+            "create_session(alias={:?}, game_id={:?}, invitation_id={:?})",
+            alias,
+            game_id,
+            invitation_id
+        );
+
+        let maybe_invitation = if let Some(invitation_id) = invitation_id {
+            self.invitations.get(&invitation_id)
+        } else {
+            None
+        };
+
+        if invitation_id.is_some() {
+            println!("found invitation: {:?}", maybe_invitation);
+        }
+
         let mut saved_player_id = None;
         if let Some((arena_id, session_id)) = saved_session_tuple {
             if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
@@ -238,15 +268,29 @@ impl Repo {
                     {
                         terminate = true;
                     }
-                    info!("create_session will terminate incompatible={}", terminate);
+                    if !terminate {
+                        if let Some(invitation) = maybe_invitation {
+                            if invitation.arena_id != arena_id {
+                                terminate = true;
+                            }
+                        }
+                    }
                     if terminate {
+                        info!("terminating incompatible session {:?}", session_id);
                         session.terminate_session();
                     } else {
+                        info!("renewing compatible session {:?}", session_id);
                         // It is OK to change parameters like alias, language and referer.
                         if let Some(uncensored_alias) = alias {
                             let censored_text =
                                 uncensored_alias.0.chars().censor().collect::<String>();
                             session.alias = PlayerAlias::new(&censored_text);
+                        }
+                        if session.invitation.is_none() {
+                            if let Some(invitation) = maybe_invitation {
+                                // Mark as accepted (so won't accept again).
+                                session.invitation = Some(invitation.clone());
+                            }
                         }
                         if let Some(language) = language_pref {
                             session.language = language;
@@ -254,29 +298,43 @@ impl Repo {
                         if let Some(referer) = referer {
                             session.referer = Some(referer);
                         }
+                        if let Some(user_agent) = user_agent {
+                            session.user_agent = Some(user_agent);
+                        }
 
                         session.date_drop = None;
                         session.date_renewed = get_unix_time_now();
-                        debug!("recreate_session() => session={:?}", session_id);
                         return Some((
                             arena_id,
                             session.language,
                             session.region_id,
                             session_id,
-                            arena.server_addr.clone(),
+                            arena.server_id,
                         ));
                     }
                 }
             }
         }
 
-        info!("session not recreated");
+        // If not renewed...
+        info!("session was not renewed");
 
-        // If not recreated...
         let region_id = region_pref.unwrap_or_default();
         let mut found: Option<(ArenaId, &mut Arena)> = None;
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
-            if arena.game_id == game_id && arena.region_id == region_id {
+            if arena.game_id != game_id {
+                continue;
+            }
+            if let Some(invitation) = maybe_invitation {
+                if invitation.arena_id != *arena_id {
+                    continue;
+                }
+                if region_pref.is_none() {
+                    found = Some((*arena_id, arena));
+                    break;
+                }
+            }
+            if arena.region_id == region_id {
                 found = Some((*arena_id, arena));
                 break;
             }
@@ -300,14 +358,8 @@ impl Repo {
                 // Use the date so that a session_id from a prior day is guaranteed to be different.
                 let session_id = SessionId(generate_id_64());
                 if let Entry::Vacant(e) = arena.sessions.entry(session_id) {
-                    let server_addr = arena.server_addr.clone();
-                    let tuple = Some((
-                        arena_id,
-                        language,
-                        region_id,
-                        session_id,
-                        server_addr.clone(),
-                    ));
+                    let server_id = arena.server_id;
+                    let tuple = Some((arena_id, language, region_id, session_id, server_id));
                     let player_id = if let Some(player_id) = saved_player_id {
                         self.players.insert(player_id, session_id);
                         player_id
@@ -319,7 +371,7 @@ impl Repo {
                         &effective_alias, session_id, player_id
                     );
                     let bot = false;
-                    e.insert(Session::new(
+                    let mut session = Session::new(
                         effective_alias,
                         arena_id,
                         bot,
@@ -329,8 +381,13 @@ impl Repo {
                         previous_id,
                         referer,
                         region_id,
-                        server_addr,
-                    ));
+                        server_id,
+                        user_agent,
+                    );
+                    if let Some(invitation) = maybe_invitation {
+                        session.invitation = Some(invitation.clone());
+                    }
+                    e.insert(session);
                     return tuple;
                 }
             }
@@ -348,7 +405,7 @@ impl Repo {
             arena_id, session_id
         );
         if let Some(arena) = self.arenas.get_mut(&arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if session.date_drop.is_none() {
                     session.date_drop = Some(get_unix_time_now());
                     if let Some(play) = session.plays.last_mut() {
@@ -363,9 +420,9 @@ impl Repo {
     }
 
     /// Returns true if the (arena_id, session_id) is in the in-memory cache.
-    pub fn is_session_in_cache(&mut self, session_tuple: Option<(ArenaId, SessionId)>) -> bool {
+    pub fn is_session_in_cache(&self, session_tuple: Option<(ArenaId, SessionId)>) -> bool {
         if let Some((arena_id, session_id)) = session_tuple {
-            if let Some(arena) = self.arenas.get_mut(&arena_id) {
+            if let Some(arena) = self.arenas.get(&arena_id) {
                 if arena.sessions.contains_key(&session_id) {
                     return true;
                 }
@@ -412,7 +469,6 @@ impl Repo {
                         session.live = false;
                         if let Some(team_id) = play.team_id {
                             arena.confide_membership.insert(session.player_id, None);
-                            arena.broadcast_players.removed(*session_id);
                             if play.team_captain {
                                 if let Some(team) = arena.teams.get(&team_id) {
                                     for joiner in team.joiners.iter() {
@@ -455,7 +511,7 @@ impl Repo {
         trace!("set_status(arena={:?}, session={:?})", arena_id, session_id);
         let mut liveboard_changed = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last_mut() {
                     if play.date_stop.is_none() {
                         if let Some(value) = location {
@@ -479,9 +535,33 @@ impl Repo {
 
     // Server reports that player joined game.  Useful for reports.
     pub fn start_play(&mut self, arena_id: ArenaId, session_id: SessionId) -> Option<PlayerId> {
+        // Get this session's invitation if any.
+        let invitation = self
+            .arenas
+            .get(&arena_id)
+            .and_then(|a| a.sessions.get(&session_id))
+            .and_then(|s| s.invitation.clone());
+
+        println!("starting play invitation={:?}", invitation);
+
+        // Get the team_id that can be joined with that invitation, if any.
+        // TODO: Check if the team has space.
+        let players = &mut self.players;
+        let arenas = &mut self.arenas;
+        let invitation_team_id = invitation
+            .and_then(|inv| {
+                arenas
+                    .get_mut(&inv.arena_id)
+                    .zip(players.get(&inv.player_id))
+            })
+            .and_then(|(a, &s)| a.team_of_captain(s))
+            .map(|(team_id, _)| team_id);
+
+        println!("starting play invitation_team_id={:?}", invitation_team_id);
+
         let mut result = None;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if !session.bot {
                     debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
                 }
@@ -494,6 +574,10 @@ impl Repo {
                 } else {
                     // Other sessions are added to the roster as they become live.
                     session.live = true;
+                    new_play.team_id = invitation_team_id;
+                    arena
+                        .confide_membership
+                        .insert(session.player_id, invitation_team_id);
                     arena.broadcast_players.added(session_id);
                 }
                 session.plays.push(new_play);
@@ -512,7 +596,7 @@ impl Repo {
     // Server reports that player left game.  Nevertheless session remains live for a while.
     pub fn stop_play(&mut self, arena_id: ArenaId, session_id: SessionId) {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if !session.bot {
                     debug!("stop_play(arena={:?}, session={:?})", arena_id, session_id);
                 }
@@ -537,7 +621,7 @@ impl Repo {
             arena_id, session_id
         );
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 let was_live = session.live;
                 if session.terminate_session() && was_live {
                     arena.broadcast_players.removed(session_id);
@@ -552,7 +636,7 @@ impl Repo {
         &mut self,
         arena_id: ArenaId,
         session_id: SessionId,
-    ) -> Option<(u32, PlayerId, u32)> {
+    ) -> Option<(u32, Option<InvitationDto>, PlayerId, u32)> {
         debug!(
             "validate_session(arena={:?}, session={:?})",
             arena_id, session_id
@@ -560,7 +644,8 @@ impl Repo {
         let mut result = None;
         if let Some(arena) = self.arenas.get(&arena_id) {
             if let Some(session) = arena.sessions.get(&session_id) {
-                result = Some((0, session.player_id, 0));
+                let invitation = session.invitation.as_ref().map(|Invitation{player_id, ..}| InvitationDto{player_id: *player_id});
+                result = Some((0, invitation.clone(), session.player_id, 0));
                 if session.live {
                     if let Some(play) = session.plays.last() {
                         if let Some(score) = play.score {
@@ -569,7 +654,7 @@ impl Repo {
                             } else {
                                 0
                             };
-                            result = Some((elapsed as u32, session.player_id, score));
+                            result = Some((elapsed as u32, invitation, session.player_id, score));
                         }
                     }
                 }

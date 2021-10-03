@@ -42,24 +42,25 @@ impl Repo {
     pub fn read_available_bots(&mut self, arena_id: ArenaId) -> Option<Vec<(PlayerId, SessionId)>> {
         let mut available_bots: Vec<(PlayerId, SessionId)> = vec![];
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            let mut bots_to_add = 0;
-            if let Some(rules) = &arena.rules {
-                let mut player_count = 0;
-                let mut bot_count = 0;
-                for session in arena.sessions.values() {
-                    if let Some(play) = session.plays.last() {
-                        if let None = play.date_stop {
-                            player_count += 1;
-                        }
-                    }
-                    if session.bot {
-                        bot_count += 1;
+            // Apply rules
+            let mut player_count = 0;
+            let mut bot_count = 0;
+            for session in arena.sessions.values() {
+                if let Some(play) = session.plays.last() {
+                    if let None = play.date_stop {
+                        player_count += 1;
                     }
                 }
-
-                let bots_wanted = rules.bot_min.max((rules.bot_percent * player_count) / 100);
-                bots_to_add = bots_wanted - bot_count;
+                if session.bot {
+                    bot_count += 1;
+                }
             }
+
+            let bots_wanted = arena
+                .rules
+                .bot_min
+                .max((arena.rules.bot_percent * player_count) / 100);
+            let bots_to_add = bots_wanted - bot_count;
 
             if bots_to_add > 0 {
                 debug!("{} bots to add", bots_to_add);
@@ -97,6 +98,7 @@ impl Repo {
                                 let bot = true;
                                 let previous_id = None;
                                 let referer = None;
+                                let user_agent = None;
                                 let mut session = Session::new(
                                     alias,
                                     arena_id,
@@ -107,7 +109,8 @@ impl Repo {
                                     previous_id,
                                     referer,
                                     arena.region_id,
-                                    arena.server_addr,
+                                    arena.server_id,
+                                    user_agent,
                                 );
                                 session.plays.push(Play::new());
                                 e.insert(session);

@@ -21,9 +21,9 @@ use servutil::observer::*;
 use std::collections::hash_map::{Entry, HashMap};
 use std::fs::OpenOptions;
 use std::lazy::OnceCell;
+use std::process;
 use std::sync::Arc;
 use std::time::Duration;
-use std::process;
 
 const CLIENT_TIMER_MILLIS: u64 = 250;
 const DATABASE_TIMER_SECS: u64 = 60;
@@ -132,33 +132,43 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate>> for Core {
             ObserverMessage::Request { observer, request } => match request {
                 // Handle asynchronous requests (i.e. those that may access database).
                 ClientRequest::CreateInvitation => {
-                    /* TODO:
-                        if client.arena_id.is_some() && client.session_id.is_some() {
-                            let Some((invitationId, invitation) = act.repo.create_invitation(arena_id, session_id);
-                            // Note: Invitation contains (arena_id, team_id, server_addr) - see arena.rs
-                            // Use async call to put it into DB with invitation_id as hash key.
+                    let client = self.clients.get_mut(&observer).unwrap();
+                    if let Some(arena_id) = client.arena_id {
+                        if let Some(session_id) = client.session_id {
+                            if let Some(invitation_id) =
+                                self.repo.create_invitation(arena_id, session_id)
+                            {
+                                let message = ClientUpdate::InvitationCreated { invitation_id };
+                                match observer.do_send(ObserverUpdate::Send { message }) {
+                                    Err(e) => {
+                                        warn!("Error sending {}", e)
+                                    }
+                                    _ => {}
+                                }
+                            }
                         }
-                    */
+                    }
                 }
                 ClientRequest::CreateSession {
                     alias,
                     game_id,
-                    invitation_id: _,
+                    invitation_id,
                     language_pref,
                     referer,
                     region_pref,
                     saved_session_tuple,
+                    user_agent,
                 } => {
-                    // TODO: if invitation_id is not in cache then load it from DB and put it into cache.
+                    // TODO: if invitation_id is not in cache then load it from DB and call self.repo.put_invitation(invitatation_id, invitation)
                     let found = self.repo.is_session_in_cache(saved_session_tuple);
-                    info!("create session 1: found={}", found);
+                    info!("session cache hit={}", found);
                     return Box::pin(
                         async move {
                             if found {
                                 // No need to load from database because session is in memory.
                                 Result::Ok(None)
                             } else if let Some((arena_id, session_id)) = saved_session_tuple {
-                                info!("create session 2: reading from DB...");
+                                info!("reading session from DB");
                                 Self::database().get_session(arena_id, session_id).await
                             } else {
                                 // Cannot load from database because (arena_id, session_id) is unavailable.
@@ -176,7 +186,10 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate>> for Core {
 
                             if let Some(loaded) = db_result.ok() {
                                 if let Some(session_item) = loaded {
-                                    info!("create session 4: loaded from DB {:?}", session_item);
+                                    info!(
+                                        "populating cache with session from DB {:?}",
+                                        session_item
+                                    );
 
                                     let bot = false;
                                     let mut session = Session::new(
@@ -189,7 +202,8 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate>> for Core {
                                         session_item.previous_id,
                                         session_item.referer,
                                         session_item.region_id,
-                                        session_item.server_addr,
+                                        session_item.server_id,
+                                        None, // TODO: session_item.user_agent,
                                     );
                                     session.date_created = session_item.date_created;
                                     session.date_renewed = session_item.date_renewed;
@@ -203,17 +217,19 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate>> for Core {
                                 }
                             }
 
-                            if let Some((arena_id, language, region, session_id, server_addr)) =
+                            if let Some((arena_id, language, region, session_id, server_id)) =
                                 act.repo.create_session(
                                     alias,
                                     game_id,
+                                    invitation_id,
                                     language_pref,
                                     referer,
                                     region_pref,
                                     saved_session_tuple,
+                                    user_agent,
                                 )
                             {
-                                info!("session created!");
+                                info!("session was created!");
 
                                 if client.arena_id != None
                                     && client.session_id != None
@@ -234,7 +250,7 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate>> for Core {
                                     arena_id,
                                     language,
                                     region,
-                                    server_addr,
+                                    server_id,
                                     session_id,
                                 };
                                 info!("notifying client about session");
@@ -423,7 +439,7 @@ impl Core {
                         leaderboard_initializer,
                         liveboard_initializer,
                         message_initializer,
-                        player_initializer,
+                        (player_count, player_initializer),
                         team_initializer,
                     )) = act.repo.get_initializers(client.arena_id.unwrap())
                     {
@@ -469,6 +485,7 @@ impl Core {
                         sent += 1;
                         match addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::PlayersUpdated {
+                                count: player_count,
                                 added: player_initializer.clone(),
                                 removed: Arc::new([]),
                             },
@@ -496,10 +513,12 @@ impl Core {
             }
 
             // Notify existing clients of any changes.
-            if let Some((players_added_or_removed, teams_added_or_removed)) =
+            if let Some((players_counted_added_or_removed, teams_added_or_removed)) =
                 act.repo.read_broadcasts()
             {
-                for (arena_id, (added, removed)) in players_added_or_removed.iter() {
+                for (arena_id, (player_count, added, removed)) in
+                    players_counted_added_or_removed.iter()
+                {
                     found += 1;
                     for (addr, client) in act.clients.iter_mut() {
                         if let Some(client_arena_id) = client.arena_id {
@@ -507,6 +526,7 @@ impl Core {
                                 sent += 1;
                                 match addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::PlayersUpdated {
+                                        count: *player_count,
                                         added: Arc::clone(added),
                                         removed: Arc::clone(removed),
                                     },
@@ -726,7 +746,7 @@ impl Core {
                         previous_id: session.previous_id,
                         region_id: session.region_id,
                         referer: session.referer,
-                        server_addr: session.server_addr,
+                        server_id: session.server_id,
                         session_id,
                     }));
                 }
@@ -749,7 +769,7 @@ impl Core {
             } else {
                 let stream = FuturesUnordered::new();
 
-                for (game_id, metrics) in act.repo.get_metrics(METRICS_MILLIS) {
+                for (game_id, metrics) in act.repo.get_metrics(METRICS_MILLIS, |_| return true) {
                     stream.push(Core::database().update_metrics(MetricsItem {
                         game_id,
                         timestamp: (get_unix_time_now() / METRICS_MILLIS) * METRICS_MILLIS,
@@ -846,6 +866,7 @@ impl Core {
         ctx.run_interval(Duration::from_secs(TEAM_TIMER_SECS), |act, _ctx| {
             act.repo.prune_sessions();
             act.repo.prune_teams();
+            act.repo.prune_invitations();
         }); // ctx.run_interval TEAM
     }
 }
@@ -870,6 +891,13 @@ impl Repo {
                 if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id) {
                     if self.assign_captain(arena_id, session_id, player_id) {
                         result = Ok(ClientUpdate::CaptainAssigned { player_id });
+                    }
+                }
+            }
+            ClientRequest::CreateInvitation => {
+                if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id) {
+                    if let Some(invitation_id) = self.create_invitation(arena_id, session_id) {
+                        result = Ok(ClientUpdate::InvitationCreated { invitation_id });
                     }
                 }
             }
@@ -954,7 +982,7 @@ impl Repo {
         let result;
         match request {
             MetricRequest::RequestMetrics => {
-                let metrics = self.get_metrics(24 * 60 * 60 * 1000);
+                let metrics = self.get_metrics(24 * 60 * 60 * 1000, |_| return true);
                 result = Ok(MetricUpdate::MetricsRequested {
                     metrics: metrics
                         .iter()
@@ -1007,10 +1035,10 @@ impl Repo {
                 region,
                 rules,
                 saved_arena_id,
-                server_addr,
+                server_id,
             } => {
                 server.arena_id =
-                    Some(self.start_arena(game_id, region, rules, saved_arena_id, server_addr));
+                    Some(self.start_arena(game_id, region, rules, saved_arena_id, server_id));
                 if server.arena_id != None {
                     result = Ok(ServerUpdate::ArenaStarted {
                         arena_id: server.arena_id.unwrap(),
@@ -1039,13 +1067,14 @@ impl Repo {
             }
             ServerRequest::ValidateSession { session_id } => {
                 if let Some(arena_id) = server.arena_id {
-                    if let Some((elapsed, player_id, score)) =
+                    if let Some((elapsed, invitation, player_id, score)) =
                         self.validate_session(arena_id, session_id)
                     {
                         result = Ok(ServerUpdate::SessionValid {
                             elapsed,
                             player_id,
                             score,
+                            invitation
                         });
                     }
                 }

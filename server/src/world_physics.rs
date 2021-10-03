@@ -364,7 +364,8 @@ impl World {
                     self.entities.move_sector(index);
                 }
                 Fate::DowngradeHq => {
-                    self.entities[index].change_entity_type(EntityType::Hq, &mut self.arena);
+                    self.entities[index]
+                        .change_entity_type(EntityType::OilPlatform, &mut self.arena);
                 }
             }
         }

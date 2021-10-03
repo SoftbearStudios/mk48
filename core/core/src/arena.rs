@@ -8,7 +8,6 @@ use crate::session::{Play, Session};
 use crate::team::Team;
 use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, RulesDto};
 use core_protocol::id::*;
-use core_protocol::name::ServerAddr;
 use core_protocol::UnixTime;
 use core_protocol::*;
 use log::debug;
@@ -27,7 +26,6 @@ pub struct Arena {
     pub date_start: UnixTime,
     pub date_stop: Option<UnixTime>,
     pub game_id: GameId,
-    invitations: HashMap<InvitationId, Invitation>,
     pub leaderboards: [Arc<[LeaderboardDto]>; PeriodId::VARIANT_COUNT],
     pub leaderboard_changed: [bool; PeriodId::VARIANT_COUNT],
     pub liveboard_changed: bool,
@@ -35,26 +33,14 @@ pub struct Arena {
     pub liveboard_min_score: u32,
     pub newbie_messages: ConstGenericRingBuffer<Rc<MessageDto>, 16>,
     pub region_id: RegionId,
-    pub rules: Option<RulesDto>,
+    pub rules: RulesDto,
     pub sessions: HashMap<SessionId, Session>,
-    pub server_addr: ServerAddr, // e.g. "s1.usa.softbear.com"
+    pub server_id: ServerId, // e.g. "s1.usa.softbear.com"
     pub teams: HashMap<TeamId, Team>,
 }
 
-#[allow(dead_code)]
-struct Invitation {
-    arena_id: ArenaId,
-    team_id: TeamId,
-    server_addr: ServerAddr,
-}
-
 impl Arena {
-    pub fn new(
-        game_id: GameId,
-        region_id: RegionId,
-        rules: Option<RulesDto>,
-        server_addr: ServerAddr,
-    ) -> Self {
+    pub fn new(game_id: GameId, region_id: RegionId, rules: RulesDto, server_id: ServerId) -> Self {
         let date_created = get_unix_time_now();
         Self {
             broadcast_players: NotifySet::new(),
@@ -64,7 +50,6 @@ impl Arena {
             date_start: date_created,
             date_stop: None,
             game_id,
-            invitations: HashMap::new(),
             leaderboards: [Vec::new().into(), Vec::new().into(), Vec::new().into()],
             leaderboard_changed: [false; PeriodId::VARIANT_COUNT],
             liveboard_changed: false,
@@ -73,11 +58,13 @@ impl Arena {
             region_id,
             rules,
             sessions: HashMap::new(),
-            server_addr,
+            server_id,
             teams: HashMap::new(),
         }
     }
 
+    /// If there exists a session in `sessions` that is captain of the specified
+    /// `team_id` then return its `session_id`.  Otherwise, return `None`.
     pub fn static_captain_of_team(
         sessions: &HashMap<SessionId, Session>,
         team_id: &TeamId,
@@ -103,6 +90,8 @@ impl Arena {
         captain_session_id
     }
 
+    /// If there exists a session in the arena that is captain of the specified
+    /// `team_id` then return its `session_id`.  Otherwise, return `None`.
     pub fn captain_of_team(&self, team_id: &TeamId) -> Option<SessionId> {
         Self::static_captain_of_team(&self.sessions, team_id)
     }
@@ -167,10 +156,8 @@ impl Arena {
         })
     }
 
-    pub fn team_of_captain<'a>(
-        &'a mut self,
-        session_id: &'a SessionId,
-    ) -> Option<(TeamId, &'a mut Play)> {
+    /// If the specified `session_id` is a captain then return its `team_id`, otherwise return `None`.
+    pub fn team_of_captain(&mut self, session_id: SessionId) -> Option<(TeamId, &mut Play)> {
         let mut result = None;
         if let Some(session) = Session::get_mut(&mut self.sessions, session_id) {
             if session.live {
@@ -196,7 +183,7 @@ impl Repo {
         region_id: RegionId,
         rules: Option<RulesDto>,
         saved_arena_id: Option<ArenaId>,
-        server_addr: ServerAddr,
+        server_id: ServerId,
     ) -> ArenaId {
         let mut result: Option<ArenaId> = None;
         if let Some(arena_id) = saved_arena_id {
@@ -211,7 +198,12 @@ impl Repo {
             result = Some(loop {
                 let arena_id = ArenaId(generate_id());
                 if let Entry::Vacant(e) = self.arenas.entry(arena_id) {
-                    e.insert(Arena::new(game_id, region_id, rules, server_addr));
+                    e.insert(Arena::new(
+                        game_id,
+                        region_id,
+                        rules.unwrap_or_default(),
+                        server_id,
+                    ));
                     break arena_id;
                 }
             });

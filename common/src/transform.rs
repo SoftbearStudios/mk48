@@ -58,7 +58,7 @@ impl Transform {
         {
             let delta_angle = guidance.direction_target - self.direction;
             let turn_max = Angle::from_radians(
-                delta_seconds
+                (delta_seconds
                     * match data.kind {
                         // Longer boats turn slower.
                         EntityKind::Boat => 0.1 + 25.0 / data.length,
@@ -69,7 +69,8 @@ impl Transform {
                         }
                         _ => (1.0 - self.velocity.abs().to_mps() / (1.0 + data.speed.to_mps()))
                             .max(0.3),
-                    },
+                    })
+                .clamp(0.0, std::f32::consts::PI),
             );
             self.direction += delta_angle.clamp_magnitude(turn_max);
         }

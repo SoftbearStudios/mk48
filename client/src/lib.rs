@@ -123,7 +123,9 @@ pub enum Status {
 pub struct State {
     player_id: Option<PlayerId>,
     team_name: Option<TeamName>,
+    invitation_id: Option<InvitationId>,
     score: u32,
+    player_count: u32,
     status: Status,
     chats: Vec<ChatModel>,
     liveboard: Vec<LeaderboardItemModel>,
@@ -214,13 +216,13 @@ pub fn handle_volume(volume: f32) {
 }
 
 #[wasm_bindgen(js_name = "handleShoot")]
-pub fn handle_shoot() {
-    borrow_game().input.shoot = true;
+pub fn handle_shoot(shoot: bool) {
+    borrow_game().input.shoot = shoot;
 }
 
 #[wasm_bindgen(js_name = "handlePay")]
-pub fn handle_pay() {
-    borrow_game().input.pay = true;
+pub fn handle_pay(pay: bool) {
+    borrow_game().input.pay = pay;
 }
 
 #[wasm_bindgen(js_name = "handleActive")]
@@ -312,16 +314,22 @@ pub fn handle_drop_web_sockets(core: bool, server: bool) {
 
 /// run is the entry point for actually taking arguments.
 #[wasm_bindgen]
-pub fn run(aid: Option<String>, sid: Option<String>) {
+pub fn run(aid: Option<String>, sid: Option<String>, inv_id: Option<String>) {
     let arena_id = aid
         .and_then(|id| NonZeroU32::from_str(&id).ok())
         .map(|id| ArenaId(id));
     let session_id = sid
         .and_then(|id| NonZeroU64::from_str(&id).ok())
         .map(|id| SessionId(id));
+    let invitation_id = inv_id
+        .and_then(|id| NonZeroU32::from_str(&id).ok())
+        .map(|id| InvitationId(id));
     unsafe {
         // SAFETY: This has to run before any calls to borrow_game()
-        *GAME.get_mut() = MaybeUninit::new(RefCell::new(Game::new(arena_id.zip(session_id))));
+        *GAME.get_mut() = MaybeUninit::new(RefCell::new(Game::new(
+            arena_id.zip(session_id),
+            invitation_id,
+        )));
     }
 }
 

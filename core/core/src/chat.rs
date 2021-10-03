@@ -133,7 +133,7 @@ impl Repo {
         );
         let mut muted = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if self.players.contains_key(&player_id) {
                     session.muted.insert(player_id);
                     muted = true;
@@ -159,7 +159,7 @@ impl Repo {
         let mut sent = None;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             let mut maybe_message_tuple = None;
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last() {
                     let mut team_name: Option<TeamName> = None;
                     if let Some(team_id) = play.team_id {

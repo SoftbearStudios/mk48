@@ -26,6 +26,7 @@ pub enum ClientRequest {
         referer: Option<Referer>,
         region_pref: Option<RegionId>,
         saved_session_tuple: Option<(ArenaId, SessionId)>,
+        user_agent: Option<UserAgentId>,
     },
     CreateTeam {
         team_name: TeamName,
@@ -82,7 +83,7 @@ pub enum ServerRequest {
         region: RegionId,
         rules: Option<RulesDto>,
         saved_arena_id: Option<ArenaId>,
-        server_addr: ServerAddr,
+        server_id: ServerId,
     },
     StartPlay {
         session_id: SessionId,
@@ -145,7 +146,11 @@ pub enum ClientUpdate {
         player_id: PlayerId,
     },
     PlayersUpdated {
+        /// Total count, *excluding* bots.
+        count: u32,
+        /// Added and/or changed players, including bots.
         added: Arc<[PlayerDto]>,
+        /// Removed players, including bots.
         removed: Arc<[PlayerId]>,
     },
     RegionsUpdated {
@@ -160,7 +165,7 @@ pub enum ClientUpdate {
         arena_id: ArenaId,
         language: LanguageId,
         region: RegionId,
-        server_addr: ServerAddr,
+        server_id: ServerId,
         session_id: SessionId,
     },
     TeamCreated {
@@ -209,6 +214,7 @@ pub enum ServerUpdate {
     SessionValid {
         elapsed: u32,
         player_id: PlayerId,
+        invitation: Option<InvitationDto>,
         score: u32,
     },
     StatusSet,

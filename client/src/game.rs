@@ -8,7 +8,7 @@ use crate::particle::Particle;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
 use crate::texture::Texture;
-use crate::util::{gray, host, rgb, rgba, ws_protocol};
+use crate::util::{domain_name, gray, host, rgb, rgba, ws_protocol};
 use crate::{
     has_webp, ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel,
     TeamPlayerModel,
@@ -45,9 +45,12 @@ pub struct Game {
     teams: HashMap<TeamId, TeamDto>,
     leaderboards: HashMap<PeriodId, Vec<LeaderboardDto>>,
     liveboard: Vec<LiveboardDto>,
+    /// Created invitation
+    created_invitation_id: Option<InvitationId>,
     particles: Vec<Particle>,
     animations: Vec<Animation>,
     terrain: Terrain,
+    player_count: u32,
     world_radius: f32,
     /// Camera from alive boat, useful to maintain view after death.
     saved_camera: Option<(Vec2, f32)>,
@@ -98,7 +101,10 @@ impl Game {
     // Time, in seconds, between sending Control commands.
     const CONTROL_PERIOD: f32 = 0.1;
 
-    pub fn new(saved_session_tuple: Option<(ArenaId, SessionId)>) -> Self {
+    pub fn new(
+        saved_session_tuple: Option<(ArenaId, SessionId)>,
+        invitation_id: Option<InvitationId>,
+    ) -> Self {
         let sprite_path = if has_webp() {
             "/sprites_webgl.webp"
         } else {
@@ -112,16 +118,27 @@ impl Game {
             serde_json::from_str(include_str!("./sprites_audio.json")).unwrap();
         let audio_player = AudioPlayer::new("/sprites_audio.mp3", audio_sprite_sheet);
 
+        let host = if let Some(invitation_id) = invitation_id {
+            if invitation_id.server_id() == ServerId::LOCALHOST {
+                host()
+            } else {
+                format!("server{}.{}", invitation_id.server_id().0, domain_name())
+            }
+        } else {
+            host()
+        };
+
         let core_web_socket = ReconnWebSocket::new(
-            &format!("{}://{}/client/ws/", ws_protocol(), host()),
+            &format!("{}://{}/client/ws/", ws_protocol(), host),
             WebSocketFormat::Json,
             Some(ClientRequest::CreateSession {
                 game_id: GameId::Mk48,
                 alias: None,
-                invitation_id: None,
+                invitation_id,
                 language_pref: None,
                 region_pref: None,
                 referer: None,
+                user_agent: None,
                 saved_session_tuple,
             }),
         );
@@ -150,12 +167,14 @@ impl Game {
             session_id: None,
             death_reason: None,
             score: 0,
+            player_count: 0,
             server_web_socket: None,
             core_web_socket,
             terrain_texture: None,
             text_textures: HashMap::new(),
             world_radius: 10.0,
             saved_camera: None,
+            created_invitation_id: None,
         }
     }
 
@@ -481,16 +500,24 @@ impl Game {
                 .unwrap_or(Vec2::ZERO)
         };
 
-        (camera, self.zoom)
+        let aspect = self.renderer.aspect();
+
+        let effective_zoom = if aspect > 1.0 {
+            self.zoom * aspect
+        } else {
+            self.zoom
+        };
+
+        (camera, effective_zoom)
     }
 
-    fn update_camera(&mut self, delta_seconds: f32) -> (Vec2, f32) {
-        let mut camera = Vec2::ZERO;
-        let mut zoom = 300.0;
-
-        if let Some(player_contact) = self.player_contact() {
-            camera = player_contact.transform().position;
-            zoom = player_contact
+    /// Interpolates the zoom level closer as if delta_seconds elapsed.
+    /// If the player's ship exists, it's camera info is cached, such that it may be returned
+    /// even after that ship sinks.
+    fn update_camera(&mut self, delta_seconds: f32) {
+        let zoom = if let Some(player_contact) = self.player_contact() {
+            let camera = player_contact.transform().position;
+            let zoom = player_contact
                 .entity_type()
                 .unwrap()
                 .data()
@@ -499,22 +526,23 @@ impl Game {
                 .range;
 
             self.saved_camera = Some((camera, zoom));
+            zoom
         } else if let Some(saved_camera) = self.saved_camera {
-            camera = saved_camera.0;
-            zoom = saved_camera.1;
-        }
-
-        zoom *= self.input.zoom();
+            saved_camera.1
+        } else {
+            300.0
+        } * self.input.zoom();
 
         self.zoom += (zoom - self.zoom) * (6.0 * delta_seconds).min(1.0);
-
-        (camera, self.zoom)
     }
 
+    /// Gets the position of the mouse cursor in world coordinates, given camera info.
     fn mouse_world_position(&self, camera: Vec2, zoom: f32) -> Vec2 {
         camera + self.input.mouse_position * zoom
     }
 
+    /// Sends commands to the server to spawn the player.
+    /// Does nothing if there is no session or name is empty.
     pub fn spawn(&mut self, name: String, entity_type: EntityType) {
         if self.server_web_socket.is_none() || trim_spaces(&name).len() == 0 {
             return;
@@ -527,6 +555,7 @@ impl Game {
             language_pref: None, // TODO: should be from UI.
             referer: None,       // TODO: should be from UI.
             region_pref: None,   // TODO: should be from UI.
+            user_agent: None,
             saved_session_tuple: self.arena_id.zip(self.session_id),
         });
 
@@ -536,15 +565,24 @@ impl Game {
             .send(Command::Spawn(Spawn { entity_type }));
     }
 
+    /// Sets the altitude target that will be sent to the server, and plays
+    /// the corresponding sound (provided the player's boat is a submarine).
     pub fn set_altitude_target(&mut self, target: Altitude) {
-        if !self.input.altitude_target.is_submerged() && target.is_submerged() {
-            self.audio_player.play("dive");
-        } else if self.input.altitude_target.is_submerged() && !target.is_submerged() {
-            self.audio_player.play("surface");
+        if let Some(contact) = self.player_contact() {
+            if contact.data().sub_kind == EntitySubKind::Submarine {
+                if !self.input.altitude_target.is_submerged() && target.is_submerged() {
+                    self.audio_player.play("dive");
+                } else if self.input.altitude_target.is_submerged() && !target.is_submerged() {
+                    self.audio_player.play("surface");
+                }
+            }
         }
+
         self.input.altitude_target = target;
     }
 
+    /// Sets the active sensors flag that will be sent to the server,
+    /// playing a sound if appropriate.
     pub fn set_active(&mut self, active: bool) {
         if let Some(contact) = self.player_contact() {
             if active && contact.data().sensors.sonar.range >= 0.0 {
@@ -554,6 +592,8 @@ impl Game {
         self.input.active = active;
     }
 
+    /// Sends a command to the server to upgrade the player's ship
+    /// to a given entity type, playing a corresponding sound.
     pub fn upgrade(&mut self, entity_type: EntityType) {
         self.audio_player.play("upgrade");
         self.server_web_socket
@@ -562,40 +602,52 @@ impl Game {
             .send(Command::Upgrade(Upgrade { entity_type }))
     }
 
+    /// Sends a command to the server to send a chat message.
     pub fn send_chat(&mut self, message: String, whisper: bool) {
         self.core_web_socket
             .send(ClientRequest::SendChat { message, whisper });
     }
 
+    /// Sends a command to the server to create a new team.
     pub fn create_team(&mut self, team_name: TeamName) {
         self.core_web_socket
             .send(ClientRequest::CreateTeam { team_name });
     }
 
+    /// Sends a command to the server to request joining an
+    /// existing team.
     pub fn request_join_team(&mut self, team_id: TeamId) {
         self.core_web_socket
             .send(ClientRequest::RequestJoin { team_id })
     }
 
+    /// Sends a command to the server to accept another player
+    /// into a team of which the current player is the captain.
     pub fn accept_join_team(&mut self, player_id: PlayerId) {
         self.core_web_socket
             .send(ClientRequest::AcceptPlayer { player_id });
     }
 
+    /// Sends a command to the server to reject another player
+    /// from joining a team of which the current player is the captain.
     pub fn reject_join_team(&mut self, player_id: PlayerId) {
         self.core_web_socket
             .send(ClientRequest::RejectPlayer { player_id });
     }
 
+    /// Sends a command to the server to kick another player from
+    /// the team of which the current player is the captain.
     pub fn kick_from_team(&mut self, player_id: PlayerId) {
         self.core_web_socket
             .send(ClientRequest::KickPlayer { player_id });
     }
 
+    /// Sends a command to the server to remove the current player from their current team.
     pub fn leave_team(&mut self) {
         self.core_web_socket.send(ClientRequest::QuitTeam);
     }
 
+    /// Sends a command to the server to mute or un-mute another player.
     pub fn mute_player(&mut self, player_id: PlayerId, mute: bool) {
         self.core_web_socket.send(ClientRequest::MuteSender {
             enable: mute,
@@ -603,8 +655,9 @@ impl Game {
         })
     }
 
+    /// Performs time_seconds of game logic, and renders a frame of game state.
     pub fn frame(&mut self, time_seconds: f32) {
-        // TODO: Maybe need to clear state if core server is different.
+        // TODO: Maybe need to clear state if core server changes/reconnects.
 
         self.core_web_socket.reconnect_if_necessary(time_seconds);
 
@@ -612,7 +665,9 @@ impl Game {
             match update {
                 ClientUpdate::CaptainAssigned{..} => {}
                 ClientUpdate::ChatSent{..} => {}
-                ClientUpdate::InvitationCreated{..} => {}
+                ClientUpdate::InvitationCreated{invitation_id} => {
+                    self.created_invitation_id = Some(invitation_id);
+                }
                 ClientUpdate::JoinRequested{..} => {}
                 ClientUpdate::JoinsUpdated{added, removed} => {
                     for &team_id in added.iter() {
@@ -648,7 +703,8 @@ impl Game {
                 ClientUpdate::PlayerAccepted{..} => {}
                 ClientUpdate::PlayerKicked{..} => {}
                 ClientUpdate::PlayerRejected{..} => {}
-                ClientUpdate::PlayersUpdated { added, removed } => {
+                ClientUpdate::PlayersUpdated { count, added, removed } => {
+                    self.player_count = count;
                     for player in added.iter() {
                         self.players.insert(player.player_id, player.clone());
                     }
@@ -660,10 +716,13 @@ impl Game {
                 ClientUpdate::SessionCreated {
                     session_id,
                     arena_id,
-                    server_addr,
+                    server_id,
                     ..  // TODO: copy language and region to UI's drop down.
                 } => {
                     if Some(session_id) != self.session_id {
+                        // Create an invitation so that the user doesn't have to wait for one later.
+                        self.core_web_socket.send(ClientRequest::CreateInvitation);
+
                         if let Some(socket) = self.server_web_socket.as_mut() {
                             socket.close();
                         }
@@ -675,7 +734,7 @@ impl Game {
                         self.server_web_socket = Some(ReconnWebSocket::new(&format!(
                             "{}://{}/ws/{}/",
                             ws_protocol(),
-                            server_addr.0.replace("localhost", &host()),
+                            if server_id.0 == 255 { host() } else { format!("server{}.{}", server_id.0, domain_name()) },
                             serde_json::to_string(self.session_id.as_ref().unwrap()).unwrap()
                         ), WebSocketFormat::Binary, None));
                     }
@@ -715,6 +774,7 @@ impl Game {
             self.audio_player.play_looping("ocean");
         }
 
+        // Don't let this be negative, or assumptions will be broken.
         let delta_seconds = (time_seconds - self.last_time_seconds).clamp(0.005, 0.5);
         self.last_time_seconds = time_seconds;
 
@@ -723,8 +783,10 @@ impl Game {
         let mut team_proximity: HashMap<TeamId, f32> = HashMap::new();
 
         // Temporary (will be recalculated after moving ships).
-        let (camera, _) = self.update_camera(delta_seconds);
+        self.update_camera(delta_seconds);
+        let (camera, _) = self.camera();
 
+        // A subset of game logic.
         for NetworkContact {
             model, view, error, ..
         } in &mut self.contacts.values_mut()
@@ -734,6 +796,7 @@ impl Game {
                 .map(|e| e.data().kind == EntityKind::Boat)
                 .unwrap_or(false)
             {
+                // Update team_proximity.
                 if let Some(player_id) = model.player_id() {
                     if let Some(player) = self.players.get(&player_id) {
                         if let Some(team_id) = player.team_id {
@@ -796,14 +859,16 @@ impl Game {
             }
         }
 
-        let (camera, zoom) = self.update_camera(delta_seconds);
-        let (aspect, zoom) = self.renderer.reset(camera, zoom);
+        // The player's boat may have moved, so get the camera again.
+        let (camera, zoom) = self.camera();
+        self.renderer.reset(camera, zoom);
         let mouse_world_position = self.mouse_world_position(camera, zoom);
 
         // Both width and height must be odd numbers so there is an equal distance from the center
         // on both sides.
         let terrain_width: usize = 2 * ((zoom / terrain::SCALE).max(2.0) as usize + 1) + 3;
-        let terrain_height = 2 * ((zoom / (aspect * terrain::SCALE)).max(2.0) as usize + 1) + 3;
+        let terrain_height =
+            2 * ((zoom / (self.renderer.aspect() * terrain::SCALE)).max(2.0) as usize + 1) + 3;
 
         let mut terrain_bytes = Vec::with_capacity(terrain_width * terrain_height);
         let terrain_center = Coord::from_position(camera).unwrap();
@@ -1292,6 +1357,7 @@ impl Game {
         // Buffer until later so as not to borrow the websocket early. The web socket's lifetime is tied
         // to the deserialized updates it produces (because serde_json can reference the raw json buffer).
         let mut to_send = Vec::with_capacity(3);
+        let mut reset_input = false;
 
         let status = if let Some(player_contact) = self.player_contact() {
             let direction_target =
@@ -1356,21 +1422,23 @@ impl Game {
                     aim_target: Some(mouse_world_position),
                     active: self.input.active,
                 }));
-            }
 
-            if self.input.pay {
-                to_send.push(Command::Pay(Pay {
-                    position: mouse_world_position,
-                }));
-            }
-
-            if self.input.mouse_left_click || self.input.shoot {
-                if let Some(i) = self.find_best_armament(player_contact, true) {
-                    to_send.push(Command::Fire(Fire {
-                        index: i as u8,
-                        position_target: mouse_world_position,
+                if self.input.pay {
+                    to_send.push(Command::Pay(Pay {
+                        position: mouse_world_position,
                     }));
                 }
+
+                if self.input.mouse_left_click || self.input.shoot {
+                    if let Some(i) = self.find_best_armament(player_contact, true) {
+                        to_send.push(Command::Fire(Fire {
+                            index: i as u8,
+                            position_target: mouse_world_position,
+                        }));
+                    }
+                }
+
+                reset_input = true;
             }
 
             let status = Status::Alive {
@@ -1463,7 +1531,9 @@ impl Game {
             team_name: team_id
                 .and_then(|id| self.teams.get(&id))
                 .map(|t| t.team_name),
+            invitation_id: self.created_invitation_id,
             score: self.score,
+            player_count: self.player_count,
             status,
             chats: self
                 .chats
@@ -1565,10 +1635,13 @@ impl Game {
                 .collect(),
         });
 
-        self.input.reset();
+        if reset_input {
+            self.input.reset();
+        }
     }
 
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).
+    /// Armaments are scored by a combination of distance and angle to target.
     fn find_best_armament(&self, player_contact: &Contact, angle_limit: bool) -> Option<usize> {
         let (camera, zoom) = self.camera();
         let mouse_world_position = self.mouse_world_position(camera, zoom);
@@ -1627,7 +1700,7 @@ impl Game {
 
                 if !angle_limit || angle_diff < Angle::from_degrees(90.0) {
                     let score = angle_diff.to_radians() + 0.01 * distance_squared;
-                    if score < best_armament.unwrap_or((0, f32::MAX)).1 {
+                    if best_armament.map(|(_, s)| score < s).unwrap_or(true) {
                         best_armament = Some((i, score));
                     }
                 }

@@ -53,6 +53,14 @@
 		color: white;
 	}
 
+	span:hover {
+		filter: brightness(0.85);
+	}
+
+	span:active {
+		filter: brightness(0.75);
+	}
+
 	div {
 		display: table-row;
 	}

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::arena::Arena;
+use crate::invitation::Invitation;
 use crate::session::Session;
 use crate::team::Team;
 use core_protocol::dto::{
@@ -19,6 +20,7 @@ use std::sync::Arc;
 pub struct Repo {
     // Assume these fields are synchronized via Actor so Mutex is not required.
     pub arenas: HashMap<ArenaId, Arena>,
+    pub invitations: HashMap<InvitationId, Invitation>,
     pub players: HashMap<PlayerId, SessionId>,
 }
 
@@ -29,6 +31,7 @@ impl Repo {
     pub fn new() -> Self {
         Repo {
             arenas: HashMap::new(),
+            invitations: HashMap::new(),
             players: HashMap::new(),
         }
     }
@@ -41,7 +44,7 @@ impl Repo {
         Vec<(Arc<[LeaderboardDto]>, PeriodId)>,
         Arc<[LiveboardDto]>,
         Arc<[MessageDto]>,
-        Arc<[PlayerDto]>,
+        (u32, Arc<[PlayerDto]>),
         Arc<[TeamDto]>,
     )> {
         debug!("get_initializers()");
@@ -53,7 +56,7 @@ impl Repo {
             } // for leaderboard_period
             let leaderboard_initializer = leaderboards.into();
 
-            let (liveboard, _) = arena.get_liveboard(true);
+            let (liveboard, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
             let liveboard_initializer = liveboard.into();
 
             let message_initializer = arena
@@ -62,12 +65,17 @@ impl Repo {
                 .map(|rc| MessageDto::clone(&rc))
                 .collect();
 
+            let mut player_count = 0;
             let mut players = vec![];
             for session in arena.sessions.values() {
                 if !session.live {
                     continue;
                 }
                 if let Some(play) = session.plays.last() {
+                    if !session.bot {
+                        player_count += 1;
+                    }
+
                     players.push(PlayerDto {
                         alias: session.alias.clone(),
                         player_id: session.player_id,
@@ -91,7 +99,7 @@ impl Repo {
                 leaderboard_initializer,
                 liveboard_initializer,
                 message_initializer,
-                players_initializer,
+                (player_count, players_initializer),
                 teams_initializer,
             ))
         } else {
@@ -129,12 +137,12 @@ impl Repo {
             }
 
             let region_id = arena.region_id;
-            let server_addr = arena.server_addr.clone();
+            let server_id = arena.server_id.clone();
 
             regions.push(RegionDto {
                 player_count,
                 region_id,
-                server_addr,
+                server_id,
             });
         }
 
@@ -160,14 +168,16 @@ impl Repo {
     pub fn read_broadcasts(
         &mut self,
     ) -> Option<(
-        Vec<(ArenaId, (Arc<[PlayerDto]>, Arc<[PlayerId]>))>,
+        Vec<(ArenaId, (u32, Arc<[PlayerDto]>, Arc<[PlayerId]>))>,
         Vec<(ArenaId, (Arc<[TeamDto]>, Arc<[TeamId]>))>,
     )> {
         trace!("read_broadcasts()");
 
         // ARC is used because the same message is sent to multiple observers.
-        let mut players_added_or_removed: Vec<(ArenaId, (Arc<[PlayerDto]>, Arc<[PlayerId]>))> =
-            Vec::new();
+        let mut players_counted_added_or_removed: Vec<(
+            ArenaId,
+            (u32, Arc<[PlayerDto]>, Arc<[PlayerId]>),
+        )> = Vec::new();
         let mut teams_added_or_removed: Vec<(ArenaId, (Arc<[TeamDto]>, Arc<[TeamId]>))> =
             Vec::new();
 
@@ -175,8 +185,17 @@ impl Repo {
             if !(arena.broadcast_players.add.is_empty()
                 && arena.broadcast_players.remove.is_empty())
             {
+                let mut player_count = 0;
+
+                for (_, session) in arena.sessions.iter() {
+                    if session.live && !session.bot {
+                        player_count += 1;
+                    }
+                }
+
                 let mut added = vec![];
                 let mut count = 0;
+
                 if !arena.broadcast_players.add.is_empty() {
                     for session_id in arena.broadcast_players.add.iter() {
                         if let Some(session) = arena.sessions.get(session_id) {
@@ -216,7 +235,8 @@ impl Repo {
                     }
                 }
 
-                players_added_or_removed.push((*arena_id, (added.into(), removed.into())));
+                players_counted_added_or_removed
+                    .push((*arena_id, (player_count, added.into(), removed.into())));
             }
 
             if !(arena.broadcast_teams.add.is_empty() && arena.broadcast_teams.remove.is_empty()) {
@@ -246,10 +266,10 @@ impl Repo {
             }
         }
 
-        if players_added_or_removed.is_empty() && teams_added_or_removed.is_empty() {
+        if players_counted_added_or_removed.is_empty() && teams_added_or_removed.is_empty() {
             None
         } else {
-            Some((players_added_or_removed, teams_added_or_removed))
+            Some((players_counted_added_or_removed, teams_added_or_removed))
         }
     }
 
@@ -293,7 +313,7 @@ impl Repo {
             }
             trace!("liveboard_changed for arena {:?}", arena_id);
             arena.liveboard_changed = false;
-            let (leaderboard, min_score) = arena.get_liveboard(true);
+            let (leaderboard, min_score) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
             arena.liveboard_min_score = min_score;
             changed_liveboards.push((*arena_id, leaderboard.into()));
         }
@@ -355,7 +375,7 @@ impl Repo {
         let mut messages_added: Arc<[MessageDto]> = Vec::new().into();
 
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
-            if let Some(session) = Session::get_mut(&mut arena.sessions, &session_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 messages_added = mem::take(&mut session.inbox)
                     .iter()
                     .map(|rc| MessageDto::clone(&rc))

@@ -324,9 +324,6 @@ impl Turret {
     /// within_azimuth returns whether the given boat-relative angle is within the azimuth (horizontal
     /// angle) limits, if any.
     pub fn within_azimuth(&self, curr: Angle) -> bool {
-        // Use floats so that negative angles work better with
-        // comparison operators
-
         /*
         Angles are counterclockwise.
         Each turret.azimuth_** angle is a restriction starting in the respective quadrant.
@@ -338,13 +335,13 @@ impl Turret {
          */
 
         // The angle as it relates to the front azimuth limits.
-        let azimuth_f = (curr - self.angle).to_radians();
-        if -self.azimuth_fr.to_radians() < azimuth_f && azimuth_f < self.azimuth_fl.to_radians() {
+        let azimuth_f = curr - self.angle;
+        if -self.azimuth_fr < azimuth_f && azimuth_f < self.azimuth_fl {
             false
         } else {
             // The angle as it relates to the back azimuth limits.
-            let azimuth_b = (Angle::PI + curr - self.angle).to_radians();
-            !(-self.azimuth_bl.to_radians() < azimuth_b && azimuth_b < self.azimuth_br.to_radians())
+            let azimuth_b = Angle::PI + curr - self.angle;
+            !(-self.azimuth_bl < azimuth_b && azimuth_b < self.azimuth_br)
         }
     }
 }

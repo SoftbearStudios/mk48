@@ -11,6 +11,7 @@ mod chat;
 pub mod core;
 mod database;
 mod generate_id;
+mod invitation;
 mod metrics;
 mod notify_set;
 mod repo;

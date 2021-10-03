@@ -23,8 +23,8 @@ serde_bytes = "0.11.5"
 server = ["actix"]
 js = ["getrandom/js"]
 
-[dev-dependencies]
-criterion = "0.3"
+#dev-dependencies]
+#criterion = "0.3"
 
 [[bench]]
 name = "benchmark"

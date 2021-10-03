@@ -123,6 +123,7 @@ dependencies = [
  "chrono",
  "enum-iterator",
  "glam",
+ "rand",
  "serde",
  "variant_count",
 ]

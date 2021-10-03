@@ -18,7 +18,8 @@ use actix_web_middleware_redirect_https::RedirectHTTPS;
 use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use core::core::{ParameterizedMetricRequest, ParametrizedClientRequest};
-use core_protocol::id::{PlayerId, SessionId};
+use core_protocol::dto::InvitationDto;
+use core_protocol::id::*;
 use core_protocol::rpc::{ClientRequest, ClientUpdate};
 use core_protocol::web_socket::WebSocketFormat;
 use env_logger;
@@ -53,7 +54,7 @@ mod world_spawn;
 #[derive(Debug, StructOpt)]
 struct Options {
     /// Minimum player count (to be achieved by adding bots)
-    #[structopt(short = "p", long, default_value = "35")]
+    #[structopt(short = "p", long, default_value = "30")]
     min_players: usize,
     /// Verbosity
     #[structopt(short, long, parse(from_occurrences))]
@@ -76,7 +77,11 @@ struct Options {
     // Don't write to the database.
     #[structopt(long)]
     database_read_only: bool,
-    // Domain (enables SSL support)
+    // Server id.
+    #[structopt(long, default_value = "255")]
+    server_id: u8,
+    // Domain.
+    #[allow(dead_code)]
     #[structopt(long)]
     domain: Option<String>,
     // Certificate chain path
@@ -102,11 +107,11 @@ async fn ws_index(
 ) -> Result<HttpResponse, Error> {
     match srv.send(Authenticate { session_id }).await {
         Ok(response) => match response {
-            Some(player_id) => ws::start(
-                WebSocket::<Command, Update, (SessionId, PlayerId)>::new(
+            Some((player_id, invitation)) => ws::start(
+                WebSocket::<Command, Update, (SessionId, PlayerId, Option<InvitationDto>)>::new(
                     srv.recipient(),
                     format,
-                    (session_id, player_id),
+                    (session_id, player_id, invitation),
                 ),
                 &r,
                 stream,
@@ -155,7 +160,11 @@ fn main() {
         let core = core::core::Core::start(
             core::core::Core::new(options.chat_log, options.database_read_only).await,
         );
-        let srv = server::Server::start(server::Server::new(options.min_players, core.to_owned()));
+        let srv = server::Server::start(server::Server::new(
+            ServerId(options.server_id),
+            options.min_players,
+            core.to_owned(),
+        ));
 
         let mut ssl = options
             .certificate_path

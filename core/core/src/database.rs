@@ -141,7 +141,7 @@ pub struct SessionItem {
     pub previous_id: Option<SessionId>,
     pub referer: Option<Referer>,
     pub region_id: RegionId,
-    pub server_addr: ServerAddr,
+    pub server_id: ServerId,
     // Range key.
     pub session_id: SessionId,
 }
@@ -578,7 +578,9 @@ impl Database {
                 #peek.#total = :peek_total AND\
                 #concurrent.#count = :concurrent_count AND\
                 #concurrent.#min = :concurrent_min AND\
-                #concurrent.#max = :concurrent_max",
+                #concurrent.#max = :concurrent_max AND\
+                #concurrent.#total = :concurrent_total AND\
+                #concurrent.#squared_total = :concurrent_squared_total",
                     )
                     .expression_attribute_names("#count", "count")
                     .expression_attribute_names("#total", "total")
@@ -651,7 +653,12 @@ impl Database {
                     .expression_attribute_names("#concurrent", "concurrent")
                     .expression_attribute_values(":concurrent_count", to_av(old.concurrent.count)?)
                     .expression_attribute_values(":concurrent_min", to_av(old.concurrent.min)?)
-                    .expression_attribute_values(":concurrent_max", to_av(old.concurrent.max)?);
+                    .expression_attribute_values(":concurrent_max", to_av(old.concurrent.max)?)
+                    .expression_attribute_values(":concurrent_total", to_av(old.concurrent.total)?)
+                    .expression_attribute_values(
+                        ":concurrent_squared_total",
+                        to_av(old.concurrent.squared_total)?,
+                    );
             } else {
                 // Condition is that the item wasn't created elsewhere.
                 request = request

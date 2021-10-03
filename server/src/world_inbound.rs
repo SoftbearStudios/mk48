@@ -56,12 +56,17 @@ impl CommandTrait for Spawn {
             _ => None,
         };
 
-        if let Some(team_id) = player.team_id {
+        if player.team_id.is_some() || shared_data.invitation.is_some() {
             // TODO: Inefficient to scan all entities; only need to scan all players. Unfortunately,
             // that data is not available here, currently.
             if let Some((_, team_boat)) = world.entities.par_iter().find_any(|(_, entity)| {
                 let data = entity.data();
-                if data.kind == EntityKind::Boat && entity.borrow_player().team_id == Some(team_id)
+                if data.kind == EntityKind::Boat
+                    && ((player.team_id.is_some()
+                        && entity.borrow_player().team_id == player.team_id)
+                        || (shared_data.invitation.is_some()
+                            && entity.borrow_player().player_id
+                                == shared_data.invitation.as_ref().unwrap().player_id))
                 {
                     if let Some(exclusion_zone) = exclusion_zone {
                         if entity.transform.position.distance_squared(exclusion_zone)

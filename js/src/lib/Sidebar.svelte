@@ -5,6 +5,7 @@
 
 <script>
 	import IconButton from './IconButton.svelte';
+	import Invite from "svelte-bootstrap-icons/lib/PersonPlus";
 	import VolumeEmpty from "svelte-bootstrap-icons/lib/VolumeMute";
 	import VolumeDownFill from "svelte-bootstrap-icons/lib/VolumeDownFill";
 	import VolumeUpFill from "svelte-bootstrap-icons/lib/VolumeUpFill";
@@ -14,9 +15,12 @@
 	import {volume} from '../util/settings.js';
 
 	export let onZoom;
+	export let onCopyInvitationLink;
 </script>
 
 <div>
+	<IconButton tooltip={$t('panel.team.action.invite.label')} onChange={onCopyInvitationLink} icons={[Invite]}/>
+	<br/>
 	<IconButton tooltip={$t('panel.sidebar.action.zoomIn.hint')} onChange={() => onZoom(-8)} icons={[ZoomIn]}/>
 	<br/>
 	<IconButton tooltip={$t('panel.sidebar.action.zoomOut.hint')} onChange={() => onZoom(8)} icons={[ZoomOut]}/>

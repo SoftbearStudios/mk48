@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use core_protocol::serde_util::{F32Visitor, U16Visitor};
+use core_protocol::serde_util::{F32Visitor, I16Visitor};
 use glam::{Vec2, Vec2Swizzles};
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
@@ -10,8 +10,7 @@ use std::f32::consts::PI;
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
-// TODO: Consider AngleReprSigned (i16 for now) or just making AngleRepr an i16.
-type AngleRepr = u16;
+type AngleRepr = i16;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Angle(AngleRepr);
@@ -19,9 +18,9 @@ pub struct Angle(AngleRepr);
 #[allow(dead_code)]
 impl Angle {
     pub const ZERO: Self = Self(0);
-    pub const MAX: Self = Self(i16::MAX as AngleRepr);
-    pub const PI: Self = Self(AngleRepr::MAX / 2);
-    pub const PI_2: Self = Self(AngleRepr::MAX / 4);
+    pub const MAX: Self = Self(AngleRepr::MAX);
+    pub const PI: Self = Self(AngleRepr::MAX);
+    pub const PI_2: Self = Self(AngleRepr::MAX / 2);
 
     pub fn new() -> Self {
         Self::ZERO
@@ -43,12 +42,12 @@ impl Angle {
 
     #[inline]
     pub fn to_radians(self) -> f32 {
-        self.0 as i16 as f32 * (PI / Self::PI.0 as f32)
+        self.0 as f32 * (PI / Self::PI.0 as f32)
     }
 
     #[inline]
     pub fn from_radians(radians: f32) -> Self {
-        Self((radians * (Self::PI.0 as f32 / PI)) as i32 as i16 as AngleRepr)
+        Self((radians * (Self::PI.0 as f32 / PI)) as i32 as AngleRepr)
     }
 
     pub fn to_degrees(self) -> f32 {
@@ -60,24 +59,24 @@ impl Angle {
     }
 
     pub fn abs(self) -> Self {
-        if self.0 as i16 == i16::MIN {
+        if self.0 == AngleRepr::MIN {
             // Don't negate with overflow.
-            return Angle(i16::MAX as AngleRepr);
+            return Angle::MAX;
         }
-        Self((self.0 as i16).abs() as AngleRepr)
+        Self(self.0.abs())
     }
 
     pub fn min(self, other: Self) -> Self {
-        Self((self.0 as i16).min(other.0 as i16) as AngleRepr)
+        Self(self.0.min(other.0))
     }
 
     pub fn clamp_magnitude(self, max: Self) -> Self {
-        return if max.0 as i16 >= 0 {
-            Self((self.0 as i16).clamp(-(max.0 as i16), max.0 as i16) as AngleRepr)
+        if max.0 >= 0 {
+            Self(self.0.clamp(-max.0, max.0))
         } else {
             // Clamping to over 180 degrees in either direction, any angle is valid.
             self
-        };
+        }
     }
 
     pub fn lerp(self, other: Self, value: f32) -> Self {
@@ -145,7 +144,7 @@ impl Mul<f32> for Angle {
     type Output = Self;
 
     fn mul(self, other: f32) -> Self::Output {
-        Self((self.0 as i16 as f32 * other) as i32 as i16 as AngleRepr)
+        Self((self.0 as f32 * other) as i32 as AngleRepr)
     }
 }
 
@@ -169,7 +168,7 @@ impl Serialize for Angle {
         if serializer.is_human_readable() {
             serializer.serialize_f32(self.to_radians())
         } else {
-            serializer.serialize_u16(self.0)
+            serializer.serialize_i16(self.0)
         }
     }
 }
@@ -184,7 +183,7 @@ impl<'de> Deserialize<'de> for Angle {
                 .deserialize_f32(F32Visitor)
                 .map(Self::from_radians)
         } else {
-            deserializer.deserialize_u16(U16Visitor).map(Self)
+            deserializer.deserialize_i16(I16Visitor).map(Self)
         }
     }
 }

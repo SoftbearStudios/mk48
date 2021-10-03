@@ -62,6 +62,10 @@
 			return;
 		}
 
+		if (msg.includes('/invite')) {
+			return 'Invitation links cannot currently be accepted by players that are already in game. They must send a join request instead.';
+		}
+
 		if (msg.includes('how')) {
 			if (msg.includes('move')) {
 				return 'If you are asking how you move, you click and hold (or right click) outside the inner ring of your ship to set your speed and direction (or use WASD)';
@@ -103,8 +107,11 @@
 		max-width: 25%;
 	}
 
-	p.message {
+	p {
 		color: white;
+	}
+
+	p.message {
 		text-overflow: ellipsis;
 		overflow-wrap: anywhere;
 		word-break: normal;

@@ -179,9 +179,16 @@ impl Renderer {
         );
     }
 
+    /// Returns the aspect ratio (width/height) of the canvas.
+    pub fn aspect(&self) -> f32 {
+        let width = self.canvas.width();
+        let height = self.canvas.height();
+        width as f32 / height as f32
+    }
+
     /// reset resets the renderer, by clearing all added meshes, changing the aspect ratio if necessary,
     /// clearing the screen, and setting a new view matrix.
-    pub fn reset(&mut self, camera: Vec2, mut zoom: f32) -> (f32, f32) {
+    pub fn reset(&mut self, camera: Vec2, zoom: f32) {
         self.sprite_mesh.clear();
         self.particle_mesh.clear();
         self.graphic_mesh.clear();
@@ -190,18 +197,12 @@ impl Renderer {
         let height = self.canvas.height();
         let aspect = width as f32 / height as f32;
 
-        if aspect > 1.0 {
-            zoom *= aspect;
-        }
-
         // This matrix is manually inverted.
         self.view_matrix = Mat3::from_scale(Vec2::new(1.0, aspect) / zoom)
             .mul_mat3(&Mat3::from_translation(-camera));
 
         self.gl.viewport(0, 0, width as i32, height as i32);
         self.gl.clear(Gl::COLOR_BUFFER_BIT);
-
-        (aspect, zoom)
     }
 
     /// render_sprite adds a sprite to the drawing queue.

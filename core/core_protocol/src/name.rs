@@ -15,9 +15,6 @@ pub struct PlayerAlias(pub ArrayString<12>);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Referer(pub ArrayString<16>);
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct ServerAddr(pub ArrayString<32>);
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TeamName(pub ArrayString<12>);
 
@@ -46,12 +43,6 @@ impl TeamName {
 impl Display for TeamName {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-impl ServerAddr {
-    pub fn new(str: &str) -> Self {
-        Self(slice_up_to(str))
     }
 }
 

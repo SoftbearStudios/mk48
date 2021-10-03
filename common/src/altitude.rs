@@ -5,6 +5,7 @@ use crate::ticks::{Ticks, TicksRepr};
 use crate::util::map_ranges;
 use core_protocol::serde_util::{F32Visitor, I8Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
@@ -92,12 +93,10 @@ impl Altitude {
     /// Linearly interpolates towards another altitudes.
     pub fn lerp(self, end: Self, t: f32) -> Self {
         let diff = end - self;
-        if diff > Altitude::ZERO {
-            self + (diff * t).max(Altitude::UNIT)
-        } else if diff < Altitude::ZERO {
-            self + (diff * t).min(-Altitude::UNIT)
-        } else {
-            self
+        self + match end.cmp(&self) {
+            Ordering::Less => (diff * t).min(-Altitude::UNIT),
+            Ordering::Greater => (diff * t).max(Altitude::UNIT),
+            Ordering::Equal => Altitude::ZERO,
         }
     }
 
@@ -216,7 +215,7 @@ impl<'de> Deserialize<'de> for Altitude {
 
 #[cfg(test)]
 mod tests {
-    use crate::altitude::Altitude;
+    // use crate::altitude::Altitude;
 
     // TODO: Test altitude.
 }

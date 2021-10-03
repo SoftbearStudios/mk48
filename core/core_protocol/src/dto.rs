@@ -7,6 +7,11 @@ use crate::name::*;
 use crate::UnixTime;
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct InvitationDto {
+    pub player_id: PlayerId,
+}
+
 /// The Leaderboard Data Transfer Object (DTO) is a single line on a leaderboard.
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct LeaderboardDto {
@@ -47,7 +52,7 @@ pub struct MessageDto {
 pub struct MetricsDto {
     pub bounce: <RatioMetric as Metric>::Summary,
     pub peek: <RatioMetric as Metric>::Summary,
-    pub concurrent: <ExtremaMetric as Metric>::Summary,
+    pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
     pub minutes: <ContinuousExtremaMetric as Metric>::Summary,
     pub plays: <ContinuousExtremaMetric as Metric>::Summary,
     pub play_minutes: <ContinuousExtremaMetric as Metric>::Summary,
@@ -71,7 +76,7 @@ pub struct PlayerDto {
 pub struct RegionDto {
     pub player_count: u32,
     pub region_id: RegionId,
-    pub server_addr: ServerAddr,
+    pub server_id: ServerId,
 }
 
 /// The Rules Data Transfer Object (DTO) specifies arena rules.
@@ -79,7 +84,19 @@ pub struct RegionDto {
 pub struct RulesDto {
     pub bot_min: u32,
     pub bot_percent: u32,
+    pub show_bots_on_liveboard: bool,
     pub team_size_max: u32,
+}
+
+impl Default for RulesDto {
+    fn default() -> Self {
+        Self {
+            bot_min: 0,
+            bot_percent: 0,
+            show_bots_on_liveboard: false,
+            team_size_max: 6,
+        }
+    }
 }
 
 /// The Team Data Transfer Object (DTO) binds team ID to team name.

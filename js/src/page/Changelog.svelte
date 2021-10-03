@@ -13,6 +13,28 @@
 
 	<h2>2021</h2>
 
+	<h3>10/2/2021</h3>
+
+	<ul>
+		<li>Add back invite feature, which is now usable regardless of whether you are a team captain.</li>
+		<li>Fix upgraded oil rigs drying up after an hour.</li>
+		<li>Fix mouse controls in wide aspect ratios.</li>
+		<li>Fix holding space or 'c' to shoot or donate repetitively.</li>
+		<li>Show number of players below leaderboard.</li>
+		<li>Fix rare desync related to team membership.</li>
+		<li>Stop showing bots in live leaderboard.</li>
+	</ul>
+
+	<h3>9/28/2021</h3>
+
+	<ul>
+		<li>Make aircraft more controllable.</li>
+		<li>Fix blur issue on mobile devices and high-DPI screens.</li>
+		<li>Fix name tag rendering below objects.</li>
+		<li>Increase rate of auto-regen for larger ships.</li>
+		<li>Allow you to see your team members further outside your sensor range.</li>
+	</ul>
+
 	<h3>9/27/2021</h3>
 
 	<ul>
@@ -31,7 +53,7 @@
 		<li>Improve lag compensation to reduce perceived network latency.</li>
 		<li>Behavior of torpedoes and submarine launched weapons changed to reflect altitude.</li>
 		<li>Overhaul all ship, weapon, etc. textures and particles.</li>
-		<li>Add firing arc display to HUD.</li>
+		<li>Add firing arc display to HUD, remove confusing and almost completely useless sensor dots.</li>
 		<li>Increase intelligence of bots.</li>
 		<li>Add auto-reconnect feature to mitigate network issues that last less than 5 seconds.</li>
 		<li>Change terrain seed.</li>

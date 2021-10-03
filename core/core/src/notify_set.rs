@@ -19,21 +19,19 @@ impl<T: Eq + Hash> NotifySet<T> {
         }
     }
 
-    /// Mark an item as added.
+    /// Mark an item as added (or changed), and thus requiring notification.
     pub fn added(&mut self, key: T) {
         if self.remove.contains(&key) {
             self.remove.remove(&key);
-        } else {
-            self.add.insert(key);
         }
+        self.add.insert(key);
     }
 
     /// Mark an item as removed.
     pub fn removed(&mut self, key: T) {
         if self.add.contains(&key) {
             self.add.remove(&key);
-        } else {
-            self.remove.insert(key);
         }
+        self.remove.insert(key);
     }
 }

@@ -62,8 +62,6 @@ impl Input {
     // Resets input flags.
     pub fn reset(&mut self) {
         self.mouse_left_click = false;
-        self.shoot = false;
-        self.pay = false;
     }
 
     pub fn handle_mouse_button(&mut self, button: MouseButton, down: bool) {

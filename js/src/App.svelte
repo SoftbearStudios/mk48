@@ -5,7 +5,7 @@
 
 <script context="module">
 	import storage from './util/storage.js';
-	import {writable} from 'svelte/store';
+	import {get, writable} from 'svelte/store';
 
 	let state = writable(null);
 	let leaderboard = writable(null);
@@ -15,6 +15,7 @@
 		storage.arenaId = arenaId;
 		storage.sessionId = sessionId;
 	}
+
 	export function setState(value) {
 		state.set(value);
 	}
@@ -60,7 +61,15 @@
 
 	onMount(async () => {
 		client = await wasm();
-		client.run(storage.arenaId, storage.sessionId);
+
+		const hash = window.location.hash;
+		let invitationId = null;
+
+		if (hash.includes("/invite")) {
+			invitationId = hash.split("/").pop();
+		}
+
+		client.run(storage.arenaId, storage.sessionId, invitationId);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 
 		// Make client accessible (for debugging only).
@@ -88,7 +97,7 @@
 			client.handleJoystickRelease();
 		} else {
 			instructBasics = false;
-			client.handleJoystick(leftRight, forwardBackward, keyboard.stop);
+			client.handleJoystick(leftRight, forwardBackward, typeof keyboard.stop === 'number');
 		}
 
 		client && client.frame(timestamp / 1000.0);
@@ -192,10 +201,10 @@
 				});
 			} else {
 				Object.assign(keys, {
-					32: () => client.handleShoot(), // space
-					67: () => client.handlePay(),   // c (coin)
-					69: () => client.handleShoot(), // e
-					88: 'stop',     // x
+					32: 'shoot', // space
+					67: 'pay',   // c (coin)
+					69: 'shoot', // e
+					88: 'stop',  // x
 
 					// WASD
 					65: 'left',     // a
@@ -238,6 +247,10 @@
 					if (down) {
 						key();
 					}
+				} else if (key === 'pay') {
+					client && client.handlePay(down);
+				} else if (key === 'shoot') {
+					client && client.handleShoot(down);
 				} else if (!(down && keyboard[key])) {
 					// Don't reset date if already down.
 					keyboard[key] = down ? Date.now() : false;
@@ -298,6 +311,13 @@
 
 	function onLeaveTeam() {
 		client && client.handleLeaveTeam();
+	}
+
+	async function onCopyInvitationLink() {
+		let invitationId = get(state).invitationId;
+		if (invitationId) {
+			await navigator.clipboard.writeText(`${location.origin}/#/invite/${invitationId}`);
+		}
 	}
 
 	// Originates from iframe parent.
@@ -385,7 +405,7 @@
 			</div>
 		{/if}
 		{#if $state.liveboard}
-			<Leaderboard leaderboard={$state.liveboard} headerAlign='right'/>
+			<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? `${$state.playerCount} online` : null}/>
 		{:else}
 			<div><!--placeholder--></div>
 		{/if}
@@ -400,10 +420,10 @@
 	{:else if $state.status.spawning}
 		<SplashScreen state={$state} {onSpawn}/>
 	{/if}
-	<Sidebar onZoom={client.handleWheel}/>
-	<Router routes={{'/help': Help, '/about': About, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
+	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
 	<ContextMenu/>
 {/if}
+<Router routes={{'/help': Help, '/about': About, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
 
 <svelte:head>
 	<title>mk48.io</title>

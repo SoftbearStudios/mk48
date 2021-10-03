@@ -34,7 +34,7 @@ chmod u+x /root/get_ssl_cert.sh
 #/root/download-game-server.sh
 
 echo "Installing service..."
-printf "[Unit]\nDescription=Game Server\n[Service]\nType=simple\nUser=root\nGroup=root\nRestart=always\nRestartSec=3\nEnvironmentFile=/etc/environment\nExecStart=/root/server -v -v --debug-game --chat-log /root/chat.log --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem\n[Install]\nWantedBy=multi-user.target" > /etc/systemd/system/game-server.service
+printf "[Unit]\nDescription=Game Server\n[Service]\nType=simple\nUser=root\nGroup=root\nRestart=always\nRestartSec=3\nEnvironmentFile=/etc/environment\nExecStart=/root/server --server-id $SERVER -v -v --debug-game --chat-log /root/chat.log --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem\n[Install]\nWantedBy=multi-user.target" > /etc/systemd/system/game-server.service
 
 echo "Enabling service..."
 sudo systemctl daemon-reload
