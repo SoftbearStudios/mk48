@@ -2,7 +2,6 @@
 *.iml
 target
 terrain.png
-core/*
 *.data
 *.data.old
 serde-test/*
