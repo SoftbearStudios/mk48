@@ -17,7 +17,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: egor-tensin/setup-clang@v1
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rustfmt, clippy
     - name: Build
       run: cargo build --manifest-path server/Cargo.toml --verbose
-    - name: Run tests
-      run: cargo test --manifest-path server/Cargo.toml --verbose
