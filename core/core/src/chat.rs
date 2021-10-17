@@ -7,9 +7,10 @@ use crate::session::Session;
 use crate::team::Team;
 use core_protocol::dto::MessageDto;
 use core_protocol::id::{ArenaId, PlayerId, SessionId};
+use core_protocol::metrics::RatioMetric;
 use core_protocol::name::{trim_spaces, TeamName};
 use core_protocol::{get_unix_time_now, UnixTime};
-use log::debug;
+use log::{debug, warn};
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 use rustrict::{Censor, Type};
 use std::rc::Rc;
@@ -26,6 +27,9 @@ pub struct ChatHistory {
 
     /// Time last faded out in milliseconds.
     date_updated: UnixTime,
+
+    /// Ratio of inappropriate messages to all messages.
+    pub toxicity: RatioMetric,
 }
 
 impl ChatHistory {
@@ -35,20 +39,34 @@ impl ChatHistory {
             inappropriate: 0.0,
             recent_lengths: ConstGenericRingBuffer::new(),
             total: 0.0,
+            toxicity: RatioMetric::default(),
         }
     }
 
     /// Returns censored text and whether to block it entirely.
     pub fn update(&mut self, message: &str, whisper: bool) -> (String, bool) {
-        let (censored, analysis) = Censor::from_str(message).censor_and_analyze();
+        let threshold = if whisper {
+            // Allow moderately mean words.
+            Type::INAPPROPRIATE
+        } else {
+            // Don't allow moderately mean words.
+            Type::INAPPROPRIATE | (Type::MEAN & Type::MODERATE)
+        };
+
+        let (censored, analysis) = Censor::from_str(message)
+            .with_censor_threshold(threshold)
+            .censor_and_analyze();
 
         self.total += 1.0;
-        let inappropriate = analysis.is(Type::INAPPROPRIATE);
+
+        let inappropriate = analysis.is(threshold);
         let severely_inappropriate = analysis.is(Type::INAPPROPRIATE & Type::SEVERE);
 
         if inappropriate {
             self.inappropriate += 1.0;
         }
+
+        self.toxicity.push(inappropriate);
 
         let inappropriate_fraction = self.inappropriate / self.total;
 
@@ -141,6 +159,13 @@ impl Repo {
             }
         }
 
+        if !muted {
+            warn!(
+                "mute_sender(arena={:?}, session={:?}, enable={:?}, player={:?}) failed",
+                arena_id, session_id, enable, player_id
+            );
+        }
+
         return muted;
     }
 
@@ -224,7 +249,10 @@ impl Repo {
             }
         }
         if sent.is_none() {
-            debug!("message not sent");
+            warn!(
+                "send_chat(arena={:?}, session={:?}) failed: {}",
+                arena_id, session_id, &message
+            );
         }
         return sent;
     }

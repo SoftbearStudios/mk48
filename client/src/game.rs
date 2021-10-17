@@ -8,7 +8,7 @@ use crate::particle::Particle;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
 use crate::texture::Texture;
-use crate::util::{domain_name, gray, host, rgb, rgba, ws_protocol};
+use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol};
 use crate::{
     has_webp, ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel,
     TeamPlayerModel,
@@ -23,7 +23,7 @@ use common::protocol::*;
 use common::terrain::{Coord, Terrain};
 use common::ticks::Ticks;
 use common::transform::Transform;
-use common::util::map_ranges;
+use common::util::{gen_radius, map_ranges};
 use common::velocity::Velocity;
 use common::{terrain, util};
 use core_protocol::dto::*;
@@ -33,7 +33,7 @@ use core_protocol::rpc::*;
 use core_protocol::web_socket::WebSocketFormat;
 use glam::{Mat2, Mat3, Vec2};
 use itertools::Itertools;
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 pub struct Game {
@@ -47,7 +47,8 @@ pub struct Game {
     liveboard: Vec<LiveboardDto>,
     /// Created invitation
     created_invitation_id: Option<InvitationId>,
-    particles: Vec<Particle>,
+    sea_level_particles: Vec<Particle>,
+    airborne_particles: Vec<Particle>,
     animations: Vec<Animation>,
     terrain: Terrain,
     player_count: u32,
@@ -98,7 +99,7 @@ impl NetworkContact {
 }
 
 impl Game {
-    // Time, in seconds, between sending Control commands.
+    /// Time, in seconds, between sending Control commands.
     const CONTROL_PERIOD: f32 = 0.1;
 
     pub fn new(
@@ -119,10 +120,10 @@ impl Game {
         let audio_player = AudioPlayer::new("/sprites_audio.mp3", audio_sprite_sheet);
 
         let host = if let Some(invitation_id) = invitation_id {
-            if invitation_id.server_id() == ServerId::LOCALHOST {
-                host()
+            if let Some(server_id) = invitation_id.server_id() {
+                format!("{}.{}", server_id.0, domain_name())
             } else {
-                format!("server{}.{}", invitation_id.server_id().0, domain_name())
+                host()
             }
         } else {
             host()
@@ -133,12 +134,8 @@ impl Game {
             WebSocketFormat::Json,
             Some(ClientRequest::CreateSession {
                 game_id: GameId::Mk48,
-                alias: None,
                 invitation_id,
-                language_pref: None,
-                region_pref: None,
-                referer: None,
-                user_agent: None,
+                referrer: referrer(),
                 saved_session_tuple,
             }),
         );
@@ -158,7 +155,8 @@ impl Game {
             leaderboards: HashMap::new(),
             liveboard: Vec::new(),
             teams: HashMap::new(),
-            particles: Vec::new(),
+            sea_level_particles: Vec::new(),
+            airborne_particles: Vec::new(),
             animations: Vec::new(),
             terrain: Terrain::new(),
             player_id: None,
@@ -548,15 +546,8 @@ impl Game {
             return;
         }
 
-        self.core_web_socket.send(ClientRequest::CreateSession {
-            game_id: GameId::Mk48,
-            invitation_id: None,
-            alias: Some(PlayerAlias::new(&name)),
-            language_pref: None, // TODO: should be from UI.
-            referer: None,       // TODO: should be from UI.
-            region_pref: None,   // TODO: should be from UI.
-            user_agent: None,
-            saved_session_tuple: self.arena_id.zip(self.session_id),
+        self.core_web_socket.send(ClientRequest::IdentifySession {
+            alias: PlayerAlias::new(&name),
         });
 
         self.server_web_socket
@@ -657,7 +648,18 @@ impl Game {
 
     /// Performs time_seconds of game logic, and renders a frame of game state.
     pub fn frame(&mut self, time_seconds: f32) {
-        // TODO: Maybe need to clear state if core server changes/reconnects.
+        if self.core_web_socket.is_closed() {
+            self.players.clear();
+            self.teams.clear();
+            // TODO: Investigate whether this is a good or bad idea.
+            //self.created_invitation_id.clear();
+            self.liveboard.clear();
+            // No real benefit to hiding these, as they don't change often.
+            //self.leaderboards.clear();
+            self.joins.clear();
+            self.joiners.clear();
+            self.chats.clear();
+        }
 
         self.core_web_socket.reconnect_if_necessary(time_seconds);
 
@@ -734,11 +736,13 @@ impl Game {
                         self.server_web_socket = Some(ReconnWebSocket::new(&format!(
                             "{}://{}/ws/{}/",
                             ws_protocol(),
-                            if server_id.0 == 255 { host() } else { format!("server{}.{}", server_id.0, domain_name()) },
+                            if let Some(server_id) = server_id { format!("{}.{}", server_id.0, domain_name()) } else { host() },
                             serde_json::to_string(self.session_id.as_ref().unwrap()).unwrap()
                         ), WebSocketFormat::Binary, None));
                     }
                 }
+                ClientUpdate::SessionIdentified { .. } => {}
+                ClientUpdate::SurveySubmitted => {}
                 ClientUpdate::TeamCreated { .. } => {}
                 ClientUpdate::TeamQuit => {}
                 ClientUpdate::TeamsUpdated { added, removed } => {
@@ -938,19 +942,6 @@ impl Game {
             self.world_radius,
             time_seconds,
         );
-
-        // Update particles.
-        let mut i = 0;
-        while i < self.particles.len() {
-            if self.particles[i].update(delta_seconds) {
-                self.particles.swap_remove(i);
-            } else {
-                let particle = &self.particles[i];
-                self.renderer
-                    .add_particle(particle.position, particle.created);
-                i += 1;
-            }
-        }
 
         // Prepare to sort sprites.
         let mut sortable_sprites = Vec::with_capacity(self.contacts.len() * 5);
@@ -1309,17 +1300,48 @@ impl Game {
                 let direction_vector: Vec2 = contact.transform().direction.into();
                 let tangent_vector = direction_vector.perp();
                 let amount = (data.width * (1.0 / 7.5)) as usize + 1;
+                let mut rng = thread_rng();
 
-                for _ in 0..amount {
-                    self.particles.push(Particle {
-                        position: contact.transform().position
-                            - direction_vector * (data.length * 0.485)
-                            + tangent_vector
-                                * (data.width * (rand::thread_rng().gen::<f32>() - 0.5) * 0.25),
-                        velocity: direction_vector * contact.transform().velocity.to_mps() * 0.75,
-                        altitude: contact.altitude().to_norm() - 0.01,
-                        created: time_seconds,
-                    });
+                // Wake/trail particles.
+                if contact.transform().velocity != Velocity::ZERO {
+                    for _ in 0..amount {
+                        let collection = if contact.altitude().is_airborne() {
+                            &mut self.airborne_particles
+                        } else {
+                            &mut self.sea_level_particles
+                        };
+                        collection.push(Particle {
+                            position: contact.transform().position
+                                - direction_vector * (data.length * 0.485)
+                                + tangent_vector * (data.width * (rng.gen::<f32>() - 0.5) * 0.25),
+                            velocity: direction_vector
+                                * contact.transform().velocity.to_mps()
+                                * 0.75,
+                            color: 1.0,
+                            created: time_seconds,
+                        });
+                    }
+                }
+
+                // Exhaust particles
+                if !contact.altitude().is_submerged() {
+                    for exhaust in data.exhausts.iter() {
+                        for _ in 0..amount * 2 {
+                            self.airborne_particles.push(Particle {
+                                position: contact.transform().position
+                                    + direction_vector * exhaust.position_forward
+                                    + tangent_vector * exhaust.position_side
+                                    + gen_radius(&mut rng, 1.5),
+                                velocity: gen_radius(&mut rng, 6.0),
+                                color: if entity_type == EntityType::OilPlatform {
+                                    -1.0
+                                } else {
+                                    0.4
+                                },
+                                created: time_seconds,
+                            });
+                        }
+                    }
                 }
             } else {
                 self.renderer.render_sprite(
@@ -1339,8 +1361,43 @@ impl Game {
                 .render_sprite(sprite.0, sprite.1, sprite.2, sprite.3, sprite.5);
         }
 
+        // Update sea-level particles.
+        let mut i = 0;
+        while i < self.sea_level_particles.len() {
+            if self.sea_level_particles[i].update(delta_seconds) {
+                self.sea_level_particles.swap_remove(i);
+            } else {
+                let particle = &self.sea_level_particles[i];
+                self.renderer
+                    .add_particle(particle.position, particle.color, particle.created);
+                i += 1;
+            }
+        }
         self.renderer.render_particles(time_seconds);
+
+        // Render sprites in between sea level particles and airborne particles.
         self.renderer.render_sprites();
+
+        // Update airborne particles.
+        let mut i = 0;
+        while i < self.airborne_particles.len() {
+            let particle = &mut self.airborne_particles[i];
+
+            // Apply wind.
+            particle.velocity += Vec2::new(14.0, 3.0) * delta_seconds;
+
+            particle.update(delta_seconds);
+
+            if time_seconds >= particle.created + 1.5 {
+                self.airborne_particles.swap_remove(i);
+            } else {
+                self.renderer
+                    .add_particle(particle.position, particle.color, particle.created);
+                i += 1;
+            }
+        }
+        self.renderer.render_particles(time_seconds);
+
         self.renderer.render_graphics();
 
         for (position, scale, color, text) in text_queue {

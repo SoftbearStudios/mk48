@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::angle::Angle;
+use glam::Vec2;
+use rand::prelude::ThreadRng;
+use rand::Rng;
 use std::ops::Range;
 
 /// map_ranges linearly maps a number from one range to another, optionally clamping to the new range.
@@ -29,4 +33,9 @@ pub fn level_to_score(level: u8) -> u32 {
 #[inline]
 pub fn lerp(start: f32, end: f32, amount: f32) -> f32 {
     amount.mul_add(end, (-amount).mul_add(start, start))
+}
+
+/// Samples a point from a circle with the given radius.
+pub fn gen_radius(rng: &mut ThreadRng, radius: f32) -> Vec2 {
+    rng.gen::<Angle>().to_vec() * (rng.gen::<f32>().sqrt() * radius)
 }

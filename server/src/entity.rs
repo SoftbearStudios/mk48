@@ -75,31 +75,20 @@ impl Entity {
 
     /// change_entity_type is the only valid way to change an entity's type.
     pub fn change_entity_type(&mut self, entity_type: EntityType, arena: &mut Arena) {
-        debug_assert_eq!(self.data().kind, entity_type.data().kind);
+        let old_data = self.data();
+        debug_assert_eq!(old_data.kind, entity_type.data().kind);
+
+        // Update entity type counts.
         arena.change_type(self.entity_type, entity_type);
+
+        self.entity_type = entity_type;
 
         if entity_type.data().kind != EntityKind::Boat {
             // Not a boat, no additional consideration needed.
-            self.entity_type = entity_type;
             return;
         }
 
-        let old_data = self.data();
-
-        // Keep armament (lack of) reloads. Use usize ot avoid overflow.
-        // Start by counting the total ticks left to reload (for non-limited armaments).
-        let mut total_reload = 0;
-        for (i, reload) in self.extension().reloads.iter().enumerate() {
-            if !old_data.armaments[i].entity_type.data().limited {
-                total_reload += reload.0 as usize;
-            }
-        }
-
-        self.entity_type = entity_type;
         let new_data = self.data();
-
-        *self.extension_mut() = EntityExtension::new(entity_type);
-        self.update_turret_aim(10.0);
 
         // Regen half of damage (as a fraction). Get original damage fraction before changing
         // entity type. Never result in boat being dead.
@@ -113,8 +102,30 @@ impl Entity {
         // immediately dead.
         debug_assert!(self.ticks < max_health);
 
+        let extension = self.extension_mut();
+
+        // Save some settings from the old extension.
+        let old_active = extension.active;
+        let old_altitude_target = extension.altitude_target;
+
+        // Keep armament (lack of) reloads. Use usize ot avoid overflow.
+        // Start by counting the total ticks left to reload (for non-limited armaments).
+        let mut total_reload = 0;
+        for (i, reload) in extension.reloads.iter().enumerate() {
+            if !old_data.armaments[i].entity_type.data().limited {
+                total_reload += reload.0 as usize;
+            }
+        }
+
+        // Change the extension to correspond with the new type.
+        *extension = EntityExtension::new(entity_type);
+
+        // Restore some settings from the old extension.
+        extension.set_active(old_active);
+        extension.altitude_target = old_altitude_target;
+
         // Finish (un)reloading.
-        for (i, reload) in self.extension_mut().reloads_mut().iter_mut().enumerate() {
+        for (i, reload) in extension.reloads_mut().iter_mut().enumerate() {
             let armament = &new_data.armaments[i];
             if !armament.entity_type.data().limited {
                 let to_consume = (armament.reload().0 as usize).min(total_reload);
@@ -125,6 +136,9 @@ impl Entity {
                 }
             }
         }
+
+        // extension dropped, can call methods that get it themselves now:
+        self.update_turret_aim(10.0);
     }
 
     /// Adds a reference from player to self.
@@ -379,6 +393,12 @@ impl Entity {
 
     /// Returns true if two entities are overlapping, only taking into account their altitudes.
     pub fn altitude_overlapping(&self, other: &Self) -> bool {
+        if (self.altitude > Altitude::ZERO && other.altitude < Altitude::ZERO)
+            || (self.altitude < Altitude::ZERO && other.altitude > Altitude::ZERO)
+        {
+            // Entities above water should never collide with entities below water.
+            return false;
+        }
         self.altitude.difference(other.altitude)
             <= if self.special_altitude_overlap() || other.special_altitude_overlap() {
                 Altitude::SPECIAL_OVERLAP_MARGIN

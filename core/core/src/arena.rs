@@ -13,12 +13,14 @@ use core_protocol::*;
 use log::debug;
 use ringbuffer::ConstGenericRingBuffer;
 use std::collections::hash_map::{Entry, HashMap};
+use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::sync::Arc;
 
 // Eventually, each arena will be able to contain one or more scenes.
 #[allow(dead_code)]
 pub struct Arena {
+    pub armageddon: bool,
     pub broadcast_players: NotifySet<SessionId>,
     pub broadcast_teams: NotifySet<TeamId>,
     pub confide_membership: HashMap<PlayerId, Option<TeamId>>, // For game server.
@@ -35,14 +37,20 @@ pub struct Arena {
     pub region_id: RegionId,
     pub rules: RulesDto,
     pub sessions: HashMap<SessionId, Session>,
-    pub server_id: ServerId, // e.g. "s1.usa.softbear.com"
+    pub server_id: Option<ServerId>,
     pub teams: HashMap<TeamId, Team>,
 }
 
 impl Arena {
-    pub fn new(game_id: GameId, region_id: RegionId, rules: RulesDto, server_id: ServerId) -> Self {
+    pub fn new(
+        game_id: GameId,
+        region_id: RegionId,
+        rules: RulesDto,
+        server_id: Option<ServerId>,
+    ) -> Self {
         let date_created = get_unix_time_now();
         Self {
+            armageddon: false,
             broadcast_players: NotifySet::new(),
             broadcast_teams: NotifySet::new(),
             confide_membership: HashMap::new(),
@@ -183,7 +191,7 @@ impl Repo {
         region_id: RegionId,
         rules: Option<RulesDto>,
         saved_arena_id: Option<ArenaId>,
-        server_id: ServerId,
+        server_id: Option<ServerId>,
     ) -> ArenaId {
         let mut result: Option<ArenaId> = None;
         if let Some(arena_id) = saved_arena_id {
@@ -191,6 +199,27 @@ impl Repo {
                 arena.date_start = get_unix_time_now();
                 arena.date_stop = None;
                 result = Some(arena_id);
+            }
+        }
+
+        if result.is_none() {
+            if let Some(server_id) = server_id {
+                // This ensures consistent arena IDs even if arena IDs are not
+                // persisted by the game server.  Assume there is one arena per
+                // server, and fewer than 1,000 servers.  In the unlikely event
+                // this doesn't find an available arena ID, assume that the arena
+                // ID generated in the subsequent clause is likely to be over 1,000.
+                let n = NonZeroU32::new(server_id.0.get() as u32 + 1000).unwrap();
+                let arena_id = ArenaId(n);
+                if let Entry::Vacant(e) = self.arenas.entry(arena_id) {
+                    e.insert(Arena::new(
+                        game_id,
+                        region_id,
+                        rules.unwrap_or_default(),
+                        Some(server_id),
+                    ));
+                    result = Some(arena_id);
+                }
             }
         }
 

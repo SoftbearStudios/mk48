@@ -87,7 +87,7 @@ impl Renderer {
             &gl,
             include_str!("../shaders/particle.vert"),
             include_str!("../shaders/particle.frag"),
-            vec!["position", "created"],
+            vec!["position", "color", "created"],
         );
 
         let background_shader = Shader::new(
@@ -263,8 +263,9 @@ impl Renderer {
     }
 
     /// add_particle queues a particle for drawing.
-    pub fn add_particle(&mut self, pos: Vec2, time: f32) {
-        self.particle_mesh.push_vertex(Particle { pos, time });
+    pub fn add_particle(&mut self, pos: Vec2, color: f32, time: f32) {
+        self.particle_mesh
+            .push_vertex(Particle { pos, color, time });
     }
 
     /// add_triangle_graphic adds a transformed equilateral triangle to the graphics queue, pointing
@@ -529,6 +530,9 @@ impl Renderer {
 
         render_buffer_unbind(&self.oes_vao);
         Shader::unbind(&self.gl);
+
+        // Clear particles (as multiple batches may be drawn).
+        self.particle_mesh.clear();
     }
 
     /// render_graphics immediately renders all graphics queued for drawing.
@@ -748,17 +752,22 @@ impl Vertex for PosColor {
     }
 }
 
-/// Particle stores a vertex with (only) a given position and time (useful for particles).
+/// Particle stores a vertex with (only) a given position, indexed color, and time (useful for particles).
 #[repr(C)]
 pub struct Particle {
     pub pos: Vec2,
+    /// Possible values:
+    /// -1 to 1: Fire to black
+    ///  0 to 1: Black to white
+    pub color: f32,
     pub time: f32,
 }
 
 impl Vertex for Particle {
-    const FLOATS: usize = 3;
+    const FLOATS: usize = 4;
     fn bind_attribs(attribs: &mut Attribs<Self>) {
         attribs.floats(2);
+        attribs.floats(1);
         attribs.floats(1);
     }
 }

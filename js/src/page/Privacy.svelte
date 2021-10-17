@@ -25,7 +25,7 @@
 			<tr>
 				<th>Information</th>
 				<th>Collection method</th>
-				<th>Opt-out method</th>
+				<th>Suggested opt-out method</th>
 				<th>Primary purpose</th>
 				<th>Storage duration</th>
 			</tr>
@@ -43,7 +43,7 @@
 				<td>Team panel</td>
 				<td>Don't make team</td>
 				<td>Differentiate between teams</td>
-				<td>Temporary, until logs are rotated</td>
+				<td>As long as the team exists</td>
 			</tr>
 			<tr>
 				<td>Chat messages</td>
@@ -53,24 +53,30 @@
 				<td>Forever, until manually deleted</td>
 			</tr>
 			<tr>
-				<td>Game status, including player-built terrain</td>
-				<td>Regular snapshot</td>
-				<td>N/A</td>
-				<td>Record a history of player activity</td>
-				<td>Forever, until manually deleted</td>
+				<td>User agent, referrer</td>
+				<td>Game server</td>
+				<td>Install a browser extension to hide them</td>
+				<td>Provide for aggregate statistics</td>
+				<td>Forever</td>
 			</tr>
 			<tr>
-				<td>IP address</td>
+				<td>How long you play</td>
 				<td>Game server</td>
-				<td>Use a VPN</td>
-				<td>Limit number of connections per client</td>
-				<td>Temporary, until logs are rotated</td>
+				<td>N/A</td>
+				<td>Provide for aggregate statistics</td>
+				<td>Forever</td>
 			</tr>
 		</tbody>
 	</table>
 
-	<p>Other information, such as which language you select, remains on your
-	computer.</p>
+	<h2>Use of Cookies</h2>
+
+	<p>In order to ensure the continuity and consistency of player experience, and provide for internal operations, we
+	store a persistent session identifier in your browser's local storage. You can reset it at any time, by using
+	your browser's "clear site data" option. We do not use this information for advertising purposes.</p>
+
+	<p>Other information, such as which language and volume level you select, is also stored in your browser's local
+	storage but we don't collect it.</p>
 
 	<h2>Changes</h2>
 
@@ -79,8 +85,8 @@
 	{#if $outboundEnabled}
 		<h2>Contact Us</h2>
 
-		<p>If you have any concern, such as a desire to be removed from the leaderboard, please contact us by email at
-		<a href="mailto:contact@mk48.io">contact@mk48.io</a>.</p>
+		<p>If you have any concern, such as a desire to remove your nickname or your child's nickname from the
+		leaderboard, please contact us by email at <a href="mailto:contact@mk48.io">contact@mk48.io</a>.</p>
 	{/if}
 </Page>
 
@@ -96,5 +102,6 @@
 	table {
 		border-spacing: 1em;
 		text-align: left;
+		width: 100%;
 	}
 </style>

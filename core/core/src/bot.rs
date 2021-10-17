@@ -5,9 +5,10 @@ use crate::arena::Arena;
 use crate::generate_id::generate_id_64;
 use crate::repo::Repo;
 use crate::session::{Play, Session};
-use core_protocol::id::{ArenaId, LanguageId, PlayerId, SessionId};
+use core_protocol::get_unix_time_now;
+use core_protocol::id::{ArenaId, PlayerId, SessionId};
 use core_protocol::name::PlayerAlias;
-use log::debug;
+use log::{debug, info};
 use rand::Rng;
 use std::collections::hash_map::Entry;
 use std::collections::HashSet;
@@ -47,11 +48,17 @@ impl Repo {
             let mut bot_count = 0;
             for session in arena.sessions.values() {
                 if let Some(play) = session.plays.last() {
-                    if let None = play.date_stop {
-                        player_count += 1;
+                    if session.live || play.date_stop.is_none() {
+                        if session.bot {
+                            bot_count += 1;
+                        } else {
+                            player_count += 1;
+                        }
                     }
-                }
-                if session.bot {
+                } else if session.bot
+                    && get_unix_time_now().saturating_sub(session.date_created) < 1000
+                {
+                    // Give bots some time to start their session before spawning more.
                     bot_count += 1;
                 }
             }
@@ -60,31 +67,26 @@ impl Repo {
                 .rules
                 .bot_min
                 .max((arena.rules.bot_percent * player_count) / 100);
-            let bots_to_add = bots_wanted - bot_count;
+
+            let bots_to_add = bots_wanted.saturating_sub(bot_count);
 
             if bots_to_add > 0 {
-                debug!("{} bots to add", bots_to_add);
+                info!("{} bots to add", bots_to_add);
                 let mut excluded_aliases = HashSet::new();
-                for session in arena.sessions.values() {
+                for (session_id, session) in arena.sessions.iter() {
                     if session.bot {
                         excluded_aliases.insert(session.alias);
-                    }
-                }
-                for _ in 0..bots_to_add {
-                    for (session_id, session) in arena.sessions.iter() {
+
                         if let Some(play) = session.plays.last() {
-                            if let None = play.date_stop {
-                                continue;
+                            if play.date_stop.is_some() {
+                                available_bots.push((session.player_id, *session_id));
                             }
                         }
-                        if session.bot {
-                            available_bots.push((session.player_id, *session_id));
-                        }
                     }
                 }
-                let create_count = bots_to_add - available_bots.len() as u32;
+                let create_count = bots_to_add.saturating_sub(available_bots.len() as u32);
                 if create_count > 0 {
-                    debug!("{} bots to create", create_count);
+                    info!("{} bots to create", create_count);
                     for _ in 0..create_count {
                         let alias = next_name(&excluded_aliases);
                         let (player_id, session_id) = loop {
@@ -97,20 +99,18 @@ impl Repo {
                                 );
                                 let bot = true;
                                 let previous_id = None;
-                                let referer = None;
-                                let user_agent = None;
+                                let referrer = None;
+                                let user_agent_id = None;
                                 let mut session = Session::new(
                                     alias,
                                     arena_id,
                                     bot,
                                     arena.game_id,
-                                    LanguageId::Bork,
                                     player_id,
                                     previous_id,
-                                    referer,
-                                    arena.region_id,
+                                    referrer,
                                     arena.server_id,
-                                    user_agent,
+                                    user_agent_id,
                                 );
                                 session.plays.push(Play::new());
                                 e.insert(session);
@@ -122,6 +122,9 @@ impl Repo {
                     }
                 }
             }
+
+            // Don't add too many bots.
+            available_bots.truncate(bots_to_add as usize);
         }
 
         if available_bots.is_empty() {

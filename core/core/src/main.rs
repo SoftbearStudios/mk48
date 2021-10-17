@@ -7,7 +7,9 @@ use actix::prelude::*;
 use actix_files as fs;
 use actix_web::dev::Server;
 use actix_web::{middleware, web, App, HttpRequest, HttpResponse, HttpServer};
-use core::core;
+use core::client::ParametrizedClientRequest;
+use core::core::Core;
+use core::server::ParametrizedServerRequest;
 use core_protocol::rpc::{ClientRequest, ClientUpdate, ServerRequest, ServerUpdate};
 use servutil::web_socket;
 
@@ -20,8 +22,8 @@ fn main() {
     });
 }
 
-pub async fn server() -> (Server, Addr<core::Core>) {
-    let core = core::Core::start(core::Core::new(None, false).await);
+pub async fn server() -> (Server, Addr<Core>) {
+    let core = Core::start(Core::new(None, false).await);
     let core_clone = core.to_owned();
 
     (
@@ -35,7 +37,7 @@ pub async fn server() -> (Server, Addr<core::Core>) {
                 .wrap(middleware::Logger::default())
                 .service(web::resource("/client/ws/").route(web::get().to(
                     move |r: HttpRequest, stream: web::Payload| {
-                        web_socket::sock_index::<core::Core, ClientRequest, ClientUpdate>(
+                        web_socket::sock_index::<Core, ClientRequest, ClientUpdate>(
                             r,
                             stream,
                             core_clone_1.to_owned(),
@@ -43,7 +45,7 @@ pub async fn server() -> (Server, Addr<core::Core>) {
                     },
                 )))
                 .service(web::resource("/client/").route(web::post().to(
-                    move |request: web::Json<core::ParametrizedClientRequest>| {
+                    move |request: web::Json<ParametrizedClientRequest>| {
                         let core = core_clone_2.to_owned();
 
                         async move {
@@ -62,7 +64,7 @@ pub async fn server() -> (Server, Addr<core::Core>) {
                 )))
                 .service(web::resource("/server/ws/").route(web::get().to(
                     move |r: HttpRequest, stream: web::Payload| {
-                        web_socket::sock_index::<core::Core, ServerRequest, ServerUpdate>(
+                        web_socket::sock_index::<Core, ServerRequest, ServerUpdate>(
                             r,
                             stream,
                             core_clone_3.to_owned(),
@@ -70,7 +72,7 @@ pub async fn server() -> (Server, Addr<core::Core>) {
                     },
                 )))
                 .service(web::resource("/server/").route(web::post().to(
-                    move |request: web::Json<core::ParametrizedServerRequest>| {
+                    move |request: web::Json<ParametrizedServerRequest>| {
                         let core = core_clone_4.to_owned();
 
                         async move {

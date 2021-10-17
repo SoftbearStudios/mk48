@@ -7,12 +7,12 @@ use crate::generate_id::{generate_id, generate_id_64};
 use crate::invitation::Invitation;
 use crate::notify_set::NotifySet;
 use crate::repo::Repo;
-use core_protocol::dto::{MessageDto, InvitationDto};
+use core_protocol::dto::{InvitationDto, MessageDto};
 use core_protocol::id::*;
-use core_protocol::name::{Location, PlayerAlias, Referer};
+use core_protocol::name::{trim_spaces, Location, PlayerAlias, Referrer};
 use core_protocol::UnixTime;
 use core_protocol::*;
-use log::{debug, info, trace};
+use log::{debug, info, trace, warn};
 use rustrict::CensorIter;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::HashSet;
@@ -22,6 +22,7 @@ pub struct Play {
     pub date_created: UnixTime,
     pub date_join: Option<UnixTime>,
     pub date_stop: Option<UnixTime>,
+    pub invited: bool,
     pub score: Option<u32>, // e.g. 1234
     pub team_captain: bool,
     pub team_id: Option<TeamId>,
@@ -41,7 +42,6 @@ pub struct Session {
     pub date_renewed: UnixTime,
     pub date_terminated: Option<UnixTime>,
     pub game_id: GameId,
-    pub language: LanguageId,
     /// e.g. (001, 215, 912)
     pub location: Option<Location>,
     // For recipient (even if NOT playing).
@@ -55,10 +55,10 @@ pub struct Session {
     pub player_id: PlayerId,
     pub plays: Vec<Play>,
     pub previous_id: Option<SessionId>,
-    pub referer: Option<Referer>,
-    pub region_id: RegionId,
-    pub server_id: ServerId,
-    pub user_agent: Option<UserAgentId>,
+    pub previous_plays: u32,
+    pub referrer: Option<Referrer>,
+    pub server_id: Option<ServerId>,
+    pub user_agent_id: Option<UserAgentId>,
     pub whisper_muted: NotifySet<PlayerId>, // For muter (even if NOT playing).
 }
 
@@ -69,6 +69,7 @@ impl Play {
             date_created,
             date_join: None,
             date_stop: None,
+            invited: false,
             score: None,
             team_captain: false,
             team_id: None,
@@ -95,13 +96,11 @@ impl Session {
         arena_id: ArenaId,
         bot: bool,
         game_id: GameId,
-        language: LanguageId,
         player_id: PlayerId,
         previous_id: Option<SessionId>,
-        referer: Option<Referer>,
-        region_id: RegionId,
-        server_id: ServerId,
-        user_agent: Option<UserAgentId>,
+        referrer: Option<Referrer>,
+        server_id: Option<ServerId>,
+        user_agent_id: Option<UserAgentId>,
     ) -> Self {
         let date_created = get_unix_time_now();
         Self {
@@ -117,17 +116,16 @@ impl Session {
             inbox: Vec::new(),
             invitation: None,
             invitation_id: None,
-            language,
             live: false,
             location: None,
             muted: HashSet::new(),
-            referer,
-            region_id,
+            referrer,
             player_id,
             plays: Vec::new(),
             previous_id,
+            previous_plays: 0,
             server_id,
-            user_agent,
+            user_agent_id,
             whisper_muted: NotifySet::new(),
         }
     }
@@ -229,21 +227,22 @@ impl Repo {
     /// is returned.  Assumes saved session put into cache if possible.
     pub fn create_session(
         &mut self,
-        alias: Option<PlayerAlias>,
         game_id: GameId,
         invitation_id: Option<InvitationId>,
-        language_pref: Option<LanguageId>,
-        referer: Option<Referer>,
-        region_pref: Option<RegionId>,
+        referrer: Option<Referrer>,
         saved_session_tuple: Option<(ArenaId, SessionId)>,
-        user_agent: Option<UserAgentId>,
-    ) -> Option<(ArenaId, LanguageId, RegionId, SessionId, ServerId)> {
-        trace!(
-            "create_session(alias={:?}, game_id={:?}, invitation_id={:?})",
-            alias,
-            game_id,
-            invitation_id
+        user_agent_id: Option<UserAgentId>,
+    ) -> Option<(ArenaId, SessionId, Option<ServerId>)> {
+        info!(
+            "create_session(game_id={:?}, invitation_id={:?}, user_agent_id={:?})",
+            game_id, invitation_id, user_agent_id
         );
+
+        if let Some(user_agent_id) = user_agent_id {
+            if user_agent_id == UserAgentId::Spider {
+                return None;
+            }
+        }
 
         let maybe_invitation = if let Some(invitation_id) = invitation_id {
             self.invitations.get(&invitation_id)
@@ -252,7 +251,7 @@ impl Repo {
         };
 
         if invitation_id.is_some() {
-            println!("found invitation: {:?}", maybe_invitation);
+            debug!("found invitation: {:?}", maybe_invitation);
         }
 
         let mut saved_player_id = None;
@@ -264,10 +263,6 @@ impl Repo {
                     if arena.game_id != game_id {
                         terminate = true;
                     }
-                    if !terminate && region_pref != None && arena.region_id != region_pref.unwrap()
-                    {
-                        terminate = true;
-                    }
                     if !terminate {
                         if let Some(invitation) = maybe_invitation {
                             if invitation.arena_id != arena_id {
@@ -275,42 +270,28 @@ impl Repo {
                             }
                         }
                     }
-                    if terminate {
+                    if session.date_terminated.is_some() {
+                        info!("session already terminated {:?}", session_id)
+                    } else if terminate {
                         info!("terminating incompatible session {:?}", session_id);
                         session.terminate_session();
                     } else {
                         info!("renewing compatible session {:?}", session_id);
-                        // It is OK to change parameters like alias, language and referer.
-                        if let Some(uncensored_alias) = alias {
-                            let censored_text =
-                                uncensored_alias.0.chars().censor().collect::<String>();
-                            session.alias = PlayerAlias::new(&censored_text);
+                        // It is OK to change parameters like referrer and user agent.
+                        if let Some(invitation) = maybe_invitation {
+                            // Will be consumed in start_play().
+                            session.invitation = Some(invitation.clone());
                         }
-                        if session.invitation.is_none() {
-                            if let Some(invitation) = maybe_invitation {
-                                // Mark as accepted (so won't accept again).
-                                session.invitation = Some(invitation.clone());
-                            }
+                        if let Some(referrer) = referrer {
+                            session.referrer = Some(referrer);
                         }
-                        if let Some(language) = language_pref {
-                            session.language = language;
-                        }
-                        if let Some(referer) = referer {
-                            session.referer = Some(referer);
-                        }
-                        if let Some(user_agent) = user_agent {
-                            session.user_agent = Some(user_agent);
+                        if user_agent_id.is_some() {
+                            session.user_agent_id = user_agent_id;
                         }
 
                         session.date_drop = None;
                         session.date_renewed = get_unix_time_now();
-                        return Some((
-                            arena_id,
-                            session.language,
-                            session.region_id,
-                            session_id,
-                            arena.server_id,
-                        ));
+                        return Some((arena_id, session_id, arena.server_id));
                     }
                 }
             }
@@ -319,7 +300,6 @@ impl Repo {
         // If not renewed...
         info!("session was not renewed");
 
-        let region_id = region_pref.unwrap_or_default();
         let mut found: Option<(ArenaId, &mut Arena)> = None;
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             if arena.game_id != game_id {
@@ -329,26 +309,15 @@ impl Repo {
                 if invitation.arena_id != *arena_id {
                     continue;
                 }
-                if region_pref.is_none() {
-                    found = Some((*arena_id, arena));
-                    break;
-                }
             }
-            if arena.region_id == region_id {
-                found = Some((*arena_id, arena));
-                break;
-            }
+            found = Some((*arena_id, arena));
+            break;
         }
 
         if let Some((arena_id, arena)) = found {
             info!("found compatible arena");
 
-            let effective_alias = if let Some(a) = alias {
-                PlayerAlias::new(&a.0.chars().censor().collect::<String>())
-            } else {
-                PlayerAlias::new("Guest")
-            };
-            let language = language_pref.unwrap_or_default();
+            let guest_alias = PlayerAlias::new("Guest");
             loop {
                 let previous_id = if let Some((_, session_id)) = saved_session_tuple {
                     Some(session_id)
@@ -359,7 +328,7 @@ impl Repo {
                 let session_id = SessionId(generate_id_64());
                 if let Entry::Vacant(e) = arena.sessions.entry(session_id) {
                     let server_id = arena.server_id;
-                    let tuple = Some((arena_id, language, region_id, session_id, server_id));
+                    let tuple = Some((arena_id, session_id, server_id));
                     let player_id = if let Some(player_id) = saved_player_id {
                         self.players.insert(player_id, session_id);
                         player_id
@@ -368,21 +337,19 @@ impl Repo {
                     };
                     debug!(
                         "create_session(alias={:?}) => session={:?}, player={:?}",
-                        &effective_alias, session_id, player_id
+                        &guest_alias, session_id, player_id
                     );
                     let bot = false;
                     let mut session = Session::new(
-                        effective_alias,
+                        guest_alias,
                         arena_id,
                         bot,
                         game_id,
-                        language,
                         player_id,
                         previous_id,
-                        referer,
-                        region_id,
+                        referrer,
                         server_id,
-                        user_agent,
+                        user_agent_id,
                     );
                     if let Some(invitation) = maybe_invitation {
                         session.invitation = Some(invitation.clone());
@@ -393,7 +360,10 @@ impl Repo {
             }
         }
 
-        info!("no session returned");
+        warn!(
+            "could not create session for game_id={:?}, invitation_id={:?}",
+            game_id, invitation_id
+        );
 
         None
     }
@@ -417,6 +387,62 @@ impl Repo {
                 }
             }
         }
+    }
+
+    pub fn identify_session(
+        &mut self,
+        arena_id: ArenaId,
+        session_id: SessionId,
+        uncensored_alias: PlayerAlias,
+    ) -> bool {
+        info!(
+            "identify_session(arena_id={:?}, session_id={:?}, uncensored_alias={:?})",
+            arena_id, session_id, uncensored_alias,
+        );
+
+        let mut identified = false;
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
+                let now = get_unix_time_now();
+                let mut prohibited = false;
+                if session.live {
+                    if let Some(play) = session.plays.last() {
+                        if play.date_stop.is_none() {
+                            let elapsed_millis = now.saturating_sub(play.date_created);
+                            if elapsed_millis > 10000 {
+                                // Prohibit alias changes after play starts lest it corrupt leaderboard.
+                                prohibited = true;
+                            }
+                        }
+                    }
+                }
+                if !prohibited {
+                    let censored_text = uncensored_alias.0.chars().censor().collect::<String>();
+                    let trimmed_text = trim_spaces(&censored_text);
+                    if trimmed_text.len() > 0 {
+                        let censored_alias = PlayerAlias::new(trimmed_text);
+                        if session.alias != censored_alias {
+                            session.alias = censored_alias;
+                            session.date_renewed = now; // Persist alias.
+                            if session.live {
+                                // Tell clients about name change.
+                                arena.broadcast_players.added(session_id);
+                            }
+                            identified = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if !identified {
+            warn!(
+                "identify_session(arena_id={:?}, session_id={:?}, uncensored_alias={:?}) failed",
+                arena_id, session_id, uncensored_alias,
+            );
+        }
+
+        identified
     }
 
     /// Returns true if the (arena_id, session_id) is in the in-memory cache.
@@ -457,30 +483,50 @@ impl Repo {
 
     // Assume this is called every minute to prune live sessions.
     pub fn prune_sessions(&mut self) {
-        let date_dead = get_unix_time_now() - Self::DYING_DURATION_MILLIS;
+        let now = get_unix_time_now();
+        let date_dead = now - Self::DYING_DURATION_MILLIS;
+        const TWENTY_FOUR_HOURS_IN_MILLIS: u64 = 24 * 60 * 60 * 1000;
+
         for (_, arena) in Arena::iter_mut(&mut self.arenas) {
+            let mut removable = vec![];
             for (session_id, session) in Session::iter_mut(&mut arena.sessions) {
-                if !session.live {
-                    continue;
-                }
-                let play = session.plays.last_mut().unwrap();
-                if let Some(date_stop) = play.date_stop {
-                    if date_stop < date_dead {
-                        session.live = false;
-                        if let Some(team_id) = play.team_id {
-                            arena.confide_membership.insert(session.player_id, None);
-                            if play.team_captain {
-                                if let Some(team) = arena.teams.get(&team_id) {
-                                    for joiner in team.joiners.iter() {
-                                        play.whisper_joiners.removed(*joiner);
+                if session.live {
+                    // Prune live sessions.
+                    let play = session.plays.last_mut().unwrap();
+                    if let Some(date_stop) = play.date_stop {
+                        if date_stop < date_dead {
+                            session.live = false;
+                            if let Some(team_id) = play.team_id {
+                                arena.confide_membership.insert(session.player_id, None);
+                                if play.team_captain {
+                                    if let Some(team) = arena.teams.get(&team_id) {
+                                        for joiner in team.joiners.iter() {
+                                            play.whisper_joiners.removed(*joiner);
+                                        }
                                     }
                                 }
                             }
+                            arena.broadcast_players.removed(*session_id);
                         }
-                        arena.broadcast_players.removed(*session_id);
+                    }
+                } else if session.date_terminated.is_none() {
+                    // Terminate non-live sessions.
+                    let elapsed_millis = now.saturating_sub(session.date_renewed);
+                    if elapsed_millis > TWENTY_FOUR_HOURS_IN_MILLIS {
+                        session.date_terminated = Some(now);
+                    }
+                } else if let Some(date_terminated) = session.date_terminated {
+                    // Remove terminated sessions.
+                    let elapsed_millis = now.saturating_sub(date_terminated);
+                    if elapsed_millis > TWENTY_FOUR_HOURS_IN_MILLIS {
+                        removable.push(*session_id);
                     }
                 }
             } // for session
+
+            for session_id in removable {
+                arena.sessions.remove(&session_id);
+            }
         } // for arena
     }
 
@@ -541,8 +587,7 @@ impl Repo {
             .get(&arena_id)
             .and_then(|a| a.sessions.get(&session_id))
             .and_then(|s| s.invitation.clone());
-
-        println!("starting play invitation={:?}", invitation);
+        let invited = invitation.is_some();
 
         // Get the team_id that can be joined with that invitation, if any.
         // TODO: Check if the team has space.
@@ -557,8 +602,6 @@ impl Repo {
             .and_then(|(a, &s)| a.team_of_captain(s))
             .map(|(team_id, _)| team_id);
 
-        println!("starting play invitation_team_id={:?}", invitation_team_id);
-
         let mut result = None;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
@@ -566,6 +609,14 @@ impl Repo {
                     debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
                 }
                 let mut new_play = Play::new();
+                new_play.score = arena.rules.default_score;
+                if new_play.exceeds_score(arena.liveboard_min_score) {
+                    arena.liveboard_changed = true;
+                }
+                if invited {
+                    new_play.invited = true;
+                    session.invitation = None; // Once used, invitation is cleared.
+                }
                 if session.live {
                     // Live sessions inherit previous team and captaincy.
                     let last_play = session.plays.last().unwrap();
@@ -575,17 +626,21 @@ impl Repo {
                     // Other sessions are added to the roster as they become live.
                     session.live = true;
                     new_play.team_id = invitation_team_id;
-                    arena
-                        .confide_membership
-                        .insert(session.player_id, invitation_team_id);
-                    arena.broadcast_players.added(session_id);
                 }
+
+                // Player is either new or possibly changed their name. Also, game server may have
+                // expired player already.
+                arena.broadcast_players.added(session_id);
+                arena
+                    .confide_membership
+                    .insert(session.player_id, new_play.team_id);
+
                 session.plays.push(new_play);
                 result = Some(session.player_id);
             }
         }
         if result == None {
-            debug!(
+            warn!(
                 "start_play(arena={:?}, session={:?}) failed",
                 arena_id, session_id
             );
@@ -644,7 +699,13 @@ impl Repo {
         let mut result = None;
         if let Some(arena) = self.arenas.get(&arena_id) {
             if let Some(session) = arena.sessions.get(&session_id) {
-                let invitation = session.invitation.as_ref().map(|Invitation{player_id, ..}| InvitationDto{player_id: *player_id});
+                let invitation =
+                    session
+                        .invitation
+                        .as_ref()
+                        .map(|Invitation { player_id, .. }| InvitationDto {
+                            player_id: *player_id,
+                        });
                 result = Some((0, invitation.clone(), session.player_id, 0));
                 if session.live {
                     if let Some(play) = session.plays.last() {
@@ -660,6 +721,14 @@ impl Repo {
                 }
             }
         }
+
+        if result.is_none() {
+            warn!(
+                "validate_session(arena={:?}, session={:?}) failed",
+                arena_id, session_id
+            );
+        }
+
         result
     }
 }

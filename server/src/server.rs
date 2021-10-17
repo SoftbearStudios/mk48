@@ -10,7 +10,8 @@ use common::entity::EntityId;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
-use core::core::{Core, ParametrizedServerRequest, ServerState};
+use core::core::Core;
+use core::server::{ParametrizedServerRequest, ServerState};
 use core_protocol::dto::{InvitationDto, RulesDto};
 use core_protocol::id::*;
 use core_protocol::name::Location;
@@ -35,7 +36,7 @@ pub struct Server {
     /// Bot players.
     pub bots: Vec<(Bot, SharedData)>,
     pub world: World,
-    server_id: ServerId,
+    server_id: Option<ServerId>,
     counter: Ticks,
     min_players: usize,
 }
@@ -81,7 +82,7 @@ impl Server {
     const LIMBO: Duration = Duration::from_secs(6);
 
     /// new returns a game server with the specified parameters.
-    pub fn new(server_id: ServerId, min_players: usize, core: Addr<Core>) -> Self {
+    pub fn new(server_id: Option<ServerId>, min_players: usize, core: Addr<Core>) -> Self {
         Self {
             core,
             world: World::new(World::target_radius(min_players, World::BOAT_DENSITY)),
@@ -139,21 +140,36 @@ impl Server {
         {
             benchmark_scope!("bots");
 
-            let mut bot_commands = Vec::new();
+            let mut bot_actions = Vec::new();
             self.bots
                 .par_iter_mut()
+                .enumerate()
                 .with_min_len(16)
-                .map(|(bot, shared_data)| {
+                .map(|(i, (bot, shared_data))| {
                     let update = world.get_player_complete(&shared_data.player);
-                    let commands = bot.update(update);
+                    let bot_action = bot.update(update);
                     Self::update_core_status(&core, &addr, world, shared_data);
-                    (shared_data, commands)
+                    (i, bot_action)
                 })
-                .collect_into_vec(&mut bot_commands);
+                .collect_into_vec(&mut bot_actions);
 
-            for (shared_data, commands) in bot_commands {
-                for c in commands {
-                    let _ = c.as_command().apply(&mut self.world, shared_data, true);
+            for (i, (commands, quit)) in bot_actions.into_iter().rev() {
+                if quit {
+                    let shared_data = &self.bots[i].1;
+
+                    self.world.remove_if(|e| {
+                        e.player
+                            .as_ref()
+                            .map_or(false, |p| *p == shared_data.player)
+                    });
+
+                    self.bots.swap_remove(i);
+                } else {
+                    for c in commands {
+                        let _ = c
+                            .as_command()
+                            .apply(&mut self.world, &mut self.bots[i].1, true);
+                    }
                 }
             }
         }
@@ -199,7 +215,7 @@ impl Server {
 
             // Postpone core updates, so as to not terminate the session until expired from limbo.
             self.core
-                .do_send(ObserverMessage::<ServerRequest, ServerUpdate>::Request {
+                .do_send(ObserverMessage::<ServerRequest, ServerUpdate, _>::Request {
                     observer: ctx.address().recipient(),
                     request: ServerRequest::DropSession {
                         session_id: client_data.data.session_id,
@@ -238,7 +254,7 @@ impl Server {
             return;
         }
 
-        let _ = core.do_send(ObserverMessage::<ServerRequest, ServerUpdate>::Request {
+        core.do_send(ObserverMessage::<ServerRequest, ServerUpdate, _>::Request {
             observer: addr.to_owned().recipient(),
             request: match new_status {
                 Some(_) if data.last_status.is_none() => ServerRequest::StartPlay {
@@ -270,16 +286,18 @@ impl Actor for Server {
 
         let _ = self
             .core
-            .send(ObserverMessage::<ServerRequest, ServerUpdate>::Register {
-                observer: ctx.address().recipient(),
-                payload: (),
-            })
+            .send(
+                ObserverMessage::<ServerRequest, ServerUpdate, _>::Register {
+                    observer: ctx.address().recipient(),
+                    payload: None,
+                },
+            )
             .into_actor(self)
             .then(move |res, self2, ctx| {
                 debug!("register resulted in {:?}", res);
                 self2
                     .core
-                    .send(ObserverMessage::<ServerRequest, ServerUpdate>::Request {
+                    .send(ObserverMessage::<ServerRequest, ServerUpdate, _>::Request {
                         observer: ctx.address().recipient(),
                         request: ServerRequest::StartArena {
                             game_id: GameId::Mk48,
@@ -287,6 +305,7 @@ impl Actor for Server {
                             rules: Some(RulesDto {
                                 bot_min: self2.min_players as u32,
                                 bot_percent: 50,
+                                default_score: Some(0),
                                 show_bots_on_liveboard: false,
                                 team_size_max: 6,
                             }),
@@ -341,7 +360,10 @@ impl Handler<Authenticate> for Server {
                             },
                             Err(_) => None,
                         },
-                        Err(_) => None, // actix error
+                        Err(e) => {
+                            error!("authenticate actix: {}", e);
+                            None
+                        } // actix error
                     }
                 }),
         )
@@ -446,6 +468,7 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
                 ServerUpdate::ArenaStarted { arena_id } => {
                     self.arena_id = Some(arena_id);
                 }
+                ServerUpdate::ArmageddonStarted { .. } => {}
                 ServerUpdate::ArenaStopped => {}
                 ServerUpdate::PlayStarted { .. } => {}
                 ServerUpdate::PlayStopped => {}
@@ -465,15 +488,23 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
                 ServerUpdate::BotReady {
                     session_id,
                     player_id,
-                } => self.bots.push((
-                    Bot::new(),
-                    SharedData {
-                        player: Arc::new(PlayerTuple::new(player_id)),
-                        session_id,
-                        last_status: None,
-                        invitation: None,
-                    },
-                )),
+                } => {
+                    if !self
+                        .bots
+                        .iter()
+                        .any(|(_, data)| data.session_id == session_id)
+                    {
+                        self.bots.push((
+                            Bot::new(),
+                            SharedData {
+                                player: Arc::new(PlayerTuple::new(player_id)),
+                                session_id,
+                                last_status: None,
+                                invitation: None,
+                            },
+                        ))
+                    }
+                }
             },
             _ => {}
         }

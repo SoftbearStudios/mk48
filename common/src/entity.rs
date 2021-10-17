@@ -120,6 +120,8 @@ pub struct EntityData {
     pub armaments: Vec<Armament>,
     #[serde(default)]
     pub turrets: Vec<Turret>,
+    #[serde(default)]
+    pub exhausts: Vec<Exhaust>,
     pub label: String,
     #[serde(default)]
     pub position_forward: f32,
@@ -223,7 +225,6 @@ impl EntityData {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Armament {
@@ -259,6 +260,15 @@ impl Armament {
     pub fn is_similar_to(&self, other: &Self) -> bool {
         self.entity_type == other.entity_type && self.turret == other.turret
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Exhaust {
+    #[serde(default)]
+    pub position_forward: f32,
+    #[serde(default)]
+    pub position_side: f32,
 }
 
 #[allow(dead_code)]

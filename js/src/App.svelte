@@ -196,8 +196,8 @@
 			if (down && ctrlKey) {
 				Object.assign(keys, {
 					// Zoom in and out (see #57).
-					187: () => client.handleWheel(-1.0), // +
-					189: () => client.handleWheel(1.0)   // -
+					187: () => client.handleWheel(-4.0), // +
+					189: () => client.handleWheel(4.0)   // -
 				});
 			} else {
 				Object.assign(keys, {

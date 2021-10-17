@@ -160,7 +160,7 @@ impl CommandTrait for Fire {
             let armament = &data.armaments[index];
             let armament_entity_data = armament.entity_type.data();
 
-            if data.sub_kind == EntitySubKind::Submarine && entity.altitude.is_submerged() {
+            if entity.altitude.is_submerged() {
                 // Submerged submarine
                 if armament_entity_data.sub_kind == EntitySubKind::Shell
                     || armament_entity_data.sub_kind == EntitySubKind::Sam
@@ -216,10 +216,13 @@ impl CommandTrait for Fire {
                     armament_entity.transform.direction = armament_entity.guidance.direction_target;
                 }
 
-                if armament_entity_data.sub_kind == EntitySubKind::Rocket {
-                    // Rockets experience random angle deviations on launch.
-                    armament_entity.transform.direction += thread_rng().gen::<Angle>() * 0.05;
-                }
+                // Some weapons experience random deviation on launch
+                let deviation = match armament_entity_data.sub_kind {
+                    EntitySubKind::Rocket => 0.05,
+                    EntitySubKind::Shell => 0.01,
+                    _ => 0.03,
+                };
+                armament_entity.transform.direction += thread_rng().gen::<Angle>() * deviation;
 
                 failed |= !world.spawn_here_or_nearby(armament_entity, 0.0);
             }

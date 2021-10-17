@@ -1,7 +1,7 @@
 resource "linode_instance" "servers" {
     depends_on = [linode_domain.main]
     count = var.servers
-    label = "${var.name}_server_${count.index}"
+    label = "${var.name}_${count.index + 1}"
     image = "linode/debian11"
     region = var.region
     type = "g6-nanode-1"
@@ -34,10 +34,9 @@ resource "linode_instance" "servers" {
         inline = [
             "chmod u+x /root/server",
             "chmod u+x /root/server_init.sh",
-            "echo \"SERVER=\\\"${count.index}\\\"\" >> /etc/environment",
-            "echo \"SERVER_COUNT=\\\"${var.servers}\\\"\" >> /etc/environment",
+            "echo \"SERVER_ID=\\\"${count.index + 1}\\\"\" >> /etc/environment",
             "echo \"DOMAIN_HOME=\\\"${var.domain}\\\"\" >> /etc/environment",
-            "echo \"DOMAIN=\\\"server${count.index}.${var.domain}\\\"\" >> /etc/environment",
+            "echo \"DOMAIN=\\\"${count.index + 1}.${var.domain}\\\"\" >> /etc/environment",
             "echo \"AWS_ACCESS_KEY_ID=\\\"${data.terraform_remote_state.core.outputs.aws_access_key_id}\\\"\" >> /etc/environment",
             "echo \"AWS_SECRET_ACCESS_KEY=\\\"${data.terraform_remote_state.core.outputs.aws_secret_access_key}\\\"\" >> /etc/environment",
             "echo \"PRIVATE_S3_BUCKET=\\\"${data.terraform_remote_state.core.outputs.private_s3_bucket}\\\"\" >> /etc/environment",

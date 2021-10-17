@@ -18,10 +18,10 @@ pub struct DiscreteMetric {
 
 impl DiscreteMetric {
     pub fn increment(&mut self) {
-        self.add(1);
+        self.add_multiple(1);
     }
 
-    pub fn add(&mut self, amount: u32) {
+    pub fn add_multiple(&mut self, amount: u32) {
         self.total = self.total.saturating_add(amount)
     }
 }
@@ -111,10 +111,10 @@ impl RatioMetric {
 }
 
 impl Metric for RatioMetric {
-    type Summary = (u32, f32);
+    type Summary = (f32, u32);
 
     fn summarize(&self) -> Self::Summary {
-        (self.total, self.ratio())
+        (self.ratio(), self.total)
     }
 }
 
@@ -231,10 +231,10 @@ impl Metric for ContinuousExtremaMetric {
 
     fn summarize(&self) -> Self::Summary {
         (
-            self.min,
-            self.max,
             self.average(),
             self.standard_deviation(),
+            self.min,
+            self.max,
         )
     }
 }

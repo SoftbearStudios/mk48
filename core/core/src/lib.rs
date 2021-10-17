@@ -5,9 +5,11 @@
 /*
  * Copyright (c) 2020 Softbear Studios - All Rights Reserved
  */
+pub mod admin;
 mod arena;
 mod bot;
 mod chat;
+pub mod client;
 pub mod core;
 mod database;
 mod generate_id;
@@ -15,8 +17,10 @@ mod invitation;
 mod metrics;
 mod notify_set;
 mod repo;
+pub mod server;
 mod session;
 mod team;
+mod user_agent;
 
 #[macro_use]
 extern crate lazy_static;

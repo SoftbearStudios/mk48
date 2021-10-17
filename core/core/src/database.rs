@@ -118,7 +118,9 @@ pub struct Score {
 /// A database row storing a score.
 #[derive(Serialize, Deserialize)]
 struct ScoreItem {
+    /// Hash key.
     game_id_score_type: GameIdScoreType,
+    /// Range key.
     alias: String,
     score: u32,
     /// Unix seconds when DynamoDB should expire.
@@ -129,20 +131,22 @@ struct ScoreItem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionItem {
     pub alias: PlayerAlias,
-    // Hash key.
+    /// Hash key.
     pub arena_id: ArenaId,
     pub date_created: UnixTime,
     pub date_renewed: UnixTime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_terminated: Option<UnixTime>,
     pub game_id: GameId,
-    pub language: LanguageId,
     pub player_id: PlayerId,
+    pub plays: u32,
     pub previous_id: Option<SessionId>,
-    pub referer: Option<Referer>,
-    pub region_id: RegionId,
+    pub referrer: Option<Referrer>,
+    pub user_agent_id: Option<UserAgentId>,
+    /// Unlike RAM cache Session, not optional because storing localhost sessions in the database
+    /// makes no sense.
     pub server_id: ServerId,
-    // Range key.
+    /// Range key.
     pub session_id: SessionId,
 }
 
@@ -378,27 +382,51 @@ impl Database {
         Ok(ret)
     }
 
-    pub async fn query<K: Serialize, O: DeserializeOwned>(
+    pub async fn query_inner<O: DeserializeOwned>(
         &self,
         table: &'static str,
         hash_name: &'static str,
-        hash_value: K,
-    ) -> Result<Vec<O>, Error> {
-        let key_ser: AttributeValue = match serde_dynamo::generic::to_attribute_value(hash_value) {
-            Err(e) => return Err(Error::Serde(e)),
-            Ok(key_ser) => key_ser,
-        };
-
-        let scan_output = match self
+        hash_value: AttributeValue,
+        range_key_bounds: Option<(&'static str, Option<AttributeValue>, Option<AttributeValue>)>,
+        last_evaluated_key: Option<HashMap<String, AttributeValue>>,
+        ignore_corrupt: bool,
+    ) -> Result<(Vec<O>, Option<HashMap<String, AttributeValue>>), Error> {
+        let mut scan = self
             .client
             .query()
             .table_name(table)
-            .key_condition_expression("#h = :hv")
             .expression_attribute_names("#h", hash_name)
-            .expression_attribute_values(":hv", key_ser)
-            .send()
-            .await
-        {
+            .expression_attribute_values(":hv", hash_value)
+            .set_exclusive_start_key(last_evaluated_key);
+
+        if let Some(key_bounds) = range_key_bounds {
+            match (key_bounds.1, key_bounds.2) {
+                (None, None) => scan = scan.key_condition_expression("#h = :hv"),
+                (Some(lo), None) => {
+                    scan = scan
+                        .key_condition_expression("#h = :hv AND #r >= :lo")
+                        .expression_attribute_names("#r", key_bounds.0)
+                        .expression_attribute_values(":lo", lo)
+                }
+                (None, Some(hi)) => {
+                    scan = scan
+                        .key_condition_expression("#h = :hv AND #r <= hi")
+                        .expression_attribute_names("#r", key_bounds.0)
+                        .expression_attribute_values(":hi", hi)
+                }
+                (Some(lo), Some(hi)) => {
+                    scan = scan
+                        .key_condition_expression("#h = :hv AND #r BETWEEN :lo :hi")
+                        .expression_attribute_names("#r", key_bounds.0)
+                        .expression_attribute_values(":lo", lo)
+                        .expression_attribute_values(":hi", hi)
+                }
+            }
+        } else {
+            scan = scan.key_condition_expression("#h = :hv");
+        }
+
+        let scan_output = match scan.send().await {
             Ok(output) => output,
             Err(e) => return Err(Error::Dynamo(e.into())),
         };
@@ -406,10 +434,104 @@ impl Database {
         let mut ret = Vec::new();
         for item in scan_output.items.unwrap_or_default() {
             match serde_dynamo::generic::from_item(item) {
-                Err(e) => return Err(Error::Serde(e)),
+                Err(e) => {
+                    if !ignore_corrupt {
+                        return Err(Error::Serde(e));
+                    }
+                }
                 Ok(de) => ret.push(de),
             }
         }
+        Ok((ret, scan_output.last_evaluated_key))
+    }
+
+    pub async fn query<HK: Serialize, O: DeserializeOwned>(
+        &self,
+        table: &'static str,
+        hash_name: &'static str,
+        hash_value: HK,
+        ignore_corrupt: bool,
+    ) -> Result<Vec<O>, Error> {
+        let key_ser = to_av(hash_value)?;
+
+        let mut ret = Vec::new();
+        let mut last_evaluated_key = None;
+        loop {
+            match self
+                .query_inner(
+                    table,
+                    hash_name,
+                    key_ser.clone(),
+                    None,
+                    last_evaluated_key,
+                    ignore_corrupt,
+                )
+                .await
+            {
+                Err(e) => return Err(e),
+                Ok((mut items, lek)) => {
+                    ret.append(&mut items);
+                    last_evaluated_key = lek;
+
+                    if last_evaluated_key.is_none() {
+                        break;
+                    }
+                }
+            }
+        }
+
+        Ok(ret)
+    }
+
+    pub async fn query_hash_range<HK: Serialize, RK: Serialize, O: DeserializeOwned>(
+        &self,
+        table: &'static str,
+        hash_key: (&'static str, HK),
+        range_key_bounds: (&'static str, Option<RK>, Option<RK>),
+        ignore_corrupt: bool,
+    ) -> Result<Vec<O>, Error> {
+        let key_ser = to_av(hash_key.1)?;
+
+        let bounds = (
+            range_key_bounds.0,
+            if let Some(b) = range_key_bounds.1 {
+                Some(to_av(b)?)
+            } else {
+                None
+            },
+            if let Some(b) = range_key_bounds.2 {
+                Some(to_av(b)?)
+            } else {
+                None
+            },
+        );
+
+        let mut ret = Vec::new();
+        let mut last_evaluated_key = None;
+        loop {
+            match self
+                .query_inner(
+                    table,
+                    hash_key.0,
+                    key_ser.clone(),
+                    Some(bounds.clone()),
+                    last_evaluated_key,
+                    ignore_corrupt,
+                )
+                .await
+            {
+                Err(e) => return Err(e),
+                Ok((mut items, lek)) => {
+                    ret.append(&mut items);
+                    last_evaluated_key = lek;
+
+                    if last_evaluated_key.is_none() {
+                        break;
+                    }
+                }
+            }
+        }
+
         Ok(ret)
     }
 
@@ -465,7 +587,7 @@ impl Database {
         &self,
         score_type: GameIdScoreType,
     ) -> Result<Vec<ScoreItem>, Error> {
-        self.query(Self::SCORES_TABLE_NAME, "game_id_type", score_type)
+        self.query(Self::SCORES_TABLE_NAME, "game_id_type", score_type, false)
             .await
     }
 
@@ -488,9 +610,19 @@ impl Database {
         self.put(session, Self::SESSIONS_TABLE_NAME).await
     }
 
-    pub async fn get_metrics(&self, game_id: GameId) -> Result<Vec<MetricsItem>, Error> {
-        self.query(Self::METRICS_TABLE_NAME, "game_id", game_id)
-            .await
+    pub async fn get_metrics_between(
+        &self,
+        game_id: GameId,
+        period_start: Option<UnixTime>,
+        period_stop: Option<UnixTime>,
+    ) -> Result<Vec<MetricsItem>, Error> {
+        self.query_hash_range(
+            Self::METRICS_TABLE_NAME,
+            ("game_id", game_id),
+            ("timestamp", period_start, period_stop),
+            true,
+        )
+        .await
     }
 
     /*
@@ -540,125 +672,13 @@ impl Database {
 
             if let Some(old_metrics_item) = old {
                 let old = old_metrics_item.metrics;
-                // Condition is that the item wasn't changed elsewhere.
+                // Condition is that the item wasn't changed elsewhere (all changes by servers hosting
+                // arenas would increase the arenas field)
                 request = request
-                    .condition_expression(
-                        "#minutes.#count = :minutes_count AND\
-                #minutes.#total = :minutes_total AND\
-                #minutes.#squared_total = :minutes_squared_total AND\
-                #minutes.#min = :minutes_min AND\
-                #minutes.#max = :minutes_max AND\
-                #plays.#count = :plays_count AND\
-                #plays.#total = :plays_total AND\
-                #plays.#squared_total = :plays_squared_total AND\
-                #plays.#min = :plays_min AND\
-                #plays.#max = :plays_max AND\
-                #play_minutes.#count = :play_minutes_count AND\
-                #play_minutes.#total = :play_minutes_total AND\
-                #play_minutes.#squared_total = :play_minutes_squared_total AND\
-                #play_minutes.#min = :play_minutes_min AND\
-                #play_minutes.#max = :play_minutes_max AND\
-                #retention.#count = :retention_count AND\
-                #retention.#total = :retention_total AND\
-                #retention.#squared_total = :retention_squared_total AND\
-                #retention.#min = :retention_min AND\
-                #retention.#max = :retention_max AND\
-                #score.#count = :score_count AND\
-                #score.#total = :score_total AND\
-                #score.#squared_total = :score_squared_total AND\
-                #score.#min = :score_min AND\
-                #score.#max = :score_max AND\
-                #solo.#count = :solo_count AND\
-                #solo.#total = :solo_total AND\
-                #new.#count = :new_count AND\
-                #new.#total = :new_total AND\
-                #bounce.#count = :bounce_count AND\
-                #bounce.#total = :bounce_total AND\
-                #peek.#count = :peek_count AND\
-                #peek.#total = :peek_total AND\
-                #concurrent.#count = :concurrent_count AND\
-                #concurrent.#min = :concurrent_min AND\
-                #concurrent.#max = :concurrent_max AND\
-                #concurrent.#total = :concurrent_total AND\
-                #concurrent.#squared_total = :concurrent_squared_total",
-                    )
-                    .expression_attribute_names("#count", "count")
+                    .condition_expression("#arenas_cached.#total = :arenas_total")
+                    .expression_attribute_names("#arenas_cached", "arenas_cached")
                     .expression_attribute_names("#total", "total")
-                    .expression_attribute_names("#squared_total", "squared_total")
-                    .expression_attribute_names("#min", "min")
-                    .expression_attribute_names("#max", "max")
-                    .expression_attribute_names("#minutes", "minutes")
-                    .expression_attribute_values(":minutes_count", to_av(old.minutes.count)?)
-                    .expression_attribute_values(":minutes_total", to_av(old.minutes.total)?)
-                    .expression_attribute_values(
-                        ":minutes_squared_total",
-                        to_av(old.minutes.squared_total)?,
-                    )
-                    .expression_attribute_values(":minutes_min", to_av(old.minutes.min)?)
-                    .expression_attribute_values(":minutes_max", to_av(old.minutes.max)?)
-                    .expression_attribute_names("#retention", "retention")
-                    .expression_attribute_values(":retention_count", to_av(old.retention.count)?)
-                    .expression_attribute_values(":retention_total", to_av(old.retention.total)?)
-                    .expression_attribute_values(
-                        ":minutes_squared_total",
-                        to_av(old.retention.squared_total)?,
-                    )
-                    .expression_attribute_values(":retention_min", to_av(old.retention.min)?)
-                    .expression_attribute_values(":retention_max", to_av(old.retention.max)?)
-                    .expression_attribute_names("#plays", "plays")
-                    .expression_attribute_values(":plays_count", to_av(old.plays.count)?)
-                    .expression_attribute_values(":plays_total", to_av(old.plays.total)?)
-                    .expression_attribute_values(
-                        ":plays_squared_total",
-                        to_av(old.plays.squared_total)?,
-                    )
-                    .expression_attribute_values(":plays_min", to_av(old.plays.min)?)
-                    .expression_attribute_values(":plays_max", to_av(old.plays.max)?)
-                    .expression_attribute_names("#play_minutes", "play_minutes")
-                    .expression_attribute_values(
-                        ":play_minutes_count",
-                        to_av(old.play_minutes.count)?,
-                    )
-                    .expression_attribute_values(
-                        ":play_minutes_total",
-                        to_av(old.play_minutes.total)?,
-                    )
-                    .expression_attribute_values(
-                        ":play_minutes_squared_total",
-                        to_av(old.play_minutes.squared_total)?,
-                    )
-                    .expression_attribute_values(":play_minutes_min", to_av(old.play_minutes.min)?)
-                    .expression_attribute_values(":play_minutes_max", to_av(old.play_minutes.max)?)
-                    .expression_attribute_names("#score", "score")
-                    .expression_attribute_values(":score_count", to_av(old.score.count)?)
-                    .expression_attribute_values(":score_total", to_av(old.score.total)?)
-                    .expression_attribute_values(
-                        ":score_squared_total",
-                        to_av(old.score.squared_total)?,
-                    )
-                    .expression_attribute_values(":score_min", to_av(old.score.min)?)
-                    .expression_attribute_values(":score_max", to_av(old.score.max)?)
-                    .expression_attribute_names("#solo", "solo")
-                    .expression_attribute_values(":solo_count", to_av(old.solo.count)?)
-                    .expression_attribute_values(":solo_total", to_av(old.solo.total)?)
-                    .expression_attribute_names("#new", "new")
-                    .expression_attribute_values(":new_count", to_av(old.new.count)?)
-                    .expression_attribute_values(":new_total", to_av(old.new.total)?)
-                    .expression_attribute_names("#bounce", "bounce")
-                    .expression_attribute_values(":bounce_count", to_av(old.bounce.count)?)
-                    .expression_attribute_values(":bounce_total", to_av(old.bounce.total)?)
-                    .expression_attribute_names("#peek", "peek")
-                    .expression_attribute_values(":peek_count", to_av(old.peek.count)?)
-                    .expression_attribute_values(":peek_total", to_av(old.peek.total)?)
-                    .expression_attribute_names("#concurrent", "concurrent")
-                    .expression_attribute_values(":concurrent_count", to_av(old.concurrent.count)?)
-                    .expression_attribute_values(":concurrent_min", to_av(old.concurrent.min)?)
-                    .expression_attribute_values(":concurrent_max", to_av(old.concurrent.max)?)
-                    .expression_attribute_values(":concurrent_total", to_av(old.concurrent.total)?)
-                    .expression_attribute_values(
-                        ":concurrent_squared_total",
-                        to_av(old.concurrent.squared_total)?,
-                    );
+                    .expression_attribute_values("#arenas_cached", to_av(old.arenas_cached.total)?);
             } else {
                 // Condition is that the item wasn't created elsewhere.
                 request = request
@@ -671,7 +691,6 @@ impl Database {
 
             return match request.send().await {
                 Err(e) => {
-                    //println!("{}", e.to_string());
                     let compat = e.into();
                     if matches!(
                         compat,
@@ -707,6 +726,8 @@ impl Database {
             .key("game_id", game_id_ser)
             .key("timestamp", timestamp_ser)
             .update_expression("ADD bounce_t :bounce_t, ADD bounce_c :bounce_c,
+                                    ADD flop_t :flop_t, ADD flop_c :flop_c,
+                                    ADD invited_t :invited_t, ADD invited_c :invited_c,
                                     ADD peek_t :peek_t, ADD peek_c :peek_c,
                                     ADD concurrent_c :concurrent_c,
                                     ADD minutes_c :minutes_c, ADD minutes_t :minutes_t, ADD minutes_st :minutes_st,

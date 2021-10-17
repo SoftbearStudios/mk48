@@ -13,9 +13,27 @@
 
 	<h2>2021</h2>
 
-	<h3>10/2/2021</h3>
+	<h3>10/10/2021</h3>
 
 	<ul>
+		<li>Fix two more bugs related to names and teams.</li>
+		<li>Improve boat vs. boat collision resolution.</li>
+		<li>Increase sensitivity of CTRL + and CTRL - keys.</li>
+	</ul>
+
+	<h3>10/7/2021</h3>
+
+	<ul>
+		<li>Fix several bugs related to names and teams.</li>
+		<li>Airborne SAMs can no longer hit submerged torpedoes.</li>
+		<li>"Visby" is no longer on fire when it shouldn't be.</li>
+		<li>Bots handle terrain a bit better.</li>
+	</ul>
+
+	<h3>10/3/2021</h3>
+
+	<ul>
+		<li>Add smoke particles.</li>
 		<li>Add back invite feature, which is now usable regardless of whether you are a team captain.</li>
 		<li>Fix upgraded oil rigs drying up after an hour.</li>
 		<li>Fix mouse controls in wide aspect ratios.</li>
@@ -23,6 +41,7 @@
 		<li>Show number of players below leaderboard.</li>
 		<li>Fix rare desync related to team membership.</li>
 		<li>Stop showing bots in live leaderboard.</li>
+		<li>All weapons (not just rockets) now experience an angle deviation when launched, depending on their type.</li>
 	</ul>
 
 	<h3>9/28/2021</h3>

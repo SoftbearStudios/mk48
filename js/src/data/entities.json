@@ -10,7 +10,8 @@
 		"width": 1.785,
 		"speed": 20,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"coin": {
 		"label": "Coin",
@@ -23,7 +24,8 @@
 		"width": 3,
 		"speed": 15,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"crate": {
 		"label": "Crate",
@@ -36,7 +38,8 @@
 		"width": 2,
 		"speed": 20,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"scrap": {
 		"label": "Scrap",
@@ -49,7 +52,8 @@
 		"width": 3,
 		"speed": 15,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"hq": {
 		"label": "HQ",
@@ -59,7 +63,8 @@
 		"width": 90,
 		"lifespan": 3600,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",
@@ -67,6 +72,16 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
+		"exhausts": [
+			{
+				"positionForward": 7,
+				"positionSide": 21
+			},
+			{
+				"positionForward": -23,
+				"positionSide": 21
+			}
+		],
 		"armaments": [],
 		"turrets": []
 	},
@@ -174,7 +189,8 @@
 			}
 		],
 		"damage": 3.7766666666666664,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"arleighBurke": {
 		"label": "Arleigh Burke",
@@ -372,6 +388,14 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -2
+			},
+			{
+				"positionForward": -18.25
+			}
+		],
 		"antiAircraft": 0.126,
 		"damage": 5.133333333333333
 	},
@@ -525,6 +549,11 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -1
+			}
+		],
 		"antiAircraft": 0.2,
 		"damage": 8.053333333333333
 	},
@@ -557,6 +586,12 @@
 				"positionSide": 0,
 				"speed": 1.413716694115407,
 				"angle": 0
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -39,
+				"positionSide": -0.8
 			}
 		],
 		"damage": 3.3
@@ -727,6 +762,12 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -5.38,
+				"positionSide": -12.71
+			}
+		],
 		"antiAircraft": 0.221,
 		"damage": 8.86
 	},
@@ -833,6 +874,11 @@
 				"positionSide": 0,
 				"angle": 3.141592653589793,
 				"speed": 1.8849555921538759
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 0
 			}
 		],
 		"antiAircraft": 0.024,
@@ -1069,6 +1115,14 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 9.5
+			},
+			{
+				"positionForward": -4.5
+			}
+		],
 		"antiAircraft": 0.092,
 		"damage": 3.8266666666666667
 	},
@@ -1239,6 +1293,16 @@
 				"speed": 1.8849555921538759
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 1.4,
+				"positionSide": 1.68
+			},
+			{
+				"positionForward": 1.4,
+				"positionSide": -1.68
+			}
+		],
 		"antiAircraft": 0.092,
 		"damage": 3.8333333333333335
 	},
@@ -1277,7 +1341,8 @@
 		],
 		"antiAircraft": 0.011,
 		"damage": 0.6283333333333334,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"golf": {
 		"label": "Golf",
@@ -1349,7 +1414,8 @@
 			}
 		],
 		"damage": 3.2800000000000002,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"indiaman": {
 		"label": "East Indiaman",
@@ -1441,7 +1507,8 @@
 		"antiAircraft": 0.039,
 		"npc": true,
 		"damage": 1.7604766666666667,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"kirov": {
 		"label": "Kirov",
@@ -1658,6 +1725,11 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -19
+			}
+		],
 		"antiAircraft": 0.209,
 		"damage": 8.4
 	},
@@ -1836,6 +1908,14 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 3.74
+			},
+			{
+				"positionForward": -24.21
+			}
+		],
 		"antiAircraft": 0.133,
 		"damage": 5.433333333333334
 	},
@@ -1936,7 +2016,8 @@
 			}
 		],
 		"antiAircraft": 0.016,
-		"damage": 0.8466666666666666
+		"damage": 0.8466666666666666,
+		"exhausts": []
 	},
 	"leander": {
 		"label": "Leander",
@@ -2154,6 +2235,11 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 7
+			}
+		],
 		"antiAircraft": 0.138,
 		"damage": 5.636666666666667
 	},
@@ -2239,7 +2325,8 @@
 		],
 		"antiAircraft": 0.076,
 		"damage": 3.1933333333333334,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"momi": {
 		"label": "Momi",
@@ -2398,6 +2485,14 @@
 				"speed": 1.413716694115407,
 				"azimuthBL": 0.3490658503988659,
 				"azimuthBR": 0.3490658503988659
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 7.84
+			},
+			{
+				"positionForward": -3.09
 			}
 		],
 		"antiAircraft": 0.067,
@@ -2577,6 +2672,14 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 10
+			},
+			{
+				"positionForward": -14.5
+			}
+		],
 		"antiAircraft": 0.234,
 		"damage": 9.36
 	},
@@ -2737,6 +2840,11 @@
 				"azimuthBR": 0.5235987755982988
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -13.35
+			}
+		],
 		"antiAircraft": 0.155,
 		"damage": 6.3
 	},
@@ -2885,7 +2993,8 @@
 			}
 		],
 		"damage": 5.666666666666667,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"olympias": {
 		"label": "Olympias",
@@ -2905,7 +3014,8 @@
 		"antiAircraft": 0.026,
 		"damage": 1.23,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"osa": {
 		"label": "Osa",
@@ -2992,7 +3102,8 @@
 			}
 		],
 		"antiAircraft": 0.027,
-		"damage": 1.2866666666666666
+		"damage": 1.2866666666666666,
+		"exhausts": []
 	},
 	"pt34": {
 		"label": "PT-34",
@@ -3045,7 +3156,8 @@
 		],
 		"antiAircraft": 0.014,
 		"damage": 0.7666666666666666,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"skipjack": {
 		"label": "Skipjack",
@@ -3126,7 +3238,8 @@
 			}
 		],
 		"damage": 2.557,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"tanker": {
 		"label": "Oil Tanker",
@@ -3144,6 +3257,11 @@
 			}
 		},
 		"armaments": [],
+		"exhausts": [
+			{
+				"positionForward": -77
+			}
+		],
 		"damage": 5.966666666666667,
 		"turrets": []
 	},
@@ -3387,6 +3505,14 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": 17
+			},
+			{
+				"positionForward": -8
+			}
+		],
 		"antiAircraft": 0.148,
 		"damage": 6.010000000000001
 	},
@@ -3546,6 +3672,24 @@
 				"azimuthBR": 0.2617993877991494
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -7.34,
+				"positionSide": 1.45
+			},
+			{
+				"positionForward": -7.34,
+				"positionSide": -1.45
+			},
+			{
+				"positionForward": -17.34,
+				"positionSide": 1.45
+			},
+			{
+				"positionForward": -17.34,
+				"positionSide": -1.45
+			}
+		],
 		"antiAircraft": 0.148,
 		"damage": 6
 	},
@@ -3629,7 +3773,8 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
-		"damage": 2.2366666666666664
+		"damage": 2.2366666666666664,
+		"exhausts": []
 	},
 	"visby": {
 		"label": "Visby",
@@ -3804,7 +3949,8 @@
 			}
 		],
 		"antiAircraft": 0.056,
-		"damage": 2.4233333333333333
+		"damage": 2.4233333333333333,
+		"exhausts": []
 	},
 	"yasen": {
 		"label": "Yasen",
@@ -3995,7 +4141,8 @@
 			}
 		],
 		"damage": 4.333333333333333,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"zubr": {
 		"label": "Zubr",
@@ -4136,6 +4283,19 @@
 				"positionSide": -6.25,
 				"angle": 0,
 				"speed": 1.8849555921538759
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -22.5
+			},
+			{
+				"positionForward": -22.5,
+				"positionSide": 6.91
+			},
+			{
+				"positionForward": -22.5,
+				"positionSide": -6.91
 			}
 		],
 		"antiAircraft": 0.043,
@@ -4320,6 +4480,16 @@
 				"azimuthBR": 0.5235987755982988
 			}
 		],
+		"exhausts": [
+			{
+				"positionForward": -0.09,
+				"positionSide": 0.1
+			},
+			{
+				"positionForward": -18.58,
+				"positionSide": -0.72
+			}
+		],
 		"antiAircraft": 0.156,
 		"damage": 6.333333333333333
 	},
@@ -4340,7 +4510,8 @@
 				"external": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"25x129mmR": {
 		"label": "25 x 129 mmR",
@@ -4353,7 +4524,8 @@
 		"damage": 0.29788156030885266,
 		"reload": 8,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"38cmSKC34": {
 		"label": "38 cm SK C/34",
@@ -4383,7 +4555,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"380x1700mmR": {
 		"label": "380 x 1700 mmR",
@@ -4396,7 +4569,8 @@
 		"damage": 0.6449074083498981,
 		"reload": 14.628571428571428,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"6pounder": {
 		"label": "6-Pounder",
@@ -4416,7 +4590,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"57x441mmR": {
 		"label": "57 x 441 mmR",
@@ -4430,7 +4605,8 @@
 		"damage": 0.4302236359802337,
 		"reload": 8.873142857142858,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"8_8cmSKC35": {
 		"label": "8.8 cm SK C/35",
@@ -4450,7 +4626,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"82r": {
 		"label": "82R",
@@ -4469,7 +4646,8 @@
 		"damage": 0.6194577306589099,
 		"reload": 12,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"ak130": {
 		"label": "AK-130",
@@ -4485,7 +4663,8 @@
 				"angle": 0
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"avenger": {
 		"label": "TBF Avenger",
@@ -4509,7 +4688,8 @@
 		"lifespan": 52.02177423382331,
 		"limited": true,
 		"reload": 10,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"asroc": {
 		"label": "ASROC",
@@ -4533,7 +4713,8 @@
 		],
 		"lifespan": 5.211645949126277,
 		"reload": 20,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"barak8": {
 		"label": "Barak 8",
@@ -4552,7 +4733,8 @@
 		"lifespan": 4.290123456790123,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"bl6MkXXIII": {
 		"label": "BL 6-inch Mk XXIII",
@@ -4580,7 +4762,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"bl6MkXXIIIx3": {
 		"label": "BL 6-inch Mk XXIII",
@@ -4616,7 +4799,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"bofors57mmMK3": {
 		"label": "Bofors 57mm MK3",
@@ -4636,7 +4820,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"brahmos": {
 		"label": "BrahMos",
@@ -4656,7 +4841,8 @@
 		"damage": 0.8428476906183171,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"brosok": {
 		"label": "Brosok",
@@ -4670,7 +4856,8 @@
 		"lifespan": 15,
 		"reload": 20,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"cannonBall": {
 		"label": "Cannon Ball",
@@ -4683,7 +4870,8 @@
 		"damage": 0.26796317021247873,
 		"reload": 8,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"depositor": {
 		"label": "Depositor",
@@ -4694,7 +4882,8 @@
 		"range": 60,
 		"reload": 1,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"essm": {
 		"label": "ESSM",
@@ -4713,7 +4902,8 @@
 		"lifespan": 4.109819121447028,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"harpoon": {
 		"label": "Harpoon",
@@ -4733,7 +4923,8 @@
 		"damage": 0.48372899338458225,
 		"reload": 10.719999999999999,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"hpj38": {
 		"label": "H/PJ-38",
@@ -4752,7 +4943,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"130x720mmR": {
 		"label": "130 x 720 mmR",
@@ -4766,7 +4958,8 @@
 		"damage": 0.4983821031071073,
 		"reload": 10.14857142857143,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"harbin": {
 		"label": "Harbin Z-9",
@@ -4797,7 +4990,8 @@
 		"lifespan": 69.42298117276519,
 		"limited": true,
 		"reload": 10,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"hq9": {
 		"label": "HQ-9",
@@ -4816,7 +5010,8 @@
 		"lifespan": 4.7555555555555555,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"igla": {
 		"label": "Igla",
@@ -4835,7 +5030,8 @@
 		"lifespan": 3.5831871345029236,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"ka25": {
 		"label": "Ka-25",
@@ -4864,7 +5060,8 @@
 		"lifespan": 93.4540136162498,
 		"limited": true,
 		"reload": 10,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"kingfisher": {
 		"label": "Kingfisher",
@@ -4888,7 +5085,8 @@
 		"lifespan": 73.63043705554827,
 		"limited": true,
 		"reload": 10,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark7": {
 		"label": "Mark 7",
@@ -4923,7 +5121,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark8": {
 		"label": "Mark 8",
@@ -4937,7 +5136,8 @@
 		"damage": 0.6363541077327811,
 		"reload": 14.290285714285714,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark9": {
 		"label": "Mark 9",
@@ -4951,7 +5151,8 @@
 		"damage": 0.8,
 		"reload": 8,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark12": {
 		"label": "Mark 12",
@@ -4970,7 +5171,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark12x2": {
 		"label": "Mark 12",
@@ -4998,7 +5200,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"127x680mmR": {
 		"label": "127 x 680 mmR",
@@ -5012,7 +5215,8 @@
 		"damage": 0.4899089384728208,
 		"reload": 9.965714285714286,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark18": {
 		"label": "Mark 18",
@@ -5027,7 +5231,8 @@
 		"damage": 0.9683624639651887,
 		"reload": 8,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark48": {
 		"label": "Mark 48",
@@ -5047,7 +5252,8 @@
 		"damage": 0.9241944574495458,
 		"reload": 12,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark51": {
 		"label": "Mark 51",
@@ -5063,7 +5269,8 @@
 				"angle": 0
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"lrlap": {
 		"label": "LRLAP",
@@ -5076,7 +5283,8 @@
 		"lifespan": 1.3737373737373737,
 		"damage": 0.7061241099028986,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark54": {
 		"label": "Mark 54",
@@ -5096,7 +5304,8 @@
 		"damage": 0.5439537773905669,
 		"reload": 12,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"nsm": {
 		"label": "Naval Strike Missile",
@@ -5116,7 +5325,8 @@
 		"damage": 0.49701737110115,
 		"reload": 11.080000000000002,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"rim116": {
 		"label": "Rolling Airframe Missile",
@@ -5135,7 +5345,8 @@
 		"lifespan": 3.8976964769647693,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"s300": {
 		"label": "S-300",
@@ -5154,7 +5365,8 @@
 		"lifespan": 4.773242630385488,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"seahawk": {
 		"label": "Seahawk",
@@ -5183,7 +5395,8 @@
 		"lifespan": 66.57000701647874,
 		"limited": true,
 		"reload": 10,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"shtorm": {
 		"label": "Shtorm",
@@ -5209,7 +5422,8 @@
 				"external": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"v611": {
 		"label": "Shtorm",
@@ -5228,7 +5442,8 @@
 		"lifespan": 4.690393518518519,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mk70": {
 		"label": "MOSS",
@@ -5242,7 +5457,8 @@
 		"lifespan": 15,
 		"reload": 20,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"ogon": {
 		"label": "Ogon",
@@ -5326,7 +5542,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"of45": {
 		"label": "OF-45",
@@ -5341,7 +5558,8 @@
 		"damage": 0.20632904434825974,
 		"reload": 2.5,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"otoMelara76mm": {
 		"label": "OTO Melara 76 mm",
@@ -5360,7 +5578,8 @@
 				"hidden": false
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"76x636mmR": {
 		"label": "76 x 636 mmR",
@@ -5374,7 +5593,8 @@
 		"damage": 0.48017530862921753,
 		"reload": 9.76457142857143,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"p15": {
 		"label": "P-15 Termit",
@@ -5394,7 +5614,8 @@
 		"damage": 0.6503590626496802,
 		"reload": 15.52,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"p700": {
 		"label": "P-700 Granit",
@@ -5414,7 +5635,8 @@
 		"damage": 0.9522557438918172,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"rbs15": {
 		"label": "RBS-15",
@@ -5434,7 +5656,8 @@
 		"damage": 0.5300235033840559,
 		"reload": 11.992,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"rpk6": {
 		"label": "Vodopad",
@@ -5458,7 +5681,8 @@
 		],
 		"lifespan": 5.991584504002548,
 		"reload": 20,
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"mark49": {
 		"label": "Mark 49",
@@ -5518,7 +5742,8 @@
 				"hidden": true
 			}
 		],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"set65": {
 		"label": "Set 65",
@@ -5538,7 +5763,8 @@
 		"damage": 1.1473679862215587,
 		"reload": 12,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"tomahawk": {
 		"label": "Tomahawk",
@@ -5558,7 +5784,8 @@
 		"damage": 0.6314020026905378,
 		"reload": 14.943999999999999,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"torped45": {
 		"label": "Torped 45",
@@ -5578,7 +5805,8 @@
 		"damage": 0.5620243941962166,
 		"reload": 12,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"type53": {
 		"label": "Type 53",
@@ -5593,7 +5821,8 @@
 		"damage": 1.0752179639948185,
 		"reload": 8,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"wz08_39": {
 		"label": "wz. 08/39",
@@ -5607,7 +5836,8 @@
 		"damage": 1.5,
 		"reload": 30,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	},
 	"yj18": {
 		"label": "YJ-18",
@@ -5627,6 +5857,7 @@
 		"damage": 0.8216618332486386,
 		"reload": 16,
 		"armaments": [],
-		"turrets": []
+		"turrets": [],
+		"exhausts": []
 	}
 }

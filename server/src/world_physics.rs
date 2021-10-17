@@ -68,7 +68,7 @@ impl World {
                 let data = entity.data();
 
                 if data.lifespan != Ticks::ZERO {
-                    entity.ticks += delta; // TODO: potential overflow?
+                    entity.ticks = entity.ticks.saturating_add(delta);
 
                     // Downgrade or die when expired.
                     if entity.ticks > data.lifespan {
@@ -153,7 +153,7 @@ impl World {
                                     if data.lifespan != Ticks::ZERO
                                         && altitude_change > Altitude::ZERO
                                     {
-                                        entity.ticks -= delta;
+                                        entity.ticks = entity.ticks.saturating_sub(delta);
                                     }
                                 }
                                 _ => {}
@@ -364,8 +364,9 @@ impl World {
                     self.entities.move_sector(index);
                 }
                 Fate::DowngradeHq => {
-                    self.entities[index]
-                        .change_entity_type(EntityType::OilPlatform, &mut self.arena);
+                    let entity = &mut self.entities[index];
+                    entity.ticks = Ticks::ZERO;
+                    entity.change_entity_type(EntityType::OilPlatform, &mut self.arena);
                 }
             }
         }

@@ -12,6 +12,7 @@ use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
 use common::ticks::Ticks;
+use common::util::gen_radius;
 use glam::Vec2;
 use rand::seq::IteratorRandom;
 use rand::{thread_rng, Rng};
@@ -20,8 +21,12 @@ use rand::{thread_rng, Rng};
 pub struct Bot {
     /// Bot's chance of attacking, randomized to improve variety of bots.
     aggression: f32,
+    /// Amount to offset aiming by. This creates more interesting hit patterns.
+    aim_bias: Vec2,
     /// Maximum level bot will try to upgrade to, randomized to improve variety of bots.
     level_ambition: u8,
+    /// Whether the bot spawned at least once, and therefore is capable of rage-quitting.
+    spawned_at_least_once: bool,
 }
 
 impl Bot {
@@ -34,13 +39,20 @@ impl Bot {
         Self {
             // Raise aggression to a power such that lower values are more common.
             aggression: rng.gen::<f32>().powi(2) * Self::MAX_AGGRESSION,
+            aim_bias: gen_radius(&mut rng, 10.0),
             level_ambition: rng.gen_range(1..EntityData::MAX_BOAT_LEVEL),
+            spawned_at_least_once: false,
         }
     }
 
-    /// update processes a complete update and returns some commands to execute.
-    pub fn update<'a, U: 'a + CompleteTrait<'a>>(&self, mut update: U) -> ArrayVec<Command, 2> {
+    /// update processes a complete update and returns some commands to execute, and a boolean
+    /// of whether to quit.
+    pub fn update<'a, U: 'a + CompleteTrait<'a>>(
+        &mut self,
+        mut update: U,
+    ) -> (ArrayVec<Command, 2>, bool) {
         let mut ret = ArrayVec::new();
+        let mut quit = false;
         let mut rng = thread_rng();
 
         let player_id = update.player_id();
@@ -51,6 +63,8 @@ impl Bot {
             .next()
             .filter(|c| c.is_boat() && c.player_id() == Some(player_id))
         {
+            self.spawned_at_least_once = true;
+
             let boat_type: EntityType = boat.entity_type().unwrap();
             let data: &EntityData = boat_type.data();
             let health_percent = 1.0 - boat.damage().to_secs() / data.max_health().to_secs();
@@ -73,8 +87,10 @@ impl Bot {
             };
 
             // Terrain.
-            for i in -5..=5 {
-                let angle = boat.transform().direction + Angle::from_radians(i as f32 * 0.2);
+            const SAMPLES: u32 = 10;
+            for i in 0..SAMPLES {
+                let angle =
+                    Angle::from_radians(i as f32 * (2.0 * std::f32::consts::PI / SAMPLES as f32));
                 let delta_position = angle.to_vec() * data.length;
                 if Self::is_land_or_border(
                     boat.transform().position + delta_position,
@@ -237,30 +253,33 @@ impl Bot {
                 } else {
                     None
                 },
-                aim_target: best_firing_solution.map(|solution| solution.1),
+                aim_target: best_firing_solution.map(|solution| solution.1 + self.aim_bias),
                 active: health_percent >= 0.5,
             }));
 
-            if best_firing_solution.is_some() && rng.gen_bool(self.aggression as f64) {
-                let firing_solution = best_firing_solution.unwrap();
-                if firing_solution.2 < Angle::from_degrees(60.0) {
-                    ret.push(Command::Fire(Fire {
-                        index: firing_solution.0,
-                        position_target: firing_solution.1,
-                    }));
-                }
-            } else if data.level < self.level_ambition {
-                // Upgrade, if possible.
-                if let Some(entity_type) = boat_type
-                    .upgrade_options(update.score(), true)
-                    .choose(&mut rng)
-                {
-                    ret.push(Command::Upgrade(Upgrade { entity_type }))
+            if rng.gen_bool(self.aggression as f64) {
+                if best_firing_solution.is_some() {
+                    let firing_solution = best_firing_solution.unwrap();
+                    if firing_solution.2 < Angle::from_degrees(60.0) {
+                        ret.push(Command::Fire(Fire {
+                            index: firing_solution.0,
+                            position_target: firing_solution.1,
+                        }));
+                    }
+                } else if data.level < self.level_ambition {
+                    // Upgrade, if possible.
+                    if let Some(entity_type) = boat_type
+                        .upgrade_options(update.score(), true)
+                        .choose(&mut rng)
+                    {
+                        ret.push(Command::Upgrade(Upgrade { entity_type }))
+                    }
                 }
             }
+        } else if self.spawned_at_least_once && rng.gen_bool(1.0 / 3.0) {
+            // Rage quit.
+            quit = true;
         } else {
-            // TODO: Randomly rage-quit.
-
             ret.push(Command::Spawn(Spawn {
                 entity_type: EntityType::spawn_options(true)
                     .choose(&mut rng)
@@ -268,7 +287,7 @@ impl Bot {
             }));
         }
 
-        ret
+        (ret, quit)
     }
 
     /// Returns true if there is land or border at the given position.

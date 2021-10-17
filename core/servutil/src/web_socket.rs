@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::observer::*;
+use crate::user_agent::UserAgent;
 use actix::dev::ToEnvelope;
 use actix::prelude::*;
+use actix_web::http::header;
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
@@ -24,14 +26,21 @@ pub async fn sock_index<A, I, O>(
     data: Addr<A>,
 ) -> Result<HttpResponse, Error>
 where
-    A: Handler<ObserverMessage<I, O>>,
-    <A as Actor>::Context: ToEnvelope<A, ObserverMessage<I, O>>,
+    A: Handler<ObserverMessage<I, O, Option<UserAgent>>>,
+    <A as Actor>::Context: ToEnvelope<A, ObserverMessage<I, O, Option<UserAgent>>>,
     I: 'static + Send + DeserializeOwned,
     O: 'static + Message + Send + Serialize,
     O: Message<Result = ()>,
 {
     ws::start(
-        WebSocket::<I, O>::new(data.recipient(), WebSocketFormat::Json, ()),
+        WebSocket::<I, O, Option<UserAgent>>::new(
+            data.recipient(),
+            WebSocketFormat::Json,
+            r.headers()
+                .get(header::USER_AGENT)
+                .and_then(|hv| hv.to_str().ok())
+                .map(|s| UserAgent::new(s)),
+        ),
         &r,
         stream,
     )

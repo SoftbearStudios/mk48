@@ -56,7 +56,17 @@
 		"kind": "obstacle",
 		"subkind": "structure",
 		"length": 90,
-		"width": 90
+		"width": 90,
+		"exhausts": [
+			{
+				"positionForward": 7,
+				"positionSide": 21
+			},
+			{
+				"positionForward": -23,
+				"positionSide": 21
+			}
+		]
 	},
 	"akula": {
 		"label": "Akula",
@@ -231,6 +241,14 @@
 				"speed": "fast",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -2
+			},
+			{
+				"positionForward": -18.25
+			}
 		]
 	},
 	"bismarck": {
@@ -287,6 +305,11 @@
 				"speed": "slow",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -1
+			}
 		]
 	},
 	"dredger": {
@@ -315,6 +338,12 @@
 				"positionForward": 43.75,
 				"positionSide": 0,
 				"speed": "medium"
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -39,
+				"positionSide": -0.8
 			}
 		]
 	},
@@ -401,6 +430,12 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -5.38,
+				"positionSide": -12.71
+			}
 		]
 	},
 	"fairmileD": {
@@ -462,6 +497,11 @@
 				"positionSide": 0,
 				"angle": 180,
 				"speed": "fast"
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 0
 			}
 		]
 	},
@@ -617,6 +657,14 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 9.5
+			},
+			{
+				"positionForward": -4.5
+			}
 		]
 	},
 	"freedom": {
@@ -674,6 +722,13 @@
 				"positionSide": 0,
 				"angle": 180,
 				"speed": "fast"
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 1.4,
+				"positionSide": 1.68,
+				"symmetrical": true
 			}
 		]
 	},
@@ -894,6 +949,11 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -19
+			}
 		]
 	},
 	"kolkata": {
@@ -979,6 +1039,14 @@
 				"positionSide": 0,
 				"speed": "fast",
 				"azimuthB": 20
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 3.74
+			},
+			{
+				"positionForward": -24.21
 			}
 		]
 	},
@@ -1141,6 +1209,11 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 7
+			}
 		]
 	},
 	"lublin": {
@@ -1283,6 +1356,14 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 7.84
+			},
+			{
+				"positionForward": -3.09
+			}
 		]
 	},
 	"montana": {
@@ -1338,6 +1419,14 @@
 				"angle": 180,
 				"speed": "slow",
 				"azimuthB": 20
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 10
+			},
+			{
+				"positionForward": -14.5
 			}
 		]
 	},
@@ -1430,6 +1519,11 @@
 				"positionSide": 0,
 				"speed": "medium",
 				"azimuthB": 30
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -13.35
 			}
 		]
 	},
@@ -1690,7 +1784,12 @@
 		"sensors": {
 			"visual": {}
 		},
-		"armaments": []
+		"armaments": [],
+		"exhausts": [
+			{
+				"positionForward": -77
+			}
+		]
 	},
 	"town": {
 		"label": "Town",
@@ -1795,6 +1894,14 @@
 				"speed": "medium",
 				"azimuthB": 20
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 17
+			},
+			{
+				"positionForward": -8
+			}
 		]
 	},
 	"type055": {
@@ -1865,6 +1972,18 @@
 				"positionSide": 0,
 				"speed": "fast",
 				"azimuthB": 15
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -7.34,
+				"positionSide": 1.45,
+				"symmetrical": true
+			},
+			{
+				"positionForward": -17.34,
+				"positionSide": 1.45,
+				"symmetrical": true
 			}
 		]
 	},
@@ -2139,6 +2258,16 @@
 				"speed": "fast",
 				"symmetrical": true
 			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -22.5
+			},
+			{
+				"positionForward": -22.5,
+				"positionSide": 6.91,
+				"symmetrical": true
+			}
 		]
 	},
 	"zumwalt": {
@@ -2218,6 +2347,16 @@
 				"positionSide": 0,
 				"speed": "medium",
 				"azimuthB": 30
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -0.09,
+				"positionSide": 0.1
+			},
+			{
+				"positionForward": -18.58,
+				"positionSide": -0.72
 			}
 		]
 	},

@@ -123,7 +123,7 @@
 	mode listens for emissions (e.g. sound in the case of sonar) from other entities.
 	Active mode emits a signal and resolves contacts based on the signals that bounce
 	back. In general, active mode allows you to see more, but has the potential
-	to give away your position.</p>
+	to give away your position. You can toggle between the modes with the 'z' key.</p>
 
 	<!--
 	<p>To visualize sensor data, look at the dots surrounding the outer circle

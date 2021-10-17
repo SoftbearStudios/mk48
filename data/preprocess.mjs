@@ -202,6 +202,9 @@ for (const entityType of Object.keys(entityDatas)) {
 	const turrets = entityData.turrets;
 	entityData.turrets = [];
 
+    const exhausts = entityData.exhausts;
+	entityData.exhausts = [];
+
 	if (turrets) {
 		for (let i = 0; i < turrets.length; i++) {
 			const turret = turrets[i];
@@ -293,6 +296,19 @@ for (const entityType of Object.keys(entityDatas)) {
 			}
 		}
 	}
+
+	if (exhausts) {
+        for (const exhaust of exhausts) {
+            const sym = exhaust.symmetrical;
+            delete exhaust.symmetrical;
+
+            entityData.exhausts.push({...exhaust});
+            if (sym) {
+                const copy = {...exhaust, positionSide: -exhaust.positionSide};
+                entityData.exhausts.push(copy);
+            }
+        }
+    }
 
 	if (entityData.sensors) {
 		for (const sensorType in entityData.sensors) {

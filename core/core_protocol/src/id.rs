@@ -4,7 +4,7 @@
 use enum_iterator::IntoEnumIterator;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::num::{NonZeroU32, NonZeroU64};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
 use variant_count::VariantCount;
 
 #[repr(transparent)]
@@ -22,16 +22,22 @@ pub enum GameId {
 pub struct InvitationId(pub NonZeroU32);
 
 impl InvitationId {
-    pub fn generate(server_id: ServerId) -> Self {
+    pub fn generate(server_id: Option<ServerId>) -> Self {
         let mut r: u32 = rand::thread_rng().gen();
         if r == 0 {
             r = 1;
         }
-        Self(NonZeroU32::new(((server_id.0 as u32) << 24) | (r & ((1 << 24) - 1))).unwrap())
+        Self(
+            NonZeroU32::new(
+                ((server_id.map(|id| id.0.get()).unwrap_or(0) as u32) << 24)
+                    | (r & ((1 << 24) - 1)),
+            )
+            .unwrap(),
+        )
     }
 
-    pub fn server_id(self) -> ServerId {
-        ServerId((self.0.get() >> 24) as u8)
+    pub fn server_id(self) -> Option<ServerId> {
+        NonZeroU8::new((self.0.get() >> 24) as u8).map(|nz| ServerId(nz))
     }
 }
 
@@ -99,12 +105,15 @@ impl Default for RegionId {
 }
 
 #[repr(transparent)]
-/// For example: server#.domain.ext
+/// Symbolizes, for example: #.domain.com
+/// The meaning of Option::<ServerId>::None is often "localhost"
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct ServerId(pub u8);
+pub struct ServerId(pub NonZeroU8);
 
 impl ServerId {
-    pub const LOCALHOST: Self = Self(u8::MAX);
+    pub fn new(val: u8) -> Option<Self> {
+        NonZeroU8::new(val).map(|nz| Self(nz))
+    }
 }
 
 #[repr(transparent)]
@@ -113,18 +122,22 @@ pub struct SessionId(pub NonZeroU64);
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct TeamId(pub NonZeroU32);
+pub struct StarId(pub NonZeroU8);
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct UserAgentId(pub NonZeroU32);
+pub struct TeamId(pub NonZeroU32);
 
-impl UserAgentId {
-    fn _new(_user_agent: &str) -> Self {
-        // Bucketize user_agent in order to limit the number of categories.
-        // TODO: for example, 1 = PC/chrome, 2=Mac/chrome, ...
-        Self(NonZeroU32::new(1).unwrap())
-    }
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum UserAgentId {
+    ChromeOS,
+    Desktop,
+    DesktopChrome,
+    DesktopFirefox,
+    DesktopSafari,
+    Mobile,
+    Spider,
+    Tablet,
 }
 
 #[cfg(test)]

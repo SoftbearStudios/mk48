@@ -116,7 +116,11 @@
 				<option value={type}>{entityData[type].label}</option>
 			{/each}
 		</select>
-		<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused}>{$t('panel.splash.action.spawn.label')}</button>
+		{#if state.status.spawning.connectionLost}
+			<button disabled={paused} on:click={() => location.reload(true)}>Reload</button>
+		{:else}
+			<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused}>{$t('panel.splash.action.spawn.label')}</button>
+		{/if}
 		{#if invite}
 			<small>{$t('panel.splash.invitePrefix')} {invite}</small>
 		{/if}

@@ -5,8 +5,11 @@ use crate::arena::Arena;
 use crate::invitation::Invitation;
 use crate::session::Session;
 use crate::team::Team;
+// TODO: use chrono::{DateTime, Utc};
+use chrono::Timelike;
+use chrono::Utc;
 use core_protocol::dto::{
-    LeaderboardDto, LiveboardDto, MemberDto, MessageDto, PlayerDto, RegionDto, TeamDto,
+    LeaderboardDto, LiveboardDto, MemberDto, MessageDto, PlayerDto, RegionDto, RestartDto, TeamDto,
 };
 use core_protocol::id::PeriodId;
 use core_protocol::id::*;
@@ -16,12 +19,16 @@ use ringbuffer::RingBufferExt;
 use std::collections::hash_map::HashMap;
 use std::mem;
 use std::sync::Arc;
+use sysinfo::{RefreshKind, System, SystemExt};
 
 pub struct Repo {
     // Assume these fields are synchronized via Actor so Mutex is not required.
+    pub armageddon: bool,
     pub arenas: HashMap<ArenaId, Arena>,
     pub invitations: HashMap<InvitationId, Invitation>,
     pub players: HashMap<PlayerId, SessionId>,
+    pub stopping: Option<RestartDto>,
+    pub system_status: System,
 }
 
 impl Repo {
@@ -30,9 +37,12 @@ impl Repo {
 
     pub fn new() -> Self {
         Repo {
+            armageddon: false,
             arenas: HashMap::new(),
             invitations: HashMap::new(),
             players: HashMap::new(),
+            stopping: None,
+            system_status: System::new_with_specifics(RefreshKind::new().with_cpu().with_memory()),
         }
     }
 
@@ -149,6 +159,59 @@ impl Repo {
         regions.into()
     }
 
+    fn get_usage(&self) -> (u32, u32) {
+        let mut player_count = 0;
+        let mut max_score = 0;
+        for (_, arena) in self.arenas.iter() {
+            if arena.date_stop.is_some() {
+                continue;
+            }
+            for (_, session) in arena.sessions.iter() {
+                if !session.live || session.bot {
+                    continue;
+                }
+                player_count += 1;
+                if let Some(play) = session.plays.last() {
+                    if let Some(score) = play.score {
+                        if score > max_score {
+                            max_score = score;
+                        }
+                    }
+                }
+            }
+        }
+        return (player_count, max_score);
+    }
+
+    /// Assume caller uses this method to check if repo can be stopped.
+    pub fn is_stoppable(&self) -> bool {
+        let mut stoppable = false;
+        if let Some(conditions) = self.stopping {
+            stoppable = true;
+
+            let now = Utc::now();
+            let hour = now.hour();
+
+            if conditions.min_hour > hour || conditions.max_hour < hour {
+                stoppable = false;
+            }
+
+            let (player_count, max_score) = self.get_usage();
+            if let Some(max_players_allowed) = conditions.max_players {
+                if player_count > max_players_allowed {
+                    stoppable = false;
+                }
+            }
+            if let Some(max_score_allowed) = conditions.max_score {
+                if max_score > max_score_allowed {
+                    stoppable = false;
+                }
+            }
+        }
+
+        stoppable
+    }
+
     /// Assume caller uses this method to populate cache with leaderboards.
     pub fn put_leaderboard(
         &mut self,
@@ -162,6 +225,16 @@ impl Repo {
                 arena.leaderboard_changed[period as usize] = true;
             }
         }
+    }
+
+    /// Assume caller polls this method to check when to start "armageddon"
+    /// (bots outnumber and eliminate players, as a prelude to server shutdown).
+    pub fn read_armageddon(&mut self) -> bool {
+        let armageddon = self.armageddon;
+        if armageddon {
+            self.armageddon = false;
+        }
+        armageddon
     }
 
     // Assume caller reads public updates and broadcasts to all clients.
@@ -404,5 +477,13 @@ impl Repo {
             joins_added_or_removed,
             messages_added,
         )
+    }
+
+    /// Set the stop conditions that, when met, will cause the service to exit.
+    pub fn set_stop_conditions(&mut self, condition: RestartDto) {
+        if self.stopping.is_none() {
+            self.armageddon = true;
+            self.stopping = Some(condition);
+        }
     }
 }

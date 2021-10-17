@@ -7,6 +7,13 @@ use crate::name::*;
 use crate::UnixTime;
 use serde::{Deserialize, Serialize};
 
+/// The Survey Data Transfer Object (DTO) collects user feedback.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct SurveyDto {
+    pub star_id: StarId,
+    pub detail: Option<SurveyDetail>,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InvitationDto {
     pub player_id: PlayerId,
@@ -50,16 +57,25 @@ pub struct MessageDto {
 /// The Metrics Data Transfer Object (DTO) contains core server metrics.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct MetricsDto {
+    pub arenas_cached: <DiscreteMetric as Metric>::Summary,
     pub bounce: <RatioMetric as Metric>::Summary,
-    pub peek: <RatioMetric as Metric>::Summary,
     pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
-    pub minutes: <ContinuousExtremaMetric as Metric>::Summary,
-    pub plays: <ContinuousExtremaMetric as Metric>::Summary,
-    pub play_minutes: <ContinuousExtremaMetric as Metric>::Summary,
-    pub solo: <RatioMetric as Metric>::Summary,
+    pub cpu: <ContinuousExtremaMetric as Metric>::Summary,
+    pub flop: <RatioMetric as Metric>::Summary,
+    pub invited: <RatioMetric as Metric>::Summary,
+    pub minutes_per_play: <ContinuousExtremaMetric as Metric>::Summary,
+    pub minutes_per_session: <ContinuousExtremaMetric as Metric>::Summary,
     pub new: <RatioMetric as Metric>::Summary,
+    pub peek: <RatioMetric as Metric>::Summary,
+    pub plays_per_session: <ContinuousExtremaMetric as Metric>::Summary,
+    pub plays_total: <DiscreteMetric as Metric>::Summary,
+    pub ram: <ContinuousExtremaMetric as Metric>::Summary,
     pub retention: <ContinuousExtremaMetric as Metric>::Summary,
     pub score: <ContinuousExtremaMetric as Metric>::Summary,
+    pub sessions_cached: <DiscreteMetric as Metric>::Summary,
+    pub teamed: <RatioMetric as Metric>::Summary,
+    pub toxicity: <RatioMetric as Metric>::Summary,
+    pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
 }
 
 /// The Player Data Transfer Object (DTO) binds player ID to player data.
@@ -76,15 +92,30 @@ pub struct PlayerDto {
 pub struct RegionDto {
     pub player_count: u32,
     pub region_id: RegionId,
-    pub server_id: ServerId,
+    pub server_id: Option<ServerId>,
+}
+
+/// The Restart Data Transfer Object (DTO) contains restart parameters.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct RestartDto {
+    pub max_hour: u32,
+    pub max_players: Option<u32>,
+    pub max_score: Option<u32>,
+    pub min_hour: u32,
 }
 
 /// The Rules Data Transfer Object (DTO) specifies arena rules.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RulesDto {
+    /// Minimum number of players, to be reached by adding bots.
     pub bot_min: u32,
+    /// Multiply real players by this as a percent to get minimum bots.
     pub bot_percent: u32,
+    /// Start play's score at this.
+    pub default_score: Option<u32>,
+    /// Do bots appear on the live leaderboard? (bots never appear on the persistent leaderboard)
     pub show_bots_on_liveboard: bool,
+    /// Maximum number of players in a team before no more can be accepted.
     pub team_size_max: u32,
 }
 
@@ -93,6 +124,7 @@ impl Default for RulesDto {
         Self {
             bot_min: 0,
             bot_percent: 0,
+            default_score: None,
             show_bots_on_liveboard: false,
             team_size_max: 6,
         }

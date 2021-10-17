@@ -13,6 +13,9 @@ debug = true
 [profile.release.package."*"]
 debug = false
 
+[patch.crates-io]
+actix-tls = { git = "https://github.com/actix/actix-net", branch = "fix/tls-handshake-timeout" }
+
 [dependencies]
 actix = "0.12"
 actix-codec = "0.4.0"
@@ -22,9 +25,7 @@ actix-files = "0.6.0-beta.7"
 actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
 #actix-plus-static-files = {path="../../actix-plus/actix-plus-static-files"}
 actix-web-middleware-redirect-https = {git="https://github.com/finnbear/actix-web-middleware-redirect-https"}
-awc = "2"
 futures = "0.3.1"
-bytes = "0.5.3"
 tokio = { version = "1.2" }
 glam = { version = "0.18.0", features = ["serde"] }
 serde = "1.0.127"
@@ -49,6 +50,7 @@ actix-http = "3.0.0-beta.10"
 chrono = "0.4.19"
 log = {version = "0.4.14", features = [ "release_max_level_info" ] }
 env_logger = "0.9.0"
+num_cpus = "1"
 
 [dev-dependencies]
 image = { version = "0.23.14", features = [ "png" ] }

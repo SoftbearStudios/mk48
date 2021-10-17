@@ -12,8 +12,9 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct EntityExtension {
     pub altitude_target: Altitude,
-    /// Active sensors.
-    active: bool,
+    /// Whether the player *wants* active sensors. To tell if the player *has* active sensors, use
+    /// Self::is_active() instead.
+    pub active: bool,
     /// Active stays on for a an extra duration to avoid rapid switching, which could induce flickering on other player's screens.
     active_cooldown: Ticks,
     /// Ticks of protection ticks remaining, zeroed if showing signs of aggression.
@@ -47,7 +48,7 @@ impl EntityExtension {
         }
     }
 
-    /// Returns whether active, or within active cooldown.
+    /// Returns whether active sensors, or within active sensor cooldown.
     pub fn is_active(&self) -> bool {
         self.active || self.active_cooldown > Ticks::ZERO
     }

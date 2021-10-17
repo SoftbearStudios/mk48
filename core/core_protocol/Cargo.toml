@@ -16,6 +16,7 @@ serde = { version = "1.0.126", features = ["derive", "rc"] }
 glam = { version = "0.18.0", features = ["serde"] }
 variant_count = "1.1.0"
 rand = "0.8.4"
+unicode_categories = "0.1"
 
 [features]
 server = ["actix"]

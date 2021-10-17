@@ -12,15 +12,17 @@
 
 use crate::protocol::Authenticate;
 use actix::prelude::*;
+use actix_http::KeepAlive;
 use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_middleware_redirect_https::RedirectHTTPS;
 use common::entity::EntityType;
 use common::protocol::{Command, Update};
-use core::core::{ParameterizedMetricRequest, ParametrizedClientRequest};
+use core::admin::{AdminState, ParameterizedAdminRequest};
+use core::client::ParametrizedClientRequest;
 use core_protocol::dto::InvitationDto;
 use core_protocol::id::*;
-use core_protocol::rpc::{ClientRequest, ClientUpdate};
+use core_protocol::rpc::{AdminRequest, ClientRequest, ClientUpdate};
 use core_protocol::web_socket::WebSocketFormat;
 use env_logger;
 use futures::{pin_mut, select, FutureExt};
@@ -78,7 +80,7 @@ struct Options {
     #[structopt(long)]
     database_read_only: bool,
     // Server id.
-    #[structopt(long, default_value = "255")]
+    #[structopt(long, default_value = "0")]
     server_id: u8,
     // Domain.
     #[allow(dead_code)]
@@ -161,7 +163,7 @@ fn main() {
             core::core::Core::new(options.chat_log, options.database_read_only).await,
         );
         let srv = server::Server::start(server::Server::new(
-            ServerId(options.server_id),
+            ServerId::new(options.server_id),
             options.min_players,
             core.to_owned(),
         ));
@@ -186,9 +188,10 @@ fn main() {
 
             let mut server = HttpServer::new(move || {
                 // Rust let's you get away with cloning one closure deep, not all the way to a nested closure.
+                let admin_clone = iter_core.to_owned();
                 let core_clone = iter_core.to_owned();
                 let client_code = iter_core.to_owned();
-                let metric_clone = iter_core.to_owned();
+                let status_clone = iter_core.to_owned();
                 let srv_clone = iter_srv.to_owned();
 
                 let app = App::new()
@@ -239,9 +242,9 @@ fn main() {
                             }
                         },
                     )))
-                    .service(web::resource("/metrics/").route(web::post().to(
-                        move |request: web::Json<ParameterizedMetricRequest>| {
-                            let core = metric_clone.to_owned();
+                    .service(web::resource("/admin/").route(web::post().to(
+                        move |request: web::Json<ParameterizedAdminRequest>| {
+                            let core = admin_clone.to_owned();
                             debug!("received metric request");
                             // HttpResponse impl's Future, but that is irrelevant in this context.
                             #[allow(clippy::async_yields_async)]
@@ -260,7 +263,31 @@ fn main() {
                                 }
                             }
                         },
-                    )));
+                    )))
+                    .service(web::resource("/status/").route(web::get().to(move || {
+                        let core = status_clone.to_owned();
+                        debug!("received status request");
+                        let request = ParameterizedAdminRequest {
+                            params: AdminState {
+                                auth: AdminState::AUTH.to_string(),
+                            },
+                            request: AdminRequest::RequestStatus,
+                        };
+                        // HttpResponse impl's Future, but that is irrelevant in this context.
+                        #[allow(clippy::async_yields_async)]
+                        async move {
+                            match core.send(request).await {
+                                Ok(result) => match result {
+                                    actix_web::Result::Ok(update) => {
+                                        let response = serde_json::to_vec(&update).unwrap();
+                                        HttpResponse::Ok().body(response)
+                                    }
+                                    Err(e) => HttpResponse::BadRequest().body(String::from(e)),
+                                },
+                                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+                            }
+                        }
+                    })));
 
                 // Allows changing without recompilation.
                 #[cfg(debug_assertions)]
@@ -268,7 +295,7 @@ fn main() {
                     use actix_files as fs;
                     return app
                         .service(
-                            fs::Files::new("/core", "../core/js/public/").index_file("index.html"),
+                            fs::Files::new("/admin", "../core/js/public/").index_file("index.html"),
                         )
                         .service(fs::Files::new("/", "../js/public/").index_file("index.html"));
                 }
@@ -280,7 +307,7 @@ fn main() {
                         build_hashmap_from_included_dir, include_dir, ResourceFiles,
                     };
                     app.service(ResourceFiles::new(
-                        "/core",
+                        "/admin",
                         build_hashmap_from_included_dir(&include_dir!("../core/js/public/")),
                     ))
                     .service(ResourceFiles::new(
@@ -301,10 +328,24 @@ fn main() {
                     .expect("could not listen (http)");
             }
 
+            const MAX_FILE_DESCRIPTORS: usize = 1000;
+            const BACKLOG: usize = 50;
+            const CLEARANCE: usize = 50;
+            const MAX_CONNECTIONS: usize = MAX_FILE_DESCRIPTORS - BACKLOG - CLEARANCE;
+            let workers = num_cpus::get();
+            let max_connections_per_worker = MAX_CONNECTIONS / workers;
+
+            info!(
+                "Server will spawn {} workers, each with up to {} connections",
+                workers, max_connections_per_worker
+            );
+
             server = server
+                .keep_alive(KeepAlive::Timeout(10))
+                // Don't wait forever for clients to disconnect.
                 .shutdown_timeout(3)
-                .max_connections(2048)
-                .backlog(512);
+                .max_connections(max_connections_per_worker)
+                .backlog(BACKLOG as u32);
 
             let running_server = server.run();
 

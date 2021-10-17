@@ -4,9 +4,36 @@
 use crate::dto::*;
 use crate::id::*;
 use crate::name::*;
+use crate::UnixTime;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
+
+// Admin requests are from the admin interface to the core service.
+#[derive(Debug, Serialize, Deserialize)]
+pub enum AdminRequest {
+    RequestDay {
+        game_id: GameId,
+        referrer: Option<Referrer>,
+        user_agent_id: Option<UserAgentId>,
+    },
+    RequestGames,
+    RequestSeries {
+        game_id: GameId,
+        period_start: Option<UnixTime>,
+        period_stop: Option<UnixTime>,
+    },
+    RequestStatus,
+    RequestSummary {
+        game_id: GameId,
+        period_start: Option<UnixTime>,
+        period_stop: Option<UnixTime>,
+    },
+    RequestReferrers,
+    RequestRestart {
+        conditions: RestartDto,
+    },
+    RequestUserAgents,
+}
 
 // Client requests are from the browser to the core service.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -19,17 +46,16 @@ pub enum ClientRequest {
     },
     CreateInvitation,
     CreateSession {
-        alias: Option<PlayerAlias>,
         game_id: GameId,
         invitation_id: Option<InvitationId>,
-        language_pref: Option<LanguageId>,
-        referer: Option<Referer>,
-        region_pref: Option<RegionId>,
+        referrer: Option<Referrer>,
         saved_session_tuple: Option<(ArenaId, SessionId)>,
-        user_agent: Option<UserAgentId>,
     },
     CreateTeam {
         team_name: TeamName,
+    },
+    IdentifySession {
+        alias: PlayerAlias,
     },
     KickPlayer {
         player_id: PlayerId,
@@ -49,15 +75,12 @@ pub enum ClientRequest {
         message: String,
         whisper: bool,
     },
+    SubmitSurvey {
+        survey: SurveyDto,
+    },
     Trace {
         message: String,
     },
-}
-
-// Metric requests are from the reporting interface to the core service.
-#[derive(Debug, Serialize, Deserialize)]
-pub enum MetricRequest {
-    RequestMetrics,
 }
 
 // Server requests are from the game server to the core service.
@@ -83,7 +106,7 @@ pub enum ServerRequest {
         region: RegionId,
         rules: Option<RulesDto>,
         saved_arena_id: Option<ArenaId>,
-        server_id: ServerId,
+        server_id: Option<ServerId>,
     },
     StartPlay {
         session_id: SessionId,
@@ -95,6 +118,34 @@ pub enum ServerRequest {
     },
     ValidateSession {
         session_id: SessionId,
+    },
+}
+
+#[cfg_attr(feature = "server", derive(actix::Message))]
+#[cfg_attr(feature = "server", rtype(result = "()"))]
+#[cfg_attr(feature = "client", derive(actix::Message))]
+#[cfg_attr(feature = "client", rtype(result = "()"))]
+#[derive(Serialize, Deserialize)]
+pub enum AdminUpdate {
+    DayRequested {
+        series: Arc<[(UnixTime, MetricsDto)]>,
+    },
+    GamesRequested {
+        games: Arc<[(GameId, f32)]>,
+    },
+    ReferrersRequested {
+        referrers: Arc<[(Referrer, f32)]>,
+    },
+    RestartRequested,
+    SeriesRequested {
+        series: Arc<[(UnixTime, MetricsDto)]>,
+    },
+    SummaryRequested {
+        metrics: MetricsDto,
+    },
+    StatusRequested,
+    UserAgentsRequested {
+        user_agents: Arc<[(UserAgentId, f32)]>,
     },
 }
 
@@ -163,11 +214,13 @@ pub enum ClientUpdate {
     },
     SessionCreated {
         arena_id: ArenaId,
-        language: LanguageId,
-        region: RegionId,
-        server_id: ServerId,
+        server_id: Option<ServerId>,
         session_id: SessionId,
     },
+    SessionIdentified {
+        alias: PlayerAlias,
+    },
+    SurveySubmitted,
     TeamCreated {
         team_id: TeamId,
     },
@@ -181,23 +234,15 @@ pub enum ClientUpdate {
 
 #[cfg_attr(feature = "server", derive(actix::Message))]
 #[cfg_attr(feature = "server", rtype(result = "()"))]
-#[cfg_attr(feature = "client", derive(actix::Message))]
-#[cfg_attr(feature = "client", rtype(result = "()"))]
-#[derive(Serialize, Deserialize)]
-pub enum MetricUpdate {
-    MetricsRequested {
-        metrics: HashMap<GameId, MetricsDto>,
-    },
-}
-
-#[cfg_attr(feature = "server", derive(actix::Message))]
-#[cfg_attr(feature = "server", rtype(result = "()"))]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ServerUpdate {
     ArenaStarted {
         arena_id: ArenaId,
     },
     ArenaStopped,
+    ArmageddonStarted {
+        arena_id: ArenaId,
+    },
     BotReady {
         player_id: PlayerId,
         session_id: SessionId,

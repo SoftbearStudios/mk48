@@ -346,8 +346,6 @@ impl World {
                             let data = boat.data();
                             let other_data = other_boat.data();
 
-                            let pos_diff = (boat.transform.position - other_boat.transform.position).normalize_or_zero();
-
                             // Approximate mass.
                             let mass = data.width * data.length;
                             let other_mass = other_data.width * other_data.length;
@@ -380,7 +378,16 @@ impl World {
                                 }
                             }
 
-                            let impulse = Velocity::from_mps(6.0 * pos_diff.dot(boat.transform.direction.to_vec()) * relative_mass);
+                            let pos_diff = boat.transform.position - other_boat.transform.position;
+
+                            // Closest point to boat's center on other_boat's keel (a line segment from bow to stern).
+                            let closest_point_on_other_keel = other_boat.transform.position + pos_diff.project_onto(other_boat.transform.direction.to_vec()).clamp_length_max(other_data.length * 0.5);
+
+                            // Direction of repulsion.
+                            let pos_diff_closest_point_on_other_keel = (boat.transform.position - closest_point_on_other_keel).normalize_or_zero();
+
+                            // Velocity change to cause repulsion.
+                            let impulse = Velocity::from_mps(6.0 * pos_diff_closest_point_on_other_keel.dot(boat.transform.direction.to_vec()) * relative_mass);
 
                             mutate(boat, Mutation::CollidedWithBoat{other_player: Arc::clone(other_boat.player.as_ref().unwrap()), damage, ram: other_data.sub_kind == EntitySubKind::Ram, impulse});
                         }
@@ -395,7 +402,7 @@ impl World {
                             (EntitySubKind::Battleship, EntitySubKind::Torpedo) => 0.6,
                             (EntitySubKind::Cruiser, EntitySubKind::Torpedo) => 0.8,
                             _ => 1.0
-                        };
+                        } * boats[0].extension().spawn_protection();
 
                         let damage = Ticks::from_damage(
                             weapons[0].data().damage * collision_multiplier(dist2, r2) * damage_resistance,

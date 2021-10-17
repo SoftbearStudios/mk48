@@ -31,15 +31,24 @@ impl World {
             if let Some(entity) = player_entity {
                 let data = entity.data();
                 let sensors = &data.sensors;
-                let altitude = entity.altitude.to_norm();
-                let visual_range = sensors.visual.range * (altitude + 1.0).clamp(0.5, 1.0);
-                let radar_range = sensors.radar.range * (altitude.min(0.0) + 1.0);
-                let sonar_range = if altitude > 0.0 {
+
+                // Ranges from -1.0 to 1.0 where 0.0 is sea level.
+                let norm_altitude = entity.altitude.to_norm();
+
+                // As altitude ranges from -0.5 to 0.0, visual ranges from 50% to 100% effective range.
+                let visual_range = sensors.visual.range * (norm_altitude + 1.0).clamp(0.5, 1.0);
+
+                // As altitude ranges from minimum to sea level, radar ranges from 0% to 100% effective range.
+                let radar_range = sensors.radar.range * (norm_altitude.min(0.0) + 1.0);
+
+                // Sonar works at full effective range as long as it is not airborne.
+                let sonar_range = if entity.altitude.is_airborne() {
                     0.0
                 } else {
                     sensors.sonar.range
                 };
-                if let Status::Alive { .. } = player.status {
+
+                if player.status.is_alive() {
                     (
                         visual_range,
                         radar_range,
@@ -83,12 +92,15 @@ impl World {
                 // Limit contacts based on visibility.
 
                 let data = entity.data();
+
+                // Variables related to the relationship between the player and the contact.
                 let distance_squared = position.distance_squared(entity.transform.position);
                 let same_player =
                     entity.player.is_some() && tuple == &**entity.player.as_ref().unwrap();
                 let friendly = entity.is_friendly_to_player(Some(tuple));
                 let known = same_player || (friendly && distance_squared < 800f32.powi(2));
 
+                // Variables related to detecting the contact.
                 let mut visible = false;
                 let mut uncertainty = 0f32;
                 let altitude = entity.altitude;

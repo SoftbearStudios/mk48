@@ -8,7 +8,7 @@ use crate::session::Session;
 use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::name::*;
-use log::{debug, error};
+use log::{debug, error, warn};
 use rustrict::CensorIter;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
@@ -109,6 +109,14 @@ impl Repo {
                 }
             }
         }
+
+        if !accepted {
+            warn!(
+                "accept_player(arena={:?}, session={:?}, player={:?}) failed",
+                arena_id, session_id, player_id
+            );
+        }
+
         return accepted;
     }
 
@@ -157,6 +165,14 @@ impl Repo {
                 }
             }
         }
+
+        if !assigned {
+            warn!(
+                "assign_captain(arena={:?}, session={:?}, player={:?}) failed",
+                arena_id, session_id, player_id
+            );
+        }
+
         return assigned;
     }
 
@@ -166,35 +182,36 @@ impl Repo {
         arena_id: ArenaId,
         session_id: SessionId,
         team_name: TeamName,
-    ) -> Option<TeamId> {
+    ) -> Result<TeamId, &'static str> {
         debug!(
             "create_team(arena={:?}, session={:?}, team_name={:?})",
             arena_id, session_id, team_name
         );
 
         let censored_text = team_name.0.chars().censor().collect::<String>();
-        let censored_team_name = TeamName::new(&censored_text);
+        let trimmed_text = trim_spaces(&censored_text);
+        let censored_team_name = TeamName::new(trimmed_text);
 
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
-                let mut ok = session.live && !censored_team_name.0.is_empty();
-                let play = session.plays.last_mut().unwrap();
-                if ok && play.date_stop.is_some() {
-                    ok = false;
-                }
-                if ok && play.team_id.is_some() {
-                    // Cannot create team if already on another team.
-                    ok = false;
-                }
-                if ok {
+                if let Some(play) = session.plays.last_mut() {
+                    if !session.live {
+                        return Err("session not live");
+                    }
+                    if censored_team_name.0.is_empty() {
+                        return Err("empty team name");
+                    }
+                    if play.date_stop.is_some() {
+                        return Err("play stopped");
+                    }
+                    if play.team_id.is_some() {
+                        return Err("already in team");
+                    }
                     for Team { team_name, .. } in arena.teams.values() {
                         if team_name == &censored_team_name {
-                            ok = false;
-                            break;
+                            return Err("team name in use");
                         }
                     }
-                }
-                if ok {
                     let team_id = loop {
                         let team_id = TeamId(generate_id());
                         if let Entry::Vacant(e) = arena.teams.entry(team_id) {
@@ -215,11 +232,16 @@ impl Repo {
                     arena
                         .confide_membership
                         .insert(session.player_id, play.team_id);
-                    return Some(team_id);
+                    return Ok(team_id);
+                } else {
+                    Err("not playing")
                 }
+            } else {
+                Err("invalid session_id")
             }
+        } else {
+            Err("invalid arena_id")
         }
-        return None;
     }
 
     // Client removes another player from its team.
@@ -252,6 +274,14 @@ impl Repo {
                 }
             }
         }
+
+        if !removed {
+            warn!(
+                "kick_player(arena={:?}, session={:?}, player={:?}) failed",
+                arena_id, session_id, player_id
+            );
+        }
+
         return removed;
     }
 
@@ -375,6 +405,14 @@ impl Repo {
             // If possible, promote somebody else immediately.
             self.prune_teams();
         }
+
+        if !quit {
+            warn!(
+                "quit_team(arena={:?}, session={:?}) failed",
+                arena_id, session_id
+            );
+        }
+
         return quit;
     }
 
@@ -415,6 +453,14 @@ impl Repo {
                 }
             }
         }
+
+        if !rejected {
+            warn!(
+                "reject_player(arena={:?}, session={:?}, player={:?}) failed",
+                arena_id, session_id, player_id
+            );
+        }
+
         return rejected;
     }
 
@@ -457,6 +503,13 @@ impl Repo {
                     error!("team gone in request join");
                 }
             }
+        }
+
+        if !requested {
+            warn!(
+                "request_join(arena={:?}, session={:?}, team={:?})",
+                arena_id, session_id, team_id
+            );
         }
 
         requested

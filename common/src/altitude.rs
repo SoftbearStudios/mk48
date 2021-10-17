@@ -61,7 +61,7 @@ impl Altitude {
         ) as AltitudeRepr)
     }
 
-    /// to_norm returns self in the range [-1, 1].
+    /// to_norm returns self in the range [-1, 1] where 0.0 is sea level.
     pub fn to_norm(self) -> f32 {
         map_ranges(
             self.0 as f32,

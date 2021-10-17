@@ -86,7 +86,7 @@ impl Player {
             player_id,
             team_id: None,
             #[cfg(debug_assertions)]
-            score: 300,
+            score: 500,
             #[cfg(not(debug_assertions))]
             score: 0,
             status: Status::Spawning {

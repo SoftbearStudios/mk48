@@ -3,6 +3,7 @@
 
 use crate::repo::Repo;
 use core_protocol::id::*;
+use log::debug;
 use std::collections::hash_map::Entry;
 
 #[derive(Clone, Debug)]
@@ -69,7 +70,7 @@ impl Repo {
                     }
                 }
             }
-            println!("Pruning invitation {:?}", invitation_id);
+            debug!("pruning invitation {:?}", invitation_id);
             false
         });
     }

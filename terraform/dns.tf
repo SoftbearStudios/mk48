@@ -18,7 +18,7 @@ resource "linode_domain_record" "home_ipv4" {
 resource "linode_domain_record" "servers_ipv4" {
   count = var.servers
   domain_id = linode_domain.main.id
-  name = "server${count.index}"
+  name = count.index + 1
   record_type = "A"
   target = element(linode_instance.servers.*.ip_address, count.index)
   ttl_sec = 30

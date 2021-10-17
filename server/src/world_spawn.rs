@@ -9,10 +9,10 @@ use common::entity::*;
 use common::guidance::Guidance;
 use common::ticks::Ticks;
 use common::transform::Transform;
+use common::util::gen_radius;
 use common::velocity::Velocity;
 use glam::Vec2;
 use log::warn;
-use rand::prelude::ThreadRng;
 use rand::Rng;
 use servutil::benchmark::Timer;
 use servutil::benchmark_scope;
@@ -229,9 +229,4 @@ impl World {
             altitude: Altitude::ZERO,
         });
     }
-}
-
-/// Samples a point from a circle with the given radius.
-fn gen_radius(rng: &mut ThreadRng, radius: f32) -> Vec2 {
-    rng.gen::<Angle>().to_vec() * (rng.gen::<f32>().sqrt() * radius)
 }

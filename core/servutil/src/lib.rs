@@ -4,4 +4,5 @@
 pub mod benchmark;
 pub mod observer;
 pub mod ssl;
+pub mod user_agent;
 pub mod web_socket;

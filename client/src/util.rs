@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use core_protocol::name::Referrer;
 use glam::{Vec3, Vec4};
 use wasm_bindgen::prelude::*;
 
@@ -31,6 +32,10 @@ pub fn domain_name() -> String {
     } else {
         h
     }
+}
+
+pub fn referrer() -> Option<Referrer> {
+    Referrer::new(&web_sys::window().unwrap().document().unwrap().referrer())
 }
 
 pub fn ws_protocol() -> &'static str {
