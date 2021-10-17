@@ -1,4 +1,4 @@
-name: Rust
+name: Build
 
 on:
   push:
@@ -22,5 +22,8 @@ jobs:
         toolchain: nightly
         override: true
         components: rustfmt, clippy
-    - name: Build
+    - name: Build Server
       run: cargo build --manifest-path server/Cargo.toml --verbose
+    - name: Build Client
+      working-directory: ./js
+      run: npm install && npm run build
