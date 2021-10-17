@@ -16,6 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - uses: egor-tensin/setup-clang@v1
+        with:
+         version: latest
+         platform: x64
     - name: Build
       run: cargo build --manifest-path server/Cargo.toml --verbose
     - name: Run tests
