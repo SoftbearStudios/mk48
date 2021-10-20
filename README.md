@@ -1,6 +1,6 @@
 # Mk48.io Game
 
-[![Rust](https://github.com/SoftbearStudios/mk48/actions/workflows/rust.yml/badge.svg)](https://github.com/SoftbearStudios/mk48/actions/workflows/rust.yml)
+[![Build](https://github.com/SoftbearStudios/mk48/actions/workflows/build.yml/badge.svg)](https://github.com/SoftbearStudios/mk48/actions/workflows/build.yml)
 <a href='https://discord.gg/YMheuFQWTX'>
   <img src='https://img.shields.io/badge/Mk48.io-%23announcements-blue.svg' alt='Mk48.io Discord' />
 </a>
