@@ -40,7 +40,7 @@ impl Bot {
             // Raise aggression to a power such that lower values are more common.
             aggression: rng.gen::<f32>().powi(2) * Self::MAX_AGGRESSION,
             aim_bias: gen_radius(&mut rng, 10.0),
-            level_ambition: rng.gen_range(1..EntityData::MAX_BOAT_LEVEL),
+            level_ambition: rng.gen_range(1..=EntityData::MAX_BOAT_LEVEL),
             spawned_at_least_once: false,
         }
     }
@@ -134,23 +134,27 @@ impl Bot {
                                 data.radius + contact_data.radius,
                             );
                         }
-                    } else {
-                        if match contact_data.kind {
-                            EntityKind::Boat | EntityKind::Aircraft => true,
-                            EntityKind::Weapon => contact_data.sub_kind == EntitySubKind::Missile,
-                            EntityKind::Obstacle => {
-                                repel(&mut movement, delta_position, distance_squared);
-                                false
-                            }
-                            _ => false,
-                        } {
-                            if let Some(existing) = &closest_enemy {
-                                if distance_squared < existing.1 {
-                                    closest_enemy = Some((contact, distance_squared));
-                                }
-                            } else {
+                    } else if match contact_data.kind {
+                        // Don't kill smol boats unless they get too close.
+                        EntityKind::Boat => {
+                            contact_data.level + 1 >= data.level
+                                || distance_squared < 1.5 * data.radius.powi(2)
+                                || health_percent < 1.0 / 3.0
+                        }
+                        EntityKind::Aircraft => true,
+                        EntityKind::Weapon => contact_data.sub_kind == EntitySubKind::Missile,
+                        EntityKind::Obstacle => {
+                            repel(&mut movement, delta_position, distance_squared);
+                            false
+                        }
+                        _ => false,
+                    } {
+                        if let Some(existing) = &closest_enemy {
+                            if distance_squared < existing.1 {
                                 closest_enemy = Some((contact, distance_squared));
                             }
+                        } else {
+                            closest_enemy = Some((contact, distance_squared));
                         }
                     }
                 }

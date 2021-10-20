@@ -49,7 +49,11 @@ impl Referrer {
         let e: Vec<&str> = d.split(".").into_iter().collect();
         let n = e.len();
         if n > 1 {
-            let cooked = e[n - 2];
+            let mut cooked = e[n - 2];
+            if n > 2 && cooked == "com" {
+                // e.g. "foo.com.uk"
+                cooked = e[n - 3];
+            }
             Some(Self(slice_up_to(cooked)))
         } else {
             None

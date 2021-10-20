@@ -373,43 +373,35 @@
 	on:contextmenu|preventDefault
 ></canvas>
 
-{#if client && $state}
-	<div class='top bar'>
-		{#if $state.status.alive}
-			<Teams state={$state} {onCreateTeam} {onRequestJoinTeam} {onAcceptJoinTeam} {onRejectJoinTeam} {onKickFromTeam} {onLeaveTeam}/>
-			{#if canUpgrade($state.status.alive.type, $state.score)}
-				<Upgrades
-					type={$state.status.alive.type}
-					{onUpgrade}
-				/>
-			{:else}
-				<Instructions {touch} {instructBasics} {instructZoom}/>
-			{/if}
+<div class='top bar'>
+	{#if client && $state && $state.status.alive}
+		<Teams state={$state} {onCreateTeam} {onRequestJoinTeam} {onAcceptJoinTeam} {onRejectJoinTeam} {onKickFromTeam} {onLeaveTeam}/>
+		{#if canUpgrade($state.status.alive.type, $state.score)}
+			<Upgrades
+				type={$state.status.alive.type}
+				{onUpgrade}
+			/>
 		{:else}
-			<!-- Render this div even without contents, as it causes the flex
-			box to shift the other contents to the right side -->
-			<div>
-				{#if $state.leaderboards}
-					{#if $state.leaderboards['AllTime']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={$state.leaderboards['AllTime']} headerAlign='left'/>
-						<br/>
-					{/if}
-					{#if $state.leaderboards['Weekly']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={$state.leaderboards['Weekly']} headerAlign='left'/>
-						<br/>
-					{/if}
-					{#if $state.leaderboards['Daily']}
-						<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={$state.leaderboards['Daily']} headerAlign='left'/>
-					{/if}
-				{/if}
-			</div>
+			<Instructions {touch} {instructBasics} {instructZoom}/>
 		{/if}
-		{#if $state.liveboard}
-			<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? `${$state.playerCount} online` : null}/>
-		{:else}
-			<div><!--placeholder--></div>
-		{/if}
-	</div>
+	{:else}
+		<!-- Render this div even without contents, as it causes the flex
+		box to shift the other contents to the right side -->
+		<div>
+			<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={$state && $state.leaderboards && $state.leaderboards['AllTime'] ? $state.leaderboards['AllTime'] : []} headerAlign='left'/>
+			<br/>
+			<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Daily'] ? $state.leaderboards['Daily'] : []} headerAlign='left'/>
+			<br/>
+			<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Daily'] ? $state.leaderboards['Daily'] : []} headerAlign='left'/>
+		</div>
+	{/if}
+	{#if $state && $state.liveboard}
+		<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? `${$state.playerCount} online` : null}/>
+	{:else}
+		<div><!--placeholder--></div>
+	{/if}
+</div>
+{#if $state && $state.status}
 	{#if $state.status.alive}
 		<div class='bottom bar'>
 			<Ship bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
@@ -421,8 +413,8 @@
 		<SplashScreen state={$state} {onSpawn}/>
 	{/if}
 	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
-	<ContextMenu/>
 {/if}
+<ContextMenu/>
 <Router routes={{'/help': Help, '/about': About, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
 
 <svelte:head>
@@ -500,8 +492,8 @@
 	}
 
 	:global(button) {
-		background-color: #2980b9;
-		border: 1px solid #2980b9;
+		background-color: #2575a9;
+		border: 1px solid #2575a9;
 		border-radius: 0.25em;
 		box-sizing: border-box;
 		color: white;

@@ -7,7 +7,7 @@
 	-->
 
 	<meta charset='utf-8'>
-	<meta name='viewport' content='width=device-width,initial-scale=1,user-scalable=no'>
+	<meta name='viewport' content='width=device-width,initial-scale=1'>
 
 	<title>mk48.io</title>
 
@@ -17,6 +17,8 @@
 	<link rel='shortcut icon' type='image/png' href='/favicon.png'>
 	<meta property="og:image" content="https://mk48.io/logo-712.png"/>
 
+	<!-- Ensure bundle.js is the first HTTP request -->
+	<link rel="preload" href="/build/bundle.js" as="script">
 	<script defer src='/build/bundle.js'></script>
 	<link rel="preload" href="/build/client.wasm" as="fetch" crossorigin="anonymous">
 	<link rel="preload" href="/sprites_webgl.webp" as="image">

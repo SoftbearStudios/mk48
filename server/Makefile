@@ -9,7 +9,7 @@ SSH_OPTS := -i $(SSH_KEY) -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChe
 all: debug_core
 
 debug_core:
-	RUST_BACKTRACE=1 cargo run -- --debug-core -v -v -p 0
+	RUST_BACKTRACE=1 cargo run -- --debug-core -v -v -p 0 --database-read-only
 
 ssh:
 	ssh $(DEV_SERVER)

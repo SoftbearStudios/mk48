@@ -601,6 +601,7 @@ impl Repo {
                                     let _ = wtr.write_record(&[
                                         &format!("{}", get_unix_time_now()),
                                         &format!("{:?}", arena.game_id),
+                                        &format!("{:?}", whisper),
                                         &format!("{}", player_id.is_some()),
                                         &session.alias.0.to_string(),
                                         &message,

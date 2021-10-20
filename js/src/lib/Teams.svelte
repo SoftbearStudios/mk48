@@ -9,7 +9,7 @@
 
 	export let state;
 
-	const minNameLength = 2;
+	const minNameLength = 1;
 	const maxNameLength = 6;
 
 	export let onCreateTeam;

@@ -54,7 +54,7 @@
 	let invite = undefined;
 	let paused = false;
 
-	const minNameLength = 3;
+	const minNameLength = 1;
 	const maxNameLength = 12;
 
 	function handleSubmit() {

@@ -13,6 +13,14 @@
 
 	<h2>2021</h2>
 
+	<h3>10/19/2021</h3>
+
+	<ul>
+		<li>Bots are less aggressive towards much smaller boats.</li>
+		<li>Improve network loading time if not cached.</li>
+		<li>Allow single-character player nicknames and team names.</li>
+	</ul>
+
 	<h3>10/10/2021</h3>
 
 	<ul>

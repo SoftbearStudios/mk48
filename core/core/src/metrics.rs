@@ -169,8 +169,11 @@ impl Repo {
         let mut total = 0;
         for (_, arena) in self.arenas.iter() {
             for (_, session) in arena.sessions.iter() {
+                if session.bot || session.date_terminated.is_some() {
+                    continue;
+                }
+                total += 1;
                 if let Some(referrer) = session.referrer {
-                    total += 1;
                     let count = hash.entry(referrer.clone()).or_insert(0);
                     *count += 1;
                 }
@@ -387,8 +390,11 @@ impl Repo {
         let mut total = 0;
         for (_, arena) in self.arenas.iter() {
             for (_, session) in arena.sessions.iter() {
+                if session.bot || session.date_terminated.is_some() {
+                    continue;
+                }
+                total += 1;
                 if let Some(user_agent_id) = session.user_agent_id {
-                    total += 1;
                     let count = hash.entry(user_agent_id).or_insert(0);
                     *count += 1;
                 }

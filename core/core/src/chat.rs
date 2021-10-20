@@ -220,18 +220,15 @@ impl Repo {
                 if whisper {
                     if let Some(whisper_team_id) = maybe_team_id {
                         for (_, session) in Session::iter_mut(&mut arena.sessions) {
-                            if session.muted.contains(&message.player_id) {
+                            // Must be live to receive whisper, otherwise your team affilation isn't real.
+                            if !session.live || session.muted.contains(&message.player_id) {
                                 continue;
                             }
                             if let Some(play) = session.plays.last_mut() {
-                                if let Some(team_id) = play.team_id {
-                                    if team_id == whisper_team_id
-                                        && !session.muted.contains(&message.player_id)
-                                    {
-                                        session.inbox.push(Rc::clone(&message));
-                                        if sent.is_none() {
-                                            sent = Some(player_id);
-                                        }
+                                if play.team_id == Some(whisper_team_id) {
+                                    session.inbox.push(Rc::clone(&message));
+                                    if sent.is_none() {
+                                        sent = Some(player_id);
                                     }
                                 }
                             }

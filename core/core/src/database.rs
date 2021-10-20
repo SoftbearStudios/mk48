@@ -264,16 +264,6 @@ impl Database {
         Ok(leaderboard)
     }
 
-    /*
-    UpdateScore(score Score) error
-    ReadScores() (scores []Score, err error)
-    ReadScoresByType(scoreType string) (scores []Score, err error)
-    UpdateServer(server Server) error
-    UpdateStatistic(statistic Statistic) error
-    ReadServers() (servers []Server, err error)
-    ReadServersByRegion(region string) (servers []Server, err error)
-     */
-
     async fn put<I: Serialize>(&self, item: I, table: &'static str) -> Result<(), Error> {
         let ser = match serde_dynamo::generic::to_item(item) {
             Ok(ser) => ser,
@@ -625,12 +615,6 @@ impl Database {
         .await
     }
 
-    /*
-    pub async fn put_metrics(&self, metrics_item: MetricsItem) -> Result<(), Error> {
-        self.put(metrics_item, Self::METRICS_TABLE_NAME).await
-    }
-     */
-
     pub async fn update_metrics(&self, metrics_item: MetricsItem) -> Result<(), Error> {
         // Atomic compare and swap.
         let mut governor = 0;
@@ -675,10 +659,13 @@ impl Database {
                 // Condition is that the item wasn't changed elsewhere (all changes by servers hosting
                 // arenas would increase the arenas field)
                 request = request
-                    .condition_expression("#arenas_cached.#total = :arenas_total")
+                    .condition_expression("#arenas_cached.#total = :arenas_cached_total")
                     .expression_attribute_names("#arenas_cached", "arenas_cached")
                     .expression_attribute_names("#total", "total")
-                    .expression_attribute_values("#arenas_cached", to_av(old.arenas_cached.total)?);
+                    .expression_attribute_values(
+                        "#arenas_cached_total",
+                        to_av(old.arenas_cached.total)?,
+                    );
             } else {
                 // Condition is that the item wasn't created elsewhere.
                 request = request
@@ -707,40 +694,6 @@ impl Database {
                 Ok(_) => Ok(()),
             };
         }
-
-        /*
-         let game_id_ser: AttributeValue = match serde_dynamo::generic::to_attribute_value(game_id) {
-            Err(e) => return Err(Error::Serde(e)),
-            Ok(key_ser) => key_ser,
-        };
-
-        let timestamp_ser: AttributeValue = match serde_dynamo::generic::to_attribute_value(timestamp)
-        {
-            Err(e) => return Err(Error::Serde(e)),
-            Ok(key_ser) => key_ser,
-        };
-
-        match self.client
-            .update_item()
-            .table_name(Self::METRICS_TABLE_NAME)
-            .key("game_id", game_id_ser)
-            .key("timestamp", timestamp_ser)
-            .update_expression("ADD bounce_t :bounce_t, ADD bounce_c :bounce_c,
-                                    ADD flop_t :flop_t, ADD flop_c :flop_c,
-                                    ADD invited_t :invited_t, ADD invited_c :invited_c,
-                                    ADD peek_t :peek_t, ADD peek_c :peek_c,
-                                    ADD concurrent_c :concurrent_c,
-                                    ADD minutes_c :minutes_c, ADD minutes_t :minutes_t, ADD minutes_st :minutes_st,
-                                    ADD plays_c :plays_c, ADD plays_t :plays_t, ADD plays_st :plays_st,
-                                    ADD play_minutes_c :play_minutes_c, ADD play_minutes_t :play_minutes_t, ADD play_minutes_st :play_minutes_st,
-                                    ADD solo_t :solo_t, ADD solo_c :solo_c,
-                                    ADD score_c :score_c, ADD score_t :score_t, ADD score_st :score_st")
-            .send()
-            .await {
-            Err(e) => Err(Error::Dynamo(e)),
-            Ok(_) => Ok(())
-        }
-         */
     }
 }
 
