@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #![feature(box_syntax)]
-#![feature(float_interpolation)]
 
 pub mod altitude;
 pub mod angle;
