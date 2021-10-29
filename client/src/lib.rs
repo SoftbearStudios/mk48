@@ -52,7 +52,7 @@ pub struct TeamPlayerModel {
 #[serde(rename_all = "camelCase")]
 pub struct ChatModel {
     name: PlayerAlias,
-    player_id: PlayerId,
+    player_id: Option<PlayerId>,
     team: Option<TeamName>,
     whisper: bool,
     message: String,
@@ -166,9 +166,21 @@ pub fn set_state(state: &State) {
 */
 static mut GAME: UnsafeCell<MaybeUninit<RefCell<Game>>> = UnsafeCell::new(MaybeUninit::uninit());
 
-// Easily get the game.
+/// Easily get the game.
 fn borrow_game() -> RefMut<'static, Game> {
     unsafe { GAME.get_mut().assume_init_ref().borrow_mut() }
+}
+
+/// Easily access the game.
+///
+/// This should be used instead of [`borrow_game()`] if mitigation of JavaScript "Immediate Events"
+/// is a concern (if calls were observed to interrupt already-executing WebAssembly).
+fn with_game<F: Fn(RefMut<'static, Game>)>(function: F) {
+    unsafe {
+        if let Ok(game) = GAME.get_mut().assume_init_ref().try_borrow_mut() {
+            function(game);
+        }
+    }
 }
 
 #[wasm_bindgen(js_name = "handleSpawn")]
@@ -190,12 +202,12 @@ pub fn handle_mouse_button(button: MouseButton, down: bool) {
 
 #[wasm_bindgen(js_name = "handleMouseMove")]
 pub fn handle_mouse_move(x: f32, y: f32) {
-    borrow_game().input.handle_mouse_move((x, y).into());
+    with_game(|mut game| game.input.handle_mouse_move((x, y).into()));
 }
 
 #[wasm_bindgen(js_name = "handleWheel")]
 pub fn handle_wheel(delta: f32) {
-    borrow_game().input.handle_wheel(delta);
+    with_game(|mut game| game.input.handle_wheel(delta));
 }
 
 #[wasm_bindgen(js_name = "handleJoystick")]

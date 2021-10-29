@@ -98,7 +98,7 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 746.6
+				"range": 826.6
 			},
 			"sonar": {
 				"range": 406.65
@@ -205,7 +205,7 @@
 		"stealth": 0.25,
 		"sensors": {
 			"visual": {
-				"range": 828
+				"range": 908
 			},
 			"radar": {
 				"range": 1231
@@ -411,7 +411,7 @@
 		"speed": 15.438478,
 		"sensors": {
 			"visual": {
-				"range": 1003.2
+				"range": 1083.2
 			},
 			"radar": {
 				"range": 1362.4
@@ -569,7 +569,7 @@
 		"speed": 8,
 		"sensors": {
 			"visual": {
-				"range": 718
+				"range": 798
 			}
 		},
 		"armaments": [
@@ -596,6 +596,139 @@
 		],
 		"damage": 3.3
 	},
+	"espana": {
+		"label": "España",
+		"link": "https://en.wikipedia.org/wiki/Espa%C3%B1a-class_battleship",
+		"kind": "boat",
+		"subkind": "dreadnought",
+		"level": 3,
+		"length": 138.414,
+		"width": 24.331,
+		"draft": 7.8,
+		"speed": 10.032,
+		"sensors": {
+			"visual": {
+				"range": 876.828
+			}
+		},
+		"armaments": [
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			}
+		],
+		"turrets": [
+			{
+				"type": "vickersMkH12in",
+				"positionForward": 34.9562,
+				"positionSide": 0,
+				"speed": 0.9424777960769379,
+				"angle": 0,
+				"azimuthBL": 0.8726646259971648,
+				"azimuthBR": 0.8726646259971648
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": 13.7379,
+				"positionSide": -6.25652,
+				"speed": 0.9424777960769379,
+				"azimuthFR": 0.3490658503988659,
+				"azimuthBL": 3.141592653589793,
+				"angle": 0
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": -15.7514,
+				"positionSide": 6.73689,
+				"angle": 3.141592653589793,
+				"speed": 0.9424777960769379,
+				"azimuthBL": 3.141592653589793
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": -39.8474,
+				"angle": 3.141592653589793,
+				"speed": 0.9424777960769379,
+				"azimuthBL": 0.7853981633974483,
+				"azimuthBR": 0.7853981633974483
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -0.822
+			}
+		],
+		"antiAircraft": 0.112,
+		"damage": 4.6137999999999995
+	},
 	"essex": {
 		"label": "Essex",
 		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
@@ -608,7 +741,7 @@
 		"speed": 16.83333,
 		"sensors": {
 			"visual": {
-				"range": 1051.6
+				"range": 1131.6
 			},
 			"radar": {
 				"range": 1398.7
@@ -783,7 +916,7 @@
 		"speed": 15.9477,
 		"sensors": {
 			"visual": {
-				"range": 590
+				"range": 670
 			}
 		},
 		"armaments": [
@@ -896,7 +1029,7 @@
 		"speed": 18.777,
 		"sensors": {
 			"visual": {
-				"range": 749.6
+				"range": 829.6
 			},
 			"radar": {
 				"range": 1172.2
@@ -1031,28 +1164,24 @@
 			{
 				"type": "mark9",
 				"positionForward": -55,
-				"positionSide": 1,
 				"angle": 3.141592653589793,
 				"external": true
 			},
 			{
 				"type": "mark9",
 				"positionForward": -55.5,
-				"positionSide": 1,
 				"angle": 3.141592653589793,
 				"external": true
 			},
 			{
 				"type": "mark9",
 				"positionForward": -56,
-				"positionSide": 1,
 				"angle": 3.141592653589793,
 				"external": true
 			},
 			{
 				"type": "mark9",
 				"positionForward": -56.5,
-				"positionSide": 1,
 				"angle": 3.141592653589793,
 				"external": true
 			}
@@ -1139,7 +1268,7 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 750
+				"range": 830
 			},
 			"radar": {
 				"range": 1172.5
@@ -1318,7 +1447,7 @@
 		"speed": 27.26557,
 		"sensors": {
 			"visual": {
-				"range": 557.7
+				"range": 637.7
 			}
 		},
 		"armaments": [
@@ -1357,7 +1486,7 @@
 		"speed": 8.7455,
 		"sensors": {
 			"visual": {
-				"range": 716.8
+				"range": 796.8
 			},
 			"sonar": {
 				"range": 399.2
@@ -1501,7 +1630,7 @@
 		],
 		"sensors": {
 			"visual": {
-				"range": 625.6286
+				"range": 705.6286
 			}
 		},
 		"antiAircraft": 0.039,
@@ -1522,7 +1651,7 @@
 		"speed": 16.46223,
 		"sensors": {
 			"visual": {
-				"range": 1024
+				"range": 1104
 			},
 			"radar": {
 				"range": 1378
@@ -1746,7 +1875,7 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 846
+				"range": 926
 			},
 			"radar": {
 				"range": 1244.5
@@ -1931,7 +2060,7 @@
 		"speed": 22.6,
 		"sensors": {
 			"visual": {
-				"range": 570.8
+				"range": 650.8
 			},
 			"radar": {
 				"range": 1038.1
@@ -2031,7 +2160,7 @@
 		"speed": 16.71945,
 		"sensors": {
 			"visual": {
-				"range": 858.2
+				"range": 938.2
 			},
 			"radar": {
 				"range": 1253.65
@@ -2255,7 +2384,7 @@
 		"speed": 8.5,
 		"sensors": {
 			"visual": {
-				"range": 711.6
+				"range": 791.6
 			},
 			"radar": {
 				"range": 1143.7
@@ -2340,7 +2469,7 @@
 		"speed": 18.52,
 		"sensors": {
 			"visual": {
-				"range": 690.6
+				"range": 770.6
 			},
 			"radar": {
 				"range": 1127.95
@@ -2510,7 +2639,7 @@
 		"speed": 14.404,
 		"sensors": {
 			"visual": {
-				"range": 1081.6
+				"range": 1161.6
 			},
 			"radar": {
 				"range": 1421.2
@@ -2695,7 +2824,7 @@
 		"speed": 14.66167,
 		"sensors": {
 			"visual": {
-				"range": 898
+				"range": 978
 			},
 			"radar": {
 				"range": 1283.5
@@ -2861,7 +2990,7 @@
 		"speed": 12.8611,
 		"sensors": {
 			"visual": {
-				"range": 860
+				"range": 940
 			},
 			"radar": {
 				"range": 1255
@@ -3008,7 +3137,7 @@
 		"speed": 16,
 		"sensors": {
 			"visual": {
-				"range": 593.8
+				"range": 673.8
 			}
 		},
 		"antiAircraft": 0.026,
@@ -3029,7 +3158,7 @@
 		"speed": 21.6067,
 		"sensors": {
 			"visual": {
-				"range": 597.2
+				"range": 677.2
 			},
 			"radar": {
 				"range": 1057.9
@@ -3117,7 +3246,7 @@
 		"speed": 21.09,
 		"sensors": {
 			"visual": {
-				"range": 566
+				"range": 646
 			}
 		},
 		"armaments": [
@@ -3172,7 +3301,7 @@
 		"speed": 16.976667,
 		"sensors": {
 			"visual": {
-				"range": 673.42
+				"range": 753.42
 			},
 			"radar": {
 				"range": 1115.065
@@ -3253,7 +3382,7 @@
 		"draft": 11.6,
 		"sensors": {
 			"visual": {
-				"range": 878
+				"range": 958
 			}
 		},
 		"armaments": [],
@@ -3277,7 +3406,7 @@
 		"speed": 16.59084,
 		"sensors": {
 			"visual": {
-				"range": 880.6
+				"range": 960.6
 			},
 			"radar": {
 				"range": 1270.45
@@ -3529,7 +3658,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 880
+				"range": 960
 			},
 			"radar": {
 				"range": 1270
@@ -3706,7 +3835,7 @@
 		"speed": 9.06,
 		"sensors": {
 			"visual": {
-				"range": 654.2
+				"range": 734.2
 			},
 			"sonar": {
 				"range": 383.55
@@ -3789,7 +3918,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 665.4
+				"range": 745.4
 			},
 			"radar": {
 				"range": 1109.05
@@ -3965,7 +4094,7 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 780
+				"range": 860
 			},
 			"radar": {
 				"range": 1195
@@ -4156,7 +4285,7 @@
 		"speed": 28.29446,
 		"sensors": {
 			"visual": {
-				"range": 634
+				"range": 714
 			},
 			"radar": {
 				"range": 1085.5
@@ -4314,7 +4443,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 900
+				"range": 980
 			},
 			"radar": {
 				"range": 1285
@@ -4567,7 +4696,7 @@
 		"speed": 615,
 		"lifespan": 1.2195121951219512,
 		"damage": 0.6449074083498981,
-		"reload": 14.628571428571428,
+		"reload": 13.8,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4603,7 +4732,7 @@
 		"speed": 639.75,
 		"lifespan": 0.5163475315878598,
 		"damage": 0.4302236359802337,
-		"reload": 8.873142857142858,
+		"reload": 8.764,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4677,7 +4806,7 @@
 		"speed": 96.1136,
 		"sensors": {
 			"visual": {
-				"range": 544.9
+				"range": 624.9
 			}
 		},
 		"armaments": [
@@ -4839,7 +4968,7 @@
 		},
 		"lifespan": 5.073375262054507,
 		"damage": 0.8428476906183171,
-		"reload": 16,
+		"reload": 12,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4921,7 +5050,7 @@
 		},
 		"lifespan": 4.5563634318853135,
 		"damage": 0.48372899338458225,
-		"reload": 10.719999999999999,
+		"reload": 8.48,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4956,7 +5085,7 @@
 		"speed": 637.5,
 		"lifespan": 0.6640522875816994,
 		"damage": 0.4983821031071073,
-		"reload": 10.14857142857143,
+		"reload": 9.879999999999999,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4972,7 +5101,7 @@
 		"speed": 72.02226,
 		"sensors": {
 			"visual": {
-				"range": 548.4286
+				"range": 628.4286
 			}
 		},
 		"armaments": [
@@ -5044,7 +5173,7 @@
 		"speed": 53.50225,
 		"sensors": {
 			"visual": {
-				"range": 551.6
+				"range": 631.6
 			}
 		},
 		"armaments": [
@@ -5074,7 +5203,7 @@
 		"speed": 67.9067,
 		"sensors": {
 			"visual": {
-				"range": 540.1706
+				"range": 620.1706
 			}
 		},
 		"armaments": [
@@ -5134,7 +5263,7 @@
 		"speed": 570,
 		"lifespan": 1.2725146198830408,
 		"damage": 0.6363541077327811,
-		"reload": 14.290285714285714,
+		"reload": 13.504,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5213,7 +5342,7 @@
 		"speed": 592.5,
 		"lifespan": 0.6919831223628692,
 		"damage": 0.4899089384728208,
-		"reload": 9.965714285714286,
+		"reload": 9.72,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5323,7 +5452,7 @@
 		},
 		"lifespan": 4.284693816410552,
 		"damage": 0.49701737110115,
-		"reload": 11.080000000000002,
+		"reload": 8.72,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5379,7 +5508,7 @@
 		"speed": 75.1089,
 		"sensors": {
 			"visual": {
-				"range": 559.2
+				"range": 639.2
 			}
 		},
 		"armaments": [
@@ -5591,7 +5720,7 @@
 		"speed": 686.25,
 		"lifespan": 0.5760777170613237,
 		"damage": 0.48017530862921753,
-		"reload": 9.76457142857143,
+		"reload": 9.544,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5612,7 +5741,7 @@
 		},
 		"lifespan": 4.697630031549474,
 		"damage": 0.6503590626496802,
-		"reload": 15.52,
+		"reload": 11.68,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5633,7 +5762,7 @@
 		},
 		"lifespan": 5.357142857142857,
 		"damage": 0.9522557438918172,
-		"reload": 16,
+		"reload": 12,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5654,7 +5783,7 @@
 		},
 		"lifespan": 4.391191073943132,
 		"damage": 0.5300235033840559,
-		"reload": 11.992,
+		"reload": 9.328,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5782,7 +5911,7 @@
 		},
 		"lifespan": 5.096210582734502,
 		"damage": 0.6314020026905378,
-		"reload": 14.943999999999999,
+		"reload": 11.296,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5824,6 +5953,48 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"vickersMkH12in": {
+		"label": "Vickers MkH 12. in",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 16.65,
+		"positionForward": 2.3553,
+		"width": 8.4551,
+		"armaments": [
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"external": false,
+				"hidden": false
+			},
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": -0.727,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
+	"300x1400mmR": {
+		"label": "300 x 1400 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"length": 1.4,
+		"width": 0.3,
+		"speed": 685.5,
+		"lifespan": 0.9482129832239241,
+		"damage": 0.6084166635909958,
+		"reload": 12.6,
+		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
 	"wz08_39": {
 		"label": "wz. 08/39",
 		"link": "https://pl.wikipedia.org/wiki/Plik:Mina_morska_typu_M_1908-39.jpg",
@@ -5855,7 +6026,7 @@
 		},
 		"lifespan": 5.665362543672178,
 		"damage": 0.8216618332486386,
-		"reload": 16,
+		"reload": 12,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []

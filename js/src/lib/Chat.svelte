@@ -52,6 +52,9 @@
 			return;
 		}
 		*/
+		if ($message == '') {
+			return;
+		}
 		onSendChat($message, team);
 		$message = '';
 		input && input.blur && input.blur();
@@ -91,7 +94,7 @@
 				<span
 					class='name'
 					on:click={() => populateReply(name)}
-					on:contextmenu={playerId !== state.playerId ? (event => showContextMenu(event, {[`Mute ${name}`]: () => onMutePlayer(playerId, true)})) : null}
+					on:contextmenu={typeof playerId === 'string' && playerId !== state.playerId ? (event => showContextMenu(event, {[`Mute ${name}`]: () => onMutePlayer(playerId, true)})) : null}
 				>{team ? `[${team}] ${name}` : name}</span>&nbsp;{message}
 			</p>
 		{/each}

@@ -4,7 +4,7 @@
 use crate::generate_id::generate_id;
 use crate::notify_set::NotifySet;
 use crate::repo::Repo;
-use crate::session::{Play, Session};
+use crate::session::Session;
 use crate::team::Team;
 use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, RulesDto};
 use core_protocol::id::*;
@@ -75,7 +75,7 @@ impl Arena {
     /// `team_id` then return its `session_id`.  Otherwise, return `None`.
     pub fn static_captain_of_team(
         sessions: &HashMap<SessionId, Session>,
-        team_id: &TeamId,
+        team_id: TeamId,
     ) -> Option<SessionId> {
         let mut captain_session_id: Option<SessionId> = None;
         for (session_id, session) in sessions.iter() {
@@ -87,7 +87,7 @@ impl Arena {
                     continue;
                 }
                 if let Some(captain_team_id) = play.team_id {
-                    if captain_team_id == *team_id {
+                    if captain_team_id == team_id {
                         captain_session_id = Some(*session_id);
                         break;
                     }
@@ -100,7 +100,7 @@ impl Arena {
 
     /// If there exists a session in the arena that is captain of the specified
     /// `team_id` then return its `session_id`.  Otherwise, return `None`.
-    pub fn captain_of_team(&self, team_id: &TeamId) -> Option<SessionId> {
+    pub fn captain_of_team(&self, team_id: TeamId) -> Option<SessionId> {
         Self::static_captain_of_team(&self.sessions, team_id)
     }
 
@@ -165,14 +165,14 @@ impl Arena {
     }
 
     /// If the specified `session_id` is a captain then return its `team_id`, otherwise return `None`.
-    pub fn team_of_captain(&mut self, session_id: SessionId) -> Option<(TeamId, &mut Play)> {
+    pub fn team_of_captain(&mut self, session_id: SessionId) -> Option<(TeamId, &mut Session)> {
         let mut result = None;
         if let Some(session) = Session::get_mut(&mut self.sessions, session_id) {
             if session.live {
-                if let Some(play) = session.plays.last_mut() {
+                if let Some(play) = session.plays.last() {
                     if play.team_captain {
                         if let Some(team_id) = play.team_id {
-                            result = Some((team_id, play));
+                            result = Some((team_id, session));
                         }
                     }
                 }

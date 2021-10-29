@@ -48,6 +48,9 @@ impl Core {
             let _ = DATABASE.set(Database::new().await);
         }
 
+        // Crash server if user agent parser can't be created (avoids crashing on first connection).
+        let _ = &crate::user_agent::USER_AGENT_PARSER;
+
         Self {
             chat_log,
             database_read_only,
@@ -180,6 +183,7 @@ impl Core {
                             alias: session.alias.clone(),
                             arena_id,
                             date_created: session.date_created,
+                            date_previous: session.date_previous,
                             date_renewed: session.date_renewed,
                             date_terminated: session.date_terminated,
                             game_id: session.game_id,

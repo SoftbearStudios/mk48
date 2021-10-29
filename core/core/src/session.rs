@@ -26,8 +26,6 @@ pub struct Play {
     pub score: Option<u32>, // e.g. 1234
     pub team_captain: bool,
     pub team_id: Option<TeamId>,
-    pub whisper_joins: NotifySet<TeamId>,     // For joiner.
-    pub whisper_joiners: NotifySet<PlayerId>, // For captain.
 }
 
 #[allow(dead_code)]
@@ -38,6 +36,7 @@ pub struct Session {
     pub chat_history: ChatHistory,
     pub date_created: UnixTime,
     pub date_drop: Option<UnixTime>,
+    pub date_previous: Option<UnixTime>,
     /// When last called create_session.
     pub date_renewed: UnixTime,
     pub date_terminated: Option<UnixTime>,
@@ -59,7 +58,12 @@ pub struct Session {
     pub referrer: Option<Referrer>,
     pub server_id: Option<ServerId>,
     pub user_agent_id: Option<UserAgentId>,
-    pub whisper_muted: NotifySet<PlayerId>, // For muter (even if NOT playing).
+    /// For muter (even if NOT playing).
+    pub whisper_muted: NotifySet<PlayerId>,
+    /// For joiner.
+    pub whisper_joins: NotifySet<TeamId>,
+    /// For captain.
+    pub whisper_joiners: NotifySet<PlayerId>,
 }
 
 impl Play {
@@ -73,8 +77,6 @@ impl Play {
             score: None,
             team_captain: false,
             team_id: None,
-            whisper_joins: NotifySet::new(),
-            whisper_joiners: NotifySet::new(),
         }
     }
 
@@ -95,6 +97,7 @@ impl Session {
         alias: PlayerAlias,
         arena_id: ArenaId,
         bot: bool,
+        date_previous: Option<UnixTime>,
         game_id: GameId,
         player_id: PlayerId,
         previous_id: Option<SessionId>,
@@ -110,6 +113,7 @@ impl Session {
             chat_history: ChatHistory::new(),
             date_created,
             date_drop: None,
+            date_previous,
             date_renewed: date_created,
             date_terminated: None,
             game_id,
@@ -127,6 +131,8 @@ impl Session {
             server_id,
             user_agent_id,
             whisper_muted: NotifySet::new(),
+            whisper_joins: NotifySet::new(),
+            whisper_joiners: NotifySet::new(),
         }
     }
 
@@ -191,6 +197,21 @@ impl Repo {
                 {
                     return Some((session_id.clone(), play));
                 }
+            }
+        }
+        None
+    }
+
+    /// Finds an active session.
+    pub fn player_id_to_session_mut<'a, 'b>(
+        players: &'a mut HashMap<PlayerId, SessionId>,
+        sessions: &'b mut HashMap<SessionId, Session>,
+        player_id: PlayerId,
+    ) -> Option<(SessionId, &'b mut Session)> {
+        if let Some(session_id) = players.get_mut(&player_id) {
+            let session = sessions.get_mut(session_id).unwrap();
+            if session.player_id == player_id && session.date_terminated.is_none() && session.live {
+                return Some((session_id.clone(), session));
             }
         }
         None
@@ -289,6 +310,17 @@ impl Repo {
                             session.user_agent_id = user_agent_id;
                         }
 
+                        if let Some(&old_session_id) = self.players.get(&session.player_id) {
+                            if session_id != old_session_id {
+                                println!(
+                                    "FATAL ERROR: Session mismatch {:?} {:?}",
+                                    session_id, old_session_id
+                                );
+                            }
+                        }
+
+                        self.players.insert(session.player_id, session_id);
+
                         session.date_drop = None;
                         session.date_renewed = get_unix_time_now();
                         return Some((arena_id, session_id, arena.server_id));
@@ -319,11 +351,16 @@ impl Repo {
 
             let guest_alias = PlayerAlias::new("Guest");
             loop {
-                let previous_id = if let Some((_, session_id)) = saved_session_tuple {
-                    Some(session_id)
-                } else {
-                    None
-                };
+                let (date_previous, previous_id) =
+                    if let Some((_, session_id)) = saved_session_tuple {
+                        let date_previous = arena
+                            .sessions
+                            .get(&session_id)
+                            .map(|s| s.date_previous.unwrap_or(s.date_created));
+                        (date_previous, Some(session_id))
+                    } else {
+                        (None, None)
+                    };
                 // Use the date so that a session_id from a prior day is guaranteed to be different.
                 let session_id = SessionId(generate_id_64());
                 if let Entry::Vacant(e) = arena.sessions.entry(session_id) {
@@ -344,6 +381,7 @@ impl Repo {
                         guest_alias,
                         arena_id,
                         bot,
+                        date_previous,
                         game_id,
                         player_id,
                         previous_id,
@@ -489,7 +527,7 @@ impl Repo {
 
         for (_, arena) in Arena::iter_mut(&mut self.arenas) {
             let mut removable = vec![];
-            for (session_id, session) in Session::iter_mut(&mut arena.sessions) {
+            for (session_id, session) in arena.sessions.iter_mut() {
                 if session.live {
                     // Prune live sessions.
                     let play = session.plays.last_mut().unwrap();
@@ -501,11 +539,35 @@ impl Repo {
                                 if play.team_captain {
                                     if let Some(team) = arena.teams.get(&team_id) {
                                         for joiner in team.joiners.iter() {
-                                            play.whisper_joiners.removed(*joiner);
+                                            session.whisper_joiners.removed(*joiner);
                                         }
                                     }
                                 }
                             }
+                            // TODO: This is likely helpful, but can't be here due to lifetime issues.
+                            /* else {
+                                for (&team_id, team) in arena.teams.iter_mut() {
+                                    if team.joiners.remove(&session.player_id) {
+                                        if let Some(captain_session_id) =
+                                        Arena::static_captain_of_team(&arena.sessions, team_id)
+                                        {
+                                            if let Some(captain_session) =
+                                            Session::get_mut(&mut arena.sessions, captain_session_id)
+                                            {
+                                                captain_session.whisper_joiners.removed(session.player_id);
+                                            }
+                                        }
+
+                                        if let Some((_, session)) = Self::player_id_to_session_mut(
+                                            &mut self.players,
+                                            &mut arena.sessions,
+                                            session.player_id,
+                                        ) {
+                                            session.whisper_joins.removed(team_id);
+                                        }
+                                    }
+                                }
+                            }*/
                             arena.broadcast_players.removed(*session_id);
                         }
                     }
@@ -619,7 +681,7 @@ impl Repo {
                 }
                 if session.live {
                     // Live sessions inherit previous team and captaincy.
-                    let last_play = session.plays.last().unwrap();
+                    let last_play = session.plays.last_mut().unwrap();
                     new_play.team_id = last_play.team_id;
                     new_play.team_captain = last_play.team_captain;
                 } else {

@@ -43,19 +43,46 @@
 	import t from './translation.js';
 	import {clamp} from '../util/math.js';
 	import {summarizeType} from './Ship.svelte';
+	import storage from '../util/storage.js';
+	import Locked from "svelte-bootstrap-icons/lib/LockFill";
+	import Unlocked from "svelte-bootstrap-icons/lib/UnlockFill";
 
 	export let type;
 	export let onUpgrade;
+
+	$: data = entityData[type];
+
+	// Protest locking of ships (click the lock x times to unlock manually).
+	let forceUnlocks = {};
+	const FORCE_UNLOCKS = 5;
+	function forceUnlock(type) {
+		forceUnlocks[type] = (forceUnlocks[type] || 0) + 1;
+	}
+
+	// Some ships are difficult/confusing. Lock them until the player has a bit of experience with the game.
+	function locked(type, forceUnlocks) {
+		const data = entityData[type];
+		const minutesPlayed = (Date.now() - (storage.join || 0)) / (60 * 1000);
+		return (forceUnlocks[type] || 0) < FORCE_UNLOCKS && minutesPlayed < ({minelayer: 30, 'dredger': 15, 'tanker': 60}[data.subkind] || -1);
+	}
 
 	$: upgrades = getUpgrades(type);
 	$: columns = upgrades.length > 3;
 </script>
 
 <div class='box' class:columns>
-	<Section name={`${$t('panel.upgrade.labelPrefix')} ${entityData[type].level + 1}`} headerAlign='center'>
+	<Section name={`${$t('panel.upgrade.labelPrefix')} ${data.level + 1}`} headerAlign='center'>
 		<div class='upgrades' class:columns>
 			{#each upgrades as upgradeType}
-				<Sprite title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`} on:click={onUpgrade.bind(null, upgradeType)} name={upgradeType}/>
+				<Sprite
+					title={`${entityData[upgradeType].label} (${summarizeType($t, upgradeType)})`}
+					consumed={locked(upgradeType, forceUnlocks)}
+					icon={locked(upgradeType, forceUnlocks) ? ((forceUnlocks[upgradeType] || 0) < FORCE_UNLOCKS - 1 ? Locked : Unlocked) : null}
+					iconTitle={'New players are not advised to choose this ship'}
+					onIconClick={() => forceUnlock(upgradeType)}
+					on:click={locked(upgradeType, forceUnlocks) ? null : onUpgrade.bind(null, upgradeType)}
+					name={upgradeType}
+				/>
 			{/each}
 		</div>
 	</Section>

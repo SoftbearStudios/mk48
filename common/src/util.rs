@@ -25,8 +25,23 @@ pub fn map_ranges(number: f32, old: Range<f32>, new: Range<f32>, clamp_to_range:
 }
 
 /// level_to_score converts a boat level to a score required to upgrade to it.
-pub fn level_to_score(level: u8) -> u32 {
+pub const fn level_to_score(level: u8) -> u32 {
     ((level as u32).pow(2) - 1) * 10
+}
+
+/// respawn_score returns how much score is kept when a boat dies.
+pub fn respawn_score(score: u32) -> u32 {
+    (score / 2).min(level_to_score(3))
+}
+
+/// respawn_score returns how much score a boat gets from a kill.
+pub fn kill_score(score: u32) -> u32 {
+    10 + score / 4
+}
+
+/// respawn_score returns how much score a boat gets from a ramming kill.
+pub fn ram_score(score: u32) -> u32 {
+    kill_score(score) / 2
 }
 
 /// lerp linearly interpolates (and possibly extrapolates) from start to end, based on amount.

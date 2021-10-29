@@ -168,7 +168,7 @@ impl World {
                                 mutate(collectibles[0], Mutation::Attraction(boats[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(20.0)));
                             }
 
-                            // Payment gravitates towards oil rigs.
+                            // Payments gravitate towards oil rigs.
                             if obstacles.len() == 1 && obstacles[0].entity_type == EntityType::OilPlatform && collectibles[0].player.is_some() {
                                 mutate(collectibles[0], Mutation::Attraction(obstacles[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(10.0)));
                             }
@@ -362,19 +362,29 @@ impl World {
                                 damage *= collision_multiplier(front_dist2, data.radius.powi(2));
                                 damage *= boat.extension().spawn_protection();
 
-                                // Rams take less damage from ramming.
-                                if data.sub_kind == EntitySubKind::Ram {
-                                    mutate(boat, Mutation::ClearSpawnProtection);
-                                    // Reduce recoil.
-                                    relative_mass *= 0.5;
-                                    damage *= 1.0 / RAM_DAMAGE_MULTIPLIER
+                                match data.sub_kind {
+                                    EntitySubKind::Ram => {
+                                        mutate(boat, Mutation::ClearSpawnProtection);
+                                        // Reduce recoil.
+                                        relative_mass *= 0.5;
+                                        // Rams take less damage from ramming.
+                                        damage *= 1.0 / RAM_DAMAGE_MULTIPLIER
+                                    }
+                                    EntitySubKind::Submarine => {
+                                        // Subs take more damage from ramming because they are fRaGiLe.
+                                        damage *= 2.0
+                                    }
+                                    _ => ()
                                 }
 
-                                // Rams deal more damage while ramming.
-                                if other_data.sub_kind == EntitySubKind::Ram {
-                                    // Un-reduce recoil.
-                                    relative_mass *= 2.0;
-                                    damage *= RAM_DAMAGE_MULTIPLIER
+                                match other_data.sub_kind {
+                                    EntitySubKind::Ram => {
+                                        // Un-reduce recoil.
+                                        relative_mass *= 2.0;
+                                        // Rams deal more damage while ramming.
+                                        damage *= RAM_DAMAGE_MULTIPLIER
+                                    }
+                                    _ => ()
                                 }
                             }
 
@@ -426,14 +436,17 @@ impl World {
                         mutate(boats[0], Mutation::CollidedWithObstacle{impulse, entity_type: obstacles[0].entity_type});
                     } else if collectibles.len() == 1
                         && obstacles.len() == 1
-                        && collectibles[0].player.is_some()
-                        && obstacles[0].entity_type == EntityType::OilPlatform
                     {
-                        if rand::thread_rng().gen_bool(0.1) {
-                            mutate(obstacles[0], Mutation::UpgradeHq);
+                        // Coins get consumed every other collectible passes under.
+                        if obstacles[0].entity_type == EntityType::OilPlatform && collectibles[0].player.is_some() {
+                            if rand::thread_rng().gen_bool(0.1) {
+                                mutate(obstacles[0], Mutation::UpgradeHq);
+                            }
+
+                            debug_remove!(collectibles[0], "consumed");
                         }
 
-                        debug_remove!(collectibles[0], "consumed");
+                        // Collectibles don't collide with obstacles.
                     } else if boats.len() == 1 && decoys.len() == 1 {
                         // No-op; boats don't collide with decoys.
                     } else if weapons.len() == 1

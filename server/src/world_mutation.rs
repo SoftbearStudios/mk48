@@ -11,7 +11,7 @@ use common::death_reason::DeathReason;
 use common::entity::*;
 use common::guidance::Guidance;
 use common::ticks::Ticks;
-use common::util::level_to_score;
+use common::util::*;
 use common::velocity::Velocity;
 use glam::Vec2;
 use rand::seq::IteratorRandom;
@@ -119,7 +119,7 @@ impl Mutation {
                 if e.damage(damage) {
                     let player_id = {
                         let mut other_player = other_player.borrow_mut();
-                        other_player.score += 10 + e.borrow_player().score / 4;
+                        other_player.score += kill_score(e.borrow_player().score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -141,7 +141,7 @@ impl Mutation {
                 if entity.damage(damage) {
                     let player_id = {
                         let mut other_player = other_player.borrow_mut();
-                        other_player.score += entity.borrow_player().score / 8;
+                        other_player.score += ram_score(entity.borrow_player().score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -269,7 +269,7 @@ impl Mutation {
 
         // Lose 1/2 score if you die.
         // Cap so can't get max level right away.
-        player.score = (player.score / 2).min(level_to_score(3));
+        player.score = respawn_score(player.score);
         drop(player);
 
         let data = entity.data();

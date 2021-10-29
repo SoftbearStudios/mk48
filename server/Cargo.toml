@@ -37,7 +37,7 @@ atomic_refcell = "0.1.7"
 arrayvec = {version = "0.7.1", features = [ "serde" ] }
 rand = "0.8.4"
 idalloc = "0.1.1"
-noise = "0.7.0"
+noise = { version = "0.7.0", default-features = false }
 common = {path="../common", version="0.1.0", features=["server"]}
 core = {path="../core/core"}
 core_protocol = {path="../core/core_protocol"}

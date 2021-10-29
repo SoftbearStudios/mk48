@@ -47,7 +47,7 @@ pub struct MemberDto {
 pub struct MessageDto {
     pub alias: PlayerAlias, // For display in case alias is changed or player quits.
     pub date_sent: UnixTime,
-    pub player_id: PlayerId, // For muting sender.
+    pub player_id: Option<PlayerId>, // For muting sender. None if from server.
     pub team_captain: bool,
     pub team_name: Option<TeamName>, // Don't use team_id in case team is deleted or ID re-used.
     pub text: String,
@@ -60,6 +60,7 @@ pub struct MetricsDto {
     pub arenas_cached: <DiscreteMetric as Metric>::Summary,
     pub bounce: <RatioMetric as Metric>::Summary,
     pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
+    pub connections: <ContinuousExtremaMetric as Metric>::Summary,
     pub cpu: <ContinuousExtremaMetric as Metric>::Summary,
     pub flop: <RatioMetric as Metric>::Summary,
     pub invited: <RatioMetric as Metric>::Summary,

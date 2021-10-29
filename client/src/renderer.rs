@@ -518,6 +518,11 @@ impl Renderer {
         self.gl
             .uniform1f(self.particle_shader.uniform(&self.gl, "uTime"), time);
 
+        self.gl.uniform1f(
+            self.particle_shader.uniform(&self.gl, "uWindowSize"),
+            self.canvas.width() as f32 * 0.5,
+        );
+
         self.particle_mesh.push_default_points();
         self.particle_buffer.buffer(
             &self.gl,

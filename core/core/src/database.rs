@@ -134,6 +134,7 @@ pub struct SessionItem {
     /// Hash key.
     pub arena_id: ArenaId,
     pub date_created: UnixTime,
+    pub date_previous: Option<UnixTime>,
     pub date_renewed: UnixTime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub date_terminated: Option<UnixTime>,
@@ -663,7 +664,7 @@ impl Database {
                     .expression_attribute_names("#arenas_cached", "arenas_cached")
                     .expression_attribute_names("#total", "total")
                     .expression_attribute_values(
-                        "#arenas_cached_total",
+                        ":arenas_cached_total",
                         to_av(old.arenas_cached.total)?,
                     );
             } else {

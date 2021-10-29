@@ -45,7 +45,7 @@ fn main() {
             }
         },
         true,
-        2,
+        4,
         true,
         true,
         optimize,

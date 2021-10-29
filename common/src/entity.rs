@@ -56,6 +56,7 @@ pub enum EntitySubKind {
     Depositor,
     DepthCharge,
     Destroyer,
+    Dreadnought,
     Dredger,
     Heli,
     Hovercraft,

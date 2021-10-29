@@ -8,12 +8,13 @@ use core_protocol::id::{GameId, UserAgentId};
 use core_protocol::metrics::*;
 use core_protocol::name::Referrer;
 use core_protocol::{get_unix_time_now, UnixTime};
-use log::debug;
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ops::Add;
+use std::process::Command;
 use std::sync::Arc;
-use sysinfo::{ProcessorExt, SystemExt};
+use sysinfo::{get_current_pid, ProcessorExt, SystemExt};
 
 const BUCKET_MILLIS: u64 = 60000;
 const MINUTE_IN_MILLIS: u64 = 60000;
@@ -24,8 +25,10 @@ pub struct Metrics {
     pub arenas_cached: DiscreteMetric,
     /// Ratio of new players that leave without ever playing.
     pub bounce: RatioMetric,
-    /// Concurrent players.
+    /// How many concurrent players.
     pub concurrent: ContinuousExtremaMetric,
+    /// How many connections are open.
+    pub connections: ContinuousExtremaMetric,
     /// Percent of available server CPU required by service.
     pub cpu: ContinuousExtremaMetric,
     /// Ratio of new players that play only once and leave quickly.
@@ -66,6 +69,7 @@ impl Metrics {
             arenas_cached: self.arenas_cached.summarize(),
             bounce: self.bounce.summarize(),
             concurrent: self.concurrent.summarize(),
+            connections: self.connections.summarize(),
             cpu: self.cpu.summarize(),
             flop: self.flop.summarize(),
             invited: self.invited.summarize(),
@@ -95,6 +99,7 @@ impl Add for Metrics {
             arenas_cached: self.arenas_cached + rhs.arenas_cached,
             bounce: self.bounce + rhs.bounce,
             concurrent: self.concurrent + rhs.concurrent,
+            connections: self.connections + rhs.connections,
             cpu: self.cpu + rhs.cpu,
             flop: self.flop + rhs.flop,
             invited: self.invited + rhs.invited,
@@ -237,6 +242,28 @@ impl Repo {
                 / self.system_status.processors().len() as f32,
         );
 
+        match get_current_pid() {
+            Ok(pid) => {
+                let pid_string = format!("{}", pid);
+                match Command::new("netstat").arg("-ntp").output() {
+                    Ok(output) => match std::str::from_utf8(&output.stdout) {
+                        Ok(output) => {
+                            // println!("{}", output);
+                            metrics.connections.push(
+                                output
+                                    .split('\n')
+                                    .filter(|&l| l.contains(&pid_string))
+                                    .count() as f32,
+                            )
+                        }
+                        Err(e) => error!("netstat invalid utf8: {}", e),
+                    },
+                    Err(e) => error!("netstat failed: {}", e),
+                }
+            }
+            Err(e) => error!("could not get pid: {}", e),
+        }
+
         for (_, arena) in self.arenas.iter() {
             if game_id != game_id {
                 continue;
@@ -265,13 +292,14 @@ impl Repo {
                     continue;
                 }
 
-                let days = session_stop.saturating_sub(session.date_created) as f32
+                let session_start = session.date_previous.unwrap_or(session.date_created);
+                let days = session_stop.saturating_sub(session_start) as f32
                     / (24 * 60 * 60 * 1000) as f32;
                 metrics.retention.push(days);
 
                 let mut activity_minutes = 0.0;
                 let mut bounced_or_peeked = true;
-                let mut flopped = session.previous_id.is_none() && session.plays.is_empty();
+                let mut flopped = session.previous_id.is_none();
                 let mut play_count = 0;
                 // Next bucket to insert into (to avoid duplicating).
                 let mut next_bucket = 0;
@@ -302,7 +330,7 @@ impl Repo {
                     let bucket_stop: u32 =
                         (prorata_stop.saturating_sub(first_bucket_start) / BUCKET_MILLIS) as u32;
                     for b in bucket_start.max(next_bucket)
-                        ..bucket_stop.min(concurrency_buckets.len() as u32)
+                        ..(bucket_stop + 1).min(concurrency_buckets.len() as u32)
                     {
                         concurrency_buckets[b as usize] += 1;
                         next_bucket = b + 1;

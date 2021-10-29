@@ -13,7 +13,32 @@
 
 	<h2>2021</h2>
 
-	<h3>10/19/2021</h3>
+	<h3>10/28/2021</h3>
+
+	<ul>
+		<li>Add "España" dreadnought.</li>
+		<li>Oil barrels can go under oil platforms and hq's.</li>
+		<li>Sensors no longer switch to active briefly when upgrading.</li>
+		<li>Fix crash while using pinch-to-zoom (i.e. on mobile).</li>
+		<li>Server tells you why it blocked your chat messages.</li>
+		<li>Advise against new players choosing certain ships (can be overridden by clicking lock 5 times).</li>
+		<li>Tapping 'x' keys stops you even while turning with 'a' or 'd' key.</li>
+		<li>Change world border and particle aesthetic.</li>
+		<li>Fix sprite border visual glitch.</li>
+		<li>Submarines take more damage while ramming, because they are <i>fragile</i>.</li>
+		<li>Increase visual range of smaller ships, decrease that of bigger ships.</li>
+		<li>Change angles at which certain types of weapons fire.</li>
+	</ul>
+
+	<h3>10/23/2021</h3>
+
+	<ul>
+		<li>Slightly reduce variation in turning speed due to ship length.</li>
+		<li>Fix a few team-related bugs.</li>
+		<li>Fix multiple music playing simultaneously.</li>
+	</ul>
+
+	<h3>10/20/2021</h3>
 
 	<ul>
 		<li>Bots are less aggressive towards much smaller boats.</li>

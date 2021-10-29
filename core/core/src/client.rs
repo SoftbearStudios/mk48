@@ -109,6 +109,7 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                                         session_item.alias.clone(),
                                         session_item.arena_id,
                                         bot,
+                                        session_item.date_previous,
                                         session_item.game_id,
                                         session_item.player_id,
                                         session_item.previous_id,

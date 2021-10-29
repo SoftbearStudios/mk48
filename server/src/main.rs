@@ -21,6 +21,7 @@ use common::protocol::{Command, Update};
 use core::admin::{AdminState, ParameterizedAdminRequest};
 use core::client::ParametrizedClientRequest;
 use core_protocol::dto::InvitationDto;
+use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::rpc::{AdminRequest, ClientRequest, ClientUpdate};
 use core_protocol::web_socket::WebSocketFormat;
@@ -195,6 +196,34 @@ fn main() {
                 let srv_clone = iter_srv.to_owned();
 
                 let app = App::new()
+                    .wrap_fn(move |req, srv| {
+                        use actix_web::dev::Service;
+
+                        // println!("{:?}", req.version());
+
+                        use std::fs::OpenOptions;
+                        if let Some(addr) = req.connection_info().remote_addr() {
+                            if let Ok(mut file) = OpenOptions::new()
+                                .create(true)
+                                .append(true)
+                                .open("/tmp/tcp-mk48.csv")
+                            {
+                                use std::io::Write;
+                                let _ = write!(
+                                    file,
+                                    "{}",
+                                    format!(
+                                        "{},{},{:?}\n",
+                                        get_unix_time_now(),
+                                        addr,
+                                        req.version()
+                                    )
+                                );
+                            }
+                        }
+
+                        srv.call(req)
+                    })
                     .wrap(RedirectHTTPS::default().set_enabled(use_ssl))
                     .wrap(middleware::Logger::default())
                     .service(web::resource("/client/ws/").route(web::get().to(

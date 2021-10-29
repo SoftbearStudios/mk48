@@ -55,6 +55,9 @@ impl Referrer {
                 cooked = e[n - 3];
             }
             Some(Self(slice_up_to(cooked)))
+        } else if n == 1 && !e[0].is_empty() {
+            // e.g. localhost
+            Some(Self(slice_up_to(e[0])))
         } else {
             None
         }

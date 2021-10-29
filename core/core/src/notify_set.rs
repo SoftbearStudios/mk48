@@ -35,3 +35,9 @@ impl<T: Eq + Hash> NotifySet<T> {
         self.remove.insert(key);
     }
 }
+
+impl<T: Eq + Hash> Default for NotifySet<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}

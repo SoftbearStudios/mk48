@@ -10,6 +10,9 @@ use web_sys::WebGlTexture;
 
 pub struct Texture {
     inner: Rc<WebGlTexture>,
+    // Width and height not always known/used.
+    width: u32,
+    height: u32,
     pub(crate) aspect: f32, // height / width. NAN if unknown.
 }
 
@@ -28,7 +31,6 @@ impl Texture {
 
         gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 1);
 
-        // Unloaded textures are single pixel of magenta.
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
             Gl::TEXTURE_2D,
             level,
@@ -53,8 +55,53 @@ impl Texture {
 
         Self {
             inner: texture,
+            width,
+            height,
             aspect: height as f32 / width as f32,
         }
+    }
+
+    /// Overwrites self (a single channel texture) with bytes, creating a new texture if necessary.
+    pub fn realloc_from_bytes(
+        opt: &mut Option<Self>,
+        gl: &Gl,
+        width: u32,
+        height: u32,
+        bytes: &[u8],
+    ) {
+        if let Some(texture) = opt {
+            if texture.width == width && texture.height == height {
+                gl.bind_texture(Gl::TEXTURE_2D, Some(&texture.inner));
+                let level = 0;
+                let src_format = Gl::ALPHA;
+                let src_type = Gl::UNSIGNED_BYTE;
+
+                assert_eq!(width * height, bytes.len() as u32);
+
+                gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 1);
+
+                gl.tex_sub_image_2d_with_i32_and_i32_and_u32_and_type_and_opt_u8_array(
+                    Gl::TEXTURE_2D,
+                    level,
+                    0,
+                    0,
+                    width as i32,
+                    height as i32,
+                    src_format,
+                    src_type,
+                    Some(bytes),
+                )
+                .unwrap();
+
+                gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
+
+                Self::unbind(&gl);
+
+                return;
+            }
+        }
+        // Alloc/realloc.
+        *opt = Some(Self::from_bytes(gl, width, height, bytes));
     }
 
     /// Creates a texture from some text, with variable length and constant height.
@@ -80,7 +127,8 @@ impl Texture {
         context.set_text_baseline("bottom");
         let text_width = context.measure_text(text).unwrap().width();
 
-        canvas.set_width(text_width as u32 + 2);
+        let canvas_width = text_width as u32 + 2;
+        canvas.set_width(canvas_width);
         canvas.set_height(HEIGHT);
 
         context.set_fill_style(&JsValue::from_str("white"));
@@ -121,6 +169,8 @@ impl Texture {
 
         Self {
             inner: texture,
+            width: canvas_width,
+            height: HEIGHT,
             aspect: HEIGHT as f32 / text_width as f32,
         }
     }
@@ -217,6 +267,8 @@ impl Texture {
 
         Self {
             inner: texture,
+            width: 0,
+            height: 0,
             aspect: f32::NAN,
         }
     }

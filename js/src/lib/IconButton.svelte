@@ -28,7 +28,7 @@
 	function handleClick() {
 		switch (icons.length) {
 			case 1:
-				onChange();
+				onChange && onChange();
 				break;
 			case 2:
 				value = !value;
@@ -42,7 +42,7 @@
 	}
 </script>
 
-<span title={tooltip} class:selected={value || icons.length === 1} on:click={handleClick}>
+<span title={tooltip} class:selected={value || icons.length === 1} on:click|stopPropagation={handleClick}>
 	<svelte:component this={getIcon(value)} width={sizeEms} height={sizeEms}/>
 </span>
 

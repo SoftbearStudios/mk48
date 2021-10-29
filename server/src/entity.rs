@@ -121,7 +121,7 @@ impl Entity {
         *extension = EntityExtension::new(entity_type);
 
         // Restore some settings from the old extension.
-        extension.set_active(old_active);
+        extension.active = old_active;
         extension.altitude_target = old_altitude_target;
 
         // Finish (un)reloading.

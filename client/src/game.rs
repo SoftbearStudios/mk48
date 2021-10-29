@@ -182,21 +182,22 @@ impl Game {
     }
 
     fn play_music(&self, name: &'static str) {
+        // Highest to lowest.
         let music_priorities = ["achievement", "dodge", "intense"];
 
-        let priority = music_priorities
+        let index = music_priorities
             .iter()
             .position(|&m| m == name)
             .expect("name must be one of available music");
 
         for (i, music) in music_priorities.iter().enumerate() {
             if self.audio_player.is_playing(music) {
-                if i <= priority {
+                if i <= index {
                     // Preempted by higher priority music, or already playing.
                     return;
                 } else {
                     // Preempt lower priority music.
-                    self.audio_player.stop_playing(name);
+                    self.audio_player.stop_playing(music);
                 }
             }
         }
@@ -408,6 +409,10 @@ impl Game {
         }
 
         let player_position = self.camera().0;
+        let player_altitude = self
+            .player_contact()
+            .map(|c| c.altitude())
+            .unwrap_or(Altitude::ZERO);
         let mut aircraft_volume: f32 = 0.0;
         let mut need_to_dodge: f32 = 0.0;
 
@@ -435,6 +440,7 @@ impl Game {
                                 && inbound
                                 && self.entity_id.is_some()
                                 && data.sub_kind == EntitySubKind::Ram
+                                && !player_altitude.is_submerged()
                             {
                                 need_to_dodge += 2.0 * distance_scale;
                             }
@@ -515,13 +521,16 @@ impl Game {
     fn update_camera(&mut self, delta_seconds: f32) {
         let zoom = if let Some(player_contact) = self.player_contact() {
             let camera = player_contact.transform().position;
+
+            // Reduce visual range to to fill more of screen with visual field.
             let zoom = player_contact
                 .entity_type()
                 .unwrap()
                 .data()
                 .sensors
                 .visual
-                .range;
+                .range
+                * 0.75;
 
             self.saved_camera = Some((camera, zoom));
             zoom
@@ -903,12 +912,13 @@ impl Game {
         let terrain_matrix = Mat3::from_translation(Vec2::new(0.5, 0.5))
             .mul_mat3(&terrain_scale.mul_mat3(&terrain_offset));
 
-        self.terrain_texture = Some(Texture::from_bytes(
+        Texture::realloc_from_bytes(
+            &mut self.terrain_texture,
             &self.renderer.gl,
             terrain_width as u32,
             terrain_height as u32,
             &terrain_bytes,
-        ));
+        );
 
         let (visual_range, visual_restriction) = if let Some(player_contact) = self.player_contact()
         {
@@ -1436,9 +1446,11 @@ impl Game {
                                 + Angle::from_radians(0.5 * joystick.x),
                             velocity_target: if self.input.stop {
                                 Velocity::ZERO
-                            } else {
+                            } else if joystick.y.abs() > 0.05 {
                                 player_contact.transform().velocity
                                     + Velocity::from_mps(0.25 * max_speed * joystick.y)
+                            } else {
+                                player_contact.guidance().velocity_target
                             },
                         })
                     };
@@ -1710,7 +1722,7 @@ impl Game {
             for i in 0..player_contact.data().armaments.len() {
                 let armament = &player_contact.data().armaments[i];
 
-                let armament_entity_data = armament.entity_type.data();
+                let armament_entity_data: &EntityData = armament.entity_type.data();
 
                 if !(armament_entity_data.kind == armament_selection.0
                     && armament_entity_data.sub_kind == armament_selection.1)
@@ -1755,7 +1767,16 @@ impl Game {
                     angle_diff = Angle::ZERO;
                 }
 
-                if !angle_limit || angle_diff < Angle::from_degrees(90.0) {
+                let max_angle_diff = match armament_entity_data.sub_kind {
+                    EntitySubKind::Shell => Angle::from_degrees(30.0),
+                    EntitySubKind::Rocket => Angle::from_degrees(45.0),
+                    EntitySubKind::Torpedo if armament_entity_data.sensors.sonar.range > 0.0 => {
+                        Angle::from_degrees(150.0)
+                    }
+                    _ => Angle::from_degrees(90.0),
+                };
+
+                if !angle_limit || angle_diff < max_angle_diff {
                     let score = angle_diff.to_radians() + 0.01 * distance_squared;
                     if best_armament.map(|(_, s)| score < s).unwrap_or(true) {
                         best_armament = Some((i, score));

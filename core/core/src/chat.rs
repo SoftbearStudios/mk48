@@ -8,7 +8,7 @@ use crate::team::Team;
 use core_protocol::dto::MessageDto;
 use core_protocol::id::{ArenaId, PlayerId, SessionId};
 use core_protocol::metrics::RatioMetric;
-use core_protocol::name::{trim_spaces, TeamName};
+use core_protocol::name::{trim_spaces, PlayerAlias, TeamName};
 use core_protocol::{get_unix_time_now, UnixTime};
 use log::{debug, warn};
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
@@ -44,17 +44,22 @@ impl ChatHistory {
     }
 
     /// Returns censored text and whether to block it entirely.
-    pub fn update(&mut self, message: &str, whisper: bool) -> (String, bool) {
+    pub fn update(&mut self, message: &str, whisper: bool) -> Result<String, &'static str> {
         let threshold = if whisper {
-            // Allow moderately mean words.
+            // Allow moderately mean words and spam.
             Type::INAPPROPRIATE
         } else {
-            // Don't allow moderately mean words.
-            Type::INAPPROPRIATE | (Type::MEAN & Type::MODERATE)
+            // Don't allow moderately mean words and spam.
+            Type::INAPPROPRIATE | (Type::MEAN & Type::MODERATE) | (Type::SPAM & Type::MODERATE)
         };
 
         let (censored, analysis) = Censor::from_str(message)
             .with_censor_threshold(threshold)
+            .with_censor_first_character_threshold(if self.inappropriate >= 0.8 {
+                threshold
+            } else {
+                Type::OFFENSIVE & Type::SEVERE
+            })
             .censor_and_analyze();
 
         self.total += 1.0;
@@ -63,7 +68,13 @@ impl ChatHistory {
         let severely_inappropriate = analysis.is(Type::INAPPROPRIATE & Type::SEVERE);
 
         if inappropriate {
-            self.inappropriate += 1.0;
+            if analysis.is(Type::SEVERE) {
+                self.inappropriate += 1.0;
+            } else if analysis.is(Type::MODERATE) {
+                self.inappropriate += 0.8;
+            } else {
+                self.inappropriate += 0.6;
+            }
         }
 
         self.toxicity.push(inappropriate);
@@ -98,16 +109,12 @@ impl ChatHistory {
         if self.date_updated == 0 {
             self.date_updated = now;
         } else if seconds > 0.0 {
-            let fade_rate = if self.inappropriate > 5.0 && inappropriate_fraction > 0.5 {
-                0.999999 // days
-            } else if self.inappropriate > 4.0 && inappropriate_fraction > 0.4 {
-                0.99999 // hours
-            } else if self.inappropriate > 3.0 && inappropriate_fraction > 0.3 {
-                0.9999 // minutes
-            } else if inappropriate_fraction > 0.2 {
+            let fade_rate = if self.inappropriate > 3.0 && inappropriate_fraction > 0.3 {
                 0.999
-            } else if inappropriate_fraction > 0.1 {
+            } else if self.inappropriate > 2.0 && inappropriate_fraction > 0.2 {
                 0.99
+            } else if inappropriate_fraction > 0.1 {
+                0.98
             } else {
                 0.95
             } as f32;
@@ -128,11 +135,16 @@ impl ChatHistory {
         let repetition_spam = self.total as i32 > repetition_threshold_total
             && length_standard_deviation < 3.0
             && length_specific_deviation < 3;
-        let any_spam = frequency_spam || inappropriate_spam || repetition_spam;
 
-        let block = severely_inappropriate || any_spam && !whisper;
-
-        (censored, !block)
+        if severely_inappropriate {
+            Err("Message held for severe profanity")
+        } else if inappropriate_spam {
+            Err("You have been temporarily muted due to profanity/spam")
+        } else if (frequency_spam || repetition_spam) && !whisper {
+            Err("You have been temporarily muted due to excessive frequency")
+        } else {
+            Ok(censored)
+        }
     }
 }
 
@@ -198,50 +210,71 @@ impl Repo {
                     }
                     let trimmed = trim_spaces(&message);
                     if play.date_stop.is_none() && trimmed.len() > 0 && trimmed.len() < 150 {
-                        let (text, allow) = session.chat_history.update(trimmed, whisper);
-                        if allow {
-                            let message = MessageDto {
-                                alias: session.alias.clone(),
-                                date_sent: get_unix_time_now(),
-                                player_id: session.player_id,
-                                team_captain: play.team_captain,
-                                team_name,
-                                text,
-                                whisper,
-                            };
-                            maybe_message_tuple = Some((play.team_id, Rc::new(message)));
+                        match session.chat_history.update(trimmed, whisper) {
+                            Ok(text) => {
+                                let message = MessageDto {
+                                    alias: session.alias.clone(),
+                                    date_sent: get_unix_time_now(),
+                                    player_id: Some(session.player_id),
+                                    team_captain: play.team_captain,
+                                    team_name,
+                                    text,
+                                    whisper,
+                                };
+                                maybe_message_tuple = Some((play.team_id, Rc::new(message)));
+                            }
+                            Err(text) => {
+                                let warning = MessageDto {
+                                    alias: PlayerAlias::new("Server"),
+                                    date_sent: get_unix_time_now(),
+                                    player_id: None,
+                                    team_captain: false,
+                                    team_name: None,
+                                    text: String::from(text),
+                                    whisper,
+                                };
+
+                                // Send warning to sending player only.
+                                session.inbox.push(Rc::new(warning));
+                            }
                         }
                     }
                 }
             } // sessions.get_mut
 
             if let Some((maybe_team_id, message)) = maybe_message_tuple {
-                let player_id = message.player_id;
                 if whisper {
                     if let Some(whisper_team_id) = maybe_team_id {
                         for (_, session) in Session::iter_mut(&mut arena.sessions) {
                             // Must be live to receive whisper, otherwise your team affilation isn't real.
-                            if !session.live || session.muted.contains(&message.player_id) {
+                            if !session.live
+                                || message
+                                    .player_id
+                                    .map(|id| session.muted.contains(&id))
+                                    .unwrap_or(false)
+                            {
                                 continue;
                             }
                             if let Some(play) = session.plays.last_mut() {
                                 if play.team_id == Some(whisper_team_id) {
                                     session.inbox.push(Rc::clone(&message));
-                                    if sent.is_none() {
-                                        sent = Some(player_id);
-                                    }
+                                    sent = Some(session.player_id);
                                 }
                             }
                         }
                     }
                 } else {
                     for (_, session) in Session::iter_mut(&mut arena.sessions) {
-                        if !session.muted.contains(&message.player_id) {
+                        if !message
+                            .player_id
+                            .map(|id| session.muted.contains(&id))
+                            .unwrap_or(false)
+                        {
                             session.inbox.push(Rc::clone(&message));
+                            sent = Some(session.player_id);
                         }
                     }
                     arena.newbie_messages.push(Rc::clone(&message));
-                    sent = Some(player_id);
                 }
             }
         }
@@ -251,6 +284,6 @@ impl Repo {
                 arena_id, session_id, &message
             );
         }
-        return sent;
+        sent
     }
 }

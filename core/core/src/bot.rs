@@ -98,6 +98,7 @@ impl Repo {
                                     &alias, session_id, player_id
                                 );
                                 let bot = true;
+                                let date_previous = None;
                                 let previous_id = None;
                                 let referrer = None;
                                 let user_agent_id = None;
@@ -105,6 +106,7 @@ impl Repo {
                                     alias,
                                     arena_id,
                                     bot,
+                                    date_previous,
                                     arena.game_id,
                                     player_id,
                                     previous_id,

@@ -23,7 +23,7 @@
 
 ### Server
 
-0. Install `rust nightly` and `clang`
+0. Install `rust nightly`
 1. Enter `/server`
 2. `make`
 3. Navigate to `localhost:8000`

@@ -54,18 +54,19 @@ impl Repo {
                     return false;
                 }
 
-                if let Some((session_id, play)) = Self::player_id_to_session_and_play_mut(
+                if let Some((session_id, session)) = Self::player_id_to_session_mut(
                     &mut self.players,
                     &mut arena.sessions,
                     player_id,
                 ) {
                     if let Some(team) = arena.teams.get_mut(&team_id) {
+                        let play = session.plays.last_mut().unwrap();
+
                         // Don't allow arbitrary conscription!
-                        if team.joiners.remove(&player_id) && play.team_id.is_none() {
+                        if team.joiners.contains(&player_id) && play.team_id.is_none() {
                             play.team_id = Some(team_id);
                             play.date_join = Some(get_unix_time_now());
                             accepted = true;
-                            play.whisper_joins.removed(team_id);
                             if play.exceeds_score(arena.liveboard_min_score) {
                                 arena.liveboard_changed = true;
                             }
@@ -76,36 +77,28 @@ impl Repo {
                 }
 
                 if accepted {
+                    // Purge all related joiners/joins, including on the team the joiner was just accepted into.
                     for (&other_team_id, team) in arena.teams.iter_mut() {
-                        if other_team_id != team_id {
-                            if team.joiners.remove(&player_id) {
-                                if let Some(captain_session_id) =
-                                    Arena::static_captain_of_team(&arena.sessions, &other_team_id)
+                        if team.joiners.remove(&player_id) {
+                            if let Some(captain_session_id) =
+                                Arena::static_captain_of_team(&arena.sessions, other_team_id)
+                            {
+                                if let Some(captain_session) =
+                                    Session::get_mut(&mut arena.sessions, captain_session_id)
                                 {
-                                    if let Some(captain_session) =
-                                        Session::get_mut(&mut arena.sessions, captain_session_id)
-                                    {
-                                        if let Some(play) = captain_session.plays.last_mut() {
-                                            play.whisper_joiners.removed(player_id);
-                                        }
-                                    }
+                                    captain_session.whisper_joiners.removed(player_id);
                                 }
+                            }
 
-                                if let Some((_, play)) = Self::player_id_to_session_and_play_mut(
-                                    &mut self.players,
-                                    &mut arena.sessions,
-                                    player_id,
-                                ) {
-                                    play.whisper_joins.removed(other_team_id);
-                                }
+                            if let Some((_, session)) = Self::player_id_to_session_mut(
+                                &mut self.players,
+                                &mut arena.sessions,
+                                player_id,
+                            ) {
+                                session.whisper_joins.removed(other_team_id);
                             }
                         }
                     }
-                }
-
-                // Postpone due to lifetime issues.
-                if let Some((_, play)) = arena.team_of_captain(session_id) {
-                    play.whisper_joiners.removed(player_id);
                 }
             }
         }
@@ -134,17 +127,18 @@ impl Repo {
         let mut assigned = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some((captain_team_id, _)) = arena.team_of_captain(session_id) {
-                if let Some((_, play)) = Self::player_id_to_session_and_play_mut(
+                if let Some((_, session)) = Self::player_id_to_session_mut(
                     &mut self.players,
                     &mut arena.sessions,
                     player_id,
                 ) {
+                    let play = session.plays.last_mut().unwrap();
                     if let Some(team_id) = play.team_id {
                         if team_id == captain_team_id {
                             play.team_captain = true;
                             if let Some(team) = arena.teams.get(&team_id) {
                                 for joiner in team.joiners.iter() {
-                                    play.whisper_joiners.added(*joiner);
+                                    session.whisper_joiners.added(*joiner);
                                 }
                             }
                             assigned = true;
@@ -159,7 +153,7 @@ impl Repo {
                     play.team_captain = false;
                     if let Some(team) = arena.teams.get(&captain_team_id) {
                         for joiner in team.joiners.iter() {
-                            play.whisper_joiners.removed(*joiner);
+                            session.whisper_joiners.removed(*joiner);
                         }
                     }
                 }
@@ -232,6 +226,25 @@ impl Repo {
                     arena
                         .confide_membership
                         .insert(session.player_id, play.team_id);
+
+                    let player_id = session.player_id;
+                    for (team_id, team) in arena.teams.iter_mut() {
+                        if team.joiners.remove(&player_id) {
+                            if let Some(joiner_session) = arena.sessions.get_mut(&session_id) {
+                                joiner_session.whisper_joins.removed(*team_id);
+                            }
+                            if let Some(captain_session_id) =
+                                Arena::static_captain_of_team(&mut arena.sessions, *team_id)
+                            {
+                                if let Some(captain_session) =
+                                    arena.sessions.get_mut(&captain_session_id)
+                                {
+                                    captain_session.whisper_joiners.removed(player_id);
+                                }
+                            }
+                        }
+                    }
+
                     return Ok(team_id);
                 } else {
                     Err("not playing")
@@ -332,12 +345,12 @@ impl Repo {
                     arena.broadcast_teams.removed(*team_id);
                     if let Some(team) = arena.teams.get(team_id) {
                         for &joiner in team.joiners.iter() {
-                            if let Some((_, play)) = Self::player_id_to_session_and_play_mut(
+                            if let Some((_, session)) = Self::player_id_to_session_mut(
                                 &mut self.players,
                                 &mut arena.sessions,
                                 joiner,
                             ) {
-                                play.whisper_joins.removed(*team_id);
+                                session.whisper_joins.removed(*team_id);
                             }
                         }
                         arena.teams.remove(team_id);
@@ -365,7 +378,7 @@ impl Repo {
                     play.team_captain = true;
                     if let Some(team) = arena.teams.get(&team_id) {
                         for joiner in team.joiners.iter() {
-                            play.whisper_joiners.added(*joiner);
+                            session.whisper_joiners.added(*joiner);
                         }
                     }
                     arena.broadcast_players.added(*captain_session_id); // Team membership is on roster.
@@ -386,7 +399,7 @@ impl Repo {
                         if let Some(team_id) = play.team_id {
                             if let Some(team) = arena.teams.get(&team_id) {
                                 for joiner in team.joiners.iter() {
-                                    play.whisper_joiners.removed(*joiner);
+                                    session.whisper_joiners.removed(*joiner);
                                 }
                             }
                         }
@@ -433,20 +446,20 @@ impl Repo {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last_mut() {
                     if play.team_captain {
-                        play.whisper_joiners.removed(player_id);
+                        session.whisper_joiners.removed(player_id);
                         captain_team_id = play.team_id;
                     }
                 }
             }
 
             if let Some(team_id) = captain_team_id {
-                if let Some((_, play)) = Self::player_id_to_session_and_play_mut(
+                if let Some((_, session)) = Self::player_id_to_session_mut(
                     &mut self.players,
                     &mut arena.sessions,
                     player_id,
                 ) {
                     rejected = true;
-                    play.whisper_joins.removed(team_id);
+                    session.whisper_joins.removed(team_id);
                     if let Some(team) = arena.teams.get_mut(&team_id) {
                         team.joiners.remove(&player_id);
                     }
@@ -478,12 +491,14 @@ impl Repo {
         let mut requested = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             let mut joiner_player_id: Option<PlayerId> = None;
-            let captain_session_id = arena.captain_of_team(&team_id);
+            let captain_session_id = arena.captain_of_team(team_id);
             if captain_session_id.is_some() {
                 if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
-                    if let Some(play) = session.plays.last_mut() {
-                        play.whisper_joins.added(team_id);
-                        joiner_player_id = Some(session.player_id);
+                    if let Some(play) = session.plays.last() {
+                        if play.team_id.is_none() {
+                            session.whisper_joins.added(team_id);
+                            joiner_player_id = Some(session.player_id);
+                        }
                     }
                 }
             }
@@ -493,8 +508,7 @@ impl Repo {
                     .sessions
                     .get_mut(&captain_session_id.unwrap())
                     .unwrap();
-                let play = session.plays.last_mut().unwrap();
-                play.whisper_joiners.added(player_id);
+                session.whisper_joiners.added(player_id);
                 requested = true;
 
                 if let Some(team) = arena.teams.get_mut(&team_id) {

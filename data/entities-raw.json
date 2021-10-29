@@ -347,6 +347,58 @@
 			}
 		]
 	},
+	"espana": {
+		"label": "España",
+		"link": "https://en.wikipedia.org/wiki/Espa%C3%B1a-class_battleship",
+		"kind": "boat",
+		"subkind": "dreadnought",
+		"level": 3,
+		"length": 138.414,
+		"width": 24.331,
+		"draft": 7.8,
+		"speed": 10.032,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [],
+		"turrets": [
+			{
+				"type": "vickersMkH12in",
+				"positionForward": 34.9562,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 50
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": 13.7379,
+				"positionSide": -6.25652,
+				"speed": "slow",
+				"azimuthFR": 20,
+				"azimuthBL": 180
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": -15.7514,
+				"positionSide": 6.73689,
+				"angle": 180,
+				"speed": "slow",
+				"azimuthBL": 180
+			},
+			{
+				"type": "vickersMkH12in",
+				"positionForward": -39.8474,
+				"angle": 180,
+				"speed": "slow",
+				"azimuthB": 45
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -0.822
+			}
+		]
+	},
 	"essex": {
 		"label": "Essex",
 		"link": "https://en.wikipedia.org/wiki/Essex-class_aircraft_carrier",
@@ -584,7 +636,6 @@
 			{
 				"type": "mark9",
 				"positionForward": -55,
-				"positionSide": 1,
 				"angle": 180,
 				"symmetrical": false,
 				"external": true
@@ -592,7 +643,6 @@
 			{
 				"type": "mark9",
 				"positionForward": -55.5,
-				"positionSide": 1,
 				"angle": 180,
 				"symmetrical": false,
 				"external": true
@@ -600,7 +650,6 @@
 			{
 				"type": "mark9",
 				"positionForward": -56,
-				"positionSide": 1,
 				"angle": 180,
 				"symmetrical": false,
 				"external": true
@@ -608,7 +657,6 @@
 			{
 				"type": "mark9",
 				"positionForward": -56.5,
-				"positionSide": 1,
 				"angle": 180,
 				"symmetrical": false,
 				"external": true
@@ -3297,6 +3345,34 @@
 		"width": 0.533,
 		"speed": 23.2,
 		"range": 18000
+	},
+	"vickersMkH12in": {
+		"label": "Vickers MkH 12. in",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 16.65,
+		"positionForward": 2.3553,
+		"width": 8.4551,
+		"armaments": [
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 0.727,
+				"symmetrical": true,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
+	"300x1400mmR": {
+		"label": "300 x 1400 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"length": 1.4,
+		"width": 0.300,
+		"speed": 914,
+		"range": 21500
 	},
 	"wz08_39": {
 		"label": "wz. 08/39",

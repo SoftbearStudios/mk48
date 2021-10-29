@@ -61,7 +61,7 @@ impl Transform {
                 (delta_seconds
                     * match data.kind {
                         // Longer boats turn slower.
-                        EntityKind::Boat => 0.1 + 25.0 / data.length,
+                        EntityKind::Boat => 0.125 + 20.0 / data.length,
                         // Everything else turns slower if moving faster.
                         EntityKind::Aircraft => {
                             2.0 * (1.0 - self.velocity.abs().to_mps() / (1.0 + data.speed.to_mps()))

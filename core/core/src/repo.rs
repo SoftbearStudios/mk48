@@ -453,22 +453,22 @@ impl Repo {
                     .iter()
                     .map(|rc| MessageDto::clone(&rc))
                     .collect();
-                if let Some(play) = session.plays.last_mut() {
-                    joiners_added_or_removed = (
-                        mem::take(&mut play.whisper_joiners.add)
-                            .into_iter()
-                            .collect(),
-                        mem::take(&mut play.whisper_joiners.remove)
-                            .into_iter()
-                            .collect(),
-                    );
-                    joins_added_or_removed = (
-                        mem::take(&mut play.whisper_joins.add).into_iter().collect(),
-                        mem::take(&mut play.whisper_joins.remove)
-                            .into_iter()
-                            .collect(),
-                    );
-                }
+                joiners_added_or_removed = (
+                    mem::take(&mut session.whisper_joiners.add)
+                        .into_iter()
+                        .collect(),
+                    mem::take(&mut session.whisper_joiners.remove)
+                        .into_iter()
+                        .collect(),
+                );
+                joins_added_or_removed = (
+                    mem::take(&mut session.whisper_joins.add)
+                        .into_iter()
+                        .collect(),
+                    mem::take(&mut session.whisper_joins.remove)
+                        .into_iter()
+                        .collect(),
+                );
             }
         }
 

@@ -50,9 +50,10 @@
 	});
 
 	let name = storage.name || '';
-	let type = storage.type || getRandomSpawnable();
+	let type = storage.type && getSpawnable().includes(storage.type) ? storage.type : getRandomSpawnable();
 	let invite = undefined;
 	let paused = false;
+	let transitioning = false;
 
 	const minNameLength = 1;
 	const maxNameLength = 12;
@@ -101,7 +102,7 @@
 	}
 </script>
 
-<div class='splash' in:fade="{{duration: 500, delay: 1000}}">
+<div class='splash' in:fade="{{duration: 500, delay: 1000}}" on:introstart={() => transitioning = true} on:introend={() => transitioning = false}>
 	<h2>{$t('panel.splash.label')}</h2>
 	{#if state.status.spawning.connectionLost}
 		<p>{$t('panel.splash.connectionLost')}</p>
@@ -117,9 +118,9 @@
 			{/each}
 		</select>
 		{#if state.status.spawning.connectionLost}
-			<button disabled={paused} on:click={() => location.reload(true)}>Reload</button>
+			<button disabled={paused || transitioning} on:click={() => location.reload(true)}>Reload</button>
 		{:else}
-			<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused}>{$t('panel.splash.action.spawn.label')}</button>
+			<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused || transitioning}>{$t('panel.splash.action.spawn.label')}</button>
 		{/if}
 		{#if invite}
 			<small>{$t('panel.splash.invitePrefix')} {invite}</small>

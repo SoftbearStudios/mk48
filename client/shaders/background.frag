@@ -67,6 +67,6 @@ void main() {
         gl_FragColor = vec4(mix(vec3(0.0, 0.2, 0.45), vec3(0.0, 0.3, 0.5), max((height - DEEP) / (SHOAL - DEEP), -0.35)), 1.0); // Water
     }
 
-    gl_FragColor = mix(gl_FragColor, vec4(1.0, 0.0, 0.0, 1.0), max(min((length(vPosition) - uBorder) * 0.5, 0.25), 0.0) * (mod(vPosition.x + vPosition.y + uTime * 20.0, 50.0) > 25.0 ? 1.0 : 0.75));
+    gl_FragColor = mix(gl_FragColor, vec4(0.4, 0.15, 0.15, 1.0), max(min((length(vPosition) - uBorder) * 0.1, 0.5), 0.0));
     gl_FragColor = mix(gl_FragColor, vec4(vec3(0.0, 0.14, 0.32), 1.0), max(min((length(vPosition - uMiddle) - uVisual) * 0.1, 1.0) * uRestrict, 0.0));
 }

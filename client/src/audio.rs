@@ -5,7 +5,6 @@ use js_sys::ArrayBuffer;
 use sprite_sheet::AudioSpriteSheet;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::mem;
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
@@ -217,7 +216,7 @@ impl Inner {
 
     fn stop_playing(&mut self, name: &str) {
         if let Some(playing) = self.playing.get_mut(name) {
-            for removed in mem::take(playing) {
+            for removed in playing.drain(..) {
                 let _ = removed.stop();
             }
         }

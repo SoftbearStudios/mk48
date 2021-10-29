@@ -104,6 +104,10 @@
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 	};
 
+	function safeNumber(num) {
+		return typeof num === 'number' && isFinite(num);
+	}
+
 	function onSpawn(name, type) {
 		client && client.handleSpawn(name, type);
 	}
@@ -139,7 +143,10 @@
 					// Pinch is interpreted as zoom.
 					instructZoom = false;
 
-					client && client.handleWheel(0.15 * (pinch - currentDistance));
+					const wheel = 0.15 * (pinch - currentDistance);
+					if (client && safeNumber(wheel)) {
+						client.handleWheel(wheel);
+					}
 					pinch = currentDistance;
 				} else {
 					pinch = currentDistance;
@@ -159,7 +166,9 @@
 			const aspect = rect.height / rect.width;
 			const x = mapRanges(pos.pageX, rect.x, rect.x + rect.width, -1, 1);
 			const y = mapRanges(pos.pageY, rect.y, rect.y + rect.height, aspect, -aspect);
-			client && client.handleMouseMove(x, y);
+			if (safeNumber(x) && safeNumber(y)) {
+				client && client.handleMouseMove(x, y);
+			}
 		}
 	}
 
@@ -272,7 +281,9 @@
 		instructZoom = false;
 
 		const delta = event.deltaY * 0.05;
-		client && client.handleWheel(delta);
+		if (client && safeNumber(delta)) {
+			client.handleWheel(delta);
+		}
 	};
 
 	function onUpgrade(type) {
@@ -390,7 +401,7 @@
 		<div>
 			<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={$state && $state.leaderboards && $state.leaderboards['AllTime'] ? $state.leaderboards['AllTime'] : []} headerAlign='left'/>
 			<br/>
-			<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Daily'] ? $state.leaderboards['Daily'] : []} headerAlign='left'/>
+			<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Weekly'] ? $state.leaderboards['Weekly'] : []} headerAlign='left'/>
 			<br/>
 			<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Daily'] ? $state.leaderboards['Daily'] : []} headerAlign='left'/>
 		</div>

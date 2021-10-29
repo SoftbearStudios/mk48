@@ -8,13 +8,15 @@
         localStorage.auth = prompt("Enter auth code");
     }
 
+    const ANY = 'any';
+    const DAY = 1000 * 60 * 60 * 24;
     const headers = {'Content-Type': 'application/json'};
     const params = {auth: localStorage.auth};
     const requestGames = JSON.stringify({params, request: 'RequestGames'});
     const requestReferrers = JSON.stringify({params, request: 'RequestReferrers'});
     const requestUserAgents = JSON.stringify({params, request: 'RequestUserAgents'});
     const summary_blacklist = [
-        "arenas_cached", "cpu", "ram", "retention", "sessions_cached", "uptime"
+        "arenas_cached", "connections", "cpu", "ram", "retention", "sessions_cached", "uptime"
     ];
 
     function filter_summary_blacklist(list) {
@@ -31,7 +33,7 @@
                     detail = "of " + rounded[1];
                     break;
                 case 4:
-                    detail = "\u03C3=" + rounded[1] + ", min=" + rounded[2] + ", max=" + rounded[3];
+                    detail = rounded[1] == 0 ? "" : "\u03C3=" + rounded[1] + ", min=" + rounded[2] + ", max=" + rounded[3];
                     break;
             }
         }
@@ -74,18 +76,21 @@
 
     let games = [];
     let game_id;
+    let selected_game_id = undefined;
     async function loadGames() {
         let result = await fetch("/admin/", {method: 'POST', body: requestGames, headers}).then(res => res.json());
         games = result.GamesRequested.games.map(([gameId, usage]) => gameId);
         console.log("Games: ", games);
         if (games.length != 0) {
+            selected_game_id = games[0];
             game_id = games[0];
         }
     }
     loadGames();
 
+    // TODO: use the period_id in RequestSeries()
     let periods = [];
-    let period_id;
+    let period_id = undefined;
     function initPeriods() {
         periods = ['week', 'month', 'quarter'];
         period_id = periods[0];
@@ -93,26 +98,20 @@
     initPeriods();
 
     let referrers = [];
-    let referrer_id;
+    let referrer = undefined;
     async function loadReferrers() {
         let result = await fetch("/admin/", {method: 'POST', body: requestReferrers, headers}).then(res => res.json());
         referrers = result.ReferrersRequested.referrers;
         console.log("Referrers: ", referrers);
-        if (referrers.length != 0) {
-            referrer_id = referrers[0][0];
-        }
     }
     loadReferrers();
 
     let user_agents = [];
-    let user_agent_id;
+    let user_agent_id = undefined;
     async function loadUserAgents() {
         let result = await fetch("/admin/", {method: 'POST', body: requestUserAgents, headers}).then(res => res.json());
         user_agents = result.UserAgentsRequested.user_agents;
         console.log("UserAgents: ", user_agents);
-        if (user_agents.length != 0) {
-            user_agent_id = user_agents[0][0];
-        }
     }
     loadUserAgents();
 
@@ -130,33 +129,33 @@
       <div/>
   {:else}
       {#if view == 'day'}
-          <select>
-              <option value="any">any</option>
-          {#each referrers as referrer}
-              <option value={referrer[0]}>{referrer[0]}</option>
-          {/each}
+          <select on:change={event => referrer = event.target.value === 'undefined' ? undefined : event.target.value} value={referrer}>
+              <option value={undefined}>{ANY}</option>
+              {#each referrers as r}
+                  <option value={r[0]}>{r[0]}</option>
+              {/each}
           </select>
 
-          <select>
-              <option value="any">any</option>
-          {#each user_agents as user_agent}
-              <option value={user_agent[0]}>{user_agent[0]}</option>
-          {/each}
+          <select on:change={event => user_agent_id = event.target.value === 'undefined' ? undefined : event.target.value} value={user_agent_id}>
+              <option value={undefined}>{ANY}</option>
+              {#each user_agents as u}
+                  <option value={u[0]}>{u[0]}</option>
+              {/each}
           </select>
       {/if}
 
       {#if view == 'series'}
-          <select>
-          {#each periods as period}
-              <option value={period}>{period}</option>
-          {/each}
+          <select on:change={event => period_id = event.target.value} value={period_id}>
+              {#each periods as p}
+                  <option value={p}>{p}</option>
+              {/each}
           </select>
       {/if}
 
-      <select>
-      {#each games as game}
-          <option value={game}>{game}</option>
-      {/each}
+      <select on:change={event => game_id = event.target.value} value={game_id}>
+          {#each games as g}
+              <option value={g}>{g}</option>
+          {/each}
       </select>
   {/if}
   </div>
@@ -168,7 +167,7 @@
 
 {:else if view === 'day'}
     <h2>Day (Cache)</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestDay': {game_id}}}), headers}).then(res => res.json())}
+    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestDay': {game_id, referrer, user_agent_id}}}), headers}).then(res => res.json())}
     {:then data}
         <div class="charts">
             {#each filter_summary_blacklist(Object.keys(data.DayRequested.series[0][1])) as key}
@@ -180,7 +179,7 @@
                         logarithmic={false}
                         points={true}
                         x={point => point[0]}
-                        y={(typeof data.DayRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.DayRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.DayRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
+                        y={(typeof data.DayRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.DayRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.DayRequested.series[0][1][key].map((ignored, i) => (point => i == 1 ? undefined : point[1][key][i])))}
                         fmtX={formatTimestamp}
                     />
                 </div>
@@ -189,7 +188,6 @@
     {:catch err}
         <p>{err}</p>
     {/await}
-
 {:else if view === 'referrers'}
     <h2>Referrers (Cache)</h2>
     {#await fetch("/admin/", {method: 'POST', body: requestReferrers, headers}).then(res => res.json())}
@@ -208,24 +206,28 @@
 
 {:else if view === 'series'}
     <h2>Series</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSeries': {game_id}}}), headers}).then(res => res.json())}
+    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSeries': {game_id, date_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[period_id]}}}), headers}).then(res => res.json())}
     {:then data}
-        <div class="charts">
-            {#each Object.keys(data.SeriesRequested.series[0][1]) as key}
-                <div class="chart">
-                    <p>{key}</p>
-                    <Chart
-                        data={data.SeriesRequested.series}
-                        filterBounds={false}
-                        logarithmic={false}
-                        points={true}
-                        x={point => point[0]}
-                        y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
-                        fmtX={formatTimestamp}
-                    />
-                </div>
-            {/each}
-        </div>
+        {#if data.SeriesRequested.series.length > 0}
+            <div class="charts">
+                {#each Object.keys(data.SeriesRequested.series[0][1]) as key}
+                    <div class="chart">
+                        <p>{key}</p>
+                        <Chart
+                            data={data.SeriesRequested.series}
+                            filterBounds={false}
+                            logarithmic={false}
+                            points={true}
+                            x={point => point[0]}
+                            y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => i == 1 ? undefined : point[1][key][i])))}
+                            fmtX={formatTimestamp}
+                        />
+                    </div>
+                {/each}
+            </div>
+        {:else}
+            <h2>No data.</h2>
+        {/if}
     {:catch err}
         <p>{err}</p>
     {/await}

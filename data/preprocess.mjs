@@ -170,10 +170,10 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 16;
 						break;
 					case 'missile':
-						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 16, true);
+						entityData.reload = mapRanges(entityData.length, 1, 6, 4, 12, true);
 						break;
 					case 'shell':
-						entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 16, true);
+						entityData.reload =  mapRanges(entityData.length, 0.25, 2, 8, 15, true);
 						break;
 					case 'torpedo':
 						entityData.reload = 8;
@@ -319,7 +319,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				let factor = 0;
 				switch (sensorType) {
 					case 'visual':
-						base = 520;
+						base = 600;
 						factor = 2.0;
 						break;
 					case 'radar':
