@@ -390,7 +390,7 @@ impl Game {
                     if *idle
                         <= view
                             .entity_type()
-                            .map(|t| t.data().kind.keep_alive())
+                            .map(|t| *t.data().kind.keep_alive().end())
                             .unwrap_or(EntityKind::MAX_KEEP_ALIVE)
                     {
                         // Still in keep alive period.
@@ -950,7 +950,6 @@ impl Game {
             visual_range,
             visual_restriction,
             self.world_radius,
-            time_seconds,
         );
 
         // Prepare to sort sprites.

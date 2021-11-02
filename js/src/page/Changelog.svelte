@@ -13,6 +13,17 @@
 
 	<h2>2021</h2>
 
+	<h3>10/31/2021</h3>
+
+	<ul>
+		<li>Active sonar, and moving slowly to avoid making too much noise, actually matter now.</li>
+		<li>If you are sunk by land, world border, obstacle, or leaving the game,
+		a fraction of your score is dropped as coins.</li>
+		<li>Terrain updates more frequently and with less bandwidth use.</li>
+		<li>Dredger clamps to maximum depositor range, if nearly within range.</li>
+		<li>Fix enter to close chat, and right click name to open mute menu.</li>
+	</ul>
+
 	<h3>10/28/2021</h3>
 
 	<ul>

@@ -9,14 +9,13 @@ use atomic_refcell::AtomicRef;
 use common::complete::CompleteTrait;
 use common::contact::ContactTrait;
 use common::death_reason::DeathReason;
-use common::entity::{EntityId, EntityKind};
-use common::protocol::{SerializedChunk, Update};
+use common::protocol::Update;
 use common::terrain::{ChunkSet, Terrain};
-use common::ticks::Ticks;
+use common::ticks::{Ticks, TicksRepr};
 use common::velocity::Velocity;
 use core_protocol::id::PlayerId;
 use glam::Vec2;
-use std::collections::{HashMap, HashSet};
+use std::ops::RangeInclusive;
 
 /// A "Complete" server to client update that references world data to avoid additional allocation.
 pub struct CompleteRef<'a, I: Iterator<Item = ContactRef<'a>>> {
@@ -45,12 +44,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
         }
     }
 
-    pub fn into_update(
-        self,
-        loaded_entities: &mut HashMap<EntityId, Ticks>,
-        loaded_chunks: &mut ChunkSet,
-        chunk_loading_cooldown: &mut Ticks,
-    ) -> Update {
+    pub fn into_update(self, counter: Ticks, loaded_chunks: &mut ChunkSet) -> Update {
         let death_reason = if let Status::Dead { reason, .. } = &self.player.status {
             Some(reason.clone())
         } else {
@@ -58,64 +52,55 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
         };
 
         // Any updated chunks are now no longer loaded.
-        *loaded_chunks = loaded_chunks.and(&self.world.terrain.updated.not());
+        let mut new_loaded_chunks = loaded_chunks.and(&self.world.terrain.updated.not());
 
-        let loading = if *chunk_loading_cooldown == Ticks::ZERO {
-            // Set delay before loading any more chunks.
-            *chunk_loading_cooldown = Ticks::from_secs(1.0);
+        // All chunks that are currently visible.
+        let visible = ChunkSet::new_radius(self.camera_pos, self.camera_radius);
 
-            // All chunks that are currently visible.
-            let visible = ChunkSet::new_radius(self.camera_pos, self.camera_radius);
+        // Actually load more chunks.
+        let loading = visible.and(&new_loaded_chunks.not());
 
-            // Actually load more chunks.
-            let ret = visible.and(&loaded_chunks.not());
-
-            // The chunks that will be loaded following this message.
-            *loaded_chunks = visible.or(loaded_chunks);
-
-            ret
-        } else {
-            // Don't load chunks too frequently.
-            ChunkSet::new()
-        };
+        // The chunks that will be loaded following this message.
+        new_loaded_chunks = visible.or(&new_loaded_chunks);
 
         let terrain = loading
             .into_iter()
-            .map(|id| SerializedChunk(id, self.world.terrain.get_chunk(id).to_bytes()))
+            .map(|id| {
+                (
+                    id,
+                    self.world.terrain.get_chunk(id).to_serialized_chunk(
+                        loaded_chunks.contains(id),
+                        &self.world.terrain,
+                        id,
+                    ),
+                )
+            })
             .collect();
 
-        // For draining loaded_contacts.
-        let mut visible_entities = HashSet::new();
+        *loaded_chunks = new_loaded_chunks;
 
         let ret = Update {
             contacts: self
                 .contacts
                 .unwrap()
                 .filter_map(|contact| {
-                    visible_entities.insert(contact.id());
+                    let modulus = if let Some(entity_type) = contact.entity_type() {
+                        let range: RangeInclusive<Ticks> = entity_type.data().kind.keep_alive();
 
-                    // Enforce keep alive period by omitting recently sent contacts.
-                    let until_next_send =
-                        loaded_entities.entry(contact.id()).or_insert(Ticks::ZERO);
-
-                    *until_next_send = until_next_send.saturating_sub(
                         if contact.transform().velocity.abs() > Velocity::from_mps(1.0) {
                             // Send more often if moving.
-                            Ticks(3)
+                            *range.start()
                         } else {
-                            Ticks::ONE
-                        },
-                    );
-
-                    return if *until_next_send == Ticks::ZERO {
-                        *until_next_send = contact
-                            .entity_type()
-                            .map(|t| t.data().kind.keep_alive())
-                            .unwrap_or(EntityKind::MAX_KEEP_ALIVE);
-                        Some(contact.into_contact())
+                            *range.end()
+                        }
                     } else {
-                        None
+                        Ticks(5)
                     };
+
+                    let send = counter.wrapping_add(Ticks(contact.id().get() as TicksRepr))
+                        % (modulus + Ticks(1))
+                        == Ticks::ZERO;
+                    send.then(|| contact.into_contact())
                 })
                 .collect(),
             death_reason,
@@ -124,7 +109,6 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
             world_radius: self.world.radius,
             terrain,
         };
-        loaded_entities.retain(|id, _| visible_entities.contains(id));
         ret
     }
 }

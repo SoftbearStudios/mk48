@@ -29,6 +29,12 @@ pub struct ParametrizedServerRequest {
     pub request: ServerRequest,
 }
 
+fn log_err<O, E: std::fmt::Display>(res: Result<O, E>) {
+    if let Err(e) = res {
+        warn!("Error sending {}", e);
+    }
+}
+
 impl Handler<ObserverMessage<ServerRequest, ServerUpdate, Option<UserAgent>>> for Core {
     type Result = ();
     fn handle(
@@ -41,12 +47,7 @@ impl Handler<ObserverMessage<ServerRequest, ServerUpdate, Option<UserAgent>>> fo
                 if let Some(server) = self.servers.get_mut(&observer) {
                     let result = self.repo.handle_server(server, request);
                     if let Ok(success) = result {
-                        match observer.do_send(ObserverUpdate::Send { message: success }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        log_err(observer.do_send(ObserverUpdate::Send { message: success }))
                     }
                 }
             }
@@ -83,16 +84,11 @@ impl Core {
                     for (addr, server) in act.servers.iter_mut() {
                         if let Some(server_arena_id) = server.arena_id {
                             if server_arena_id == *arena_id {
-                                match addr.do_send(ObserverUpdate::Send {
+                                log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ServerUpdate::MembersChanged {
                                         changes: Arc::clone(team_assignments), // TODO: only used once; should use Box.
                                     },
-                                }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                }));
                             }
                         }
                     }
@@ -108,17 +104,12 @@ impl Core {
                 }
                 if let Some(bots) = act.repo.read_available_bots(server.arena_id.unwrap()) {
                     for (player_id, session_id) in bots.iter() {
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ServerUpdate::BotReady {
                                 player_id: *player_id,
                                 session_id: *session_id,
                             },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }))
                     }
                 }
             }
@@ -127,14 +118,9 @@ impl Core {
             if act.repo.read_armageddon() {
                 for (addr, server) in act.servers.iter() {
                     if let Some(arena_id) = server.arena_id {
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ServerUpdate::ArmageddonStarted { arena_id },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }))
                     }
                 }
             }
@@ -156,7 +142,7 @@ impl Repo {
             } => {
                 // TODO: validate that session_id is actually a bot!
                 let mut client = ClientState {
-                    arena_id: server.arena_id.clone(),
+                    arena_id: server.arena_id,
                     newbie: false,
                     session_id: Some(session_id),
                     user_agent_id: None,

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::altitude::Altitude;
-use crate::protocol::SerializedChunk;
 use crate::protocol::TerrainUpdate;
 use crate::transform::DimensionTransform;
 use crate::util::lerp;
@@ -17,6 +16,7 @@ use std::fmt::{Debug, Formatter};
 use std::mem::{size_of, transmute};
 use std::ops::{Add, Mul, RangeInclusive, Sub};
 use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -48,7 +48,7 @@ const ALTITUDE_LUT: [i8; 17] = [
     -120,
     -100,
     -50,
-    -5,
+    -15,
     -3,
     -2,
     -1,
@@ -56,7 +56,7 @@ const ALTITUDE_LUT: [i8; 17] = [
     1,
     2,
     4,
-    8,
+    15,
     50,
     100,
     120,
@@ -271,21 +271,17 @@ impl Terrain {
             return chunk;
         }
 
+        // TODO generate in parallel.
         let chunk = Box::into_raw(Chunk::new(chunk_id, self.generator));
         ptr.store(chunk, Ordering::Release);
         drop(lock);
         chunk.as_ref().unwrap()
     }
 
-    /// Resets the updated field to empty.
-    pub fn reset_updated(&mut self) {
-        self.updated = ChunkSet::new()
-    }
-
     /// Applies a terrain update, overwriting relevant terrain pixels.
     pub fn apply_update(&mut self, update: &TerrainUpdate) {
-        for SerializedChunk(chunk_id, chunk_bytes) in update.iter() {
-            *self.mut_chunk(*chunk_id) = Chunk::from_bytes(chunk_bytes)
+        for (chunk_id, serialized) in update.iter() {
+            self.mut_chunk(*chunk_id).apply_serialized_chunk(serialized);
         }
     }
 
@@ -298,9 +294,12 @@ impl Terrain {
     fn set(&mut self, coord: Coord, value: u8) {
         let chunk_id = ChunkId::from_coord(coord);
         let chunk = self.mut_chunk(chunk_id);
-        chunk.set(coord, value);
-        chunk.mark_for_regenerate();
-        self.updated.add(chunk_id)
+
+        // Don't record sets that change nothing.
+        if chunk.at(coord) & 0b11110000 != value & 0b11110000 {
+            chunk.set_capture(coord, value);
+            self.updated.add(chunk_id)
+        }
     }
 
     /// Gets the smoothed Altitude at a position.
@@ -454,17 +453,41 @@ impl Terrain {
         Some(())
     }
 
-    /// Regenerate partially regenerates chunks that are due for regeneration.
-    pub fn regenerate_if_applicable(&mut self) {
-        let now = Instant::now();
+    /// pre_update is called once before all clients recieve updates after physics each tick.
+    pub fn pre_update(&mut self) {
+        for chunks in self.chunks.iter_mut() {
+            for chunk in chunks.iter_mut() {
+                if let Some(chunk) = chunk {
+                    let chunk: &mut Chunk = chunk;
 
+                    // Converts and dedupes updated coords into mods.
+                    chunk.calculate_mods()
+                }
+            }
+        }
+    }
+
+    /// post_update is called once after all clients recieve updates each tick.
+    pub fn post_update(&mut self) {
+        // Reset updated
+        self.updated = ChunkSet::new();
+
+        let now = Instant::now();
         for (cy, chunks) in self.chunks.iter_mut().enumerate() {
             for (cx, chunk) in chunks.iter_mut().enumerate() {
                 if let Some(chunk) = chunk {
+                    let chunk: &mut Chunk = chunk;
+
+                    // Reset chunk updates (needs to be before regenerate).
+                    chunk.update = ChunkUpdate::None;
+
+                    // Regenerate applicable chunks.
                     if let Some(next_regen) = chunk.next_regen {
-                        if now > next_regen {
+                        if now >= next_regen {
                             let chunk_id = ChunkId(cx as u16, cy as u16);
-                            chunk.regenerate(chunk_id, self.generator);
+                            chunk.regenerate(chunk_id, self.generator); // TODO parallelize
+
+                            chunk.update = ChunkUpdate::Complete;
                             self.updated.add(chunk_id);
                         }
                     }
@@ -474,10 +497,101 @@ impl Terrain {
     }
 }
 
+/// RelativeCoord is a coord within a chunk.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+struct RelativeCoord(u8, u8);
+
+impl From<Coord> for RelativeCoord {
+    fn from(coord: Coord) -> Self {
+        Self((coord.0 % CHUNK_SIZE) as u8, (coord.1 % CHUNK_SIZE) as u8)
+    }
+}
+
+impl RelativeCoord {
+    /// into_coord converts into a Coord given a chunk id.
+    fn _into_coord(self, chunk_id: ChunkId) -> Coord {
+        Coord(
+            self.0 as usize + chunk_id.0 as usize * CHUNK_SIZE,
+            self.1 as usize + chunk_id.1 as usize * CHUNK_SIZE,
+        )
+    }
+
+    /// into_absolute_coord is like into_coord, but it assumes chunk is at 0, 0.
+    fn into_absolute_coord(self) -> Coord {
+        Coord(self.0 as usize, self.1 as usize)
+    }
+}
+
+struct Mod {
+    data: u16,
+}
+
+impl Mod {
+    fn new(coord: RelativeCoord, value: u8) -> Self {
+        // Depends on chunk size.
+        assert_eq!(CHUNK_SIZE, 64);
+
+        // 6 bits
+        let x = coord.0 as u16;
+        // 6 bits
+        let y = coord.1 as u16;
+        // 4 bits
+        let real_value = (value >> 4) as u16;
+
+        let m = Self {
+            data: x << 10 | y << 4 | real_value,
+        };
+        debug_assert_eq!(m.to_coord_and_value(), (coord, value));
+        m
+    }
+
+    fn to_coord_and_value(&self) -> (RelativeCoord, u8) {
+        // Depends on chunk size.
+        assert_eq!(CHUNK_SIZE, 64);
+
+        let x = (self.data >> 10) as u8;
+        let y = ((self.data >> 4) % 64) as u8;
+        let amount = ((self.data % 16) as u8) << 4;
+
+        (RelativeCoord(x, y), amount)
+    }
+
+    fn to_bytes(&self) -> [u8; 2] {
+        self.data.to_le_bytes()
+    }
+
+    fn from_bytes(bytes: [u8; 2]) -> Self {
+        Self {
+            data: u16::from_le_bytes(bytes),
+        }
+    }
+}
+
+/// ChunkUpdate stores the updates that happened to a chunk during a tick.
+enum ChunkUpdate {
+    None,                       // No changes.
+    Coords(Vec<RelativeCoord>), // For collecting coordinates of modifications.
+    Mods(Arc<[u8]>), // Mods encoded as bytes wrapped with Arc for sharing across threads.
+    Complete,        // Send whole chunk.
+}
+
+impl Default for ChunkUpdate {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SerializedChunk {
+    is_update: bool,
+    bytes: Arc<[u8]>, // TODO: use serde_bytes.
+}
+
 /// A single chunk in a Terrain.
 pub struct Chunk {
     data: [[u8; CHUNK_SIZE / 2]; CHUNK_SIZE],
     next_regen: Option<Instant>,
+    update: ChunkUpdate,
 }
 
 impl Chunk {
@@ -486,6 +600,7 @@ impl Chunk {
         Self {
             data: [[0; CHUNK_SIZE / 2]; CHUNK_SIZE],
             next_regen: None,
+            update: ChunkUpdate::None,
         }
     }
 
@@ -493,10 +608,7 @@ impl Chunk {
     pub fn new(chunk_id: ChunkId, generator: Generator) -> Box<Self> {
         // Ensure array is initialized on the heap, not the stack.
         // See https://github.com/rust-lang/rust/issues/28008#issuecomment-135032399
-        let mut chunk = box Self {
-            data: [[0; CHUNK_SIZE / 2]; CHUNK_SIZE],
-            next_regen: None,
-        };
+        let mut chunk = box Self::zero();
 
         let coord = chunk_id.as_coord();
         let x_offset = coord.0;
@@ -567,8 +679,62 @@ impl Chunk {
         (self.data[y][sx] << ((x & 1) * 4)) & 0b11110000
     }
 
+    /// set_capture captures modifications.
+    fn set_capture(&mut self, coord: Coord, value: u8) {
+        self.set(coord, value);
+        self.mark_for_regenerate();
+
+        self.update = ChunkUpdate::Coords(match &mut self.update {
+            ChunkUpdate::None => {
+                vec![coord.into()]
+            }
+            ChunkUpdate::Coords(coords) => {
+                coords.push(coord.into());
+                return;
+            }
+            ChunkUpdate::Mods(_) => panic!("mods should have been cleared"),
+            ChunkUpdate::Complete => return, // Already sending whole chunk...
+        });
+    }
+
+    /// calculate_mods converts Coords to Mods.
+    fn calculate_mods(&mut self) {
+        use std::mem;
+
+        self.update = match mem::take(&mut self.update) {
+            ChunkUpdate::None => ChunkUpdate::None,
+            ChunkUpdate::Complete => ChunkUpdate::Complete,
+            ChunkUpdate::Coords(mut coords) => {
+                // Remove duplicates.
+                coords.sort_unstable();
+                coords.dedup();
+
+                // Not worth doing updates if above this many bytes (average compressed chunk is 2k).
+                const MAX_BYTES: usize = 1600;
+
+                if coords.len() * mem::size_of::<Mod>() < MAX_BYTES {
+                    ChunkUpdate::Mods(
+                        coords
+                            .into_iter()
+                            .map(|coord| {
+                                std::array::IntoIter::new(
+                                    Mod::new(coord, self.at(coord.into_absolute_coord()))
+                                        .to_bytes(),
+                                )
+                            })
+                            .flatten()
+                            .collect(),
+                    )
+                } else {
+                    ChunkUpdate::Complete
+                }
+            }
+            ChunkUpdate::Mods(_) => panic!("mods should have been cleared"),
+        }
+    }
+
     /// Sets the raw value of one pixel, specified by coord modulo CHUNK_SIZE.
-    pub fn set(&mut self, coord: Coord, value: u8) {
+    fn set(&mut self, coord: Coord, value: u8) {
         let Coord(x, mut y) = coord;
         let sx = (x / 2) % (CHUNK_SIZE / 2);
         y %= CHUNK_SIZE;
@@ -579,12 +745,12 @@ impl Chunk {
 
     /// to_bytes encodes a chunk as bytes.
     /// It uses run-length encoding of the chunk mapped to a hilbert curve.
-    pub fn to_bytes(&self) -> Box<[u8]> {
+    pub fn to_bytes(&self) -> Vec<u8> {
         let mut compressor = Compressor::new(1024);
         for coord in HILBERT_TO_COORD.iter() {
             compressor.write_byte(self.at((*coord).into()));
         }
-        compressor.into_vec().into_boxed_slice()
+        compressor.into_vec()
     }
 
     /// from_bytes decodes bytes encoded with to_bytes into a chunk.
@@ -595,6 +761,51 @@ impl Chunk {
             chunk.set(hilbert[i].into(), b);
         }
         chunk
+    }
+
+    pub fn to_serialized_chunk(
+        &self,
+        should_update: bool,
+        terrain: &Terrain,
+        chunk_id: ChunkId,
+    ) -> SerializedChunk {
+        if should_update {
+            match &self.update {
+                ChunkUpdate::None => {
+                    debug_assert!(false, "no updates {}", terrain.updated.contains(chunk_id))
+                }
+                ChunkUpdate::Coords(_) => debug_assert!(false, "coords should have been removed"),
+                ChunkUpdate::Mods(mods) => {
+                    return SerializedChunk {
+                        is_update: true,
+                        bytes: Arc::clone(mods),
+                    }
+                }
+                ChunkUpdate::Complete => (),
+            }
+        }
+
+        // Send whole chunk.
+        SerializedChunk {
+            is_update: false,
+            bytes: self.to_bytes().into(), // TODO could save encoded chunk is lru cache but would require atomics.
+        }
+    }
+
+    pub fn apply_serialized_chunk(&mut self, serialized: &SerializedChunk) {
+        let bytes: &[u8] = &*serialized.bytes;
+        if serialized.is_update {
+            // Apply mods.
+            for m in bytes.array_chunks::<2>().map(|b| Mod::from_bytes(*b)) {
+                let m: Mod = m;
+                let (coord, value) = m.to_coord_and_value();
+                let coord = coord.into_absolute_coord();
+                self.set(coord, value);
+            }
+        } else {
+            // Overwrite chunk.
+            *self = Self::from_bytes(bytes);
+        }
     }
 }
 

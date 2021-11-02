@@ -31,6 +31,8 @@ pub const fn level_to_score(level: u8) -> u32 {
 
 /// respawn_score returns how much score is kept when a boat dies.
 pub fn respawn_score(score: u32) -> u32 {
+    // Lose 1/2 score if you die.
+    // Cap so can't get max level right away.
     (score / 2).min(level_to_score(3))
 }
 

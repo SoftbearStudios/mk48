@@ -14,7 +14,7 @@ use rand::seq::IteratorRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
-use std::ops::{Mul, Range};
+use std::ops::{Mul, Range, RangeInclusive};
 
 pub type EntityId = NonZeroU32;
 
@@ -37,11 +37,18 @@ impl EntityKind {
     /// After how many ticks of not hearing about an entity should we assume it is gone/no longer
     /// visible. This allows the server to optimize bandwidth usage but transmitting certain entities
     /// less frequently.
-    pub const fn keep_alive(self) -> Ticks {
+    ///
+    /// The higher end of the range is used (for efficiency) except if the velocity is above
+    /// a certain threshold.
+    ///
+    /// To guarantee some updates are sent, make sure the (start + 1) divides (end + 1).
+    pub const fn keep_alive(self) -> RangeInclusive<Ticks> {
         match self {
-            Self::Boat | Self::Decoy | Self::Weapon | Self::Aircraft | Self::Turret => Ticks(0),
-            Self::Collectible => Ticks(5),
-            Self::Obstacle => Self::MAX_KEEP_ALIVE,
+            Self::Boat | Self::Decoy | Self::Weapon | Self::Aircraft | Self::Turret => {
+                Ticks(0)..=Ticks(0)
+            }
+            Self::Collectible => Ticks(2)..=Ticks(5),
+            Self::Obstacle => Self::MAX_KEEP_ALIVE..=Self::MAX_KEEP_ALIVE,
         }
     }
 }

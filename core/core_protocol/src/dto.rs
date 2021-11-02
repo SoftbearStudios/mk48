@@ -56,7 +56,7 @@ pub struct MessageDto {
 
 /// The Metrics Data Transfer Object (DTO) contains core server metrics.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct MetricsDto {
+pub struct MetricsSummaryDto {
     pub arenas_cached: <DiscreteMetric as Metric>::Summary,
     pub bounce: <RatioMetric as Metric>::Summary,
     pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
@@ -77,6 +77,30 @@ pub struct MetricsDto {
     pub teamed: <RatioMetric as Metric>::Summary,
     pub toxicity: <RatioMetric as Metric>::Summary,
     pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct MetricsDataPointDto {
+    pub arenas_cached: <DiscreteMetric as Metric>::DataPoint,
+    pub bounce: <RatioMetric as Metric>::DataPoint,
+    pub concurrent: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub connections: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub cpu: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub flop: <RatioMetric as Metric>::DataPoint,
+    pub invited: <RatioMetric as Metric>::DataPoint,
+    pub minutes_per_play: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub minutes_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub new: <RatioMetric as Metric>::DataPoint,
+    pub peek: <RatioMetric as Metric>::DataPoint,
+    pub plays_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub plays_total: <DiscreteMetric as Metric>::DataPoint,
+    pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub retention: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
+    pub teamed: <RatioMetric as Metric>::DataPoint,
+    pub toxicity: <RatioMetric as Metric>::DataPoint,
+    pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
 }
 
 /// The Player Data Transfer Object (DTO) binds player ID to player data.

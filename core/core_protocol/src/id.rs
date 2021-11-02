@@ -87,6 +87,17 @@ pub enum PeriodId {
     Weekly = 2,
 }
 
+impl From<usize> for PeriodId {
+    fn from(i: usize) -> Self {
+        match i {
+            0 => Self::AllTime,
+            1 => Self::Daily,
+            2 => Self::Weekly,
+            _ => panic!("invalid index"),
+        }
+    }
+}
+
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub NonZeroU32);

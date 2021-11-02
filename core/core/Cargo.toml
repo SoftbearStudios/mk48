@@ -34,7 +34,7 @@ rand = "0.8.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_json = "1.0.64"
 lazy_static = "1.4.0"
-rustrict = "0.1.20"
+rustrict = "0.1.24"
 ringbuffer = "0.8.2"
 log = "0.4.14"
 aws-config = { git = "https://github.com/awslabs/aws-sdk-rust", branch = "main", package = "aws-config" }

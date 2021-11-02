@@ -180,7 +180,7 @@ impl Core {
                 {
                     if let Some(server_id) = session.server_id {
                         stream.push(Core::database().put_session(SessionItem {
-                            alias: session.alias.clone(),
+                            alias: session.alias,
                             arena_id,
                             date_created: session.date_created,
                             date_previous: session.date_previous,

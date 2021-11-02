@@ -101,7 +101,7 @@
 				"range": 826.6
 			},
 			"sonar": {
-				"range": 406.65
+				"range": 641.625
 			}
 		},
 		"armaments": [
@@ -1489,7 +1489,7 @@
 				"range": 796.8
 			},
 			"sonar": {
-				"range": 399.2
+				"range": 623
 			}
 		},
 		"armaments": [
@@ -2996,7 +2996,7 @@
 				"range": 1255
 			},
 			"sonar": {
-				"range": 435
+				"range": 712.5
 			}
 		},
 		"armaments": [
@@ -3307,7 +3307,7 @@
 				"range": 1115.065
 			},
 			"sonar": {
-				"range": 388.355
+				"range": 595.8875
 			}
 		},
 		"armaments": [
@@ -3838,7 +3838,7 @@
 				"range": 734.2
 			},
 			"sonar": {
-				"range": 383.55
+				"range": 583.875
 			}
 		},
 		"armaments": [
@@ -4100,7 +4100,7 @@
 				"range": 1195
 			},
 			"sonar": {
-				"range": 415
+				"range": 662.5
 			}
 		},
 		"armaments": [

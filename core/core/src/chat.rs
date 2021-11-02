@@ -15,6 +15,7 @@ use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWr
 use rustrict::{Censor, Type};
 use std::rc::Rc;
 
+#[derive(Default)]
 pub struct ChatHistory {
     /// Total message count, faded out over time.
     total: f32,
@@ -33,16 +34,6 @@ pub struct ChatHistory {
 }
 
 impl ChatHistory {
-    pub fn new() -> Self {
-        Self {
-            date_updated: 0,
-            inappropriate: 0.0,
-            recent_lengths: ConstGenericRingBuffer::new(),
-            total: 0.0,
-            toxicity: RatioMetric::default(),
-        }
-    }
-
     /// Returns censored text and whether to block it entirely.
     pub fn update(&mut self, message: &str, whisper: bool) -> Result<String, &'static str> {
         let threshold = if whisper {
@@ -178,7 +169,7 @@ impl Repo {
             );
         }
 
-        return muted;
+        muted
     }
 
     // Client is chatty.
@@ -205,15 +196,15 @@ impl Repo {
                             ..
                         }) = arena.teams.get(&team_id)
                         {
-                            team_name = Some(existing_team_name.clone());
+                            team_name = Some(*existing_team_name);
                         }
                     }
                     let trimmed = trim_spaces(&message);
-                    if play.date_stop.is_none() && trimmed.len() > 0 && trimmed.len() < 150 {
+                    if play.date_stop.is_none() && !trimmed.is_empty() && trimmed.len() < 150 {
                         match session.chat_history.update(trimmed, whisper) {
                             Ok(text) => {
                                 let message = MessageDto {
-                                    alias: session.alias.clone(),
+                                    alias: session.alias,
                                     date_sent: get_unix_time_now(),
                                     player_id: Some(session.player_id),
                                     team_captain: play.team_captain,

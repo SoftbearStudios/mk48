@@ -202,7 +202,7 @@ for (const entityType of Object.keys(entityDatas)) {
 	const turrets = entityData.turrets;
 	entityData.turrets = [];
 
-    const exhausts = entityData.exhausts;
+	const exhausts = entityData.exhausts;
 	entityData.exhausts = [];
 
 	if (turrets) {
@@ -213,15 +213,15 @@ for (const entityType of Object.keys(entityDatas)) {
 			turret.angle = (turret.angle || 0) * Math.PI / 180;
 
 			switch (turret.speed) {
-			    case 'fast':
-                    turret.speed = Math.PI * 0.6;
-			        break;
-			    case 'slow':
-			        turret.speed = Math.PI * 0.3;
-			        break;
-			    default:
-			        turret.speed = Math.PI * 0.45;
-			        break;
+				case 'fast':
+					turret.speed = Math.PI * 0.6;
+					break;
+				case 'slow':
+					turret.speed = Math.PI * 0.3;
+					break;
+				default:
+					turret.speed = Math.PI * 0.45;
+					break;
 			}
 
 			// Apply azimuth abbreviations
@@ -298,17 +298,17 @@ for (const entityType of Object.keys(entityDatas)) {
 	}
 
 	if (exhausts) {
-        for (const exhaust of exhausts) {
-            const sym = exhaust.symmetrical;
-            delete exhaust.symmetrical;
+		for (const exhaust of exhausts) {
+			const sym = exhaust.symmetrical;
+			delete exhaust.symmetrical;
 
-            entityData.exhausts.push({...exhaust});
-            if (sym) {
-                const copy = {...exhaust, positionSide: -exhaust.positionSide};
-                entityData.exhausts.push(copy);
-            }
-        }
-    }
+			entityData.exhausts.push({...exhaust});
+			if (sym) {
+				const copy = {...exhaust, positionSide: -exhaust.positionSide};
+				entityData.exhausts.push(copy);
+			}
+		}
+	}
 
 	if (entityData.sensors) {
 		for (const sensorType in entityData.sensors) {
@@ -327,8 +327,13 @@ for (const entityType of Object.keys(entityDatas)) {
 						factor = 1.5;
 						break;
 					case 'sonar':
-						base = 350
-						factor = 0.5
+						if (entityData.subkind === 'submarine') {
+							base = 500;
+							factor = 1.25;
+						} else {
+							base = 350
+							factor = 0.5
+						}
 						break;
 				}
 

@@ -185,15 +185,22 @@ impl CommandTrait for Fire {
 
             let mut failed = false;
             if armament_entity_data.sub_kind == EntitySubKind::Depositor {
-                // Depositor.
-                if self
-                    .position_target
-                    .distance_squared(armament_transform.position)
-                    > 60f32.powi(2)
-                {
+                let depositor = armament_transform.position;
+                let target = self.position_target;
+
+                // Radius of depositor.
+                const MAX_RADIUS: f32 = 60.0;
+
+                // Max radius that will snap to MAX_RADIUS.
+                const CUTOFF_RADIUS: f32 = MAX_RADIUS * 2.0;
+
+                // Snap to valid radius.
+                let delta = target - depositor;
+                if delta.length_squared() > CUTOFF_RADIUS.powi(2) {
                     return Err("outside maximum range");
                 }
-                world.terrain.modify(self.position_target, 60.0);
+                let pos = depositor + delta.clamp_length_max(MAX_RADIUS);
+                world.terrain.modify(pos, 60.0);
             } else {
                 // Fire weapon.
                 let player_arc = Arc::clone(&shared_data.player);

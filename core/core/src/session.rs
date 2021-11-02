@@ -66,6 +66,12 @@ pub struct Session {
     pub whisper_joiners: NotifySet<PlayerId>,
 }
 
+impl Default for Play {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Play {
     pub fn new() -> Self {
         let date_created = get_unix_time_now();
@@ -93,6 +99,7 @@ impl Play {
 }
 
 impl Session {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         alias: PlayerAlias,
         arena_id: ArenaId,
@@ -110,7 +117,7 @@ impl Session {
             alias,
             arena_id,
             bot,
-            chat_history: ChatHistory::new(),
+            chat_history: ChatHistory::default(),
             date_created,
             date_drop: None,
             date_previous,
@@ -184,18 +191,18 @@ impl Session {
 impl Repo {
     /// Finds an active `SessionId` and its last `Play`, if they exist (mutable version).
     pub fn player_id_to_session_and_play_mut<'a, 'b>(
-        players: &'a mut HashMap<PlayerId, SessionId>,
+        players: &'a HashMap<PlayerId, SessionId>,
         sessions: &'b mut HashMap<SessionId, Session>,
         player_id: PlayerId,
     ) -> Option<(SessionId, &'b mut Play)> {
-        if let Some(session_id) = players.get_mut(&player_id) {
+        if let Some(session_id) = players.get(&player_id) {
             let session = sessions.get_mut(session_id).unwrap();
             if let Some(play) = session.plays.last_mut() {
                 if session.player_id == player_id
                     && session.date_terminated.is_none()
                     && session.live
                 {
-                    return Some((session_id.clone(), play));
+                    return Some((*session_id, play));
                 }
             }
         }
@@ -204,14 +211,14 @@ impl Repo {
 
     /// Finds an active session.
     pub fn player_id_to_session_mut<'a, 'b>(
-        players: &'a mut HashMap<PlayerId, SessionId>,
+        players: &'a HashMap<PlayerId, SessionId>,
         sessions: &'b mut HashMap<SessionId, Session>,
         player_id: PlayerId,
     ) -> Option<(SessionId, &'b mut Session)> {
-        if let Some(session_id) = players.get_mut(&player_id) {
+        if let Some(session_id) = players.get(&player_id) {
             let session = sessions.get_mut(session_id).unwrap();
             if session.player_id == player_id && session.date_terminated.is_none() && session.live {
-                return Some((session_id.clone(), session));
+                return Some((*session_id, session));
             }
         }
         None
@@ -457,7 +464,7 @@ impl Repo {
                 if !prohibited {
                     let censored_text = uncensored_alias.0.chars().censor().collect::<String>();
                     let trimmed_text = trim_spaces(&censored_text);
-                    if trimmed_text.len() > 0 {
+                    if !trimmed_text.is_empty() {
                         let censored_alias = PlayerAlias::new(trimmed_text);
                         if session.alias != censored_alias {
                             session.alias = censored_alias;
@@ -707,7 +714,7 @@ impl Repo {
                 arena_id, session_id
             );
         }
-        return result;
+        result
     }
 
     // Server reports that player left game.  Nevertheless session remains live for a while.

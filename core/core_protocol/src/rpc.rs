@@ -128,7 +128,7 @@ pub enum ServerRequest {
 #[derive(Serialize, Deserialize)]
 pub enum AdminUpdate {
     DayRequested {
-        series: Arc<[(UnixTime, MetricsDto)]>,
+        series: Arc<[(UnixTime, MetricsDataPointDto)]>,
     },
     GamesRequested {
         games: Arc<[(GameId, f32)]>,
@@ -138,10 +138,10 @@ pub enum AdminUpdate {
     },
     RestartRequested,
     SeriesRequested {
-        series: Arc<[(UnixTime, MetricsDto)]>,
+        series: Arc<[(UnixTime, MetricsDataPointDto)]>,
     },
     SummaryRequested {
-        metrics: MetricsDto,
+        metrics: MetricsSummaryDto,
     },
     StatusRequested,
     UserAgentsRequested {

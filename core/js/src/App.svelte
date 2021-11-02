@@ -24,45 +24,10 @@
         return list.filter(item => summary_blacklist.indexOf(item) < 0);
     }
 
-    function formatDetail(value) {
-        let detail = '';
-        if (Array.isArray(value)) {
-            let rounded = value.map(i => round(i, 4));
-            switch (value.length) {
-                case 2:
-                    detail = "of " + rounded[1];
-                    break;
-                case 4:
-                    detail = rounded[1] == 0 ? "" : "\u03C3=" + rounded[1] + ", min=" + rounded[2] + ", max=" + rounded[3];
-                    break;
-            }
-        }
-
-        return detail;
-    }
-
     function formatTimestamp(timestamp) {
         const date = new Date(timestamp);
         const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
         return `${month} ${date.getDate()} ${date.getHours()}:00`;
-    }
-
-    function formatValue(value) {
-        if (Array.isArray(value)) {
-            let rounded = value.map(i => round(i, 4));
-            switch (value.length) {
-                case 2:
-                    return percent(rounded[0]);
-                case 4:
-                    return rounded[0];
-                default:
-                    return rounded.join(", ");
-            }
-        } else if (typeof value === 'number') {
-            return round(value, 4);
-        } else {
-            return value;
-        }
     }
 
     function percent(number) {
@@ -179,7 +144,7 @@
                         logarithmic={false}
                         points={true}
                         x={point => point[0]}
-                        y={(typeof data.DayRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.DayRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.DayRequested.series[0][1][key].map((ignored, i) => (point => i == 1 ? undefined : point[1][key][i])))}
+                        y={(typeof data.DayRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.DayRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.DayRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
                         fmtX={formatTimestamp}
                     />
                 </div>
@@ -206,7 +171,7 @@
 
 {:else if view === 'series'}
     <h2>Series</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSeries': {game_id, date_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[period_id]}}}), headers}).then(res => res.json())}
+    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSeries': {game_id, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[period_id]}}}), headers}).then(res => res.json())}
     {:then data}
         {#if data.SeriesRequested.series.length > 0}
             <div class="charts">
@@ -219,7 +184,7 @@
                             logarithmic={false}
                             points={true}
                             x={point => point[0]}
-                            y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => i == 1 ? undefined : point[1][key][i])))}
+                            y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
                             fmtX={formatTimestamp}
                         />
                     </div>
@@ -240,8 +205,27 @@
             {#each Object.entries(data.SummaryRequested.metrics) as [key, value]}
                 <tr>
                     <th>{key}</th>
-                    <td class="value">{formatValue(value)}</td>
-                    <td class="detail">{formatDetail(value)}</td>
+                    <td class="value">
+                        {#if typeof value.percent === 'number'}
+                            {round(value.percent, 0)}%
+                        {:else if typeof value.total === 'number'}
+                            {value.total}
+                        {:else if typeof value.average === 'number'}
+                            {round(value.average, 3)}
+                            {#if value.standard_deviation != 0}
+                                ± {round(value.standard_deviation, 3)}
+                            {/if}
+                        {:else}
+                            {JSON.stringify(value)}
+                        {/if}
+                    </td>
+                    <td class="detail">
+                        {#if typeof value.min === 'number' && typeof value.max === 'number' && (!('standard_deviation' in value) || value.standard_deviation != 0)}
+                            (min: {round(value.min, 2)}, max: {round(value.max, 2)})
+                        {:else if typeof value.total === 'number'}
+                            (total: {value.total})
+                        {/if}
+                    </td>
                 </tr>
             {/each}
         </table>

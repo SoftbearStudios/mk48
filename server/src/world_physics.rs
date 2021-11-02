@@ -334,7 +334,11 @@ impl World {
                     let data = entity.data();
                     match data.kind {
                         EntityKind::Boat => {
-                            Mutation::boat_died(self, index);
+                            Mutation::boat_died(
+                                self,
+                                index,
+                                matches!(reason, DeathReason::Terrain | DeathReason::Border),
+                            );
                         }
                         EntityKind::Weapon => {
                             // Dying weapons may leave a mark on the terrain.

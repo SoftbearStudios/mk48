@@ -574,7 +574,6 @@ impl Renderer {
         visual_radius: f32,
         visual_restriction: f32,
         world_radius: f32,
-        time: f32,
     ) {
         self.gl.active_texture(Gl::TEXTURE0);
         texture.bind(&self.gl);
@@ -587,8 +586,6 @@ impl Renderer {
         );
         self.gl
             .uniform1i(self.background_shader.uniform(&self.gl, "uSampler"), 0);
-        self.gl
-            .uniform1f(self.background_shader.uniform(&self.gl, "uTime"), time);
         self.gl.uniform_matrix3fv_with_f32_array(
             self.background_shader.uniform(&self.gl, "uTexture"),
             false,

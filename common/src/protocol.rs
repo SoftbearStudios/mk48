@@ -7,7 +7,7 @@ use crate::contact::Contact;
 use crate::death_reason::DeathReason;
 use crate::entity::*;
 use crate::guidance::Guidance;
-use crate::terrain::ChunkId;
+use crate::terrain::{ChunkId, SerializedChunk};
 use core_protocol::id::*;
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
@@ -31,10 +31,7 @@ pub struct Update {
 }
 
 /// Updates for terrain chunks.
-pub type TerrainUpdate = [SerializedChunk];
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SerializedChunk(pub ChunkId, #[serde(with = "serde_bytes")] pub Box<[u8]>);
+pub type TerrainUpdate = [(ChunkId, SerializedChunk)];
 
 /// Client to server commands.
 #[derive(Clone, Serialize, Deserialize, Debug)]

@@ -12,7 +12,10 @@
 
 use crate::protocol::Authenticate;
 use actix::prelude::*;
+use actix_http::header::HeaderValue;
 use actix_http::KeepAlive;
+use actix_web::dev::Service;
+use actix_web::http::header::CACHE_CONTROL;
 use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_middleware_redirect_https::RedirectHTTPS;
@@ -21,7 +24,6 @@ use common::protocol::{Command, Update};
 use core::admin::{AdminState, ParameterizedAdminRequest};
 use core::client::ParametrizedClientRequest;
 use core_protocol::dto::InvitationDto;
-use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::rpc::{AdminRequest, ClientRequest, ClientUpdate};
 use core_protocol::web_socket::WebSocketFormat;
@@ -196,11 +198,11 @@ fn main() {
                 let srv_clone = iter_srv.to_owned();
 
                 let app = App::new()
+                    /*
                     .wrap_fn(move |req, srv| {
+                        use core_protocol::get_unix_time_now;
                         use actix_web::dev::Service;
-
                         // println!("{:?}", req.version());
-
                         use std::fs::OpenOptions;
                         if let Some(addr) = req.connection_info().remote_addr() {
                             if let Ok(mut file) = OpenOptions::new()
@@ -221,9 +223,9 @@ fn main() {
                                 );
                             }
                         }
-
                         srv.call(req)
                     })
+                     */
                     .wrap(RedirectHTTPS::default().set_enabled(use_ssl))
                     .wrap(middleware::Logger::default())
                     .service(web::resource("/client/ws/").route(web::get().to(
@@ -316,7 +318,16 @@ fn main() {
                                 Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
                             }
                         }
-                    })));
+                    })))
+                    .wrap_fn(move |req, srv| {
+                        srv.call(req).map(|mut r| {
+                            if let Ok(res) = r.as_mut() {
+                                res.headers_mut()
+                                    .insert(CACHE_CONTROL, HeaderValue::from_static("no-cache"));
+                            }
+                            r
+                        })
+                    });
 
                 // Allows changing without recompilation.
                 #[cfg(debug_assertions)]

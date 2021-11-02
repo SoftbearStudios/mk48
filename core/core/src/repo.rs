@@ -31,6 +31,12 @@ pub struct Repo {
     pub system_status: System,
 }
 
+impl Default for Repo {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Repo {
     /// How long after play stops before session is no longer live, e.g. promote a different captain.
     pub const DYING_DURATION_MILLIS: u64 = 30000; // half minute.
@@ -47,11 +53,12 @@ impl Repo {
     }
 
     // Newbie client needs initializers.
+    #[allow(clippy::type_complexity)]
     pub fn get_initializers(
         &mut self,
         arena_id: ArenaId,
     ) -> Option<(
-        Vec<(Arc<[LeaderboardDto]>, PeriodId)>,
+        [Arc<[LeaderboardDto]>; PeriodId::VARIANT_COUNT],
         Arc<[LiveboardDto]>,
         Arc<[MessageDto]>,
         (u32, Arc<[PlayerDto]>),
@@ -60,11 +67,7 @@ impl Repo {
         debug!("get_initializers()");
 
         if let Some(arena) = self.arenas.get(&arena_id) {
-            let mut leaderboards: Vec<(Arc<[LeaderboardDto]>, PeriodId)> = vec![];
-            for period in PeriodId::into_enum_iter() {
-                leaderboards.push((arena.leaderboards[period as usize].clone().into(), period));
-            } // for leaderboard_period
-            let leaderboard_initializer = leaderboards.into();
+            let leaderboard_initializer = arena.leaderboards.clone();
 
             let (liveboard, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
             let liveboard_initializer = liveboard.into();
@@ -72,7 +75,7 @@ impl Repo {
             let message_initializer = arena
                 .newbie_messages
                 .iter()
-                .map(|rc| MessageDto::clone(&rc))
+                .map(|rc| MessageDto::clone(rc))
                 .collect();
 
             let mut player_count = 0;
@@ -87,7 +90,7 @@ impl Repo {
                     }
 
                     players.push(PlayerDto {
-                        alias: session.alias.clone(),
+                        alias: session.alias,
                         player_id: session.player_id,
                         team_captain: play.team_captain,
                         team_id: play.team_id,
@@ -97,10 +100,10 @@ impl Repo {
             let players_initializer = players.into();
 
             let mut teams = vec![];
-            for (team_id, Team { team_name, .. }) in arena.teams.iter() {
+            for (&team_id, Team { team_name, .. }) in arena.teams.iter() {
                 teams.push(TeamDto {
-                    team_id: *team_id,
-                    team_name: team_name.clone(),
+                    team_id,
+                    team_name: *team_name,
                 });
             }
             let teams_initializer = teams.into();
@@ -147,7 +150,7 @@ impl Repo {
             }
 
             let region_id = arena.region_id;
-            let server_id = arena.server_id.clone();
+            let server_id = arena.server_id;
 
             regions.push(RegionDto {
                 player_count,
@@ -180,7 +183,7 @@ impl Repo {
                 }
             }
         }
-        return (player_count, max_score);
+        (player_count, max_score)
     }
 
     /// Assume caller uses this method to check if repo can be stopped.
@@ -238,6 +241,7 @@ impl Repo {
     }
 
     // Assume caller reads public updates and broadcasts to all clients.
+    #[allow(clippy::type_complexity)]
     pub fn read_broadcasts(
         &mut self,
     ) -> Option<(
@@ -247,12 +251,8 @@ impl Repo {
         trace!("read_broadcasts()");
 
         // ARC is used because the same message is sent to multiple observers.
-        let mut players_counted_added_or_removed: Vec<(
-            ArenaId,
-            (u32, Arc<[PlayerDto]>, Arc<[PlayerId]>),
-        )> = Vec::new();
-        let mut teams_added_or_removed: Vec<(ArenaId, (Arc<[TeamDto]>, Arc<[TeamId]>))> =
-            Vec::new();
+        let mut players_counted_added_or_removed = vec![];
+        let mut teams_added_or_removed = vec![];
 
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             if !(arena.broadcast_players.add.is_empty()
@@ -277,7 +277,7 @@ impl Repo {
                             }
                             if let Some(play) = session.plays.last() {
                                 added.push(PlayerDto {
-                                    alias: session.alias.clone(),
+                                    alias: session.alias,
                                     player_id: session.player_id,
                                     team_captain: play.team_captain,
                                     team_id: play.team_id,
@@ -317,10 +317,10 @@ impl Repo {
                 if !arena.broadcast_teams.add.is_empty() {
                     debug!("teams_added");
                     for team_id in arena.broadcast_teams.add.iter() {
-                        if let Some(Team { team_name, .. }) = arena.teams.get(&team_id) {
+                        if let Some(Team { team_name, .. }) = arena.teams.get(team_id) {
                             added.push(TeamDto {
                                 team_id: *team_id,
-                                team_name: team_name.clone(),
+                                team_name: *team_name,
                             });
                         }
                     }
@@ -347,9 +347,10 @@ impl Repo {
     }
 
     // Assume this is called periodically to read changes in the leaderboards.
+    #[allow(clippy::type_complexity)]
     pub fn read_leaderboards(&mut self) -> Option<Vec<(ArenaId, Arc<[LeaderboardDto]>, PeriodId)>> {
         // ARC is used because the same message is sent to multiple observers.
-        let mut changed_leaderboards: Vec<(ArenaId, Arc<[LeaderboardDto]>, PeriodId)> = vec![];
+        let mut changed_leaderboards = vec![];
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             for period in PeriodId::into_enum_iter() {
                 if !arena.leaderboard_changed[period as usize] {
@@ -362,7 +363,7 @@ impl Repo {
                 );
                 changed_leaderboards.push((
                     *arena_id,
-                    arena.leaderboards[period as usize].clone().into(),
+                    arena.leaderboards[period as usize].clone(),
                     period,
                 ));
                 arena.leaderboard_changed[period as usize] = false;
@@ -379,7 +380,7 @@ impl Repo {
     // Assume this is called periodically to read changes in the liveboards.
     pub fn read_liveboards(&mut self) -> Option<Vec<(ArenaId, Arc<[LiveboardDto]>)>> {
         // ARC is used because the same message is sent to multiple observers.
-        let mut changed_liveboards: Vec<(ArenaId, Arc<[LiveboardDto]>)> = vec![];
+        let mut changed_liveboards = vec![];
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             if !arena.liveboard_changed {
                 continue;
@@ -402,7 +403,7 @@ impl Repo {
     pub fn read_server_updates(&mut self) -> Option<Vec<(ArenaId, Arc<[MemberDto]>)>> {
         trace!("read_server_updates()");
 
-        let mut result: Vec<(ArenaId, Arc<[MemberDto]>)> = vec![];
+        let mut result = vec![];
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             let mut team_assignments = vec![];
             if !arena.confide_membership.is_empty() {
@@ -423,6 +424,7 @@ impl Repo {
     }
 
     // Assume caller reads private updates and whispers to the appropriate client.
+    #[allow(clippy::type_complexity)]
     pub fn read_whispers(
         &mut self,
         arena_id: ArenaId,
@@ -439,19 +441,15 @@ impl Repo {
         );
 
         // TODO: the return values are used only once; consider using Box<> instead of Arc<>.
-        #[allow(unused_mut)]
-        let mut joiners_added_or_removed: (Arc<[PlayerId]>, Arc<[PlayerId]>) =
-            (Vec::new().into(), Vec::new().into());
-        #[allow(unused_mut)]
-        let mut joins_added_or_removed: (Arc<[TeamId]>, Arc<[TeamId]>) =
-            (Vec::new().into(), Vec::new().into());
-        let mut messages_added: Arc<[MessageDto]> = Vec::new().into();
+        let mut joiners_added_or_removed = (vec![].into(), vec![].into());
+        let mut joins_added_or_removed = (vec![].into(), vec![].into());
+        let mut messages_added = vec![].into();
 
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 messages_added = mem::take(&mut session.inbox)
                     .iter()
-                    .map(|rc| MessageDto::clone(&rc))
+                    .map(|rc| MessageDto::clone(rc))
                     .collect();
                 joiners_added_or_removed = (
                     mem::take(&mut session.whisper_joiners.add)

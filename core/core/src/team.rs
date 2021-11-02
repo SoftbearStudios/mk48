@@ -54,11 +54,9 @@ impl Repo {
                     return false;
                 }
 
-                if let Some((session_id, session)) = Self::player_id_to_session_mut(
-                    &mut self.players,
-                    &mut arena.sessions,
-                    player_id,
-                ) {
+                if let Some((session_id, session)) =
+                    Self::player_id_to_session_mut(&self.players, &mut arena.sessions, player_id)
+                {
                     if let Some(team) = arena.teams.get_mut(&team_id) {
                         let play = session.plays.last_mut().unwrap();
 
@@ -91,7 +89,7 @@ impl Repo {
                             }
 
                             if let Some((_, session)) = Self::player_id_to_session_mut(
-                                &mut self.players,
+                                &self.players,
                                 &mut arena.sessions,
                                 player_id,
                             ) {
@@ -110,7 +108,7 @@ impl Repo {
             );
         }
 
-        return accepted;
+        accepted
     }
 
     // Client assigns another player as team captain.
@@ -127,11 +125,9 @@ impl Repo {
         let mut assigned = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some((captain_team_id, _)) = arena.team_of_captain(session_id) {
-                if let Some((_, session)) = Self::player_id_to_session_mut(
-                    &mut self.players,
-                    &mut arena.sessions,
-                    player_id,
-                ) {
+                if let Some((_, session)) =
+                    Self::player_id_to_session_mut(&self.players, &mut arena.sessions, player_id)
+                {
                     let play = session.plays.last_mut().unwrap();
                     if let Some(team_id) = play.team_id {
                         if team_id == captain_team_id {
@@ -167,7 +163,7 @@ impl Repo {
             );
         }
 
-        return assigned;
+        assigned
     }
 
     // Client creates a new team.
@@ -234,7 +230,7 @@ impl Repo {
                                 joiner_session.whisper_joins.removed(*team_id);
                             }
                             if let Some(captain_session_id) =
-                                Arena::static_captain_of_team(&mut arena.sessions, *team_id)
+                                Arena::static_captain_of_team(&arena.sessions, *team_id)
                             {
                                 if let Some(captain_session) =
                                     arena.sessions.get_mut(&captain_session_id)
@@ -245,7 +241,7 @@ impl Repo {
                         }
                     }
 
-                    return Ok(team_id);
+                    Ok(team_id)
                 } else {
                     Err("not playing")
                 }
@@ -272,7 +268,7 @@ impl Repo {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some((captain_team_id, _)) = arena.team_of_captain(session_id) {
                 if let Some((session_id, play)) = Self::player_id_to_session_and_play_mut(
-                    &mut self.players,
+                    &self.players,
                     &mut arena.sessions,
                     player_id,
                 ) {
@@ -295,7 +291,7 @@ impl Repo {
             );
         }
 
-        return removed;
+        removed
     }
 
     // Assume this is called every minute to prune teams, promote captains, etc.
@@ -346,7 +342,7 @@ impl Repo {
                     if let Some(team) = arena.teams.get(team_id) {
                         for &joiner in team.joiners.iter() {
                             if let Some((_, session)) = Self::player_id_to_session_mut(
-                                &mut self.players,
+                                &self.players,
                                 &mut arena.sessions,
                                 joiner,
                             ) {
@@ -361,22 +357,22 @@ impl Repo {
                     // Pick a captain according by seniority.
                     let mut members: Vec<SessionId> = tally.members.iter().cloned().collect();
                     members.sort_by(|session_id_a, session_id_b| {
-                        let session_a = arena.sessions.get(&session_id_a).unwrap();
+                        let session_a = arena.sessions.get(session_id_a).unwrap();
                         let play_a = session_a.plays.last().unwrap();
                         // This panicked in the past when forgot to set date_join. Never lose entire
                         // server over this again!
                         let join_a = play_a.date_join.unwrap_or(0);
-                        let session_b = arena.sessions.get(&session_id_b).unwrap();
+                        let session_b = arena.sessions.get(session_id_b).unwrap();
                         let play_b = session_b.plays.last().unwrap();
                         let join_b = play_b.date_join.unwrap_or(0);
 
                         join_a.cmp(&join_b)
                     });
                     let captain_session_id = members.first().unwrap();
-                    let session = arena.sessions.get_mut(&captain_session_id).unwrap();
+                    let session = arena.sessions.get_mut(captain_session_id).unwrap();
                     let play = session.plays.last_mut().unwrap();
                     play.team_captain = true;
-                    if let Some(team) = arena.teams.get(&team_id) {
+                    if let Some(team) = arena.teams.get(team_id) {
                         for joiner in team.joiners.iter() {
                             session.whisper_joiners.added(*joiner);
                         }
@@ -426,7 +422,7 @@ impl Repo {
             );
         }
 
-        return quit;
+        quit
     }
 
     // Client rejects another player's join request.
@@ -453,11 +449,9 @@ impl Repo {
             }
 
             if let Some(team_id) = captain_team_id {
-                if let Some((_, session)) = Self::player_id_to_session_mut(
-                    &mut self.players,
-                    &mut arena.sessions,
-                    player_id,
-                ) {
+                if let Some((_, session)) =
+                    Self::player_id_to_session_mut(&self.players, &mut arena.sessions, player_id)
+                {
                     rejected = true;
                     session.whisper_joins.removed(team_id);
                     if let Some(team) = arena.teams.get_mut(&team_id) {
@@ -474,7 +468,7 @@ impl Repo {
             );
         }
 
-        return rejected;
+        rejected
     }
 
     // Client no longer wants to go it alone.

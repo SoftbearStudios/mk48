@@ -3,7 +3,7 @@
 
 use crate::repo::Repo;
 use crate::session::Session;
-use core_protocol::dto::MetricsDto;
+use core_protocol::dto::{MetricsDataPointDto, MetricsSummaryDto};
 use core_protocol::id::{GameId, UserAgentId};
 use core_protocol::metrics::*;
 use core_protocol::name::Referrer;
@@ -35,7 +35,7 @@ pub struct Metrics {
     pub flop: RatioMetric,
     /// Ratio of new players who were invited to new players who were not.
     pub invited: RatioMetric,
-    /// Minutes per completed play (a measure of engagagement).
+    /// Minutes per completed play (a measure of engagement).
     pub minutes_per_play: ContinuousExtremaMetric,
     /// Minutes played, per session, during the metrics period.
     pub minutes_per_session: ContinuousExtremaMetric,
@@ -43,7 +43,7 @@ pub struct Metrics {
     pub new: RatioMetric,
     /// Ratio of previous players that leave without playing (e.g. to peek at player count).
     pub peek: RatioMetric,
-    /// Plays per session (a measure of engagagement).
+    /// Plays per session (a measure of engagement).
     pub plays_per_session: ContinuousExtremaMetric,
     /// Plays total (aka impressions).
     pub plays_total: DiscreteMetric,
@@ -64,8 +64,8 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub fn summarize(&self) -> MetricsDto {
-        MetricsDto {
+    pub fn summarize(&self) -> MetricsSummaryDto {
+        MetricsSummaryDto {
             arenas_cached: self.arenas_cached.summarize(),
             bounce: self.bounce.summarize(),
             concurrent: self.concurrent.summarize(),
@@ -86,6 +86,31 @@ impl Metrics {
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
             uptime: self.uptime.summarize(),
+        }
+    }
+
+    pub fn data_point(&self) -> MetricsDataPointDto {
+        MetricsDataPointDto {
+            arenas_cached: self.arenas_cached.data_point(),
+            bounce: self.bounce.data_point(),
+            concurrent: self.concurrent.data_point(),
+            connections: self.connections.data_point(),
+            cpu: self.cpu.data_point(),
+            flop: self.flop.data_point(),
+            invited: self.invited.data_point(),
+            minutes_per_play: self.minutes_per_play.data_point(),
+            minutes_per_session: self.minutes_per_session.data_point(),
+            new: self.new.data_point(),
+            peek: self.peek.data_point(),
+            plays_per_session: self.plays_per_session.data_point(),
+            plays_total: self.plays_total.data_point(),
+            ram: self.ram.data_point(),
+            retention: self.retention.data_point(),
+            score: self.score.data_point(),
+            sessions_cached: self.sessions_cached.data_point(),
+            teamed: self.teamed.data_point(),
+            toxicity: self.toxicity.data_point(),
+            uptime: self.uptime.data_point(),
         }
     }
 }
@@ -121,7 +146,11 @@ impl Add for Metrics {
 }
 
 impl Repo {
-    pub fn get_day<F>(&mut self, game_id: GameId, filter: &F) -> Arc<[(UnixTime, MetricsDto)]>
+    pub fn get_day<F>(
+        &mut self,
+        game_id: GameId,
+        filter: &F,
+    ) -> Arc<[(UnixTime, MetricsDataPointDto)]>
     where
         F: Fn(&Session) -> bool,
     {
@@ -135,7 +164,7 @@ impl Repo {
             if let Some(metrics) =
                 self.get_metrics(&game_id, Some(hour_start), Some(hour_stop), filter)
             {
-                list.push((t, metrics.summarize()));
+                list.push((t, metrics.data_point()));
             }
         }
 
@@ -159,7 +188,7 @@ impl Repo {
             }
         }
         let mut list: Vec<(GameId, u32)> = hash.into_iter().collect();
-        list.sort_by(|(_, a), (_, b)| b.cmp(&a));
+        list.sort_by(|(_, a), (_, b)| b.cmp(a));
 
         list.into_iter()
             .map(|(game_id, count)| (game_id, count as f32 / total as f32))
@@ -179,13 +208,13 @@ impl Repo {
                 }
                 total += 1;
                 if let Some(referrer) = session.referrer {
-                    let count = hash.entry(referrer.clone()).or_insert(0);
+                    let count = hash.entry(referrer).or_insert(0);
                     *count += 1;
                 }
             }
         }
         let mut list: Vec<(Referrer, u32)> = hash.into_iter().collect();
-        list.sort_by(|(_, a), (_, b)| b.cmp(&a));
+        list.sort_by(|(_, a), (_, b)| b.cmp(a));
         list.truncate(10);
 
         list.into_iter()
@@ -213,7 +242,7 @@ impl Repo {
 
         let now = get_unix_time_now();
         let clip_stop = period_stop.unwrap_or(now);
-        let clip_start = period_start.unwrap_or(clip_stop.saturating_sub(24 * 3600 * 1000));
+        let clip_start = period_start.unwrap_or_else(|| clip_stop.saturating_sub(24 * 3600 * 1000));
 
         if clip_start >= clip_stop {
             return None;
@@ -265,7 +294,7 @@ impl Repo {
         }
 
         for (_, arena) in self.arenas.iter() {
-            if game_id != game_id {
+            if arena.game_id != *game_id {
                 continue;
             }
             metrics.arenas_cached.increment();
@@ -403,7 +432,9 @@ impl Repo {
             } // for session
 
             for b in concurrency_buckets {
-                metrics.concurrent.push(b as f32);
+                if b > 0 {
+                    metrics.concurrent.push(b as f32);
+                }
             }
         } // for arena
 
@@ -428,8 +459,9 @@ impl Repo {
                 }
             }
         }
+        // Don't limit to 10 because UserAgentId has <= 10 items.
         let mut list: Vec<(UserAgentId, u32)> = hash.into_iter().collect();
-        list.sort_by(|(_, a), (_, b)| b.cmp(&a));
+        list.sort_by(|(_, a), (_, b)| b.cmp(a));
 
         list.into_iter()
             .map(|(user_agent_id, count)| (user_agent_id, count as f32 / total as f32))

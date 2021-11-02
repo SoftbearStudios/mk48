@@ -5,7 +5,7 @@ use crate::core::*;
 use crate::repo::*;
 use crate::session::Session;
 use actix::prelude::*;
-use core_protocol::dto::MetricsDto;
+use core_protocol::dto::MetricsDataPointDto;
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::UnixTime;
 use log::warn;
@@ -58,10 +58,10 @@ impl Handler<ParameterizedAdminRequest> for Core {
                 }
                 .into_actor(self)
                 .map(move |db_result, _act, _ctx| {
-                    if let Some(loaded) = db_result.ok() {
-                        let series: Arc<[(UnixTime, MetricsDto)]> = loaded
+                    if let Ok(loaded) = db_result {
+                        let series: Arc<[(UnixTime, MetricsDataPointDto)]> = loaded
                             .iter()
-                            .map(|item| (item.timestamp, item.metrics.summarize()))
+                            .map(|item| (item.timestamp, item.metrics.data_point()))
                             .collect();
                         let message = AdminUpdate::SeriesRequested { series };
                         Ok(message)

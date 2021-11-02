@@ -60,6 +60,7 @@ impl AudioPlayer {
                             .dyn_into()
                             .unwrap();
 
+                    #[allow(must_not_suspend)]
                     let borrow = inner_clone.borrow();
                     if let Some(inner) = borrow.as_ref() {
                         // Note: Cannot yield while borrowing; otherwise will be borrowed elsewhere. Use a scope

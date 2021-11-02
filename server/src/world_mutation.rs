@@ -104,7 +104,7 @@ impl Mutation {
                 {
                     let e = &entities[index];
                     if e.is_boat() {
-                        Self::boat_died(world, index);
+                        Self::boat_died(world, index, false);
                         if let DeathReason::Debug(msg) = reason {
                             panic!("boat removed with debug reason {}", msg);
                         }
@@ -125,7 +125,7 @@ impl Mutation {
                         player_id
                     };
 
-                    Self::boat_died(world, index);
+                    Self::boat_died(world, index, false);
                     world.remove(index, DeathReason::Weapon(player_id, weapon_type));
 
                     return true;
@@ -147,7 +147,7 @@ impl Mutation {
                         player_id
                     };
 
-                    Self::boat_died(world, index);
+                    Self::boat_died(world, index, false);
                     world.remove(
                         index,
                         if ram {
@@ -167,7 +167,7 @@ impl Mutation {
             } => {
                 let entity = &mut entities[index];
                 if entity.kill_in(delta, Ticks::from_secs(6.0)) {
-                    Self::boat_died(world, index);
+                    Self::boat_died(world, index, true);
                     world.remove(index, DeathReason::Entity(entity_type));
                     return true;
                 }
@@ -263,12 +263,19 @@ impl Mutation {
 
     /// boat_died applies the effect of a boat dying, such as a reduction in the corresponding player's
     /// score and the spawning of loot.
-    pub fn boat_died(world: &mut World, index: EntityIndex) {
+    ///
+    /// If killed by a player, that player will get the coins. If killed by land or by fleeing combat,
+    /// score should be converted into coins to strategic destruction of score.
+    pub fn boat_died(world: &mut World, index: EntityIndex, score_to_coins: bool) {
         let entity = &mut world.entities[index];
         let mut player = entity.borrow_player_mut();
 
-        // Lose 1/2 score if you die.
-        // Cap so can't get max level right away.
+        let coin_amount = if score_to_coins {
+            (player.score / 4 / 10).min(200)
+        } else {
+            0
+        };
+
         player.score = respawn_score(player.score);
         drop(player);
 
@@ -276,7 +283,7 @@ impl Mutation {
         debug_assert_eq!(data.kind, EntityKind::Boat);
         let mut rng = thread_rng();
         // Loot is based on the length of the boat.
-        let loot_amount = (data.length * 0.25 * (rng.gen::<f32>() * 0.1 + 0.9)) as i32;
+        let loot_amount = (data.length * 0.25 * (rng.gen::<f32>() * 0.1 + 0.9)) as u32;
 
         let loot_table = match data.sub_kind {
             EntitySubKind::Pirate => vec![EntityType::Crate, EntityType::Coin],
@@ -289,13 +296,17 @@ impl Mutation {
         let tangent = Vec2::new(-normal.y, normal.x);
         let altitude = entity.altitude;
 
-        for _ in 0..loot_amount {
-            let loot_type = loot_table
-                .iter()
-                .choose(&mut rng)
-                .expect("at least once option");
+        for i in 0..(loot_amount + coin_amount) {
+            let loot_type = if i < loot_amount {
+                *loot_table
+                    .iter()
+                    .choose(&mut rng)
+                    .expect("at least once option")
+            } else {
+                EntityType::Coin
+            };
 
-            let mut loot_entity = Entity::new(*loot_type, None);
+            let mut loot_entity = Entity::new(loot_type, None);
 
             // Make loot roughly conform to rectangle of ship.
             loot_entity.transform.position = center

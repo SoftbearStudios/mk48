@@ -1,13 +1,18 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
 
 pub trait Metric: Sized + Add {
-    type Summary;
+    type Summary: Serialize + DeserializeOwned;
+
+    // Must be a tuple. First value is most important.
+    type DataPoint: Serialize + DeserializeOwned;
 
     fn summarize(&self) -> Self::Summary;
+    fn data_point(&self) -> Self::DataPoint;
 }
 
 /// A metric representing something countable.
@@ -27,10 +32,15 @@ impl DiscreteMetric {
 }
 
 impl Metric for DiscreteMetric {
-    type Summary = u32;
+    type Summary = Self;
+    type DataPoint = (u32,);
 
     fn summarize(&self) -> Self::Summary {
-        self.total
+        *self
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
+        (self.total,)
     }
 }
 
@@ -67,10 +77,21 @@ impl ExtremaMetric {
     }
 }
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+struct ExtremaMetricSummary {
+    pub min: f32,
+    pub max: f32,
+}
+
 impl Metric for ExtremaMetric {
-    type Summary = (f32, f32);
+    type Summary = Self;
+    type DataPoint = (f32, f32);
 
     fn summarize(&self) -> Self::Summary {
+        *self
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
         (self.min, self.max)
     }
 }
@@ -108,13 +129,31 @@ impl RatioMetric {
     fn ratio(&self) -> f32 {
         (self.count as f64 / self.total.max(1) as f64) as f32
     }
+
+    fn percent(&self) -> f32 {
+        self.ratio() * 100.0
+    }
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct RatioMetricSummary {
+    percent: f32,
+    total: u32,
 }
 
 impl Metric for RatioMetric {
-    type Summary = (f32, u32);
+    type Summary = RatioMetricSummary;
+    type DataPoint = (f32,);
 
     fn summarize(&self) -> Self::Summary {
-        (self.ratio(), self.total)
+        RatioMetricSummary {
+            percent: self.percent(),
+            total: self.total,
+        }
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
+        (self.percent(),)
     }
 }
 
@@ -171,10 +210,24 @@ impl ContinuousMetric {
     }
 }
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct ContinuousMetricSummary {
+    average: f32,
+    standard_deviaton: f32,
+}
+
 impl Metric for ContinuousMetric {
-    type Summary = (f32, f32);
+    type Summary = ContinuousMetricSummary;
+    type DataPoint = (f32, f32);
 
     fn summarize(&self) -> Self::Summary {
+        ContinuousMetricSummary {
+            average: self.average(),
+            standard_deviaton: self.standard_deviation(),
+        }
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
         (self.average(), self.standard_deviation())
     }
 }
@@ -226,16 +279,29 @@ impl ContinuousExtremaMetric {
     }
 }
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct ContinuousExtremaMetricSummary {
+    average: f32,
+    standard_deviation: f32,
+    min: f32,
+    max: f32,
+}
+
 impl Metric for ContinuousExtremaMetric {
-    type Summary = (f32, f32, f32, f32);
+    type Summary = ContinuousExtremaMetricSummary;
+    type DataPoint = (f32, f32, f32);
 
     fn summarize(&self) -> Self::Summary {
-        (
-            self.average(),
-            self.standard_deviation(),
-            self.min,
-            self.max,
-        )
+        ContinuousExtremaMetricSummary {
+            average: self.average(),
+            standard_deviation: self.standard_deviation(),
+            min: self.min,
+            max: self.max,
+        }
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
+        (self.average(), self.min, self.max)
     }
 }
 

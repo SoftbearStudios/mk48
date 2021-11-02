@@ -5,8 +5,8 @@ use crate::bot::*;
 use crate::player::*;
 use crate::protocol::*;
 use crate::world::World;
+use crate::world_mutation::Mutation;
 use actix::prelude::*;
-use common::entity::EntityId;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
@@ -70,10 +70,7 @@ pub struct SharedData {
 /// this client (i.e. not when processing other entities). Bots don't use this.
 pub struct ClientData {
     pub data: SharedData,
-    pub chunk_loading_cooldown: Ticks,
     pub loaded_chunks: ChunkSet,
-    /// Map of `EntityId` to `Ticks` until next send, considering keepalive.
-    pub loaded_entities: HashMap<EntityId, Ticks>,
     pub limbo_expiry: Option<Instant>,
 }
 
@@ -103,10 +100,14 @@ impl Server {
 
         self.world.update(Ticks::ONE);
 
+        // Needs to be called before clients receive updates, but after World::update.
+        self.world.terrain.pre_update();
+
         // Pre-borrow one field to avoid borrowing entire self later.
         let core = self.core.to_owned();
         let addr = ctx.address();
         let world = &self.world;
+        let counter = self.counter;
 
         {
             benchmark_scope!("clients");
@@ -114,10 +115,6 @@ impl Server {
             self.clients
                 .par_iter_mut()
                 .for_each(|(client, client_data)| {
-                    client_data.chunk_loading_cooldown = client_data
-                        .chunk_loading_cooldown
-                        .saturating_sub(Ticks::ONE);
-
                     if !client.connected() {
                         // In limbo or will be soon (not connected, cannot send an update).
                         return;
@@ -125,11 +122,7 @@ impl Server {
 
                     let update = world.get_player_complete(&client_data.data.player);
                     if let Err(e) = client.do_send(ObserverUpdate::Send {
-                        message: update.into_update(
-                            &mut client_data.loaded_entities,
-                            &mut client_data.loaded_chunks,
-                            &mut client_data.chunk_loading_cooldown,
-                        ),
+                        message: update.into_update(counter, &mut client_data.loaded_chunks),
                     }) {
                         warn!("Error sending update to client: {}", e); // TODO: drop_session() !
                     }
@@ -182,11 +175,8 @@ impl Server {
             );
         }
 
-        // Generated any chunks queued for generation.
-        self.world.terrain.reset_updated();
-
-        // Regenerate modified chunks after a while.
-        self.world.terrain.regenerate_if_applicable();
+        // Needs to be after clients receive updates.
+        self.world.terrain.post_update();
 
         self.flush_limbo(ctx);
     }
@@ -197,6 +187,14 @@ impl Server {
         for (_, mut client_data) in self.clients.drain_filter(|client, client_data| {
             !client.connected() && Some(now) > client_data.limbo_expiry
         }) {
+            let borrow = client_data.data.player.borrow();
+            if let Status::Alive { entity_index, .. } = borrow.status {
+                drop(borrow);
+                Mutation::boat_died(&mut self.world, entity_index, true);
+            } else {
+                drop(borrow);
+            }
+
             self.world.remove_if(|e| {
                 e.player
                     .as_ref()
@@ -404,7 +402,6 @@ impl Handler<ObserverMessage<Command, Update, (SessionId, PlayerId, Option<Invit
 
                     // Don't assume client remembered chunks, although it should have.
                     client_data.loaded_chunks = ChunkSet::new();
-                    client_data.chunk_loading_cooldown = Ticks::ZERO;
 
                     self.clients.insert(observer, client_data);
                 } else {
@@ -418,9 +415,7 @@ impl Handler<ObserverMessage<Command, Update, (SessionId, PlayerId, Option<Invit
                                 last_status: None,
                                 invitation: payload.2,
                             },
-                            loaded_entities: HashMap::new(),
                             loaded_chunks: ChunkSet::new(),
-                            chunk_loading_cooldown: Ticks::ZERO,
                             limbo_expiry: None,
                         },
                     );

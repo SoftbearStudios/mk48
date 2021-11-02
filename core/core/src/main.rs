@@ -14,6 +14,7 @@ use core_protocol::rpc::{ClientRequest, ClientUpdate, ServerRequest, ServerUpdat
 use servutil::web_socket;
 
 fn main() {
+    #[allow(clippy::async_yields_async)]
     actix_web::rt::System::new().block_on(async {
         std::env::set_var("RUST_LOG", "actix_server=info,actix_web=info");
         env_logger::init();
@@ -48,6 +49,7 @@ pub async fn server() -> (Server, Addr<Core>) {
                     move |request: web::Json<ParametrizedClientRequest>| {
                         let core = core_clone_2.to_owned();
 
+                        #[allow(clippy::async_yields_async)]
                         async move {
                             match core.send(request.0).await {
                                 Ok(result) => match result {
@@ -75,6 +77,7 @@ pub async fn server() -> (Server, Addr<Core>) {
                     move |request: web::Json<ParametrizedServerRequest>| {
                         let core = core_clone_4.to_owned();
 
+                        #[allow(clippy::async_yields_async)]
                         async move {
                             match core.send(request.0).await {
                                 Ok(result) => match result {

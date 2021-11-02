@@ -316,14 +316,14 @@ impl Database {
             Err(e) => return Err(Error::Dynamo(e.into())),
         };
 
-        return if let Some(item) = mem::take(&mut get_item_output.item) {
+        if let Some(item) = mem::take(&mut get_item_output.item) {
             match serde_dynamo::generic::from_item(item) {
-                Err(e) => return Err(Error::Serde(e)),
+                Err(e) => Err(Error::Serde(e)),
                 Ok(de) => Ok(Some(de)),
             }
         } else {
             Ok(None)
-        };
+        }
     }
 
     async fn scan_inner<O: DeserializeOwned>(
@@ -543,7 +543,7 @@ impl Database {
                 Err(e) => return Err(Error::Serde(e)),
             };
 
-        match self
+        if let Err(e) = self
             .client
             .put_item()
             .table_name(Self::SCORES_TABLE_NAME)
@@ -554,20 +554,16 @@ impl Database {
             .send()
             .await
         {
-            Err(e) => {
-                let compat = e.into();
-                return if matches!(
-                    compat,
-                    aws_sdk_dynamodb::Error::ConditionalCheckFailedException(_)
-                ) {
-                    // Don't raise error if score wasn't high enough to persist.
-                    Ok(())
-                } else {
-                    Err(Error::Dynamo(compat))
-                };
+            let compat = e.into();
+            // Don't raise error if score wasn't high enough to persist.
+            if !matches!(
+                compat,
+                aws_sdk_dynamodb::Error::ConditionalCheckFailedException(_)
+            ) {
+                return Err(Error::Dynamo(compat));
             }
-            Ok(_) => Ok(()),
         }
+        Ok(())
     }
 
     async fn read_scores(&self) -> Result<Vec<ScoreItem>, Error> {

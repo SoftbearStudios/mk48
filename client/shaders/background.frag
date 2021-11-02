@@ -4,7 +4,6 @@ varying vec2 vPosition;
 uniform mat3 uTexture;
 uniform sampler2D uSampler;
 
-uniform float uTime;
 uniform vec2 uMiddle;
 uniform float uVisual;
 uniform float uRestrict;

@@ -37,6 +37,12 @@ pub struct ParametrizedClientRequest {
     pub request: ClientRequest,
 }
 
+fn log_err<O, E: std::fmt::Display>(res: Result<O, E>) {
+    if let Err(e) = res {
+        warn!("Error sending {}", e);
+    }
+}
+
 impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> for Core {
     type Result = ResponseActFuture<Self, ()>;
 
@@ -56,12 +62,7 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                                 self.repo.create_invitation(arena_id, session_id)
                             {
                                 let message = ClientUpdate::InvitationCreated { invitation_id };
-                                match observer.do_send(ObserverUpdate::Send { message }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                log_err(observer.do_send(ObserverUpdate::Send { message }));
                             }
                         }
                     }
@@ -97,38 +98,33 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                             }
                             let client = act.clients.get_mut(&observer).unwrap();
 
-                            if let Some(loaded) = db_result.ok() {
-                                if let Some(session_item) = loaded {
-                                    info!(
-                                        "populating cache with session from DB {:?}",
-                                        session_item
-                                    );
+                            if let Ok(Some(session_item)) = db_result {
+                                info!("populating cache with session from DB {:?}", session_item);
 
-                                    let bot = false;
-                                    let mut session = Session::new(
-                                        session_item.alias.clone(),
-                                        session_item.arena_id,
-                                        bot,
-                                        session_item.date_previous,
-                                        session_item.game_id,
-                                        session_item.player_id,
-                                        session_item.previous_id,
-                                        session_item.referrer,
-                                        Some(session_item.server_id),
-                                        None, // TODO: session_item.user_agent,
-                                    );
-                                    session.date_created = session_item.date_created;
-                                    session.date_renewed = session_item.date_renewed;
-                                    session.date_terminated = session_item.date_terminated;
-                                    session.previous_plays = session_item.plays;
-                                    session.user_agent_id = session_item.user_agent_id;
+                                let bot = false;
+                                let mut session = Session::new(
+                                    session_item.alias,
+                                    session_item.arena_id,
+                                    bot,
+                                    session_item.date_previous,
+                                    session_item.game_id,
+                                    session_item.player_id,
+                                    session_item.previous_id,
+                                    session_item.referrer,
+                                    Some(session_item.server_id),
+                                    None, // TODO: session_item.user_agent,
+                                );
+                                session.date_created = session_item.date_created;
+                                session.date_renewed = session_item.date_renewed;
+                                session.date_terminated = session_item.date_terminated;
+                                session.previous_plays = session_item.plays;
+                                session.user_agent_id = session_item.user_agent_id;
 
-                                    let _ = act.repo.put_session(
-                                        session_item.arena_id,
-                                        session_item.session_id,
-                                        session,
-                                    );
-                                }
+                                let _ = act.repo.put_session(
+                                    session_item.arena_id,
+                                    session_item.session_id,
+                                    session,
+                                );
                             }
 
                             if let Some((arena_id, session_id, server_id)) =
@@ -163,12 +159,9 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                                     session_id,
                                 };
                                 info!("notifying client about session");
-                                match observer.do_send(ObserverUpdate::Send { message: success }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                log_err(
+                                    observer.do_send(ObserverUpdate::Send { message: success }),
+                                );
                             }
                         }),
                     );
@@ -180,12 +173,7 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                             self.repo
                                 .handle_client_sync(client, request, self.chat_log.as_deref());
                         if let Ok(success) = result {
-                            match observer.do_send(ObserverUpdate::Send { message: success }) {
-                                Err(e) => {
-                                    warn!("Error sending {}", e)
-                                }
-                                _ => {}
-                            }
+                            log_err(observer.do_send(ObserverUpdate::Send { message: success }));
                         }
                     }
                 }
@@ -247,17 +235,12 @@ impl Core {
                     client.newbie = false;
 
                     sent += 1;
-                    match addr.do_send(ObserverUpdate::Send {
+                    log_err(addr.do_send(ObserverUpdate::Send {
                         message: ClientUpdate::RegionsUpdated {
                             added: Arc::clone(&regions),
                             removed: Arc::new([]),
                         },
-                    }) {
-                        Err(e) => {
-                            warn!("Error sending {}", e)
-                        }
-                        _ => {}
-                    }
+                    }));
 
                     if let Some((
                         leaderboard_initializer,
@@ -267,71 +250,48 @@ impl Core {
                         team_initializer,
                     )) = act.repo.get_initializers(client.arena_id.unwrap())
                     {
-                        for (leaderboard, period) in leaderboard_initializer {
+                        for (index, leaderboard) in
+                            std::array::IntoIter::new(leaderboard_initializer).enumerate()
+                        {
                             sent += 1;
-                            match addr.do_send(ObserverUpdate::Send {
+                            log_err(addr.do_send(ObserverUpdate::Send {
                                 message: ClientUpdate::LeaderboardUpdated {
                                     leaderboard,
-                                    period,
+                                    period: index.into(),
                                 },
-                            }) {
-                                Err(e) => {
-                                    warn!("Error sending {}", e)
-                                }
-                                _ => {}
-                            }
+                            }));
                         }
 
                         sent += 1;
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::LiveboardUpdated {
                                 liveboard: liveboard_initializer.clone(),
                             },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }));
 
                         sent += 1;
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::MessagesUpdated {
                                 added: Arc::clone(&message_initializer),
                             },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }));
 
                         sent += 1;
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::PlayersUpdated {
                                 count: player_count,
                                 added: player_initializer.clone(),
                                 removed: Arc::new([]),
                             },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }));
 
                         sent += 1;
-                        match addr.do_send(ObserverUpdate::Send {
+                        log_err(addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::TeamsUpdated {
                                 added: team_initializer.clone(),
                                 removed: Arc::new([]),
                             },
-                        }) {
-                            Err(e) => {
-                                warn!("Error sending {}", e)
-                            }
-                            _ => {}
-                        }
+                        }));
                     }
                 }
             }
@@ -348,18 +308,13 @@ impl Core {
                         if let Some(client_arena_id) = client.arena_id {
                             if client_arena_id == *arena_id {
                                 sent += 1;
-                                match addr.do_send(ObserverUpdate::Send {
+                                log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::PlayersUpdated {
                                         count: *player_count,
                                         added: Arc::clone(added),
                                         removed: Arc::clone(removed),
                                     },
-                                }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                }));
                             }
                         }
                     }
@@ -370,17 +325,12 @@ impl Core {
                         if let Some(client_arena_id) = client.arena_id {
                             if client_arena_id == *arena_id {
                                 sent += 1;
-                                match addr.do_send(ObserverUpdate::Send {
+                                log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::TeamsUpdated {
                                         added: Arc::clone(added),
                                         removed: Arc::clone(removed),
                                     },
-                                }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                }));
                             }
                         }
                     }
@@ -395,45 +345,30 @@ impl Core {
 
                         let (added, removed) = joiners_added_or_removed;
                         if added.len() + removed.len() > 0 {
-                            match addr.do_send(ObserverUpdate::Send {
+                            log_err(addr.do_send(ObserverUpdate::Send {
                                 message: ClientUpdate::JoinersUpdated {
                                     added: Arc::clone(&added),
                                     removed: Arc::clone(&removed),
                                 },
-                            }) {
-                                Err(e) => {
-                                    warn!("Error sending {}", e)
-                                }
-                                _ => {}
-                            }
+                            }));
                         }
 
                         let (added, removed) = joins_added_or_removed;
                         if added.len() + removed.len() > 0 {
-                            match addr.do_send(ObserverUpdate::Send {
+                            log_err(addr.do_send(ObserverUpdate::Send {
                                 message: ClientUpdate::JoinsUpdated {
                                     added: Arc::clone(&added),
                                     removed: Arc::clone(&removed),
                                 },
-                            }) {
-                                Err(e) => {
-                                    warn!("Error sending {}", e)
-                                }
-                                _ => {}
-                            }
+                            }));
                         }
 
                         if messages_added.len() > 0 {
-                            match addr.do_send(ObserverUpdate::Send {
+                            log_err(addr.do_send(ObserverUpdate::Send {
                                 message: ClientUpdate::MessagesUpdated {
                                     added: Arc::clone(&messages_added),
                                 },
-                            }) {
-                                Err(e) => {
-                                    warn!("Error sending {}", e)
-                                }
-                                _ => {}
-                            }
+                            }));
                         }
                     }
                 }
@@ -459,17 +394,12 @@ impl Core {
                         }
                         if let Some(client_arena_id) = client.arena_id {
                             if client_arena_id == *arena_id {
-                                match addr.do_send(ObserverUpdate::Send {
+                                log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::LeaderboardUpdated {
                                         leaderboard: leaderboard.clone(),
                                         period: *period,
                                     },
-                                }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                }));
                             }
                         }
                     }
@@ -483,16 +413,11 @@ impl Core {
                         }
                         if let Some(client_arena_id) = client.arena_id {
                             if client_arena_id == *arena_id {
-                                match addr.do_send(ObserverUpdate::Send {
+                                log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::LiveboardUpdated {
                                         liveboard: liveboard.clone(),
                                     },
-                                }) {
-                                    Err(e) => {
-                                        warn!("Error sending {}", e)
-                                    }
-                                    _ => {}
-                                }
+                                }));
                             }
                         }
                     }

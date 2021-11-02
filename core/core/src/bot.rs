@@ -16,7 +16,7 @@ use std::collections::HashSet;
 lazy_static! {
     static ref BOT_NAMES: Box<[&'static str]> = include_str!("./famous_bots.txt")
         .split('\n')
-        .filter(|s| s.len() > 0 && s.len() <= PlayerAlias::capacity())
+        .filter(|s| !s.is_empty() && s.len() <= PlayerAlias::capacity())
         .collect();
 }
 

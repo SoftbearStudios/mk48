@@ -28,7 +28,7 @@ pub fn parse_user_agent(maybe_user_agent: Option<UserAgent>) -> Option<UserAgent
                 match os.as_ref() {
                     "Android" => Some(UserAgentId::Mobile),
                     "Chrome OS" => Some(UserAgentId::ChromeOS),
-                    "iOS" => match device.as_ref() {
+                    "iOS" => match device {
                         "iPad" => Some(UserAgentId::Tablet),
                         _ => Some(UserAgentId::Mobile),
                     },

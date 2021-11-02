@@ -35,11 +35,10 @@ impl World {
                 // Ranges from -1.0 to 1.0 where 0.0 is sea level.
                 let norm_altitude = entity.altitude.to_norm();
 
-                // As altitude ranges from -0.5 to 0.0, visual ranges from 50% to 100% effective range.
-                let visual_range = sensors.visual.range * (norm_altitude + 1.0).clamp(0.5, 1.0);
+                let visual_radar_efficacy = map_ranges(norm_altitude, -0.35..0.0, 0.0..1.0, true);
 
-                // As altitude ranges from minimum to sea level, radar ranges from 0% to 100% effective range.
-                let radar_range = sensors.radar.range * (norm_altitude.min(0.0) + 1.0);
+                let visual_range = sensors.visual.range * visual_radar_efficacy;
+                let radar_range = sensors.radar.range * visual_radar_efficacy;
 
                 // Sonar works at full effective range as long as it is not airborne.
                 let sonar_range = if entity.altitude.is_airborne() {
@@ -158,11 +157,13 @@ impl World {
                         // Beyond this point, sonar_ratio means passive sonar ratio.
 
                         // Always-on passive sonar:
+                        let mut noise = 2f32.max(entity_abs_vel - 4.0);
+
                         if data.kind == EntityKind::Boat
                             || data.kind == EntityKind::Weapon
                             || data.kind == EntityKind::Decoy
                         {
-                            let mut noise = 10f32.max(entity_abs_vel - 5.0);
+                            noise *= 2.0;
 
                             if data.kind != EntityKind::Boat {
                                 noise += 100.0;
@@ -172,13 +173,13 @@ impl World {
                                 // Active sonar gives away entity's position.
                                 noise += 20.0;
                             }
-
-                            sonar_ratio /= noise;
                         }
+
+                        sonar_ratio /= noise;
 
                         // Making noise of your own reduces the performance of
                         // passive sonar
-                        sonar_ratio *= 10.0 + abs_vel;
+                        sonar_ratio *= 20.0 + abs_vel;
                         uncertainty = uncertainty.min(sonar_ratio);
                     }
 
