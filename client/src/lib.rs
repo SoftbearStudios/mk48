@@ -4,6 +4,7 @@
 #![feature(hash_raw_entry)]
 #![feature(hash_drain_filter)]
 #![feature(drain_filter)]
+#![feature(must_not_suspend)]
 
 mod game;
 mod input;
