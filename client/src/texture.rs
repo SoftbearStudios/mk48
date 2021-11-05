@@ -176,7 +176,7 @@ impl Texture {
     }
 
     /// Loads an RBGA texture from a URL.
-    pub fn load(gl: &Gl, img_src: &str) -> Self {
+    pub fn load(gl: &Gl, img_src: &str, placeholder: Option<[u8; 3]>, repeating: bool) -> Self {
         let texture = Rc::new(gl.create_texture().unwrap());
         gl.bind_texture(Gl::TEXTURE_2D, Some(&texture));
         let level = 0;
@@ -187,8 +187,9 @@ impl Texture {
         let src_format = Gl::RGBA;
         let src_type = Gl::UNSIGNED_BYTE;
 
-        // Unloaded textures are single pixel of magenta.
-        let pixel: [u8; 4] = [255, 0, 255, 255];
+        // Unloaded textures are single pixel of placeholder or NONE.
+        let p = placeholder.unwrap_or([0, 0, 0]);
+        let pixel: [u8; 4] = [p[0], p[1], p[2], placeholder.is_some() as u8 * 255];
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
             Gl::TEXTURE_2D,
             level,
@@ -251,8 +252,13 @@ impl Texture {
                 }
 
                 gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
-                gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
-                gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
+                if repeating {
+                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::REPEAT as i32);
+                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::REPEAT as i32);
+                } else {
+                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
+                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
+                }
 
                 gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
 

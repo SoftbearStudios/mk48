@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use core_protocol::name::Referrer;
-use glam::{Vec3, Vec4};
+use glam::{vec3, vec4, Vec3, Vec4};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -47,11 +47,11 @@ pub fn ws_protocol() -> &'static str {
 }
 
 pub fn rgb(r: u8, b: u8, g: u8) -> Vec3 {
-    Vec3::new(r as f32, b as f32, g as f32) * (1.0 / 255.0)
+    vec3(r as f32, b as f32, g as f32) * (1.0 / 255.0)
 }
 
 pub fn rgba(r: u8, b: u8, g: u8, a: u8) -> Vec4 {
-    Vec4::new(r as f32, b as f32, g as f32, a as f32) * (1.0 / 255.0)
+    vec4(r as f32, b as f32, g as f32, a as f32) * (1.0 / 255.0)
 }
 
 pub fn gray(v: u8) -> Vec3 {

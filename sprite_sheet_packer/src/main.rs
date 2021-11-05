@@ -7,12 +7,15 @@ mod audio;
 mod texture;
 
 use crate::audio::pack_audio_sprite_sheet;
-use crate::texture::{pack_sprite_sheet, EntityPackParams};
+use crate::texture::{pack_sprite_sheet, webpify, EntityPackParams};
 use common::entity::{EntityData, EntityKind, EntityType};
 use common::util::map_ranges;
 
 fn main() {
     unsafe { EntityType::init() };
+
+    webpify("../js/public/sand.png");
+    webpify("../js/public/grass.png");
 
     pack_audio_sprite_sheet(
         1,

@@ -5,7 +5,7 @@ use crate::complete_ref::CompleteRef;
 use crate::contact_ref::ContactRef;
 use crate::player::{PlayerTuple, Status};
 use crate::world::World;
-use common::entity::{EntityKind, EntitySubKind};
+use common::entity::{EntityData, EntityKind, EntitySubKind};
 use common::util::*;
 use glam::Vec2;
 
@@ -157,7 +157,7 @@ impl World {
                         // Beyond this point, sonar_ratio means passive sonar ratio.
 
                         // Always-on passive sonar:
-                        let mut noise = 2f32.max(entity_abs_vel - 4.0);
+                        let mut noise = 2f32.max(entity_abs_vel - EntityData::CAVITATION_VELOCITY);
 
                         if data.kind == EntityKind::Boat
                             || data.kind == EntityKind::Weapon

@@ -7,13 +7,13 @@ use web_sys::{WebGlProgram, WebGlRenderingContext as Gl, WebGlShader, WebGlUnifo
 
 pub struct Shader {
     pub program: WebGlProgram,
-    uniform_cache: HashMap<String, Option<WebGlUniformLocation>>,
+    uniform_cache: HashMap<&'static str, Option<WebGlUniformLocation>>,
 }
 
 impl Shader {
     /// new compiles a new glsl shader from sources. Attribute locations are indexed exactly according
     /// to their index in the input.
-    pub fn new(gl: &Gl, vertex: &str, fragment: &str, attributes: Vec<&'static str>) -> Self {
+    pub fn new(gl: &Gl, vertex: &str, fragment: &str, attributes: &[&'static str]) -> Self {
         let vert_shader = Self::compile_shader(gl, Gl::VERTEX_SHADER, vertex).unwrap();
 
         let frag_shader = Self::compile_shader(gl, Gl::FRAGMENT_SHADER, fragment).unwrap();
@@ -27,21 +27,18 @@ impl Shader {
     }
 
     /// uniform gets the (cached) location of a named uniform.
-    pub fn uniform(&mut self, gl: &Gl, name: &str) -> Option<&WebGlUniformLocation> {
+    pub fn uniform(&mut self, gl: &Gl, name: &'static str) -> Option<&WebGlUniformLocation> {
         // Pre-borrow because using self in closure borrows all of self.
-        let cache = &mut self.uniform_cache;
         let program = &self.program;
-        cache
-            .raw_entry_mut()
-            .from_key(name)
+        self.uniform_cache
+            .entry(name)
             .or_insert_with(|| {
                 let uniform = gl.get_uniform_location(program, name);
                 if uniform.is_none() {
                     console_log!("warning: uniform {} does not exist or is not in use", name);
                 }
-                (name.to_owned(), uniform)
+                uniform
             })
-            .1
             .as_ref()
     }
 
@@ -82,7 +79,7 @@ impl Shader {
         context: &Gl,
         vert_shader: &WebGlShader,
         frag_shader: &WebGlShader,
-        attributes: Vec<&'static str>,
+        attributes: &[&'static str],
     ) -> Result<WebGlProgram, String> {
         let program = context
             .create_program()

@@ -31,7 +31,7 @@ use core_protocol::id::*;
 use core_protocol::name::*;
 use core_protocol::rpc::*;
 use core_protocol::web_socket::WebSocketFormat;
-use glam::{Mat2, Mat3, Vec2};
+use glam::{vec2, Mat2, Mat3, Vec2};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -170,7 +170,7 @@ impl Game {
             core_web_socket,
             terrain_texture: None,
             text_textures: HashMap::new(),
-            world_radius: 10.0,
+            world_radius: 10000.0,
             saved_camera: None,
             created_invitation_id: None,
         }
@@ -903,13 +903,13 @@ impl Game {
         }
 
         let terrain_offset = Mat3::from_translation(-terrain_center.corner());
-        let terrain_scale = &Mat3::from_scale(Vec2::new(
+        let terrain_scale = &Mat3::from_scale(vec2(
             1.0 / (terrain_width as f32 * terrain::SCALE),
             1.0 / (terrain_height as f32 * terrain::SCALE),
         ));
 
         // This matrix converts from world space to terrain texture UV coordinates.
-        let terrain_matrix = Mat3::from_translation(Vec2::new(0.5, 0.5))
+        let terrain_matrix = Mat3::from_translation(vec2(0.5, 0.5))
             .mul_mat3(&terrain_scale.mul_mat3(&terrain_offset));
 
         Texture::realloc_from_bytes(
@@ -950,6 +950,7 @@ impl Game {
             visual_range,
             visual_restriction,
             self.world_radius,
+            time_seconds,
         );
 
         // Prepare to sort sprites.
@@ -1140,9 +1141,9 @@ impl Game {
                                 Mat2::from_angle(contact.guidance().direction_target.to_radians());
                             self.renderer.add_line_graphic(
                                 contact.transform().position
-                                    + dir_mat * Vec2::new(data.radii().start, 0.0),
+                                    + dir_mat * vec2(data.radii().start, 0.0),
                                 contact.transform().position
-                                    + dir_mat * Vec2::new(data.radii().end, 0.0),
+                                    + dir_mat * vec2(data.radii().end, 0.0),
                                 hud_thickness,
                                 hud_color,
                             );
@@ -1167,10 +1168,8 @@ impl Game {
                                         let azimuth_line = |renderer: &mut Renderer, angle: f32| {
                                             let dir_mat = Mat2::from_angle(angle);
                                             renderer.add_line_graphic(
-                                                transform.position
-                                                    + dir_mat * Vec2::new(inner, 0.0),
-                                                transform.position
-                                                    + dir_mat * Vec2::new(outer, 0.0),
+                                                transform.position + dir_mat * vec2(inner, 0.0),
+                                                transform.position + dir_mat * vec2(outer, 0.0),
                                                 thickness,
                                                 color,
                                             );
@@ -1247,22 +1246,22 @@ impl Game {
                             let health_bar_height = 0.0075 * zoom;
                             let health =
                                 1.0 - contact.damage().to_secs() / data.max_health().to_secs();
-                            let health_back_position = contact.transform().position
-                                + Vec2::new(0.0, overlay_vertical_position);
+                            let health_back_position =
+                                contact.transform().position + vec2(0.0, overlay_vertical_position);
                             let health_bar_position = health_back_position
-                                + Vec2::new(
+                                + vec2(
                                     -health_bar_width * 0.5 + health * health_bar_width * 0.5,
                                     0.0,
                                 );
                             self.renderer.add_rectangle_graphic(
                                 health_back_position,
-                                Vec2::new(health_bar_width, health_bar_height),
+                                vec2(health_bar_width, health_bar_height),
                                 0.0,
                                 rgba(85, 85, 85, 127),
                             );
                             self.renderer.add_rectangle_graphic(
                                 health_bar_position,
-                                Vec2::new(health * health_bar_width, health_bar_height),
+                                vec2(health * health_bar_width, health_bar_height),
                                 0.0,
                                 color.extend(1.0),
                             );
@@ -1286,17 +1285,17 @@ impl Game {
 
                         text_queue.push((
                             contact.transform().position
-                                + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
+                                + vec2(0.0, overlay_vertical_position + 0.035 * zoom),
                             0.035 * zoom,
                             color.extend(1.0),
                             text,
                         ));
                     }
                     EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
-                        let triangle_position = contact.transform().position
-                            + Vec2::new(0.0, overlay_vertical_position);
+                        let triangle_position =
+                            contact.transform().position + vec2(0.0, overlay_vertical_position);
                         self.renderer.add_triangle_graphic(
-                            triangle_position + Vec2::new(0.0, 0.01 * zoom),
+                            triangle_position + vec2(0.0, 0.01 * zoom),
                             Vec2::splat(0.02 * zoom),
                             180f32.to_radians(),
                             color.extend(1.0),
@@ -1312,7 +1311,11 @@ impl Game {
                 let mut rng = thread_rng();
 
                 // Wake/trail particles.
-                if contact.transform().velocity != Velocity::ZERO {
+                if contact.transform().velocity != Velocity::ZERO
+                    && (data.sub_kind != EntitySubKind::Submarine
+                        || contact.transform().velocity
+                            > Velocity::from_mps(EntityData::CAVITATION_VELOCITY))
+                {
                     for _ in 0..amount {
                         let collection = if contact.altitude().is_airborne() {
                             &mut self.airborne_particles
@@ -1370,10 +1373,13 @@ impl Game {
                 .render_sprite(sprite.0, sprite.1, sprite.2, sprite.3, sprite.5);
         }
 
+        // Calculate powf once for particles.
+        let powf_0_25_seconds = 0.25f32.powf(delta_seconds);
+
         // Update sea-level particles.
         let mut i = 0;
         while i < self.sea_level_particles.len() {
-            if self.sea_level_particles[i].update(delta_seconds) {
+            if self.sea_level_particles[i].update(delta_seconds, powf_0_25_seconds) {
                 self.sea_level_particles.swap_remove(i);
             } else {
                 let particle = &self.sea_level_particles[i];
@@ -1393,9 +1399,9 @@ impl Game {
             let particle = &mut self.airborne_particles[i];
 
             // Apply wind.
-            particle.velocity += Vec2::new(14.0, 3.0) * delta_seconds;
+            particle.velocity += vec2(14.0, 3.0) * delta_seconds;
 
-            particle.update(delta_seconds);
+            particle.update(delta_seconds, powf_0_25_seconds);
 
             if time_seconds >= particle.created + 1.5 {
                 self.airborne_particles.swap_remove(i);
@@ -1776,7 +1782,7 @@ impl Game {
                 };
 
                 if !angle_limit || angle_diff < max_angle_diff {
-                    let score = angle_diff.to_radians() + 0.01 * distance_squared;
+                    let score = angle_diff.to_degrees().powi(2) + distance_squared;
                     if best_armament.map(|(_, s)| score < s).unwrap_or(true) {
                         best_armament = Some((i, score));
                     }

@@ -14,12 +14,12 @@ pub struct Particle {
 
 impl Particle {
     /// update applies kinematics to the particle and returns whether it should be removed.
-    pub fn update(&mut self, delta_seconds: f32) -> bool {
+    pub fn update(&mut self, delta_seconds: f32, powf_0_25_seconds: f32) -> bool {
         self.position += self.velocity * delta_seconds;
-        self.velocity *= 0.25f32.powf(delta_seconds);
+        self.velocity *= powf_0_25_seconds;
         if self.color < 0.0 {
             // Fire transitions to black smoke.
-            self.color *= 0.25f32.powf(delta_seconds);
+            self.color *= powf_0_25_seconds;
         }
         self.velocity.length_squared() < 0.05
     }

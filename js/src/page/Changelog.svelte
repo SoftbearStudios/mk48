@@ -13,6 +13,21 @@
 
 	<h2>2021</h2>
 
+	<h3>11/4/2021</h3>
+
+	<ul>
+		<li>Change visual appearance of splash screen.</li>
+		<li>Add foam at border of water.</li>
+		<li>Missiles fired by the "Freedom" LCS prefer the launcher with the closer angle.</li>
+	</ul>
+
+	<h3>11/2/2021</h3>
+
+	<ul>
+		<li>Overhaul ocean and terrain.</li>
+		<li>Wake shows when submarines are cavitating (going fast and producing more noise).</li>
+	</ul>
+
 	<h3>10/31/2021</h3>
 
 	<ul>

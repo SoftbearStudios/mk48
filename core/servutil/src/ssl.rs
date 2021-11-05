@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use log::warn;
-use rustls::ServerConfig;
+use rustls::server::{NoClientAuth, ServerConfig};
 use rustls_pemfile;
 use std::fs;
 use std::fs::File;
@@ -75,10 +75,10 @@ impl<'a> Ssl<'a> {
         let priv_file = File::open(self.private_key_file).unwrap();
         let mut priv_reader = BufReader::new(priv_file);
 
-        let mut config = ServerConfig::new(rustls::NoClientAuth::new());
-        config.set_persistence(rustls::ServerSessionMemoryCache::new(32));
-        config
-            .set_single_cert(
+        let config = ServerConfig::builder()
+            .with_safe_defaults()
+            .with_client_cert_verifier(NoClientAuth::new())
+            .with_single_cert(
                 rustls_pemfile::certs(&mut cert_reader)
                     .unwrap()
                     .into_iter()

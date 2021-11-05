@@ -52,7 +52,7 @@
 			<Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">server</Link> are written in
 			<Link href="https://www.rust-lang.org/">Rust</Link>.</li>
 		<li>The <Link href="https://github.com/SoftbearStudios/mk48/tree/main/js">client GUI</Link> is written in the <Link href="https://svelte.dev/">Svelte</Link> JavaScript framework.</li>
-		<li>The textures were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>.</li>
+		<li>The textures were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>, except for the <Link href="https://opengameart.org/content/simple-seamless-tiles-of-dirt-and-sand-sand2png">sand</Link> and <Link href="https://opengameart.org/content/grass-textureseamless-2d">grass</Link>.</li>
 		<li>The sounds are from <Link href='https://github.com/SoftbearStudios/mk48/blob/main/assets/sounds/README.md'>these sources.</Link></li>
 		<li>You can contribute to the translations at <Link href="https://crowdl.io/mk48/entries">crowdl.io</Link>.</li>
 	</ul>

@@ -142,6 +142,9 @@ impl EntityData {
     /// horizontally (very fast) until they reach the surface.
     pub const SURFACING_PROJECTILE_SPEED_LIMIT: f32 = 0.5;
 
+    /// Travelling at a speed (in mps) above this will cause more noise to be produced (12 knots).
+    pub const CAVITATION_VELOCITY: f32 = 6.17333;
+
     /// radii range of throttle (0-100%) and limit of collecting things.
     pub fn radii(&self) -> Range<f32> {
         self.length * 0.55..self.length

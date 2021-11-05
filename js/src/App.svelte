@@ -503,8 +503,8 @@
 	}
 
 	:global(button) {
-		background-color: #2575a9;
-		border: 1px solid #2575a9;
+		background-color: #61b365;
+		border: 1px solid #61b365;
 		border-radius: 0.25em;
 		box-sizing: border-box;
 		color: white;

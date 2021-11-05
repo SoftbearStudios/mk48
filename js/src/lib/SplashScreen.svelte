@@ -51,7 +51,6 @@
 
 	let name = storage.name || '';
 	let type = storage.type && getSpawnable().includes(storage.type) ? storage.type : getRandomSpawnable();
-	let invite = undefined;
 	let paused = false;
 	let transitioning = false;
 
@@ -122,9 +121,6 @@
 		{:else}
 			<button disabled={!type || (name && (name.length < minNameLength || name.length > maxNameLength)) || paused || transitioning}>{$t('panel.splash.action.spawn.label')}</button>
 		{/if}
-		{#if invite}
-			<small>{$t('panel.splash.invitePrefix')} {invite}</small>
-		{/if}
 	</form>
 	<span>
 		<a href='#/help'>{$t('panel.splash.action.help.label')}</a>
@@ -136,7 +132,7 @@
 
 <div class='translation' in:fade="{{duration: 500, delay: 1000}}">
 	<h3>Language</h3>
-	<select value={storage.language} on:change={e => setLanguage(e.target.value)}>
+	<select class='language' value={storage.language} on:change={e => setLanguage(e.target.value)}>
 		{#each Object.keys(strings) as lang}
 			{#if Object.keys(strings[lang]).length > 0}
 				<option value={lang}>{translateAs(lang, 'label')}</option>
@@ -177,6 +173,11 @@
 		color: black;
 	}
 
+	button, h2 {
+		font-size: 1.75em;
+		margin-top: 0.4em;
+	}
+
 	form {
 		padding-bottom: 1em;
 	}
@@ -190,10 +191,15 @@
 		color: black;
 		cursor: pointer;
 		margin-top: 0.5em;
-		min-width: 16em;
+		font-size: 1.2em;
+		min-width: 18em;
 		outline: 0;
 		padding: 0.5em;
 		width: 100%;
+	}
+
+	select.language {
+		min-width: 12em;
 	}
 
 	input {
@@ -208,6 +214,10 @@
 
 	label {
 		user-select: none;
+	}
+
+	p {
+		font-size: 1.2em;
 	}
 
 	select {
@@ -228,5 +238,6 @@
 		margin-left: 0.25em;
 		margin-right: 0.25em;
 		white-space: nowrap;
+		font-size: 1.2em;
 	}
 </style>

@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::console_log;
 use crate::shader::Shader;
 use crate::texture::Texture;
+use crate::{console_log, has_webp};
 use common::transform::Transform;
-use glam::{Mat2, Mat3, Vec2, Vec4};
+use glam::{vec2, Mat2, Mat3, Vec2, Vec4};
 use serde::Serialize;
 use sprite_sheet::UvSpriteSheet;
 use std::marker::PhantomData;
@@ -14,8 +14,8 @@ use std::ops::{Mul, Range};
 use std::slice;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    HtmlCanvasElement, OesVertexArrayObject, WebGlBuffer, WebGlRenderingContext as Gl,
-    WebGlVertexArrayObject,
+    HtmlCanvasElement, OesStandardDerivatives, OesVertexArrayObject, WebGlBuffer,
+    WebGlRenderingContext as Gl, WebGlVertexArrayObject,
 };
 
 pub struct Renderer {
@@ -25,6 +25,8 @@ pub struct Renderer {
     text_shader: Shader,
     canvas: HtmlCanvasElement,
     oes_vao: OesVertexArrayObject,
+    #[allow(unused)]
+    oes_standard_derivatives: OesStandardDerivatives,
     pub gl: Gl,
     sprite_buffer: RenderBuffer<PosUvAlpha>,
     sprite_mesh: MeshBuffer<PosUvAlpha>,
@@ -37,6 +39,8 @@ pub struct Renderer {
     graphic_shader: Shader,
     pub sprite_sheet: UvSpriteSheet,
     sprite_texture: Texture,
+    sand_texture: Texture,
+    grass_texture: Texture,
     view_matrix: Mat3,
 }
 
@@ -76,42 +80,57 @@ impl Renderer {
             .unwrap()
             .unchecked_into::<OesVertexArrayObject>();
 
+        let oes_standard_derivatives = gl
+            .get_extension("OES_standard_derivatives")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<OesStandardDerivatives>();
+
         let sprite_shader = Shader::new(
             &gl,
             include_str!("../shaders/sprite.vert"),
             include_str!("../shaders/sprite.frag"),
-            vec!["position", "uv", "alpha"],
+            &["position", "uv", "alpha"],
         );
 
         let particle_shader = Shader::new(
             &gl,
             include_str!("../shaders/particle.vert"),
             include_str!("../shaders/particle.frag"),
-            vec!["position", "color", "created"],
+            &["position", "color", "created"],
         );
 
         let background_shader = Shader::new(
             &gl,
             include_str!("../shaders/background.vert"),
             include_str!("../shaders/background.frag"),
-            vec!["position"],
+            &["position"],
         );
+
+        let (sand_path, grass_path) = if has_webp() {
+            ("/sand.webp", "/grass.webp")
+        } else {
+            ("/sand.png", "/grass.png")
+        };
+
+        let sand_texture = Texture::load(&gl, sand_path, Some([213, 176, 107]), true);
+        let grass_texture = Texture::load(&gl, grass_path, Some([71, 85, 45]), true);
 
         let graphic_shader = Shader::new(
             &gl,
             include_str!("../shaders/graphic.vert"),
             include_str!("../shaders/graphic.frag"),
-            vec!["position", "color"],
+            &["position", "color"],
         );
 
         let text_shader = Shader::new(
             &gl,
             include_str!("../shaders/text.vert"),
             include_str!("../shaders/text.frag"),
-            vec!["position", "uv", "color"],
+            &["position", "uv", "color"],
         );
 
-        let sprite_texture = Texture::load(&gl, sprite_path);
+        let sprite_texture = Texture::load(&gl, sprite_path, None, false);
 
         let sprite_mesh = MeshBuffer::new();
         let sprite_buffer = RenderBuffer::new(&gl, &oes_vao);
@@ -141,6 +160,7 @@ impl Renderer {
             canvas,
             gl,
             oes_vao,
+            oes_standard_derivatives,
             sprite_mesh,
             sprite_buffer,
             sprite_shader,
@@ -156,6 +176,8 @@ impl Renderer {
             sprite_sheet,
             sprite_texture,
             text_shader,
+            sand_texture,
+            grass_texture,
             view_matrix: Mat3::ZERO,
         }
     }
@@ -198,8 +220,8 @@ impl Renderer {
         let aspect = width as f32 / height as f32;
 
         // This matrix is manually inverted.
-        self.view_matrix = Mat3::from_scale(Vec2::new(1.0, aspect) / zoom)
-            .mul_mat3(&Mat3::from_translation(-camera));
+        self.view_matrix =
+            Mat3::from_scale(vec2(1.0, aspect) / zoom).mul_mat3(&Mat3::from_translation(-camera));
 
         self.gl.viewport(0, 0, width as i32, height as i32);
         self.gl.clear(Gl::COLOR_BUFFER_BIT);
@@ -225,29 +247,29 @@ impl Renderer {
         let uvs = &sprite.uvs;
 
         let matrix = Mat3::from_scale_angle_translation(
-            Vec2::new(dimensions.x, dimensions.x * sprite.aspect),
+            vec2(dimensions.x, dimensions.x * sprite.aspect),
             transform.direction.to_radians(),
             transform.position,
         );
 
         let mut vertices = [
             PosUvAlpha {
-                pos: Vec2::new(-0.5, 0.5),
+                pos: vec2(-0.5, 0.5),
                 uv: uvs[0],
                 alpha,
             },
             PosUvAlpha {
-                pos: Vec2::new(0.5, 0.5),
+                pos: vec2(0.5, 0.5),
                 uv: uvs[1],
                 alpha,
             },
             PosUvAlpha {
-                pos: Vec2::new(-0.5, -0.5),
+                pos: vec2(-0.5, -0.5),
                 uv: uvs[2],
                 alpha,
             },
             PosUvAlpha {
-                pos: Vec2::new(0.5, -0.5),
+                pos: vec2(0.5, -0.5),
                 uv: uvs[3],
                 alpha,
             },
@@ -279,9 +301,9 @@ impl Renderer {
         ]);
         let rot = Mat2::from_angle(angle);
         for delta in [
-            Vec2::new(-0.5, -0.5),
-            Vec2::new(0.0, 0.25 * 3f32.sqrt()),
-            Vec2::new(0.5, -0.5),
+            vec2(-0.5, -0.5),
+            vec2(0.0, 0.25 * 3f32.sqrt()),
+            vec2(0.5, -0.5),
         ] {
             self.graphic_mesh.push_vertex(PosColor {
                 pos: pos + rot.mul_vec2(delta.mul(scale)),
@@ -308,7 +330,7 @@ impl Renderer {
             (half_scale.x, -half_scale.y),
         ] {
             self.graphic_mesh.push_vertex(PosColor {
-                pos: pos + rot * Vec2::new(dx, dy),
+                pos: pos + rot * vec2(dx, dy),
                 color,
             });
         }
@@ -320,7 +342,7 @@ impl Renderer {
         let angle = diff.y.atan2(diff.x);
         self.add_rectangle_graphic(
             start + diff * 0.5,
-            Vec2::new(diff.length(), thickness),
+            vec2(diff.length(), thickness),
             angle,
             color,
         );
@@ -335,12 +357,20 @@ impl Renderer {
         thickness: f32,
         color: Vec4,
     ) {
+        use std::array;
+
+        assert!(radius > 0.0, "radius must be positive");
+
         let angle_span = range.end - range.start;
-        let segments = (radius.sqrt() * (40.0 * std::f32::consts::PI) / angle_span) as i32;
+        let mut segments = (radius.sqrt() * (40.0 * std::f32::consts::PI) / angle_span) as i32;
         if segments < 2 {
             // Nothing to draw, avoid corruption later on.
             return;
         }
+
+        // Set maximum to prevent indices from overflowing.
+        segments = segments.min(((u16::MAX - 3) / 2) as i32);
+        let segments = segments as u32;
 
         // Algorithm: Build a circle outline segment by segment, going counterclockwise. Vertices
         // are reused for maximum efficiency (except the original A and B which are duplicated at the
@@ -359,48 +389,42 @@ impl Renderer {
           A (index)       B
          */
 
-        let vertices = &mut self.graphic_mesh.vertices;
-        let indices = &mut self.graphic_mesh.indices;
-
         let inner = radius - thickness * 0.5;
         let outer = radius + thickness * 0.5;
 
-        let initial_a = Vec2::new(inner, 0.0);
-        let initial_b = Vec2::new(outer, 0.0);
+        let initial_a = vec2(inner, 0.0);
+        let initial_b = vec2(outer, 0.0);
         let mat = Mat2::from_angle(range.start);
         let a = center + mat * initial_a;
         let b = center + mat * initial_b;
-        let mut index = vertices.len() as Index;
-        vertices.push(PosColor { pos: a, color });
-        vertices.push(PosColor { pos: b, color });
-        for segment in 1..=segments {
-            let angle = range.start + angle_span * segment as f32 / segments as f32;
-            let mat = Mat2::from_angle(angle);
 
-            let c = center + mat * initial_a;
-            let d = center + mat * initial_b;
+        let vertices = &mut self.graphic_mesh.vertices;
+        // Calculate before extending vertices.
+        let starting_index = vertices.len() as u32;
 
-            vertices.push(PosColor { pos: c, color });
-            vertices.push(PosColor { pos: d, color });
+        // Use extend instead of loop to allow pre-allocation.
+        vertices.extend(
+            array::IntoIter::new([PosColor { pos: a, color }, PosColor { pos: b, color }]).chain(
+                (1..=segments).into_iter().flat_map(|i| {
+                    let angle = range.start + angle_span * i as f32 / segments as f32;
+                    let mat = Mat2::from_angle(angle);
 
-            // A, D, B
-            indices.push(index);
-            indices.push(index + 3);
-            indices.push(index + 1);
+                    let c = center + mat * initial_a;
+                    let d = center + mat * initial_b;
 
-            // A, C, D
-            indices.push(index);
-            indices.push(index + 2);
-            indices.push(index + 3);
+                    array::IntoIter::new([PosColor { pos: c, color }, PosColor { pos: d, color }])
+                }),
+            ),
+        );
 
-            index += 2;
-
-            /*
-            Implicitly,
-            a = c;
-            b = d;
-             */
-        }
+        // Use extend instead of loop to allow pre-allocation.
+        self.graphic_mesh
+            .indices
+            .extend((0..segments).into_iter().flat_map(|i| {
+                let index = (starting_index + i * 2) as Index;
+                // Triangles are [A, D, B] and [A, C, D].
+                array::IntoIter::new([index, index + 3, index + 1, index, index + 2, index + 3])
+            }));
     }
 
     /// add_circle_graphic adds a circle to the graphics queue.
@@ -429,28 +453,27 @@ impl Renderer {
             &self.view_matrix.to_cols_array(),
         );
 
-        let mat =
-            Mat3::from_scale_angle_translation(Vec2::new(scale / texture.aspect, scale), 0.0, pos);
+        let mat = Mat3::from_scale_angle_translation(vec2(scale / texture.aspect, scale), 0.0, pos);
 
         let verts: Vec<PosUvColor> = [
             PosUvColor {
-                pos: Vec2::new(-0.5, 0.5),
-                uv: Vec2::new(0.0, 0.0),
+                pos: vec2(-0.5, 0.5),
+                uv: vec2(0.0, 0.0),
                 color,
             },
             PosUvColor {
-                pos: Vec2::new(0.5, 0.5),
-                uv: Vec2::new(1.0, 0.0),
+                pos: vec2(0.5, 0.5),
+                uv: vec2(1.0, 0.0),
                 color,
             },
             PosUvColor {
-                pos: Vec2::new(-0.5, -0.5),
-                uv: Vec2::new(0.0, 1.0),
+                pos: vec2(-0.5, -0.5),
+                uv: vec2(0.0, 1.0),
                 color,
             },
             PosUvColor {
-                pos: Vec2::new(0.5, -0.5),
-                uv: Vec2::new(1.0, 1.0),
+                pos: vec2(0.5, -0.5),
+                uv: vec2(1.0, 1.0),
                 color,
             },
         ]
@@ -490,11 +513,7 @@ impl Renderer {
             .uniform1i(self.sprite_shader.uniform(&self.gl, "uSampler"), 0);
 
         self.sprite_mesh.push_default_quads();
-        self.sprite_buffer.buffer(
-            &self.gl,
-            &self.sprite_mesh.vertices,
-            &self.sprite_mesh.indices,
-        );
+        self.sprite_buffer.buffer_mesh(&self.gl, &self.sprite_mesh);
 
         self.sprite_buffer.bind(&self.gl, &self.oes_vao);
         self.sprite_buffer.draw(&self.gl, Gl::TRIANGLES);
@@ -524,11 +543,8 @@ impl Renderer {
         );
 
         self.particle_mesh.push_default_points();
-        self.particle_buffer.buffer(
-            &self.gl,
-            &self.particle_mesh.vertices,
-            &self.particle_mesh.indices,
-        );
+        self.particle_buffer
+            .buffer_mesh(&self.gl, &self.particle_mesh);
 
         self.particle_buffer.bind(&self.gl, &self.oes_vao);
         self.particle_buffer.draw(&self.gl, Gl::POINTS);
@@ -552,11 +568,8 @@ impl Renderer {
             &self.view_matrix.to_cols_array(),
         );
 
-        self.graphic_buffer.buffer(
-            &self.gl,
-            &self.graphic_mesh.vertices,
-            &self.graphic_mesh.indices,
-        );
+        self.graphic_buffer
+            .buffer_mesh(&self.gl, &self.graphic_mesh);
 
         self.graphic_buffer.bind(&self.gl, &self.oes_vao);
         self.graphic_buffer.draw(&self.gl, Gl::TRIANGLES);
@@ -574,9 +587,16 @@ impl Renderer {
         visual_radius: f32,
         visual_restriction: f32,
         world_radius: f32,
+        time: f32,
     ) {
         self.gl.active_texture(Gl::TEXTURE0);
         texture.bind(&self.gl);
+
+        self.gl.active_texture(Gl::TEXTURE1);
+        self.sand_texture.bind(&self.gl);
+
+        self.gl.active_texture(Gl::TEXTURE2);
+        self.grass_texture.bind(&self.gl);
 
         self.background_shader.bind(&self.gl);
         self.gl.uniform_matrix3fv_with_f32_array(
@@ -586,11 +606,18 @@ impl Renderer {
         );
         self.gl
             .uniform1i(self.background_shader.uniform(&self.gl, "uSampler"), 0);
+        self.gl
+            .uniform1i(self.background_shader.uniform(&self.gl, "uSand"), 1);
+        self.gl
+            .uniform1i(self.background_shader.uniform(&self.gl, "uGrass"), 2);
+
         self.gl.uniform_matrix3fv_with_f32_array(
             self.background_shader.uniform(&self.gl, "uTexture"),
             false,
             &matrix.to_cols_array(),
         );
+        self.gl
+            .uniform1f(self.background_shader.uniform(&self.gl, "uTime"), time);
         self.gl.uniform1f(
             self.background_shader.uniform(&self.gl, "uBorder"),
             world_radius,
@@ -781,6 +808,7 @@ type Quad = [Index; 4];
 struct MeshBuffer<V: Vertex> {
     vertices: Vec<V>,
     indices: Vec<Index>,
+    default_indices: bool,
 }
 
 impl<V: Vertex> MeshBuffer<V> {
@@ -788,6 +816,7 @@ impl<V: Vertex> MeshBuffer<V> {
         Self {
             vertices: Vec::new(),
             indices: Vec::new(),
+            default_indices: false,
         }
     }
 
@@ -805,6 +834,7 @@ impl<V: Vertex> MeshBuffer<V> {
     }
 
     fn push_default_quads(&mut self) {
+        assert!(self.indices.is_empty());
         let n = self.vertices.len();
         assert_eq!(n % 4, 0);
         let quads = n / 4;
@@ -816,10 +846,8 @@ impl<V: Vertex> MeshBuffer<V> {
     }
 
     fn push_default_points(&mut self) {
-        let n = self.vertices.len();
-        for point in 0..n {
-            self.indices.push(point as Index);
-        }
+        assert!(self.indices.is_empty());
+        self.default_indices = true;
     }
 
     fn clear(&mut self) {
@@ -842,7 +870,7 @@ impl<V: Vertex> RenderBuffer<V> {
     fn new(gl: &Gl, oes: &OesVertexArrayObject) -> Self {
         let buffer = Self {
             vertices: gl.create_buffer().unwrap(),
-            indices: gl.create_buffer().unwrap(),
+            indices: gl.create_buffer().unwrap(), // TODO create indices lazily.
             vao: oes.create_vertex_array_oes().unwrap(),
             index_count: 0,
             vertex_count: 0,
@@ -875,10 +903,28 @@ impl<V: Vertex> RenderBuffer<V> {
     // draw draws the buffer.
     // It assumes that it is bound.
     fn draw(&self, gl: &Gl, primitive: u32) {
-        gl.draw_elements_with_i32(primitive, self.index_count as i32, Gl::UNSIGNED_SHORT, 0);
+        if self.index_count != 0 {
+            gl.draw_elements_with_i32(primitive, self.index_count as i32, Gl::UNSIGNED_SHORT, 0);
+        } else if self.vertex_count != 0 {
+            let vertex_size = match primitive {
+                Gl::TRIANGLES => 3,
+                Gl::POINTS => 1,
+                _ => panic!("unknown primitive"),
+            };
+            gl.draw_arrays(primitive, 0, (self.vertex_count / vertex_size) as i32)
+        }
+    }
+
+    fn buffer_mesh(&mut self, gl: &Gl, mesh: &MeshBuffer<V>) {
+        assert!(
+            mesh.vertices.is_empty() || mesh.default_indices || !mesh.indices.is_empty(),
+            "mesh has vertices but no indices"
+        );
+        self.buffer(gl, mesh.vertices.as_slice(), mesh.indices.as_slice());
     }
 
     // buffer moves the data from floats to the WebGL buffer.
+    // If indices.is_empty() it performs array based rendering.
     fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[Index]) {
         self.index_count = indices.len() as u32;
         self.vertex_count = vertices.len() as Index;

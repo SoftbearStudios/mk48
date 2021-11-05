@@ -48,15 +48,15 @@ const ALTITUDE_LUT: [i8; 17] = [
     -120,
     -100,
     -50,
-    -15,
-    -3,
+    -20,
+    -5,
     -2,
     -1,
     0,
     1,
     2,
-    4,
-    15,
+    5,
+    20,
     50,
     100,
     120,
@@ -748,7 +748,7 @@ impl Chunk {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut compressor = Compressor::new(1024);
         for coord in HILBERT_TO_COORD.iter() {
-            compressor.write_byte(self.at((*coord).into()));
+            compressor.write_byte(self.at(coord.into_absolute_coord()));
         }
         compressor.into_vec()
     }
@@ -758,7 +758,7 @@ impl Chunk {
         let mut chunk = Self::zero();
         let hilbert = &HILBERT_TO_COORD;
         for (i, b) in Decompressor::new(bytes).enumerate() {
-            chunk.set(hilbert[i].into(), b);
+            chunk.set(hilbert[i].into_absolute_coord(), b);
         }
         chunk
     }
@@ -810,10 +810,11 @@ impl Chunk {
 }
 
 lazy_static! {
-    static ref HILBERT_TO_COORD: [(u8, u8); CHUNK_SIZE * CHUNK_SIZE] = {
-        let mut lut = [(0u8, 0u8); CHUNK_SIZE * CHUNK_SIZE];
+    static ref HILBERT_TO_COORD: [RelativeCoord; CHUNK_SIZE * CHUNK_SIZE] = {
+        let mut lut = [RelativeCoord(0u8, 0u8); CHUNK_SIZE * CHUNK_SIZE];
         for (i, v) in lut.iter_mut().enumerate() {
-            *v = hilbert::h2xy(i as u16)
+            let c = hilbert::h2xy(i as u16);
+            *v = RelativeCoord(c.0, c.1);
         }
         lut
     };

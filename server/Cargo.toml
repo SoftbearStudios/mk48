@@ -14,7 +14,18 @@ debug = true
 debug = false
 
 [patch.crates-io]
-actix-tls = { git = "https://github.com/actix/actix-net", branch = "fix/tls-handshake-timeout" }
+actix-http = { git = "https://github.com/actix/actix-web"}
+#actix-tls = { git = "https://github.com/actix/actix-net", branch = "fix/tls-handshake-timeout" }
+
+# An attempt to speed up user agent regex compilation.
+[profile.dev.package.regex]
+opt-level = 3
+
+[profile.dev.package.fancy-regex]
+opt-level = 3
+
+[profile.dev.package.uaparser]
+opt-level = 3
 
 [dependencies]
 actix = "0.12"
