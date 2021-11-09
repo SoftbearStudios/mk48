@@ -2,290 +2,66 @@
     // SPDX-FileCopyrightText: 2021 Softbear, Inc.
     // SPDX-License-Identifier: AGPL-3.0-or-later
 
-    import Chart from './Chart.svelte';
+    import Router from 'svelte-spa-router'
+    import {game, games} from './util.js';
+    import Summary from './Summary.svelte';
+    import Day from './Day.svelte';
+    import Referrers, {referrers} from './Referrers.svelte';
+    import UserAgents, {userAgents} from './UserAgents.svelte';
+    import Series, {periods} from './Series.svelte';
 
-    if (!localStorage.auth) {
-        localStorage.auth = prompt("Enter auth code");
+    const routes = {
+        '/': Summary,
+        '/summary/:userAgent/:referrer': Summary,
+        '/day/:userAgent/:referrer': Day,
+        '/referrers': Referrers,
+        '/userAgents': UserAgents,
+        '/series/:period': Series,
     }
-
-    const ANY = 'any';
-    const DAY = 1000 * 60 * 60 * 24;
-    const headers = {'Content-Type': 'application/json'};
-    const params = {auth: localStorage.auth};
-    const requestGames = JSON.stringify({params, request: 'RequestGames'});
-    const requestReferrers = JSON.stringify({params, request: 'RequestReferrers'});
-    const requestUserAgents = JSON.stringify({params, request: 'RequestUserAgents'});
-    const summary_blacklist = [
-        "arenas_cached", "connections", "cpu", "ram", "retention", "sessions_cached", "uptime"
-    ];
-
-    function filter_summary_blacklist(list) {
-        console.log(list); //@@
-        return list.filter(item => summary_blacklist.indexOf(item) < 0);
-    }
-
-    function formatTimestamp(timestamp) {
-        const date = new Date(timestamp);
-        const month = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.getMonth()];
-        return `${month} ${date.getDate()} ${date.getHours()}:00`;
-    }
-
-    function percent(number) {
-        return round(number * 100, 1) + "%";
-    }
-
-    function round(number, places) {
-        const x = Math.pow(10, places);
-        return Math.round(number * x) / x;
-    }
-
-    let games = [];
-    let game_id;
-    let selected_game_id = undefined;
-    async function loadGames() {
-        let result = await fetch("/admin/", {method: 'POST', body: requestGames, headers}).then(res => res.json());
-        games = result.GamesRequested.games.map(([gameId, usage]) => gameId);
-        console.log("Games: ", games);
-        if (games.length != 0) {
-            selected_game_id = games[0];
-            game_id = games[0];
-        }
-    }
-    loadGames();
-
-    // TODO: use the period_id in RequestSeries()
-    let periods = [];
-    let period_id = undefined;
-    function initPeriods() {
-        periods = ['week', 'month', 'quarter'];
-        period_id = periods[0];
-    }
-    initPeriods();
-
-    let referrers = [];
-    let referrer = undefined;
-    async function loadReferrers() {
-        let result = await fetch("/admin/", {method: 'POST', body: requestReferrers, headers}).then(res => res.json());
-        referrers = result.ReferrersRequested.referrers;
-        console.log("Referrers: ", referrers);
-    }
-    loadReferrers();
-
-    let user_agents = [];
-    let user_agent_id = undefined;
-    async function loadUserAgents() {
-        let result = await fetch("/admin/", {method: 'POST', body: requestUserAgents, headers}).then(res => res.json());
-        user_agents = result.UserAgentsRequested.user_agents;
-        console.log("UserAgents: ", user_agents);
-    }
-    loadUserAgents();
-
-    let view = "summary";
 </script>
 
-<nav>
-  <div class="navbtn {view == 'summary' ? 'selected' : ''}" on:click={() => view = 'summary'}>Summary</div>
-  <div class="navbtn {view == 'day' ? 'selected' : ''}" on:click={() => view = 'day'}>Day</div>
-  <div class="navbtn {view == 'referrers' ? 'selected' : ''}" on:click={() => view = 'referrers'}>Referrers</div>
-  <div class="navbtn {view == 'user_agents' ? 'selected' : ''}" on:click={() => view = 'user_agents'}>User Agents</div>
-  <div class="navbtn db {view == 'series' ? 'selected' : ''}" on:click={() => view = 'series'}>Series</div>
-  <div class="selections">
-  {#if !games}
-      <div/>
-  {:else}
-      {#if view == 'day'}
-          <select on:change={event => referrer = event.target.value === 'undefined' ? undefined : event.target.value} value={referrer}>
-              <option value={undefined}>{ANY}</option>
-              {#each referrers as r}
-                  <option value={r[0]}>{r[0]}</option>
-              {/each}
-          </select>
-
-          <select on:change={event => user_agent_id = event.target.value === 'undefined' ? undefined : event.target.value} value={user_agent_id}>
-              <option value={undefined}>{ANY}</option>
-              {#each user_agents as u}
-                  <option value={u[0]}>{u[0]}</option>
-              {/each}
-          </select>
-      {/if}
-
-      {#if view == 'series'}
-          <select on:change={event => period_id = event.target.value} value={period_id}>
-              {#each periods as p}
-                  <option value={p}>{p}</option>
-              {/each}
-          </select>
-      {/if}
-
-      <select on:change={event => game_id = event.target.value} value={game_id}>
-          {#each games as g}
-              <option value={g}>{g}</option>
-          {/each}
-      </select>
-  {/if}
-  </div>
-</nav>
-
-<main>
-{#if !game_id}
+{#if !$game}
     <h2>No data</h2>
-
-{:else if view === 'day'}
-    <h2>Day (Cache)</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestDay': {game_id, referrer, user_agent_id}}}), headers}).then(res => res.json())}
-    {:then data}
-        <div class="charts">
-            {#each filter_summary_blacklist(Object.keys(data.DayRequested.series[0][1])) as key}
-                <div class="chart">
-                    <p>{key}</p>
-                    <Chart
-                        data={data.DayRequested.series}
-                        filterBounds={false}
-                        logarithmic={false}
-                        points={true}
-                        x={point => point[0]}
-                        y={(typeof data.DayRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.DayRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.DayRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
-                        fmtX={formatTimestamp}
-                    />
-                </div>
-            {/each}
-        </div>
-    {:catch err}
-        <p>{err}</p>
-    {/await}
-{:else if view === 'referrers'}
-    <h2>Referrers (Cache)</h2>
-    {#await fetch("/admin/", {method: 'POST', body: requestReferrers, headers}).then(res => res.json())}
-    {:then data}
-        <table>
-            {#each data.ReferrersRequested.referrers as referrer}
-            <tr>
-                <th>{referrer[0]}</th>
-                <td>{percent(referrer[1])}</td>
-            </tr>
-            {/each}
-        </table>
-    {:catch err}
-        <p>{err}</p>
-    {/await}
-
-{:else if view === 'series'}
-    <h2>Series</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSeries': {game_id, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[period_id]}}}), headers}).then(res => res.json())}
-    {:then data}
-        {#if data.SeriesRequested.series.length > 0}
-            <div class="charts">
-                {#each Object.keys(data.SeriesRequested.series[0][1]) as key}
-                    <div class="chart">
-                        <p>{key}</p>
-                        <Chart
-                            data={data.SeriesRequested.series}
-                            filterBounds={false}
-                            logarithmic={false}
-                            points={true}
-                            x={point => point[0]}
-                            y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
-                            fmtX={formatTimestamp}
-                        />
-                    </div>
-                {/each}
-            </div>
-        {:else}
-            <h2>No data.</h2>
-        {/if}
-    {:catch err}
-        <p>{err}</p>
-    {/await}
-
-{:else if view === 'summary'}
-    <h2>Summary (Cache)</h2>
-    {#await fetch("/admin/", {method: 'POST', body: JSON.stringify({params, request: {'RequestSummary': {game_id, period_start: null, period_stop: null}}}), headers}).then(res => res.json())}
-    {:then data}
-        <table>
-            {#each Object.entries(data.SummaryRequested.metrics) as [key, value]}
-                <tr>
-                    <th>{key}</th>
-                    <td class="value">
-                        {#if typeof value.percent === 'number'}
-                            {round(value.percent, 0)}%
-                        {:else if typeof value.total === 'number'}
-                            {value.total}
-                        {:else if typeof value.average === 'number'}
-                            {round(value.average, 3)}
-                            {#if value.standard_deviation != 0}
-                                ± {round(value.standard_deviation, 3)}
-                            {/if}
-                        {:else}
-                            {JSON.stringify(value)}
-                        {/if}
-                    </td>
-                    <td class="detail">
-                        {#if typeof value.min === 'number' && typeof value.max === 'number' && (!('standard_deviation' in value) || value.standard_deviation != 0)}
-                            (min: {round(value.min, 2)}, max: {round(value.max, 2)})
-                        {:else if typeof value.total === 'number'}
-                            (total: {value.total})
-                        {/if}
-                    </td>
-                </tr>
-            {/each}
-        </table>
-    {:catch err}
-        <p>{err}</p>
-    {/await}
-
-{:else if view === 'user_agents'}
-    <h2>User Agents (Cache)</h2>
-    {#await fetch("/admin/", {method: 'POST', body: requestUserAgents, headers}).then(res => res.json())}
-    {:then data}
-        <table>
-            {#each data.UserAgentsRequested.user_agents as user_agent}
-            <tr>
-                <th>{user_agent[0]}</th>
-                <td>{percent(user_agent[1])}</td>
-            </tr>
-            {/each}
-        </table>
-    {:catch err}
-        <p>{err}</p>
-    {/await}
+{:else}
+    <Router {routes}/>
 {/if}
 
-</main>
-
 <style>
-    div.chart {
+    :global(div.chart) {
         #background-color: black;
     }
 
-    div.db {
+    :global(div.db) {
         text-decoration: underline;
     }
 
-    div.charts {
+    :global(div.charts) {
         display: grid;
         grid-gap: 10px 10px;
         grid-template-columns: repeat(4, 1fr);
     }
 
-    div.navbtn {
+    :global(a.navbtn) {
+        color: white;
         line-height: 2.1rem;
         padding-left: 1rem;
+        filter: opacity(0.75);
     }
 
-    div.selected {
-        color: white;
+    :global(a.navbtn.active) {
+        filter: opacity(1.0);
     }
 
-    div.selections {
+    :global(div.selections) {
         position: absolute;
         right: 0;
     }
 
-    h1 {
+    :global(h1) {
         text-transform: uppercase;
     }
 
-    main {
+    :global(main) {
         color: black;
         font-family: Verdana;
         margin: 0 auto;
@@ -294,7 +70,7 @@
         text-align: center;
     }
 
-    nav {
+    :global(nav) {
         background: darkslategrey;
         color: #ddd;
         display: flex;
@@ -305,31 +81,31 @@
         width: 80%;
     }
 
-    select {
+    :global(select) {
         background: darkslategrey;
         color: white;
     }
 
-    table {
+    :global(table) {
         border: 1px solid gray;
         margin: auto;
     }
 
-    td {
+    :global(td) {
         padding-left: 1em;
         padding-right: 1em;
         text-align: left;
     }
 
-    td.detail {
+    :global(td.detail) {
         font-style: italic;
     }
 
-    td.value {
+    :global(td.value) {
         font-weight: bold;
     }
 
-    th {
+    :global(th) {
         background-color: darkslategrey;
         color: white;
         font-weight: normal;
@@ -339,7 +115,7 @@
     }
 
     @media (min-width: 640px) {
-        main {
+        :global(main) {
             max-width: none;
         }
     }

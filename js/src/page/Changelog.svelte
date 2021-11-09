@@ -13,6 +13,12 @@
 
 	<h2>2021</h2>
 
+	<h3>11/7/2021</h3>
+
+	<ul>
+		<li>Add "Yamato" battleship as first level 8.</li>
+	</ul>
+
 	<h3>11/4/2021</h3>
 
 	<ul>

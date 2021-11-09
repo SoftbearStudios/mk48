@@ -7,6 +7,7 @@ use crate::input::Input;
 use crate::particle::Particle;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
+use crate::text_cache::TextCache;
 use crate::texture::Texture;
 use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol};
 use crate::{
@@ -59,20 +60,23 @@ pub struct Game {
     session_id: Option<SessionId>,
     death_reason: Option<DeathReason>,
     last_time_seconds: f32,
-    last_control_seconds: f32, // Time last sent Control command.
+    /// Time last sent Control command.
+    last_control_seconds: f32,
     player_id: Option<PlayerId>,
     entity_id: Option<EntityId>,
     pub input: Input,
-    zoom: f32, // actual zoom (smoothed)
+    // Actual zoom ratio (smoothed over time).
+    zoom: f32,
     renderer: Renderer,
     pub audio_player: AudioPlayer,
     score: u32,
     pub server_web_socket: Option<ReconnWebSocket<Update, Command>>,
     pub(crate) core_web_socket: ReconnWebSocket<ClientUpdate, ClientRequest>,
     terrain_texture: Option<Texture>,
-    text_textures: HashMap<String, Texture>, // TODO: use rc to prune?
+    text_cache: TextCache,
 }
 
+/// A contact that may be locally controlled by simulated elsewhere (by the server).
 struct NetworkContact {
     /// The more accurate representation of the contact, which is snapped to server updates.
     model: Contact,
@@ -169,7 +173,7 @@ impl Game {
             server_web_socket: None,
             core_web_socket,
             terrain_texture: None,
-            text_textures: HashMap::new(),
+            text_cache: TextCache::new(),
             world_radius: 10000.0,
             saved_camera: None,
             created_invitation_id: None,
@@ -1367,7 +1371,7 @@ impl Game {
         }
 
         // Sort sprites by altitude.
-        sortable_sprites.sort_by(|a, b| a.4.partial_cmp(&b.4).unwrap());
+        sortable_sprites.sort_unstable_by(|a, b| a.4.partial_cmp(&b.4).unwrap());
         for sprite in sortable_sprites {
             self.renderer
                 .render_sprite(sprite.0, sprite.1, sprite.2, sprite.3, sprite.5);
@@ -1416,14 +1420,9 @@ impl Game {
         self.renderer.render_graphics();
 
         for (position, scale, color, text) in text_queue {
-            let gl = &self.renderer.gl;
-            let name_texture = self
-                .text_textures
-                .raw_entry_mut()
-                .from_key(&text)
-                .or_insert_with(|| (text.to_owned(), Texture::from_str(gl, &text)));
+            let name_texture = self.text_cache.get(&self.renderer.gl, &text);
             self.renderer
-                .render_text(position, scale, color, name_texture.1);
+                .render_text(position, scale, color, name_texture);
         }
 
         // Buffer until later so as not to borrow the websocket early. The web socket's lifetime is tied
@@ -1712,6 +1711,7 @@ impl Game {
         if reset_input {
             self.input.reset();
         }
+        self.text_cache.tick();
     }
 
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).

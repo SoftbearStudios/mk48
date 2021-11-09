@@ -138,7 +138,8 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.damage = 0.19 * Math.pow(entityData.length, 0.7);
 						break;
 					case 'shell':
-						entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
+						//entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
+						entityData.damage = Math.max(0.5 * Math.pow(entityData.length, 0.35), 0.14 * Math.pow(entityData.length, 3));
 						break;
 					case 'depthCharge':
 						entityData.damage = 0.8;

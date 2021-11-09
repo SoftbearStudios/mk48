@@ -7,6 +7,7 @@ use crate::protocol::*;
 use crate::world::World;
 use crate::world_mutation::Mutation;
 use actix::prelude::*;
+use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
@@ -82,7 +83,9 @@ impl Server {
     pub fn new(server_id: Option<ServerId>, min_players: usize, core: Addr<Core>) -> Self {
         Self {
             core,
-            world: World::new(World::target_radius(min_players, World::BOAT_DENSITY)),
+            world: World::new(World::target_radius(
+                min_players as f32 * EntityType::FairmileD.data().visual_area(),
+            )),
             clients: HashMap::new(),
             bots: Vec::new(),
             counter: Ticks::ZERO,

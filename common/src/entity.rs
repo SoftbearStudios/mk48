@@ -160,6 +160,11 @@ impl EntityData {
         Vec2::new(self.position_forward, self.position_side)
     }
 
+    /// returns area, in square meters, of vision.
+    pub fn visual_area(&self) -> f32 {
+        self.sensors.visual.range.powi(2) * std::f32::consts::PI
+    }
+
     /// max_health returns the the minimum damage to kill a boat, panicking if the corresponding
     /// entity does not have health.
     pub fn max_health(&self) -> Ticks {

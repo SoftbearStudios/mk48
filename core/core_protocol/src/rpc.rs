@@ -25,6 +25,8 @@ pub enum AdminRequest {
     RequestStatus,
     RequestSummary {
         game_id: GameId,
+        referrer: Option<Referrer>,
+        user_agent_id: Option<UserAgentId>,
         period_start: Option<UnixTime>,
         period_stop: Option<UnixTime>,
     },

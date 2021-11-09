@@ -268,7 +268,7 @@ impl World {
                             }
                         } else if boats.len() == 1 && weapons.len() == 1 && boats[0].has_same_player(&weapons[0]) &&
                             weapons[0].data().kind == EntityKind::Aircraft &&
-                            weapons[0].ticks > Ticks::from_secs(5.0) && weapons[0].transform.position.distance(boats[0].transform.position) < 100.0 && weapons[0].can_land_on(&boats[0]) {
+                            weapons[0].ticks > Ticks::from_secs(5.0) && weapons[0].can_land_on(&boats[0]) {
 
                             // Reload instantly since landed.
                             potential_limited_reload(&weapons[0], true);

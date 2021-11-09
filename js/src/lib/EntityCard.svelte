@@ -60,7 +60,7 @@
 					<li>Reload: {entityData.reload.toFixed(1)}s</li>
 				{/if}
 				{#if entityData.damage}
-					<li>{entityData.kind === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(1)}</li>
+					<li>{entityData.kind === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(2)}</li>
 				{/if}
 				{#if entityData.antiAircraft}
 				<li>Anti-Aircraft: {entityData.antiAircraft.toFixed(2)}</li>

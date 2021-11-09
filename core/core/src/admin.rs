@@ -6,6 +6,8 @@ use crate::repo::*;
 use crate::session::Session;
 use actix::prelude::*;
 use core_protocol::dto::MetricsDataPointDto;
+use core_protocol::id::UserAgentId;
+use core_protocol::name::Referrer;
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::UnixTime;
 use log::warn;
@@ -96,6 +98,34 @@ impl Core {
     }
 }
 
+fn referrer_user_agent_id_filter(
+    referrer: Option<Referrer>,
+    user_agent_id: Option<UserAgentId>,
+) -> impl Fn(&Session) -> bool {
+    move |session: &Session| {
+        if let Some(referrer) = referrer {
+            if let Some(session_referrer) = session.referrer {
+                if session_referrer != referrer {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        if let Some(user_agent_id) = user_agent_id {
+            if let Some(session_user_agent_id) = session.user_agent_id {
+                if session_user_agent_id != user_agent_id {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
 impl Repo {
     fn handle_admin_sync(&mut self, request: AdminRequest) -> Result<AdminUpdate, &'static str> {
         let result;
@@ -105,28 +135,10 @@ impl Repo {
                 referrer,
                 user_agent_id,
             } => {
-                let series = self.get_day(game_id, &|session: &Session| {
-                    if let Some(referrer) = referrer {
-                        if let Some(session_referrer) = session.referrer {
-                            if session_referrer != referrer {
-                                return false;
-                            }
-                        } else {
-                            return false;
-                        }
-                    }
-                    if let Some(user_agent_id) = user_agent_id {
-                        if let Some(session_user_agent_id) = session.user_agent_id {
-                            if session_user_agent_id != user_agent_id {
-                                return false;
-                            }
-                        } else {
-                            return false;
-                        }
-                    }
-
-                    true
-                });
+                let series = self.get_day(
+                    game_id,
+                    &referrer_user_agent_id_filter(referrer, user_agent_id),
+                );
                 result = Ok(AdminUpdate::DayRequested { series });
             }
             AdminRequest::RequestGames => {
@@ -146,12 +158,17 @@ impl Repo {
             }
             AdminRequest::RequestSummary {
                 game_id,
+                referrer,
+                user_agent_id,
                 period_start,
                 period_stop,
             } => {
-                if let Some(metrics) =
-                    self.get_metrics(&game_id, period_start, period_stop, &|_| true)
-                {
+                if let Some(metrics) = self.get_metrics(
+                    &game_id,
+                    period_start,
+                    period_stop,
+                    &referrer_user_agent_id_filter(referrer, user_agent_id),
+                ) {
                     result = Ok(AdminUpdate::SummaryRequested {
                         metrics: metrics.summarize(),
                     })

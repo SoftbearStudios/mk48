@@ -4081,6 +4081,165 @@
 		"damage": 2.4233333333333333,
 		"exhausts": []
 	},
+	"yamato": {
+		"label": "Yamato",
+		"link": "https://en.wikipedia.org/wiki/Japanese_battleship_Yamato",
+		"kind": "boat",
+		"subkind": "battleship",
+		"level": 8,
+		"length": 263,
+		"width": 40.0664,
+		"draft": 11,
+		"speed": 13.89,
+		"sensors": {
+			"visual": {
+				"range": 1126
+			},
+			"radar": {
+				"range": 1394.5
+			}
+		},
+		"armaments": [
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": 3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": -3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": 3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": -3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": 3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": -3.1,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "e4n",
+				"positionForward": -115.239,
+				"positionSide": 9.9026,
+				"angle": 3.036872898470133
+			},
+			{
+				"type": "e4n",
+				"positionForward": -115.239,
+				"positionSide": -9.9026,
+				"angle": -3.036872898470133
+			},
+			{
+				"type": "e4n",
+				"positionForward": -100.891,
+				"positionSide": 11.1675,
+				"angle": 3.260449575650607
+			},
+			{
+				"type": "e4n",
+				"positionForward": -100.891,
+				"positionSide": -11.1675,
+				"angle": -3.260449575650607
+			}
+		],
+		"turrets": [
+			{
+				"type": "45Type94",
+				"positionForward": 51.655,
+				"positionSide": 0,
+				"speed": 0.9424777960769379,
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
+			},
+			{
+				"type": "45Type94",
+				"positionForward": 29.2646,
+				"positionSide": 0,
+				"speed": 0.9424777960769379,
+				"angle": 0,
+				"azimuthBL": 0.6981317007977318,
+				"azimuthBR": 0.6981317007977318
+			},
+			{
+				"type": "45Type94",
+				"positionForward": -64.996,
+				"positionSide": 0,
+				"angle": 3.141592653589793,
+				"speed": 0.9424777960769379,
+				"azimuthBL": 0.6981317007977318,
+				"azimuthBR": 0.6981317007977318
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -24.7
+			}
+		],
+		"antiAircraft": 0.218,
+		"damage": 8.766666666666666
+	},
 	"yasen": {
 		"label": "Yasen",
 		"link": "https://en.wikipedia.org/wiki/Yasen-class_submarine",
@@ -4650,7 +4809,7 @@
 		"length": 0.1295,
 		"speed": 675,
 		"lifespan": 0.37037037037037035,
-		"damage": 0.29788156030885266,
+		"damage": 0.24449187057430194,
 		"reload": 8,
 		"armaments": [],
 		"turrets": [],
@@ -4695,8 +4854,58 @@
 		"width": 0.38,
 		"speed": 615,
 		"lifespan": 1.2195121951219512,
-		"damage": 0.6449074083498981,
+		"damage": 0.68782,
 		"reload": 13.8,
+		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
+	"45Type94": {
+		"label": "45 cm/45 Type 94",
+		"link": "https://en.wikipedia.org/wiki/46_cm/45_Type_94_naval_gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 30.35,
+		"width": 16.4791,
+		"positionForward": 4.25,
+		"armaments": [
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": 3.1,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": -3.1,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"external": false,
+				"hidden": true
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
+	"458x1980mmR": {
+		"label": "458 x 1980 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"length": 1.98,
+		"width": 0.458,
+		"speed": 585,
+		"lifespan": 1.4415954415954417,
+		"damage": 1.08673488,
+		"reload": 14.92,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -4731,7 +4940,7 @@
 		"width": 0.057,
 		"speed": 639.75,
 		"lifespan": 0.5163475315878598,
-		"damage": 0.4302236359802337,
+		"damage": 0.37542527767137635,
 		"reload": 8.764,
 		"armaments": [],
 		"turrets": [],
@@ -4996,7 +5205,7 @@
 		"length": 0.091,
 		"speed": 329.18399999999997,
 		"lifespan": 0.759453679401186,
-		"damage": 0.26796317021247873,
+		"damage": 0.2160899115089936,
 		"reload": 8,
 		"armaments": [],
 		"turrets": [],
@@ -5011,6 +5220,31 @@
 		"range": 60,
 		"reload": 1,
 		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
+	"e4n": {
+		"label": "Nakajima E4N",
+		"link": "https://en.wikipedia.org/wiki/Nakajima_E4N",
+		"kind": "aircraft",
+		"subkind": "plane",
+		"level": 5,
+		"length": 8.87,
+		"width": 10.25,
+		"speed": 41.15,
+		"sensors": {
+			"visual": {
+				"range": 617.74
+			}
+		},
+		"armaments": [
+			{
+				"type": "mark18"
+			}
+		],
+		"lifespan": 121.50668286755771,
+		"limited": true,
+		"reload": 10,
 		"turrets": [],
 		"exhausts": []
 	},
@@ -5084,7 +5318,7 @@
 		"width": 0.13,
 		"speed": 637.5,
 		"lifespan": 0.6640522875816994,
-		"damage": 0.4983821031071073,
+		"damage": 0.4456935797508762,
 		"reload": 9.879999999999999,
 		"armaments": [],
 		"turrets": [],
@@ -5262,7 +5496,7 @@
 		"width": 0.406,
 		"speed": 570,
 		"lifespan": 1.2725146198830408,
-		"damage": 0.6363541077327811,
+		"damage": 0.6018519326399999,
 		"reload": 13.504,
 		"armaments": [],
 		"turrets": [],
@@ -5341,7 +5575,7 @@
 		"width": 0.127,
 		"speed": 592.5,
 		"lifespan": 0.6919831223628692,
-		"damage": 0.4899089384728208,
+		"damage": 0.43686587690013085,
 		"reload": 9.72,
 		"armaments": [],
 		"turrets": [],
@@ -5410,7 +5644,7 @@
 		"speed": 618.75,
 		"reload": 6,
 		"lifespan": 1.3737373737373737,
-		"damage": 0.7061241099028986,
+		"damage": 1.70338,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -5719,7 +5953,7 @@
 		"width": 0.076,
 		"speed": 686.25,
 		"lifespan": 0.5760777170613237,
-		"damage": 0.48017530862921753,
+		"damage": 0.42675635276426005,
 		"reload": 9.544,
 		"armaments": [],
 		"turrets": [],
@@ -5989,7 +6223,7 @@
 		"width": 0.3,
 		"speed": 685.5,
 		"lifespan": 0.9482129832239241,
-		"damage": 0.6084166635909958,
+		"damage": 0.5624900141167247,
 		"reload": 12.6,
 		"armaments": [],
 		"turrets": [],

@@ -2207,6 +2207,66 @@
 			}
 		]
 	},
+	"yamato": {
+		"label": "Yamato",
+		"link": "https://en.wikipedia.org/wiki/Japanese_battleship_Yamato",
+		"kind": "boat",
+		"subkind": "battleship",
+		"level": 8,
+		"length": 263,
+		"width": 40.0664,
+		"draft": 11,
+		"speed": 13.89,
+		"sensors": {
+			"visual": {},
+			"radar": {}
+		},
+		"armaments": [
+			{
+				"type": "e4n",
+				"positionForward": -115.239,
+				"positionSide": 9.9026,
+				"angle": 174,
+				"symmetrical": true
+			},
+			{
+				"type": "e4n",
+				"positionForward": -100.891,
+				"positionSide": 11.1675,
+				"angle": 186.81,
+				"symmetrical": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "45Type94",
+				"positionForward": 51.655,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 30
+			},
+			{
+				"type": "45Type94",
+				"positionForward": 29.2646,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 40
+			},
+			{
+				"type": "45Type94",
+				"positionForward": -64.996,
+				"positionSide": 0,
+				"angle": 180,
+				"speed": "slow",
+				"azimuthB": 40
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -24.7
+			}
+		]
+	},
 	"yasen": {
 		"label": "Yasen",
 		"link": "https://en.wikipedia.org/wiki/Yasen-class_submarine",
@@ -2465,6 +2525,43 @@
 		"speed": 820,
 		"range": 35600
 	},
+	"45Type94": {
+		"label": "45 cm/45 Type 94",
+		"link": "https://en.wikipedia.org/wiki/46_cm/45_Type_94_naval_gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 30.35,
+		"width": 16.4791,
+		"positionForward": 4.25,
+		"armaments": [
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"positionSide": 3.1,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "458x1980mmR",
+				"angle": 0,
+				"positionForward": 5.7,
+				"symmetrical": false,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
+	"458x1980mmR": {
+		"label": "458 x 1980 mmR",
+		"kind": "weapon",
+		"subkind": "shell",
+		"length": 1.980,
+		"width": 0.458,
+		"speed": 780,
+		"range": 25000
+	},
 	"6pounder": {
 		"label": "6-Pounder",
 		"link": "https://en.wikipedia.org/wiki/Ordnance_QF_6-pounder",
@@ -2702,6 +2799,25 @@
 		"length": 21.9,
 		"width": 5.1328,
 		"range": 60
+	},
+	"e4n": {
+		"label": "Nakajima E4N",
+		"link": "https://en.wikipedia.org/wiki/Nakajima_E4N",
+		"kind": "aircraft",
+		"subkind": "plane",
+		"level": 5,
+		"length": 8.87,
+		"width": 10.25,
+		"speed": 41.15,
+		"range": 1019000,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [
+			{
+				"type": "mark18"
+			}
+		]
 	},
 	"essm": {
 		"label": "ESSM",

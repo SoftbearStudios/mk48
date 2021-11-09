@@ -13,7 +13,7 @@ use core_protocol::name::{trim_spaces, Location, PlayerAlias, Referrer};
 use core_protocol::UnixTime;
 use core_protocol::*;
 use log::{debug, info, trace, warn};
-use rustrict::CensorIter;
+use rustrict::{Censor, Type};
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::HashSet;
 use std::rc::Rc;
@@ -462,7 +462,9 @@ impl Repo {
                     }
                 }
                 if !prohibited {
-                    let censored_text = uncensored_alias.0.chars().censor().collect::<String>();
+                    let censored_text = Censor::new(uncensored_alias.0.chars())
+                        .with_censor_first_character_threshold(Type::INAPPROPRIATE)
+                        .censor();
                     let trimmed_text = trim_spaces(&censored_text);
                     if !trimmed_text.is_empty() {
                         let censored_alias = PlayerAlias::new(trimmed_text);

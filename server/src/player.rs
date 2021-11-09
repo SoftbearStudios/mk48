@@ -82,11 +82,16 @@ pub struct Player {
 impl Player {
     /// new allocates a player with Status::Spawning.
     pub fn new(player_id: PlayerId) -> Self {
+        #[cfg(debug_assertions)]
+        use common::entity::EntityData;
+        #[cfg(debug_assertions)]
+        use common::util::level_to_score;
+
         Self {
             player_id,
             team_id: None,
             #[cfg(debug_assertions)]
-            score: 500,
+            score: level_to_score(EntityData::MAX_BOAT_LEVEL),
             #[cfg(not(debug_assertions))]
             score: 0,
             status: Status::Spawning {

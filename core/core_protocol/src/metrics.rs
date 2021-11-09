@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::ops::Add;
 
-pub trait Metric: Sized + Add {
+pub trait Metric: Sized + Add + Default {
     type Summary: Serialize + DeserializeOwned;
 
     // Must be a tuple. First value is most important.
@@ -100,10 +100,16 @@ impl Add for ExtremaMetric {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            count: self.count.saturating_add(rhs.count),
-            min: self.min.min(rhs.min),
-            max: self.max.max(rhs.max),
+        if self.count == 0 {
+            rhs
+        } else if rhs.count == 0 {
+            self
+        } else {
+            Self {
+                count: self.count.saturating_add(rhs.count),
+                min: self.min.min(rhs.min),
+                max: self.max.max(rhs.max),
+            }
         }
     }
 }
@@ -117,6 +123,7 @@ pub struct RatioMetric {
 
 impl RatioMetric {
     pub fn push(&mut self, condition: bool) {
+        debug_assert!(self.count <= self.total);
         if self.total < u32::MAX {
             self.total += 1;
             if condition {
@@ -161,9 +168,10 @@ impl Add for RatioMetric {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
+        let max = u32::MAX - rhs.total;
         Self {
-            total: self.total.saturating_add(rhs.total),
-            count: self.count.saturating_add(rhs.count),
+            total: self.total + rhs.total.min(max),
+            count: self.count + rhs.count.min(max),
         }
     }
 }
@@ -309,12 +317,98 @@ impl Add for ContinuousExtremaMetric {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
+        if self.count == 0 {
+            rhs
+        } else if rhs.count == 0 {
+            self
+        } else {
+            Self {
+                count: self.count.saturating_add(rhs.count),
+                min: self.min.min(rhs.min),
+                max: self.max.max(rhs.max),
+                total: self.total + rhs.total,
+                squared_total: self.squared_total + rhs.squared_total,
+            }
+        }
+    }
+}
+
+const BUCKET_COUNT: usize = 10;
+const BUCKET_SIZE: usize = 10;
+
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+pub struct HistogramMetric {
+    buckets: [u32; BUCKET_COUNT], // How many samples have value 0.0-9.99, 10.0-19.99, ... ?
+    overflow: u32,                // How many samples have value below the min bucket?
+    underflow: u32,               // How many samples have value above the max bucket?
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct HistogramMetricSummary {
+    buckets: [f32; BUCKET_COUNT], // What percent samples have value 0.0-9.99, 10.0-19.99, ... ?
+    overflow: f32,                // What percent samples have value below the min bucket?
+    underflow: f32,               // What percent samples have value above the max bucket?
+}
+
+impl HistogramMetric {
+    pub fn push(&mut self, sample: f32) {
+        if sample < 0.0 {
+            self.underflow = self.underflow.saturating_add(1);
+        } else if sample > (BUCKET_COUNT * BUCKET_SIZE) as f32 {
+            self.overflow = self.overflow.saturating_add(1);
+        } else {
+            let bucket = ((sample / BUCKET_SIZE as f32) as usize).min(BUCKET_COUNT - 1);
+            self.buckets[bucket] = self.buckets[bucket].saturating_add(1);
+        }
+    }
+}
+
+impl Metric for HistogramMetric {
+    type Summary = HistogramMetricSummary;
+    type DataPoint = ();
+
+    fn summarize(&self) -> Self::Summary {
+        let to_percent =
+            100f32 / (self.buckets.iter().sum::<u32>() + self.overflow + self.underflow) as f32;
+        let mut buckets = [0f32; BUCKET_COUNT];
+        for (&a, b) in self.buckets.iter().zip(buckets.iter_mut()) {
+            *b = a as f32 * 100.0 * to_percent;
+        }
+        let overflow = self.overflow as f32 * to_percent;
+        let underflow = self.underflow as f32 * to_percent;
+
+        HistogramMetricSummary {
+            buckets,
+            overflow,
+            underflow,
+        }
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
+        ()
+    }
+}
+
+impl Add for HistogramMetric {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut buckets = [0u32; BUCKET_COUNT];
+        for ((a, b), c) in self
+            .buckets
+            .iter()
+            .zip(rhs.buckets.iter())
+            .zip(buckets.iter_mut())
+        {
+            *c = a.saturating_add(*b);
+        }
+        let overflow = self.overflow + rhs.overflow;
+        let underflow = self.underflow + rhs.underflow;
+
         Self {
-            count: self.count.saturating_add(rhs.count),
-            min: self.min.min(rhs.min),
-            max: self.max.max(rhs.max),
-            total: self.total + rhs.total,
-            squared_total: self.squared_total + rhs.squared_total,
+            buckets,
+            overflow,
+            underflow,
         }
     }
 }

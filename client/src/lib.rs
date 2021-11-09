@@ -17,6 +17,7 @@ mod animation;
 mod audio;
 mod particle;
 mod reconn_web_socket;
+mod text_cache;
 mod web_socket;
 
 use crate::game::Game;
@@ -176,7 +177,7 @@ fn borrow_game() -> RefMut<'static, Game> {
 ///
 /// This should be used instead of [`borrow_game()`] if mitigation of JavaScript "Immediate Events"
 /// is a concern (if calls were observed to interrupt already-executing WebAssembly).
-fn with_game<F: Fn(RefMut<'static, Game>)>(function: F) {
+fn with_game<F: FnOnce(RefMut<'static, Game>)>(function: F) {
     unsafe {
         if let Ok(game) = GAME.get_mut().assume_init_ref().try_borrow_mut() {
             function(game);
@@ -186,7 +187,7 @@ fn with_game<F: Fn(RefMut<'static, Game>)>(function: F) {
 
 #[wasm_bindgen(js_name = "handleSpawn")]
 pub fn handle_spawn(name: String, entity_type: String) {
-    borrow_game().spawn(name, parse_enum(&entity_type));
+    with_game(move |mut game| game.spawn(name, parse_enum(&entity_type)));
 }
 
 #[wasm_bindgen]
@@ -197,8 +198,7 @@ pub enum MouseButton {
 
 #[wasm_bindgen(js_name = "handleMouseButton")]
 pub fn handle_mouse_button(button: MouseButton, down: bool) {
-    let mut game = borrow_game();
-    game.input.handle_mouse_button(button, down);
+    with_game(move |mut game| game.input.handle_mouse_button(button, down));
 }
 
 #[wasm_bindgen(js_name = "handleMouseMove")]

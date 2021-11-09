@@ -9,7 +9,7 @@ use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::name::*;
 use log::{debug, error, warn};
-use rustrict::CensorIter;
+use rustrict::{Censor, Type};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
@@ -178,7 +178,9 @@ impl Repo {
             arena_id, session_id, team_name
         );
 
-        let censored_text = team_name.0.chars().censor().collect::<String>();
+        let censored_text = Censor::new(team_name.0.chars())
+            .with_censor_first_character_threshold(Type::INAPPROPRIATE)
+            .censor();
         let trimmed_text = trim_spaces(&censored_text);
         let censored_team_name = TeamName::new(trimmed_text);
 

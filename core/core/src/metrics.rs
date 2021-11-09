@@ -22,44 +22,66 @@ const MINUTE_IN_MILLIS: u64 = 60000;
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Metrics {
     /// How many arenas are in cache.
+    #[serde(default)]
     pub arenas_cached: DiscreteMetric,
     /// Ratio of new players that leave without ever playing.
+    #[serde(default)]
     pub bounce: RatioMetric,
     /// How many concurrent players.
+    #[serde(default)]
     pub concurrent: ContinuousExtremaMetric,
     /// How many connections are open.
+    #[serde(default)]
     pub connections: ContinuousExtremaMetric,
     /// Percent of available server CPU required by service.
+    #[serde(default)]
     pub cpu: ContinuousExtremaMetric,
     /// Ratio of new players that play only once and leave quickly.
+    #[serde(default)]
     pub flop: RatioMetric,
     /// Ratio of new players who were invited to new players who were not.
+    #[serde(default)]
     pub invited: RatioMetric,
     /// Minutes per completed play (a measure of engagement).
+    #[serde(default)]
     pub minutes_per_play: ContinuousExtremaMetric,
     /// Minutes played, per session, during the metrics period.
+    #[serde(default)]
     pub minutes_per_session: ContinuousExtremaMetric,
     /// Ratio of unique players that are new to players that are not.
+    #[serde(default)]
     pub new: RatioMetric,
     /// Ratio of previous players that leave without playing (e.g. to peek at player count).
+    #[serde(default)]
     pub peek: RatioMetric,
     /// Plays per session (a measure of engagement).
+    #[serde(default)]
     pub plays_per_session: ContinuousExtremaMetric,
     /// Plays total (aka impressions).
+    #[serde(default)]
     pub plays_total: DiscreteMetric,
     /// Percent of available server RAM required by service.
+    #[serde(default)]
     pub ram: ContinuousExtremaMetric,
     /// Player retention in days.
-    pub retention: ContinuousExtremaMetric,
+    #[serde(default)]
+    pub retention_days: ContinuousExtremaMetric,
+    /// Player retention histogram.
+    // TODO:  pub retention_histogram: HistogramMetric,
     /// Score per completed play.
+    #[serde(default)]
     pub score: ContinuousExtremaMetric,
     /// Total sessions in cache.
+    #[serde(default)]
     pub sessions_cached: DiscreteMetric,
     /// Ratio of plays that end team-less to plays that don't.
+    #[serde(default)]
     pub teamed: RatioMetric,
     /// Ratio of inappropriate messages to total.
+    #[serde(default)]
     pub toxicity: RatioMetric,
     /// Uptime in (fractional) days.
+    #[serde(default)]
     pub uptime: ContinuousExtremaMetric,
 }
 
@@ -80,7 +102,7 @@ impl Metrics {
             plays_per_session: self.plays_per_session.summarize(),
             plays_total: self.plays_total.summarize(),
             ram: self.ram.summarize(),
-            retention: self.retention.summarize(),
+            retention_days: self.retention_days.summarize(),
             score: self.score.summarize(),
             sessions_cached: self.sessions_cached.summarize(),
             teamed: self.teamed.summarize(),
@@ -105,7 +127,7 @@ impl Metrics {
             plays_per_session: self.plays_per_session.data_point(),
             plays_total: self.plays_total.data_point(),
             ram: self.ram.data_point(),
-            retention: self.retention.data_point(),
+            retention_days: self.retention_days.data_point(),
             score: self.score.data_point(),
             sessions_cached: self.sessions_cached.data_point(),
             teamed: self.teamed.data_point(),
@@ -135,7 +157,7 @@ impl Add for Metrics {
             plays_per_session: self.plays_per_session + rhs.plays_per_session,
             plays_total: self.plays_total + rhs.plays_total,
             ram: self.ram + rhs.ram,
-            retention: self.retention + rhs.retention,
+            retention_days: self.retention_days + rhs.retention_days,
             score: self.score + rhs.score,
             sessions_cached: self.sessions_cached + rhs.sessions_cached,
             teamed: self.teamed + rhs.teamed,
@@ -324,7 +346,7 @@ impl Repo {
                 let session_start = session.date_previous.unwrap_or(session.date_created);
                 let days = session_stop.saturating_sub(session_start) as f32
                     / (24 * 60 * 60 * 1000) as f32;
-                metrics.retention.push(days);
+                metrics.retention_days.push(days);
 
                 let mut activity_minutes = 0.0;
                 let mut bounced_or_peeked = true;

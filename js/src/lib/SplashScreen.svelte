@@ -110,8 +110,8 @@
 	{/if}
 	<!--<small>Server maintainance in progress</small>-->
 	<form on:submit|preventDefault|stopPropagation={handleSubmit}>
-		<input type='text' name='name' placeholder='Nickname' autocomplete='off' minlength={minNameLength} maxlength={maxNameLength} bind:value={name}/>
-		<select bind:value={type}>
+		<input type='text' name='name' placeholder='Nickname' disabled={transitioning} autocomplete='off' minlength={minNameLength} maxlength={maxNameLength} bind:value={name}/>
+		<select disabled={transitioning} bind:value={type}>
 			{#each getSpawnable() as type}
 				<option value={type}>{entityData[type].label}</option>
 			{/each}
@@ -123,10 +123,10 @@
 		{/if}
 	</form>
 	<span>
-		<a href='#/help'>{$t('panel.splash.action.help.label')}</a>
-		<a href='#/about'>{$t('panel.splash.action.about.label')}</a>
-		<a href='#/privacy'>{$t('panel.splash.action.privacy.label')}</a>
-		<a href='#/terms'>{$t('panel.splash.action.terms.label')}</a>
+		<a href='#/help' class:disabled={transitioning}>{$t('panel.splash.action.help.label')}</a>
+		<a href='#/about' class:disabled={transitioning}>{$t('panel.splash.action.about.label')}</a>
+		<a href='#/privacy' class:disabled={transitioning}>{$t('panel.splash.action.privacy.label')}</a>
+		<a href='#/terms' class:disabled={transitioning}>{$t('panel.splash.action.terms.label')}</a>
 	</span>
 </div>
 
@@ -239,5 +239,10 @@
 		margin-right: 0.25em;
 		white-space: nowrap;
 		font-size: 1.2em;
+	}
+
+	a.disabled {
+		pointer-events: none;
+		opacity: 0.6;
 	}
 </style>

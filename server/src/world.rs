@@ -6,7 +6,7 @@ use crate::entities::{Entities, EntityIndex};
 use crate::entity::Entity;
 use crate::noise::noise_generator;
 use common::death_reason::DeathReason;
-use common::entity::EntityKind;
+use common::entity::{EntityKind, EntityType};
 use common::terrain::Terrain;
 use common::ticks::Ticks;
 use std::sync::Mutex;
@@ -37,10 +37,20 @@ impl World {
         self.physics_radius(delta);
         self.arena.recycle();
 
-        let boat_count = self.arena.count_kind(EntityKind::Boat);
-        let target_radius = Self::target_radius(boat_count, Self::BOAT_DENSITY);
+        let total_visual_area = EntityType::iter()
+            .map(|t| {
+                let data = t.data();
+                if data.kind == EntityKind::Boat {
+                    self.arena.count(t) as f32 * data.visual_area()
+                } else {
+                    0.0
+                }
+            })
+            .sum::<f32>();
+
+        let target_radius = Self::target_radius(total_visual_area);
         let s = delta.to_secs();
-        self.radius += (target_radius - self.radius).clamp(s * -0.25, s * 0.5);
+        self.radius += (target_radius - self.radius).clamp(s * -0.5, s);
     }
 
     /// add adds an entity to the world (assigning it an id).
@@ -77,9 +87,9 @@ impl World {
     }
 
     /// target_radius returns the eventual size of the world, assuming it is nudged in the direction
-    /// of meeting a certain target density.
-    pub fn target_radius(count: usize, density: f32) -> f32 {
-        (count as f32 / (density * std::f32::consts::PI))
+    /// of meeting the target visual overlap.
+    pub fn target_radius(total_visual_area: f32) -> f32 {
+        (total_visual_area * Self::BOAT_VISUAL_OVERLAP / std::f32::consts::PI)
             .sqrt()
             .clamp(400.0, Self::max_radius())
     }
