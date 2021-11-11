@@ -16,7 +16,7 @@
         '/day/:userAgent/:referrer': Day,
         '/referrers': Referrers,
         '/userAgents': UserAgents,
-        '/series/:period': Series,
+        '/series/:period/:resolution': Series,
     }
 </script>
 

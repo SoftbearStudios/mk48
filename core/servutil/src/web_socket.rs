@@ -10,15 +10,15 @@ use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
 use core_protocol::web_socket::WebSocketFormat;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::time::{Duration, Instant};
 
-const TIMER_SECONDS: u64 = 30;
+const TIMER_SECONDS: u64 = 5;
 pub const TIMER_DURATION: Duration = Duration::from_secs(TIMER_SECONDS);
 pub const WEBSOCK_SOFT_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 4 / 5);
-pub const WEBSOCK_HARD_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 3);
+pub const WEBSOCK_HARD_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 2);
 
 pub async fn sock_index<A, I, O>(
     r: HttpRequest,
@@ -85,14 +85,19 @@ where
 
     fn start_timer(&self, ctx: &mut <Self as Actor>::Context) {
         ctx.run_interval(TIMER_DURATION, |act, ctx| {
-            let elapsed = Instant::now().duration_since(act.date_last_activity);
+            let elapsed = act.date_last_activity.elapsed();
             if elapsed > WEBSOCK_HARD_TIMEOUT {
-                warn!("disconnect unresponsive websocket");
+                warn!(
+                    "disconnect unresponsive websocket {:?} {:?}",
+                    act.format, elapsed
+                );
                 ctx.close(None);
                 ctx.stop();
             } else if elapsed > WEBSOCK_SOFT_TIMEOUT {
-                debug!("ping idle websocket");
+                warn!("ping idle websocket {:?} {:?}", act.format, elapsed);
                 ctx.ping(b"");
+            } else {
+                info!("websocket is responsive {:?} {:?}", act.format, elapsed);
             }
         });
     }
@@ -114,12 +119,16 @@ where
         });
 
         self.start_timer(ctx);
+
+        info!("websocket started {:?}", self.format);
     }
 
     fn stopped(&mut self, ctx: &mut Self::Context) {
         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Unregister {
             observer: ctx.address().recipient(),
         });
+
+        info!("websocket stopped {:?}", self.format);
     }
 }
 

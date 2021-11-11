@@ -19,11 +19,13 @@ use servutil::benchmark_scope;
 
 impl World {
     /// Target square meters of world per square meter of player vision.
-    pub const BOAT_VISUAL_OVERLAP: f32 = 0.3;
+    pub const BOAT_VISUAL_OVERLAP: f32 = 0.28;
     /// Target density of crates (per square meter).
     const CRATE_DENSITY: f32 = 1.0 / 30000.0;
     /// Target density of obstacles (per square meter).
     const OBSTACLE_DENSITY: f32 = 1.0 / 1000000.0;
+    /// Target density of vegetation (per square meter).
+    // const VEGETATION_DENSITY: f32 = 1.0 / 100000.0;
 
     /// spawn_here_or_nearby spawns an entity, adjusting it's position and/or rotation until
     /// it can spawn without colliding with world objects.
@@ -129,7 +131,8 @@ impl World {
         if self.terrain.land_in_square(
             entity.transform.position,
             (entity.data().radius * 2.0 + 100.0) * threshold,
-        ) {
+        ) != data.is_land_based()
+        {
             return false;
         }
 
@@ -175,6 +178,15 @@ impl World {
             self.target_count(Self::OBSTACLE_DENSITY),
             ticks.0 as usize * 2,
         );
+
+        /*
+        self.spawn_static_amount(
+            EntityType::Acacia,
+            self.arena.count(EntityType::Acacia),
+            self.target_count(Self::VEGETATION_DENSITY).max(0),
+            ticks.0 as usize,
+        )
+         */
     }
 
     /// Spawns a certain amount of basic entities, all throughout the world.

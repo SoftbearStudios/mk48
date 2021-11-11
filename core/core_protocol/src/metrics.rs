@@ -334,7 +334,7 @@ impl Add for ContinuousExtremaMetric {
 }
 
 const BUCKET_COUNT: usize = 10;
-const BUCKET_SIZE: usize = 10;
+const BUCKET_SIZE: usize = 1;
 
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct HistogramMetric {
@@ -368,11 +368,15 @@ impl Metric for HistogramMetric {
     type DataPoint = ();
 
     fn summarize(&self) -> Self::Summary {
-        let to_percent =
-            100f32 / (self.buckets.iter().sum::<u32>() + self.overflow + self.underflow) as f32;
+        let total = self.buckets.iter().sum::<u32>() + self.overflow + self.underflow;
+        let to_percent = if total == 0 {
+            0f32
+        } else {
+            100f32 / total as f32
+        };
         let mut buckets = [0f32; BUCKET_COUNT];
         for (&a, b) in self.buckets.iter().zip(buckets.iter_mut()) {
-            *b = a as f32 * 100.0 * to_percent;
+            *b = a as f32 * to_percent;
         }
         let overflow = self.overflow as f32 * to_percent;
         let underflow = self.underflow as f32 * to_percent;

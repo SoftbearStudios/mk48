@@ -40,6 +40,8 @@ pub struct Session {
     /// When last called create_session.
     pub date_renewed: UnixTime,
     pub date_terminated: Option<UnixTime>,
+    /// Frames per second, as reported by the game client.
+    pub fps: Option<f32>,
     pub game_id: GameId,
     /// e.g. (001, 215, 912)
     pub location: Option<Location>,
@@ -123,6 +125,7 @@ impl Session {
             date_previous,
             date_renewed: date_created,
             date_terminated: None,
+            fps: None,
             game_id,
             inbox: Vec::new(),
             invitation: None,
@@ -629,15 +632,17 @@ impl Repo {
         let mut liveboard_changed = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
+                let liveboard_can_change = !session.bot || arena.rules.show_bots_on_liveboard;
+
                 if let Some(play) = session.plays.last_mut() {
                     if play.date_stop.is_none() {
                         if let Some(value) = location {
                             session.location = Some(value);
-                            liveboard_changed = true;
+                            liveboard_changed = liveboard_can_change;
                         }
                         if let Some(value) = score {
                             play.score = Some(value);
-                            liveboard_changed = true;
+                            liveboard_changed = liveboard_can_change;
                         }
                     }
                 }
@@ -681,7 +686,9 @@ impl Repo {
                 }
                 let mut new_play = Play::new();
                 new_play.score = arena.rules.default_score;
-                if new_play.exceeds_score(arena.liveboard_min_score) {
+                if new_play.exceeds_score(arena.liveboard_min_score)
+                    && (!session.bot || arena.rules.show_bots_on_liveboard)
+                {
                     arena.liveboard_changed = true;
                 }
                 if invited {
@@ -730,7 +737,9 @@ impl Repo {
                     if play.date_stop.is_none() {
                         play.date_stop = Some(get_unix_time_now());
                     }
-                    if play.exceeds_score(arena.liveboard_min_score) {
+                    if play.exceeds_score(arena.liveboard_min_score)
+                        && (!session.bot || arena.rules.show_bots_on_liveboard)
+                    {
                         // Even if session remains live, remove from liveboard when play stops.
                         arena.liveboard_changed = true;
                     }

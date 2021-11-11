@@ -2,7 +2,7 @@
     import {adminRequest, game, round, wildcardToUndefined} from './util.js';
 
     const summaryBlacklist = [
-        "arenas_cached", "connections", "cpu", "ram", "retention", "sessions_cached", "uptime"
+        "arenas_cached", "connections", "cpu", "fps", "ram", "retention", "sessions_cached", "ups", "uptime"
     ];
 
     export const filterSummaryBlacklist = function(list) {
@@ -52,6 +52,8 @@
                             {#if value.standard_deviation != 0}
                                 ± {round(value.standard_deviation, 3)}
                             {/if}
+                        {:else if value.buckets}
+                            {JSON.stringify(value.buckets)}
                         {:else}
                             {JSON.stringify(value)}
                         {/if}
@@ -61,6 +63,8 @@
                             (min: {round(value.min, 2)}, max: {round(value.max, 2)})
                         {:else if typeof value.total === 'number'}
                             (total: {value.total})
+                        {:else if typeof value.underflow === 'number' && typeof value.overflow === 'number'}
+                            (underflow: {value.underflow}, overflow: {value.overflow})
                         {/if}
                     </td>
                 </tr>

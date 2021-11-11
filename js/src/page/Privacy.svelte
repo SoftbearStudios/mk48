@@ -60,7 +60,7 @@
 				<td>Forever</td>
 			</tr>
 			<tr>
-				<td>How long you play</td>
+				<td>How long you play, FPS</td>
 				<td>Game server</td>
 				<td>N/A</td>
 				<td>Provide for aggregate statistics</td>

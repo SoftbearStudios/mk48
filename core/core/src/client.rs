@@ -540,6 +540,11 @@ impl Repo {
                 }
             }
             ClientRequest::SubmitSurvey { survey: _ } => {}
+            ClientRequest::TallyFps { fps } => {
+                if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id) {
+                    self.tally_fps(arena_id, session_id, fps);
+                }
+            }
             ClientRequest::Trace { message } => {
                 println!("client_trace: {}", message);
                 result = Ok(ClientUpdate::Traced)

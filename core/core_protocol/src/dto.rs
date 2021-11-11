@@ -63,6 +63,7 @@ pub struct MetricsSummaryDto {
     pub connections: <ContinuousExtremaMetric as Metric>::Summary,
     pub cpu: <ContinuousExtremaMetric as Metric>::Summary,
     pub flop: <RatioMetric as Metric>::Summary,
+    pub fps: <ContinuousExtremaMetric as Metric>::Summary,
     pub invited: <RatioMetric as Metric>::Summary,
     pub minutes_per_play: <ContinuousExtremaMetric as Metric>::Summary,
     pub minutes_per_session: <ContinuousExtremaMetric as Metric>::Summary,
@@ -72,11 +73,12 @@ pub struct MetricsSummaryDto {
     pub plays_total: <DiscreteMetric as Metric>::Summary,
     pub ram: <ContinuousExtremaMetric as Metric>::Summary,
     pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
-    //pub retention_histogram: <HistogramMetric as Metric>::Summary,
+    pub retention_histogram: <HistogramMetric as Metric>::Summary,
     pub score: <ContinuousExtremaMetric as Metric>::Summary,
     pub sessions_cached: <DiscreteMetric as Metric>::Summary,
     pub teamed: <RatioMetric as Metric>::Summary,
     pub toxicity: <RatioMetric as Metric>::Summary,
+    pub ups: <ContinuousExtremaMetric as Metric>::Summary,
     pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
 }
 
@@ -88,6 +90,7 @@ pub struct MetricsDataPointDto {
     pub connections: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub cpu: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub flop: <RatioMetric as Metric>::DataPoint,
+    pub fps: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub invited: <RatioMetric as Metric>::DataPoint,
     pub minutes_per_play: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub minutes_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
@@ -97,11 +100,11 @@ pub struct MetricsDataPointDto {
     pub plays_total: <DiscreteMetric as Metric>::DataPoint,
     pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
-    //pub retention_histogram: <HistogramMetric as Metric>::DataPoint,
     pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
     pub teamed: <RatioMetric as Metric>::DataPoint,
     pub toxicity: <RatioMetric as Metric>::DataPoint,
+    pub ups: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
 }
 

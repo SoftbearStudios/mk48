@@ -9,7 +9,7 @@ use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
 use crate::text_cache::TextCache;
 use crate::texture::Texture;
-use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol};
+use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol, FpsMonitor};
 use crate::{
     has_webp, ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel,
     TeamPlayerModel,
@@ -74,6 +74,7 @@ pub struct Game {
     pub(crate) core_web_socket: ReconnWebSocket<ClientUpdate, ClientRequest>,
     terrain_texture: Option<Texture>,
     text_cache: TextCache,
+    fps_monitor: FpsMonitor,
 }
 
 /// A contact that may be locally controlled by simulated elsewhere (by the server).
@@ -177,6 +178,7 @@ impl Game {
             world_radius: 10000.0,
             saved_camera: None,
             created_invitation_id: None,
+            fps_monitor: FpsMonitor::new(),
         }
     }
 
@@ -1712,6 +1714,12 @@ impl Game {
             self.input.reset();
         }
         self.text_cache.tick();
+
+        if let Some(fps) = self.fps_monitor.update(delta_seconds) {
+            if !self.core_web_socket.is_closed() {
+                self.core_web_socket.send(ClientRequest::TallyFps { fps });
+            }
+        }
     }
 
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).

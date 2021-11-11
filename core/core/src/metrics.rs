@@ -1,16 +1,18 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::arena::Arena;
 use crate::repo::Repo;
 use crate::session::Session;
 use core_protocol::dto::{MetricsDataPointDto, MetricsSummaryDto};
-use core_protocol::id::{GameId, UserAgentId};
+use core_protocol::id::{ArenaId, GameId, SessionId, UserAgentId};
 use core_protocol::metrics::*;
 use core_protocol::name::Referrer;
 use core_protocol::{get_unix_time_now, UnixTime};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::iter::Sum;
 use std::ops::Add;
 use std::process::Command;
 use std::sync::Arc;
@@ -39,6 +41,9 @@ pub struct Metrics {
     /// Ratio of new players that play only once and leave quickly.
     #[serde(default)]
     pub flop: RatioMetric,
+    /// Client frames per second.
+    #[serde(default)]
+    pub fps: ContinuousExtremaMetric,
     /// Ratio of new players who were invited to new players who were not.
     #[serde(default)]
     pub invited: RatioMetric,
@@ -67,7 +72,8 @@ pub struct Metrics {
     #[serde(default)]
     pub retention_days: ContinuousExtremaMetric,
     /// Player retention histogram.
-    // TODO:  pub retention_histogram: HistogramMetric,
+    #[serde(default)]
+    pub retention_histogram: HistogramMetric,
     /// Score per completed play.
     #[serde(default)]
     pub score: ContinuousExtremaMetric,
@@ -80,6 +86,9 @@ pub struct Metrics {
     /// Ratio of inappropriate messages to total.
     #[serde(default)]
     pub toxicity: RatioMetric,
+    /// Server updates per second.
+    #[serde(default)]
+    pub ups: ContinuousExtremaMetric,
     /// Uptime in (fractional) days.
     #[serde(default)]
     pub uptime: ContinuousExtremaMetric,
@@ -94,6 +103,7 @@ impl Metrics {
             connections: self.connections.summarize(),
             cpu: self.cpu.summarize(),
             flop: self.flop.summarize(),
+            fps: self.fps.summarize(),
             invited: self.invited.summarize(),
             minutes_per_play: self.minutes_per_play.summarize(),
             minutes_per_session: self.minutes_per_session.summarize(),
@@ -103,10 +113,12 @@ impl Metrics {
             plays_total: self.plays_total.summarize(),
             ram: self.ram.summarize(),
             retention_days: self.retention_days.summarize(),
+            retention_histogram: self.retention_histogram.summarize(),
             score: self.score.summarize(),
             sessions_cached: self.sessions_cached.summarize(),
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
+            ups: self.ups.summarize(),
             uptime: self.uptime.summarize(),
         }
     }
@@ -119,6 +131,7 @@ impl Metrics {
             connections: self.connections.data_point(),
             cpu: self.cpu.data_point(),
             flop: self.flop.data_point(),
+            fps: self.fps.data_point(),
             invited: self.invited.data_point(),
             minutes_per_play: self.minutes_per_play.data_point(),
             minutes_per_session: self.minutes_per_session.data_point(),
@@ -132,6 +145,7 @@ impl Metrics {
             sessions_cached: self.sessions_cached.data_point(),
             teamed: self.teamed.data_point(),
             toxicity: self.toxicity.data_point(),
+            ups: self.ups.data_point(),
             uptime: self.uptime.data_point(),
         }
     }
@@ -149,6 +163,7 @@ impl Add for Metrics {
             connections: self.connections + rhs.connections,
             cpu: self.cpu + rhs.cpu,
             flop: self.flop + rhs.flop,
+            fps: self.fps + rhs.fps,
             invited: self.invited + rhs.invited,
             minutes_per_play: self.minutes_per_play + rhs.minutes_per_play,
             minutes_per_session: self.minutes_per_session + rhs.minutes_per_session,
@@ -158,12 +173,24 @@ impl Add for Metrics {
             plays_total: self.plays_total + rhs.plays_total,
             ram: self.ram + rhs.ram,
             retention_days: self.retention_days + rhs.retention_days,
+            retention_histogram: self.retention_histogram + rhs.retention_histogram,
             score: self.score + rhs.score,
             sessions_cached: self.sessions_cached + rhs.sessions_cached,
             teamed: self.teamed + rhs.teamed,
             toxicity: self.toxicity + rhs.toxicity,
+            ups: self.ups + rhs.ups,
             uptime: self.uptime + rhs.uptime,
         }
+    }
+}
+
+impl Sum for Metrics {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut total = Self::default();
+        for item in iter {
+            total = total + item;
+        }
+        total
     }
 }
 
@@ -200,12 +227,13 @@ impl Repo {
         let mut hash: HashMap<GameId, u32> = HashMap::new();
         let mut total = 0;
         for (_, arena) in self.arenas.iter() {
+            let count = hash.entry(arena.game_id).or_insert(0);
+
             for (_, session) in arena.sessions.iter() {
                 if session.bot {
                     continue;
                 }
                 total += 1;
-                let count = hash.entry(session.game_id).or_insert(0);
                 *count += 1;
             }
         }
@@ -324,6 +352,9 @@ impl Repo {
                 now.saturating_sub(arena.date_created) as f32
                     * (1.0 / (1000.0 * 60.0 * 60.0 * 24.0)) as f32,
             );
+            if let Some(ups) = arena.ups {
+                metrics.ups.push(ups);
+            }
 
             let mut concurrency_buckets = vec![0u32; bucket_count as usize];
             let mut unique_visitors = HashSet::new();
@@ -333,8 +364,6 @@ impl Repo {
                     continue;
                 }
 
-                metrics.sessions_cached.increment();
-
                 let session_stop = session.date_terminated.unwrap_or(clip_stop);
                 if session_stop < clip_start {
                     continue;
@@ -342,11 +371,13 @@ impl Repo {
                 if !filter(session) {
                     continue;
                 }
+                metrics.sessions_cached.increment();
 
                 let session_start = session.date_previous.unwrap_or(session.date_created);
                 let days = session_stop.saturating_sub(session_start) as f32
                     / (24 * 60 * 60 * 1000) as f32;
                 metrics.retention_days.push(days);
+                metrics.retention_histogram.push(days);
 
                 let mut activity_minutes = 0.0;
                 let mut bounced_or_peeked = true;
@@ -423,6 +454,9 @@ impl Repo {
                     continue;
                 }
 
+                if let Some(fps) = session.fps {
+                    metrics.fps.push(fps);
+                }
                 metrics.toxicity = metrics.toxicity + session.chat_history.toxicity;
 
                 metrics.minutes_per_session.push(activity_minutes);
@@ -488,5 +522,27 @@ impl Repo {
         list.into_iter()
             .map(|(user_agent_id, count)| (user_agent_id, count as f32 / total as f32))
             .collect()
+    }
+
+    pub fn tally_fps(&mut self, arena_id: ArenaId, session_id: SessionId, fps: f32) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
+                session.fps = Some(Self::sanitize_tps(fps));
+            }
+        }
+    }
+
+    pub fn tally_ups(&mut self, arena_id: ArenaId, ups: f32) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+            arena.ups = Some(Self::sanitize_tps(ups));
+        }
+    }
+
+    fn sanitize_tps(tps: f32) -> f32 {
+        if tps.is_finite() {
+            tps.clamp(0.0, 144.0)
+        } else {
+            0.0
+        }
     }
 }

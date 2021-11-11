@@ -1,8 +1,9 @@
 <script>
-    import {periods} from './Series.svelte';
+    import {periods, resolutions} from './Series.svelte';
     import {game, games} from './util.js';
 
-    import {link, location} from 'svelte-spa-router'
+
+    import {link} from 'svelte-spa-router'
     import active from 'svelte-spa-router/active'
 </script>
 
@@ -11,7 +12,7 @@
     <a class="navbtn" href="/day/*/*" use:link use:active>Day</a>
     <a class="navbtn" href="/referrers" use:link use:active>Referrers</a>
     <a class="navbtn" href="/userAgents" use:link use:active>User Agents</a>
-    <a class="navbtn" href="/series/{periods[0]}" use:link use:active={'/series/*'}>Series</a>
+    <a class="navbtn" href="/series/{periods[0]}/{resolutions[0]}" use:link use:active={'/series/*/*'}>Series</a>
     <div class="selections">
         <slot/>
         {#if !$games}

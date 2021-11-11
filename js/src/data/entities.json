@@ -555,6 +555,7 @@
 			}
 		],
 		"antiAircraft": 0.2,
+		"torpedoResistance": 0.4,
 		"damage": 8.053333333333333
 	},
 	"dredger": {
@@ -1860,6 +1861,7 @@
 			}
 		],
 		"antiAircraft": 0.209,
+		"torpedoResistance": 0.2,
 		"damage": 8.4
 	},
 	"kolkata": {
@@ -2370,6 +2372,7 @@
 			}
 		],
 		"antiAircraft": 0.138,
+		"torpedoResistance": 0.2,
 		"damage": 5.636666666666667
 	},
 	"lublin": {
@@ -2810,6 +2813,7 @@
 			}
 		],
 		"antiAircraft": 0.234,
+		"torpedoResistance": 0.4,
 		"damage": 9.36
 	},
 	"moskva": {
@@ -3643,6 +3647,7 @@
 			}
 		],
 		"antiAircraft": 0.148,
+		"torpedoResistance": 0.2,
 		"damage": 6.010000000000001
 	},
 	"type055": {
@@ -4091,6 +4096,7 @@
 		"width": 40.0664,
 		"draft": 11,
 		"speed": 13.89,
+		"torpedoResistance": 0.2,
 		"sensors": {
 			"visual": {
 				"range": 1126
@@ -5644,7 +5650,7 @@
 		"speed": 618.75,
 		"reload": 6,
 		"lifespan": 1.3737373737373737,
-		"damage": 1.70338,
+		"damage": 0.6692289919357874,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []

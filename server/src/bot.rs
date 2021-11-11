@@ -14,6 +14,7 @@ use common::terrain::Terrain;
 use common::ticks::Ticks;
 use common::util::gen_radius;
 use glam::Vec2;
+use rand::rngs::ThreadRng;
 use rand::seq::IteratorRandom;
 use rand::{thread_rng, Rng};
 
@@ -36,11 +37,17 @@ impl Bot {
 
     pub fn new() -> Self {
         let mut rng = thread_rng();
+
+        fn random_level(rng: &mut ThreadRng) -> u8 {
+            rng.gen_range(1..=EntityData::MAX_BOAT_LEVEL)
+        }
+
         Self {
             // Raise aggression to a power such that lower values are more common.
             aggression: rng.gen::<f32>().powi(2) * Self::MAX_AGGRESSION,
             aim_bias: gen_radius(&mut rng, 10.0),
-            level_ambition: rng.gen_range(1..=EntityData::MAX_BOAT_LEVEL),
+            // Bias towards lower levels.
+            level_ambition: random_level(&mut rng).min(random_level(&mut rng)),
             spawned_at_least_once: false,
         }
     }
@@ -97,7 +104,7 @@ impl Bot {
                     terrain,
                     update.world_radius(),
                 ) {
-                    repel(&mut movement, delta_position, data.length.powi(2));
+                    repel(&mut movement, delta_position, 0.5 * data.length.powi(2));
                 }
             }
 
@@ -144,7 +151,11 @@ impl Bot {
                         EntityKind::Aircraft => true,
                         EntityKind::Weapon => contact_data.sub_kind == EntitySubKind::Missile,
                         EntityKind::Obstacle => {
-                            repel(&mut movement, delta_position, distance_squared);
+                            repel(
+                                &mut movement,
+                                delta_position,
+                                (distance_squared - contact_data.radius.powi(2)).max(0.0),
+                            );
                             false
                         }
                         _ => false,
@@ -186,7 +197,13 @@ impl Bot {
                             }
                         }
                         EntityKind::Boat => {
-                            if enemy.altitude().is_submerged() {
+                            if enemy.data().level == 1
+                                && armament_entity_data.sub_kind == EntitySubKind::Shell
+                            {
+                                // Don't attempt to sink level 1 boats with shells, as it is very
+                                // toxic for new players to die in this way.
+                                false
+                            } else if enemy.altitude().is_submerged() {
                                 matches!(
                                     armament_entity_data.sub_kind,
                                     EntitySubKind::Torpedo

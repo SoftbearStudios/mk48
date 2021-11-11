@@ -103,6 +103,18 @@ for (const entityType of Object.keys(entityDatas)) {
 					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
 			}
 
+			// Torpedo resistance.
+			if (typeof entityData.torpedoResistance !== 'number') {
+                switch (entityData.subkind) {
+                    case 'battleship':
+                        entityData.torpedoResistance = 0.4;
+                        break;
+                    case 'cruiser':
+                        entityData.torpedoResistance = 0.2;
+                        break;
+                }
+            }
+
 			switch (entityData.subkind) {
 				case 'pirate':
 					entityData.npc = true;
@@ -139,7 +151,17 @@ for (const entityType of Object.keys(entityDatas)) {
 						break;
 					case 'shell':
 						//entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
-						entityData.damage = Math.max(0.5 * Math.pow(entityData.length, 0.35), 0.14 * Math.pow(entityData.length, 3));
+						//console.log(entityData.label + ", " + (0.5 * Math.pow(entityData.length, 0.35) < 0.14 * Math.pow(entityData.length, 3)));
+
+						const normal = 0.5 * Math.pow(entityData.length, 0.35);
+						const special = 0.14 * Math.pow(entityData.length, 3);
+
+						if (entityData.width > 0.3) {
+						    entityData.damage = Math.max(normal, special);
+						} else {
+						    // Very long, small shells do not benefit from "special" damage calculation.
+						    entityData.damage = normal;
+						}
 						break;
 					case 'depthCharge':
 						entityData.damage = 0.8;

@@ -57,3 +57,43 @@ pub fn rgba(r: u8, b: u8, g: u8, a: u8) -> Vec4 {
 pub fn gray(v: u8) -> Vec3 {
     Vec3::splat(v as f32 * (1.0 / 255.0))
 }
+
+pub struct FpsMonitor {
+    elapsed: f32,
+    frames: u32,
+    first: bool,
+}
+
+impl FpsMonitor {
+    const FIRST_SAMPLE_DURATION: f32 = 10.0;
+    const SAMPLE_DURATION: f32 = 120.0;
+
+    pub fn new() -> Self {
+        Self {
+            elapsed: 0.0,
+            frames: 0,
+            first: true,
+        }
+    }
+
+    pub fn update(&mut self, delta_seconds: f32) -> Option<f32> {
+        self.frames = self.frames.saturating_add(1);
+        self.elapsed += delta_seconds;
+
+        if self.elapsed
+            >= if self.first {
+                Self::FIRST_SAMPLE_DURATION
+            } else {
+                Self::SAMPLE_DURATION
+            }
+        {
+            let fps = self.frames as f32 / self.elapsed as f32;
+            self.elapsed = 0.0;
+            self.frames = 0;
+            self.first = false;
+            Some(fps)
+        } else {
+            None
+        }
+    }
+}

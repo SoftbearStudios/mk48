@@ -39,6 +39,8 @@ pub struct Arena {
     pub sessions: HashMap<SessionId, Session>,
     pub server_id: Option<ServerId>,
     pub teams: HashMap<TeamId, Team>,
+    /// Updates per second, as reported by the game server.
+    pub ups: Option<f32>,
 }
 
 impl Arena {
@@ -68,6 +70,7 @@ impl Arena {
             sessions: HashMap::new(),
             server_id,
             teams: HashMap::new(),
+            ups: None,
         }
     }
 

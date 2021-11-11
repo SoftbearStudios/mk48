@@ -8,7 +8,7 @@
 
 	function levelToScore(level) {
 		// Must match server code
-		return (level * level - 1) * 10;
+		return (level * level + Math.pow(2, Math.max(level - 3, 0)) - 2) * 10;
 	}
 
 	function getUpgrades(type) {

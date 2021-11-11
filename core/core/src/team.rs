@@ -65,7 +65,9 @@ impl Repo {
                             play.team_id = Some(team_id);
                             play.date_join = Some(get_unix_time_now());
                             accepted = true;
-                            if play.exceeds_score(arena.liveboard_min_score) {
+                            if play.exceeds_score(arena.liveboard_min_score)
+                                && (!session.bot || arena.rules.show_bots_on_liveboard)
+                            {
                                 arena.liveboard_changed = true;
                             }
                             arena.broadcast_players.added(session_id); // Team membership is on roster.
@@ -215,7 +217,9 @@ impl Repo {
                             break team_id;
                         }
                     };
-                    if play.exceeds_score(arena.liveboard_min_score) {
+                    if play.exceeds_score(arena.liveboard_min_score)
+                        && (!session.bot || arena.rules.show_bots_on_liveboard)
+                    {
                         arena.liveboard_changed = true;
                     }
                     play.team_captain = true;

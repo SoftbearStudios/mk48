@@ -6,6 +6,7 @@ use crate::id::*;
 use crate::name::*;
 use crate::UnixTime;
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU8;
 use std::sync::Arc;
 
 // Admin requests are from the admin interface to the core service.
@@ -21,6 +22,8 @@ pub enum AdminRequest {
         game_id: GameId,
         period_start: Option<UnixTime>,
         period_stop: Option<UnixTime>,
+        // Resolution in hours.
+        resolution: Option<NonZeroU8>,
     },
     RequestStatus,
     RequestSummary {
@@ -80,6 +83,9 @@ pub enum ClientRequest {
     SubmitSurvey {
         survey: SurveyDto,
     },
+    TallyFps {
+        fps: f32,
+    },
     Trace {
         message: String,
     },
@@ -117,6 +123,9 @@ pub enum ServerRequest {
     StopPlay {
         session_id: SessionId,
         // In the future, may also add Option<ExitState>
+    },
+    TallyUps {
+        ups: f32,
     },
     ValidateSession {
         session_id: SessionId,

@@ -12,7 +12,7 @@ debug_core:
 	RUST_BACKTRACE=1 cargo run -- --debug-core -v -v -p 0 --database-read-only
 
 ssh:
-	ssh $(DEV_SERVER)
+	ssh $(SSH_OPTS) root@mk48.io
 
 dev0: target/release/server
 	cargo build --release

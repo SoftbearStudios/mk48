@@ -47,6 +47,7 @@ mod noise;
 mod player;
 mod protocol;
 mod server;
+mod ups_monitor;
 mod world;
 mod world_inbound;
 mod world_mutation;
@@ -198,10 +199,9 @@ fn main() {
                 let srv_clone = iter_srv.to_owned();
 
                 let app = App::new()
-                    /*
                     .wrap_fn(move |req, srv| {
                         use core_protocol::get_unix_time_now;
-                        use actix_web::dev::Service;
+                        //use actix_web::dev::Service;
                         // println!("{:?}", req.version());
                         use std::fs::OpenOptions;
                         if let Some(addr) = req.connection_info().remote_addr() {
@@ -225,7 +225,6 @@ fn main() {
                         }
                         srv.call(req)
                     })
-                     */
                     .wrap(RedirectHTTPS::default().set_enabled(use_ssl))
                     .wrap(middleware::Logger::default())
                     .service(web::resource("/client/ws/").route(web::get().to(

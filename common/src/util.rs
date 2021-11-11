@@ -26,7 +26,8 @@ pub fn map_ranges(number: f32, old: Range<f32>, new: Range<f32>, clamp_to_range:
 
 /// level_to_score converts a boat level to a score required to upgrade to it.
 pub const fn level_to_score(level: u8) -> u32 {
-    ((level as u32).pow(2) - 1) * 10
+    // For reference, https://www.desmos.com/calculator/8cwxdws7fp
+    ((level as u32).pow(2) + 2u32.pow(level.saturating_sub(3) as u32) - 2) * 10
 }
 
 /// respawn_score returns how much score is kept when a boat dies.

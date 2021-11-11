@@ -67,7 +67,7 @@ dependencies = [
 [[package]]
 name = "actix-http"
 version = "3.0.0-beta.11"
-source = "git+https://github.com/actix/actix-web#5e554dca35844c241e813663da09e20575d586d3"
+source = "git+https://github.com/actix/actix-web#2754608f3c98821a28c4f2a67d2ef40612587c04"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -2436,9 +2436,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.1.24"
+version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2b1e4a25b17bc414fcfddb09f622de200d893601e88f0b98a7b6fbdb3a8db24"
+checksum = "0a218acfd44e0f0c354ba051c37ef216b2fbf220902e4f7a9783ece1bf6d4e6a"
 dependencies = [
  "bitflags",
  "csv",

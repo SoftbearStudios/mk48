@@ -408,11 +408,7 @@ impl World {
                             .distance_squared(weapons[0].transform.position);
                         let r2 = boats[0].data().radius.powi(2);
 
-                        let damage_resistance = match (boats[0].data().sub_kind, weapons[0].data().sub_kind) {
-                            (EntitySubKind::Battleship, EntitySubKind::Torpedo) => 0.6,
-                            (EntitySubKind::Cruiser, EntitySubKind::Torpedo) => 0.8,
-                            _ => 1.0
-                        } * boats[0].extension().spawn_protection();
+                        let damage_resistance = boats[0].data().resistance_to_subkind(weapons[0].data().sub_kind) * boats[0].extension().spawn_protection();
 
                         let damage = Ticks::from_damage(
                             weapons[0].data().damage * collision_multiplier(dist2, r2) * damage_resistance,

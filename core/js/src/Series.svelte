@@ -2,6 +2,7 @@
     import {writable} from 'svelte/store';
     import {adminRequest, DAY, formatTimestamp, game} from './util.js';
     export const periods = ['week', 'month', 'quarter'];
+    export const resolutions = ['hour', 'day', 'week'];
 </script>
 
 <script>
@@ -13,15 +14,21 @@
 </script>
 
 <Nav>
-    <select on:change={event => replace(`/series/${event.target.value}`)} value={params.period}>
+    <select on:change={event => replace(`/series/${event.target.value}/${params.resolution}`)} value={params.period}>
         {#each periods as p}
             <option value={p}>{p}</option>
+        {/each}
+    </select>
+
+    <select on:change={event => replace(`/series/${params.period}/${event.target.value}`)} value={params.resolution}>
+        {#each resolutions as r}
+            <option value={r}>{r}</option>
         {/each}
     </select>
 </Nav>
 
 <main>
-    {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period]}})}
+    {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, day: 24, week: 24 * 7}[params.resolution]}})}
     {:then data}
         {#if data.SeriesRequested.series.length > 0}
             <div class="charts">

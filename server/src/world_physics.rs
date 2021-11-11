@@ -192,8 +192,8 @@ impl World {
                     .apply_guidance(data, entity.guidance, max_speed, delta_seconds);
                 entity.transform.do_kinematics(delta_seconds);
 
-                // Collide with terrain.
-                if entity.collides_with_terrain(terrain, delta_seconds) {
+                // An entity colliding with terrain/water when it shouldn't has consequences.
+                if entity.collides_with_terrain(terrain, delta_seconds) != data.is_land_based() {
                     if data.kind != EntityKind::Boat {
                         potential_limited_reload(entity);
                         return Some((index, Fate::Remove(DeathReason::Terrain)));

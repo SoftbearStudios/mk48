@@ -214,6 +214,11 @@ impl Repo {
                     }
                 }
             }
+            ServerRequest::TallyUps { ups } => {
+                if let Some(arena_id) = server.arena_id {
+                    self.tally_ups(arena_id, ups);
+                }
+            }
         }
 
         result

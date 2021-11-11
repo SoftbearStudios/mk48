@@ -4,6 +4,7 @@
 use crate::bot::*;
 use crate::player::*;
 use crate::protocol::*;
+use crate::ups_monitor::UpsMonitor;
 use crate::world::World;
 use crate::world_mutation::Mutation;
 use actix::prelude::*;
@@ -40,6 +41,7 @@ pub struct Server {
     server_id: Option<ServerId>,
     counter: Ticks,
     min_players: usize,
+    ups_monitor: UpsMonitor,
 }
 
 /// The status of an player from the perspective of the core.
@@ -92,6 +94,7 @@ impl Server {
             server_id,
             min_players,
             arena_id: None,
+            ups_monitor: UpsMonitor::new(),
         }
     }
 
@@ -182,6 +185,13 @@ impl Server {
         self.world.terrain.post_update();
 
         self.flush_limbo(ctx);
+
+        if let Some(ups) = self.ups_monitor.update() {
+            self.core.do_send(ObserverMessage::Request {
+                observer: ctx.address().recipient(),
+                request: ServerRequest::TallyUps { ups },
+            })
+        }
     }
 
     /// Permanently removes clients that have expired from limbo.

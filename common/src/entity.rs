@@ -85,6 +85,7 @@ pub enum EntitySubKind {
     Submarine,
     Tanker,
     Torpedo,
+    Tree,
 }
 
 #[allow(dead_code)]
@@ -120,6 +121,8 @@ pub struct EntityData {
     pub damage: f32,
     #[serde(default)]
     pub anti_aircraft: f32,
+    #[serde(default)]
+    pub torpedo_resistance: f32,
     #[serde(default)]
     pub stealth: f32,
     #[serde(default)]
@@ -165,6 +168,11 @@ impl EntityData {
         self.sensors.visual.range.powi(2) * std::f32::consts::PI
     }
 
+    /// returns whether this entity type primarily/only exists on land, as opposed to water.
+    pub fn is_land_based(&self) -> bool {
+        self.sub_kind == EntitySubKind::Tree
+    }
+
     /// max_health returns the the minimum damage to kill a boat, panicking if the corresponding
     /// entity does not have health.
     pub fn max_health(&self) -> Ticks {
@@ -172,6 +180,14 @@ impl EntityData {
             return Ticks::from_damage(self.damage);
         }
         unreachable!("only boats have health");
+    }
+
+    /// Returns multiplier for damage due to given sub kind.
+    pub fn resistance_to_subkind(&self, sub_kind: EntitySubKind) -> f32 {
+        1.0 - match sub_kind {
+            EntitySubKind::Torpedo => self.torpedo_resistance,
+            _ => 0.0,
+        }
     }
 
     /// armament_transform returns the entity-relative transform of a given armament.

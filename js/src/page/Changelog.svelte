@@ -13,6 +13,15 @@
 
 	<h2>2021</h2>
 
+	<h3>11/11/2021</h3>
+
+	<ul>
+		<li>Fix balancing issue with "Zumwalt" shell damage.</li>
+		<li>"Yamato" is (realistically) less torpedo-resistant than other battleships.</li>
+		<li>Higher levels cost exponentially more score.</li>
+		<li>Change bot AI to be a bit better at avoiding obstacles, and less likely to fire shells at level 1 players.</li>
+	</ul>
+
 	<h3>11/7/2021</h3>
 
 	<ul>

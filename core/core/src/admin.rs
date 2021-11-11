@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::core::*;
+use crate::metrics::Metrics;
 use crate::repo::*;
 use crate::session::Session;
 use actix::prelude::*;
@@ -52,6 +53,7 @@ impl Handler<ParameterizedAdminRequest> for Core {
                 game_id,
                 period_start,
                 period_stop,
+                resolution,
             } => Box::pin(
                 async move {
                     Core::database()
@@ -62,8 +64,17 @@ impl Handler<ParameterizedAdminRequest> for Core {
                 .map(move |db_result, _act, _ctx| {
                     if let Ok(loaded) = db_result {
                         let series: Arc<[(UnixTime, MetricsDataPointDto)]> = loaded
-                            .iter()
-                            .map(|item| (item.timestamp, item.metrics.data_point()))
+                            .rchunks(resolution.map(|v| v.get() as usize).unwrap_or(1))
+                            .map(|items| {
+                                (
+                                    items[0].timestamp,
+                                    items
+                                        .into_iter()
+                                        .map(|i| i.metrics.clone())
+                                        .sum::<Metrics>()
+                                        .data_point(),
+                                )
+                            })
                             .collect();
                         let message = AdminUpdate::SeriesRequested { series };
                         Ok(message)

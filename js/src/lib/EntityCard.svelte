@@ -63,7 +63,10 @@
 					<li>{entityData.kind === 'boat' ? 'Health' : 'Damage'}: {entityData.damage.toFixed(2)}</li>
 				{/if}
 				{#if entityData.antiAircraft}
-				<li>Anti-Aircraft: {entityData.antiAircraft.toFixed(2)}</li>
+				    <li>Anti-Aircraft: {entityData.antiAircraft.toFixed(2)}</li>
+				{/if}
+				{#if entityData.torpedoResistance}
+				    <li>Torpedo Resistance: {Math.round(entityData.torpedoResistance * 100)}%</li>
 				{/if}
 				{#if entityData.stealth}
 					<li>Stealth: {Math.round(entityData.stealth * 100)}%</li>
