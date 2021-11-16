@@ -52,8 +52,8 @@
                             {#if value.standard_deviation != 0}
                                 ± {round(value.standard_deviation, 3)}
                             {/if}
-                        {:else if value.buckets}
-                            {JSON.stringify(value.buckets)}
+                        {:else if Array.isArray(value.buckets)}
+                            {JSON.stringify(value.buckets.map(n => round(n, 1)))}
                         {:else}
                             {JSON.stringify(value)}
                         {/if}
@@ -64,7 +64,7 @@
                         {:else if typeof value.total === 'number'}
                             (total: {value.total})
                         {:else if typeof value.underflow === 'number' && typeof value.overflow === 'number'}
-                            (underflow: {value.underflow}, overflow: {value.overflow})
+                            (underflow: {round(value.underflow, 1)}, overflow: {round(value.overflow, 1)})
                         {/if}
                     </td>
                 </tr>

@@ -67,7 +67,8 @@ dependencies = [
 [[package]]
 name = "actix-http"
 version = "3.0.0-beta.11"
-source = "git+https://github.com/actix/actix-web#2754608f3c98821a28c4f2a67d2ef40612587c04"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9b510d35f13987537289f38bf136e7e702a5c87cc28760310cc459544f40afd"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -94,6 +95,7 @@ dependencies = [
  "local-channel",
  "log",
  "mime",
+ "once_cell",
  "percent-encoding",
  "pin-project",
  "pin-project-lite",
@@ -194,6 +196,7 @@ dependencies = [
  "actix-utils",
  "derive_more",
  "futures-core",
+ "http",
  "log",
  "tokio-rustls 0.23.1",
  "tokio-util",
@@ -377,6 +380,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90c108c1a94380c89d2215d0ac54ce09796823cca0fd91b299cfff3b33e346fb"
 
 [[package]]
+name = "async-trait"
+version = "0.1.51"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44318e776df68115a881de9a8fd1b9e53368d7a4a5ce4cc48517da3393233a5e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "atomic_refcell"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -398,6 +412,33 @@ name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
+
+[[package]]
+name = "awc"
+version = "3.0.0-beta.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "774d647a23d085bf35c83b6da5a6bd966fdc4af92ffce865befa9f3a8cf73015"
+dependencies = [
+ "actix-codec",
+ "actix-http",
+ "actix-rt",
+ "actix-service",
+ "base64",
+ "bytes",
+ "cfg-if",
+ "cookie",
+ "derive_more",
+ "futures-core",
+ "itoa",
+ "log",
+ "mime",
+ "percent-encoding",
+ "pin-project-lite",
+ "rand 0.8.4",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+]
 
 [[package]]
 name = "aws-config"
@@ -893,6 +934,7 @@ dependencies = [
  "actix-web",
  "actix-web-actors",
  "arrayvec 0.7.2",
+ "async-trait",
  "aws-config",
  "aws-sdk-dynamodb",
  "base64",
@@ -900,7 +942,7 @@ dependencies = [
  "core_protocol",
  "csv",
  "enum-iterator",
- "env_logger 0.8.4",
+ "env_logger",
  "futures",
  "lazy_static",
  "log",
@@ -1168,19 +1210,6 @@ name = "enum_derive"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "406ac2a8c9eedf8af9ee1489bee9e50029278a6456c740f7454cf8a158abc816"
-
-[[package]]
-name = "env_logger"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
-]
 
 [[package]]
 name = "env_logger"
@@ -2436,9 +2465,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.1.25"
+version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a218acfd44e0f0c354ba051c37ef216b2fbf220902e4f7a9783ece1bf6d4e6a"
+checksum = "eb81a4a2ca4a1023033d0cda7b66822b3d8ddc14e1e3fcd1d6139e0efbc0d3ef"
 dependencies = [
  "bitflags",
  "csv",
@@ -2654,7 +2683,7 @@ dependencies = [
  "core_protocol",
  "custom_derive",
  "enum_derive",
- "env_logger 0.9.0",
+ "env_logger",
  "futures",
  "glam",
  "idalloc",
@@ -2681,12 +2710,13 @@ dependencies = [
  "actix-web",
  "actix-web-actors",
  "arrayvec 0.7.2",
+ "async-trait",
  "atomic_refcell",
+ "awc",
  "bincode",
  "core_protocol",
  "lazy_static",
  "log",
- "ringbuffer",
  "rustls 0.20.0",
  "rustls-pemfile",
  "serde",

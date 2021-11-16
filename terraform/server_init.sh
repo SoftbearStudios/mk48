@@ -1,5 +1,102 @@
 #!/bin/bash
 
+echo "Security measures"
+
+sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config && service ssh restart
+
+cat <<EOF > /etc/nftables.conf
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+	# Garbage collected
+	set ipv4 {
+		type ipv4_addr
+		size 16384
+		flags dynamic
+	}
+
+	# Expiry based
+	set ipv4_timeout {
+		type ipv4_addr
+		size 16384
+		flags dynamic, timeout
+	}
+
+	# Garbage collected
+	set ipv6 {
+		type ipv6_addr;
+		size 16384
+		flags dynamic
+	}
+
+	# Expiry based
+	set ipv6_timeout {
+		type ipv6_addr;
+		size 16384
+		flags dynamic, timeout
+	}
+
+	chain inbound_ipv4 {
+		# Allow ICMP pings (with a global limit)
+		icmp type echo-request limit rate 10/second accept
+
+		# Limit connections per source IP
+		ct state new add @ipv4 { ip saddr ct count over 64 } counter reject
+
+		# Limit connection rate per source IP
+		ct state new add @ipv4_timeout { ip saddr timeout 30s limit rate over 12/second burst 128 packets } counter drop
+
+		# Limit packet rate per source IP
+		ct state { established, related } add @ipv4_timeout { ip saddr timeout 30s limit rate over 2048/second burst 4096 packets } counter drop
+	}
+
+	chain inbound_ipv6 {
+		icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert } accept
+
+		# Allow ICMP pings (with a global limit)
+		icmpv6 type echo-request limit rate 10/second accept
+
+		# Limit connections per source IP
+		ct state new add @ipv6 { ip6 saddr ct count over 64 } counter reject
+
+		# Limit connection rate per source IP
+		ct state new add @ipv6_timeout { ip6 saddr timeout 30s limit rate over 12/second burst 128 packets } counter drop
+
+		# Limit packet rate per source IP
+		ct state { established, related } add @ipv6_timeout { ip6 saddr timeout 30s limit rate over 2048/second burst 4096 packets } counter drop
+	}
+
+	chain inbound {
+		# What follows this is a whitelist
+		type filter hook input priority 0; policy drop;
+
+		# Protocol-specific rules
+		meta protocol vmap { ip : jump inbound_ipv4, ip6 : jump inbound_ipv6 }
+
+		# Allow existing connections to continue, drop invalid packets
+		ct state vmap { established : accept, related : accept, invalid : drop }
+
+		# Allow loopback
+		iifname lo accept
+
+		# Allow SSH (with a global limit)
+		tcp dport ssh ct count 10 accept
+
+		# Allow HTTP (with a global limit)
+		tcp dport { http, https } ct count 900 accept
+	}
+
+	chain forward {
+		# We are not a router.
+		type filter hook forward priority 0; policy drop;
+	}
+}
+EOF
+
+nft -f /etc/nftables.conf
+
 echo "Updating"
 
 apt update
@@ -34,7 +131,22 @@ chmod u+x /root/get_ssl_cert.sh
 #/root/download-game-server.sh
 
 echo "Installing service..."
-printf "[Unit]\nDescription=Game Server\n[Service]\nType=simple\nUser=root\nGroup=root\nRestart=always\nRestartSec=3\nEnvironmentFile=/etc/environment\nExecStart=/root/server --server-id $SERVER_ID -v -v --debug-game --chat-log /root/chat.log --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem\n[Install]\nWantedBy=multi-user.target" > /etc/systemd/system/game-server.service
+cat <<EOF > /etc/systemd/system/game-server.service
+[Unit]
+Description=Game Server
+
+[Service]
+Type=simple
+User=root
+Group=root
+Restart=always
+RestartSec=3
+EnvironmentFile=/etc/environment
+ExecStart=/root/server --server-id $SERVER_ID -v -v --debug-game --chat-log /root/chat.log --domain $DOMAIN_HOME --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 echo "Enabling service..."
 sudo systemctl daemon-reload

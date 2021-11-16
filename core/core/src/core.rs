@@ -24,7 +24,7 @@ use std::time::Duration;
 const DB_SESSION_TIMER_SECS: u64 = 60;
 const DB_METRICS_MILLIS: u64 = 60 * 60 * 1000;
 
-/// Putting this in an actor is very tricky. It won't have a static lifetime, and that makes
+/// Putting these in an actor is very tricky. They won't have a static lifetime, and that makes
 /// it hard to use async functions.
 static mut DATABASE: OnceCell<Database> = OnceCell::new();
 

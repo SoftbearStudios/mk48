@@ -278,11 +278,11 @@ impl ContinuousExtremaMetric {
         }
     }
 
-    fn average(&self) -> f32 {
+    pub fn average(&self) -> f32 {
         ContinuousMetric::compute_average(self.count, self.total)
     }
 
-    fn standard_deviation(&self) -> f32 {
+    pub fn standard_deviation(&self) -> f32 {
         ContinuousMetric::compute_standard_deviation(self.count, self.total, self.squared_total)
     }
 }

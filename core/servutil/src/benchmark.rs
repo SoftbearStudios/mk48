@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use atomic_refcell::{AtomicRef, AtomicRefCell};
+use core_protocol::metrics::ContinuousExtremaMetric;
 use lazy_static::lazy_static;
-use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -26,39 +26,34 @@ pub fn borrow_all() -> AtomicRef<'static, BTreeMap<&'static str, Benchmark>> {
     BENCHMARKS.borrow()
 }
 
+pub fn reset_all() {
+    BENCHMARKS
+        .borrow_mut()
+        .values_mut()
+        .for_each(Benchmark::reset);
+}
+
 /// A single benchmark's timing information.
+#[derive(Default)]
 pub struct Benchmark {
-    recent: ConstGenericRingBuffer<Duration, 16>,
+    timings: ContinuousExtremaMetric,
 }
 
 impl Benchmark {
-    pub fn new() -> Self {
-        Self {
-            recent: ConstGenericRingBuffer::new(),
-        }
-    }
-
     /// Adds one measured time to the recent history.
     fn update(&mut self, duration: Duration) {
-        self.recent.push(duration);
+        self.timings.push(duration.as_secs_f32());
+    }
+
+    /// Resets timing information.
+    fn reset(&mut self) {
+        self.timings = ContinuousExtremaMetric::default();
     }
 }
 
 impl Debug for Benchmark {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        // SAFETY: Benchmarks are only added when they have at least one sample, so this never
-        // divides by zero.
-        let mut mean = Duration::from_secs(0);
-        let mut max = Duration::from_secs(0);
-
-        for duration in self.recent.iter() {
-            mean += *duration;
-            max = max.max(*duration);
-        }
-
-        mean /= self.recent.len() as u32;
-
-        write!(f, "{:.2?}/{:.2?}", mean, max)
+        write!(f, "{:.3?}/{:.3?}", self.timings.average(), self.timings.max)
     }
 }
 
@@ -89,7 +84,7 @@ impl Drop for Timer {
         BENCHMARKS
             .borrow_mut()
             .entry(self.benchmark_name)
-            .or_insert_with(Benchmark::new)
+            .or_insert_with(Benchmark::default)
             .update(duration);
     }
 }

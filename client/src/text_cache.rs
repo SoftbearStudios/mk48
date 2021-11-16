@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::texture::Texture;
 use std::collections::HashMap;
 use web_sys::WebGlRenderingContext as Gl;

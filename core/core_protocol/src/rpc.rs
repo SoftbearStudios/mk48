@@ -136,7 +136,7 @@ pub enum ServerRequest {
 #[cfg_attr(feature = "server", rtype(result = "()"))]
 #[cfg_attr(feature = "client", derive(actix::Message))]
 #[cfg_attr(feature = "client", rtype(result = "()"))]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum AdminUpdate {
     DayRequested {
         series: Arc<[(UnixTime, MetricsDataPointDto)]>,

@@ -2,7 +2,7 @@
     import {writable} from 'svelte/store';
     import {adminRequest, DAY, formatTimestamp, game} from './util.js';
     export const periods = ['week', 'month', 'quarter'];
-    export const resolutions = ['hour', 'day', 'week'];
+    export const resolutions = ['hour', '6 hours', 'day', 'week'];
 </script>
 
 <script>
@@ -28,7 +28,7 @@
 </Nav>
 
 <main>
-    {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, day: 24, week: 24 * 7}[params.resolution]}})}
+    {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, '6 hours': 6, day: 24, week: 24 * 7}[params.resolution]}})}
     {:then data}
         {#if data.SeriesRequested.series.length > 0}
             <div class="charts">

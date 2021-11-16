@@ -179,6 +179,8 @@ impl Server {
                 self.world.arena.total(),
                 benchmark::borrow_all()
             );
+
+            benchmark::reset_all();
         }
 
         // Needs to be after clients receive updates.

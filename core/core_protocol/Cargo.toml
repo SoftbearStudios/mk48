@@ -1,7 +1,7 @@
 [package]
 name = "core_protocol"
 version = "0.1.0"
-authors = ["Cory Bear <gitlog@corybear.com>"]
+authors = ["Softbear, Inc."]
 edition = "2018"
 license = "AGPL-3.0-or-later"
 

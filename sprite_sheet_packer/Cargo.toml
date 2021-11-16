@@ -2,6 +2,7 @@
 name = "sprite_sheet_packer"
 version = "0.1.0"
 edition = "2018"
+authors = ["Softbear, Inc."]
 license = "AGPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

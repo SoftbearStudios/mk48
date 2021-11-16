@@ -31,7 +31,10 @@ use env_logger;
 use futures::{pin_mut, select, FutureExt};
 use log::{debug, error, info, warn, LevelFilter};
 use serde::Deserialize;
+use servutil::cloud::Cloud;
+use servutil::linode::Linode;
 use servutil::ssl::Ssl;
+use servutil::watchdog;
 use servutil::web_socket::{sock_index, WebSocket};
 use structopt::StructOpt;
 
@@ -77,16 +80,21 @@ struct Options {
     /// Log socket diagnostics
     #[structopt(long)]
     debug_sockets: bool,
+    /// Log watchdog diagnostics
+    #[structopt(long)]
+    debug_watchdog: bool,
     /// Log chats
     #[structopt(long)]
     chat_log: Option<String>,
+    #[structopt(long)]
+    linode_personal_access_token: Option<String>,
     // Don't write to the database.
     #[structopt(long)]
     database_read_only: bool,
     // Server id.
     #[structopt(long, default_value = "0")]
     server_id: u8,
-    // Domain.
+    /// Domain (without server id prepended).
     #[allow(dead_code)]
     #[structopt(long)]
     domain: Option<String>,
@@ -160,9 +168,16 @@ fn main() {
         logger.filter_module("actix_web", LevelFilter::Info);
         logger.filter_module("actix_server", LevelFilter::Info);
     }
+    if options.debug_watchdog || true {
+        logger.filter_module("servutil::watchdog", LevelFilter::Info);
+    }
     logger.init();
 
     let _ = actix_web::rt::System::new().block_on(async move {
+        let cloud = options
+            .linode_personal_access_token
+            .map(|t| Box::new(Linode::new(&t)) as Box<dyn Cloud>);
+
         let core = core::core::Core::start(
             core::core::Core::new(options.chat_log, options.database_read_only).await,
         );
@@ -171,6 +186,12 @@ fn main() {
             options.min_players,
             core.to_owned(),
         ));
+        if let Some((cloud, domain)) = cloud.zip(options.domain) {
+            // Safety: Only happens once.
+            unsafe {
+                watchdog::Watchdog::start(watchdog::Watchdog::new(cloud, domain));
+            }
+        }
 
         let mut ssl = options
             .certificate_path
@@ -261,7 +282,9 @@ fn main() {
                                     Ok(result) => match result {
                                         actix_web::Result::Ok(update) => {
                                             let response = serde_json::to_vec(&update).unwrap();
-                                            HttpResponse::Ok().body(response)
+                                            HttpResponse::Ok()
+                                                .content_type("application/json")
+                                                .body(response)
                                         }
                                         Err(e) => HttpResponse::BadRequest().body(String::from(e)),
                                     },
@@ -283,7 +306,9 @@ fn main() {
                                     Ok(result) => match result {
                                         actix_web::Result::Ok(update) => {
                                             let response = serde_json::to_vec(&update).unwrap();
-                                            HttpResponse::Ok().body(response)
+                                            HttpResponse::Ok()
+                                                .content_type("application/json")
+                                                .body(response)
                                         }
                                         Err(e) => HttpResponse::BadRequest().body(String::from(e)),
                                     },
@@ -310,7 +335,9 @@ fn main() {
                                 Ok(result) => match result {
                                     actix_web::Result::Ok(update) => {
                                         let response = serde_json::to_vec(&update).unwrap();
-                                        HttpResponse::Ok().body(response)
+                                        HttpResponse::Ok()
+                                            .content_type("application/json")
+                                            .body(response)
                                     }
                                     Err(e) => HttpResponse::BadRequest().body(String::from(e)),
                                 },

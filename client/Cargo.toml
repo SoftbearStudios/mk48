@@ -1,7 +1,7 @@
 [package]
 name = "client"
 version = "0.1.0"
-authors = ["The wasm-bindgen Developers"]
+authors = ["Softbear, Inc."]
 edition = "2018"
 license = "AGPL-3.0-or-later"
 
