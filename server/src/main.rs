@@ -170,6 +170,7 @@ fn main() {
     }
     if options.debug_watchdog || true {
         logger.filter_module("servutil::watchdog", LevelFilter::Info);
+        logger.filter_module("servutil::linode", LevelFilter::Warn);
     }
     logger.init();
 

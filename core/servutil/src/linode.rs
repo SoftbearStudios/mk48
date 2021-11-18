@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::cloud::{Cloud, DnsUpdate};
+use actix_web::http::Version;
 use async_trait::async_trait;
+use awc::error::{JsonPayloadError, PayloadError, SendRequestError};
 use awc::Client;
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -23,15 +26,31 @@ impl Linode {
             client: Client::builder()
                 .timeout(Duration::from_secs(5))
                 .bearer_auth(personal_access_token)
+                .max_http_version(Version::HTTP_11)
                 .finish(),
         }
+    }
+
+    fn map_send_error(e: SendRequestError) -> &'static str {
+        error!("{}", e);
+        Self::ERR_SEND
+    }
+
+    fn map_recv_error(e: PayloadError) -> &'static str {
+        error!("{}", e);
+        Self::ERR_RECV
+    }
+
+    fn map_json_recv_error(e: JsonPayloadError) -> &'static str {
+        error!("{}", e);
+        Self::ERR_RECV
     }
 
     async fn list_domains(&self) -> Result<LinodeListDomainsResponse, &'static str> {
         let endpoint = "https://api.linode.com/v4/domains";
         let request = self.client.get(endpoint);
-        let mut response = request.send().await.map_err(|_| Self::ERR_SEND)?;
-        response.json().await.map_err(|_| Self::ERR_RECV)
+        let mut response = request.send().await.map_err(Self::map_send_error)?;
+        response.json().await.map_err(Self::map_json_recv_error)
     }
 
     async fn get_domain_id(&self, domain: &str) -> Result<usize, &'static str> {
@@ -49,8 +68,8 @@ impl Linode {
     ) -> Result<LinodeListDomainRecordsResponse, &'static str> {
         let endpoint = format!("https://api.linode.com/v4/domains/{}/records", domain_id);
         let request = self.client.get(endpoint);
-        let mut response = request.send().await.map_err(|_| Self::ERR_SEND)?;
-        response.json().await.map_err(|_| Self::ERR_RECV)
+        let mut response = request.send().await.map_err(Self::map_send_error)?;
+        response.json().await.map_err(Self::map_json_recv_error)
     }
 
     async fn create_domain_record(
@@ -63,8 +82,8 @@ impl Linode {
         let mut response = request
             .send_json(&record)
             .await
-            .map_err(|_| Self::ERR_SEND)?;
-        response.json().await.map_err(|_| Self::ERR_RECV)
+            .map_err(Self::map_send_error)?;
+        response.json().await.map_err(Self::map_json_recv_error)
     }
 
     async fn update_domain_record(
@@ -81,8 +100,8 @@ impl Linode {
         let mut response = request
             .send_json(&record)
             .await
-            .map_err(|_| Self::ERR_SEND)?;
-        response.json().await.map_err(|_| Self::ERR_RECV)
+            .map_err(Self::map_send_error)?;
+        response.json().await.map_err(Self::map_json_recv_error)
     }
 
     async fn delete_domain_record(&self, domain_id: usize, id: usize) -> Result<(), &'static str> {
@@ -91,12 +110,12 @@ impl Linode {
             domain_id, id
         );
         let request = self.client.delete(endpoint);
-        let mut response = request.send().await.map_err(|_| Self::ERR_SEND)?;
+        let mut response = request.send().await.map_err(Self::map_send_error)?;
         response
             .body()
             .await
             .map(|_| ())
-            .map_err(|_| Self::ERR_RECV)
+            .map_err(Self::map_recv_error)
     }
 }
 

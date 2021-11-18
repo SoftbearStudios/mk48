@@ -3,6 +3,8 @@
 
 use crate::cloud::{Cloud, DnsUpdate};
 use actix::{fut, Actor, ActorFutureExt, AsyncContext, Context, ContextFutureSpawner, WrapFuture};
+use actix_web::http::header::CONNECTION;
+use actix_web::http::Version;
 use actix_web::rt::time::sleep;
 use awc::Client;
 use core_protocol::id::ServerId;
@@ -57,7 +59,11 @@ impl Actor for Watchdog {
             Box::pin(async move {
                 match Self::cloud().read_dns(&domain).await {
                     Ok(res) => {
-                        let client = Client::builder().timeout(Duration::from_secs(5)).finish();
+                        let client = Client::builder()
+                            .timeout(Duration::from_secs(5))
+                            .max_http_version(Version::HTTP_11)
+                            .header(CONNECTION, "close")
+                            .finish();
 
                         // Servers currently hosting the home page.
                         let mut home = Vec::new();

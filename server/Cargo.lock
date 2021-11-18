@@ -66,9 +66,9 @@ dependencies = [
 
 [[package]]
 name = "actix-http"
-version = "3.0.0-beta.11"
+version = "3.0.0-beta.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9b510d35f13987537289f38bf136e7e702a5c87cc28760310cc459544f40afd"
+checksum = "afaeb3d3fcb06b775ac62f05d580aae4afe5a149513333a73f688fdf26c06639"
 dependencies = [
  "actix-codec",
  "actix-rt",
@@ -95,14 +95,12 @@ dependencies = [
  "local-channel",
  "log",
  "mime",
- "once_cell",
  "percent-encoding",
  "pin-project",
  "pin-project-lite",
  "rand 0.8.4",
  "sha-1",
  "smallvec",
- "tokio",
  "zstd",
 ]
 
@@ -415,29 +413,37 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "awc"
-version = "3.0.0-beta.9"
+version = "3.0.0-beta.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "774d647a23d085bf35c83b6da5a6bd966fdc4af92ffce865befa9f3a8cf73015"
+checksum = "f122bed94dc044b13a991b292ff6a3cde4c3fba890a4e3dbbec0f2eedc607f0a"
 dependencies = [
  "actix-codec",
  "actix-http",
  "actix-rt",
  "actix-service",
+ "actix-tls",
+ "actix-utils",
+ "ahash",
  "base64",
  "bytes",
  "cfg-if",
  "cookie",
  "derive_more",
  "futures-core",
+ "futures-util",
+ "h2",
+ "http",
  "itoa",
  "log",
  "mime",
  "percent-encoding",
  "pin-project-lite",
  "rand 0.8.4",
+ "rustls 0.20.0",
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "tokio",
 ]
 
 [[package]]
@@ -2465,9 +2471,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.1.27"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb81a4a2ca4a1023033d0cda7b66822b3d8ddc14e1e3fcd1d6139e0efbc0d3ef"
+checksum = "0bce9f2d7369c9bde48231a9b27c8b99d262531d3d0a10925c356a2b0f451e6d"
 dependencies = [
  "bitflags",
  "csv",

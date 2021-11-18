@@ -14,7 +14,7 @@ debug = true
 debug = false
 
 [patch.crates-io]
-#actix-http = { git = "https://github.com/actix/actix-web"}
+#actix-http = { git = "https://github.com/actix/actix-web" }
 #actix-tls = { git = "https://github.com/actix/actix-net", branch = "fix/tls-handshake-timeout" }
 
 # An attempt to speed up user agent regex compilation.

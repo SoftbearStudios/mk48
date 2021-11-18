@@ -11,7 +11,7 @@ license = "AGPL-3.0-or-later"
 actix = "0.12"
 actix-web = "4.0.0-beta.10"
 actix-web-actors = "4.0.0-beta.7"
-awc = "3.0.0-beta.9"
+awc = {version = "3.0.0-beta.10", features = ["rustls"]}
 async-trait = "0.1"
 arrayvec = { version = "0.7.1", features = ["serde"] }
 atomic_refcell = "0.1.7"
