@@ -13,6 +13,12 @@
 
 	<h2>2021</h2>
 
+	<h3>11/19/2021</h3>
+
+	<ul>
+		<li>Server chat messages have a colored name, to make it more difficult to impersonate the server.</li>
+	</ul>
+
 	<h3>11/11/2021</h3>
 
 	<ul>

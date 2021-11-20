@@ -15,7 +15,7 @@
 
 ### Client
 
-0. Install `NodeJS 14` or higher and `rust nightly`
+0. Install NodeJS 14 or higher ([here](https://nodejs.org/en/download/)) and nightly Rust ([here](https://rustup.rs/), then `rustup default nightly`)
 1. Enter `/js`
 2. `npm install`
 3. `make`
@@ -23,7 +23,7 @@
 
 ### Server
 
-0. Install `rust nightly`
+0. Install nightly Rust ([here](https://rustup.rs/), then `rustup default nightly`)
 1. Enter `/server`
 2. `make`
 3. Navigate to `localhost:8000`

@@ -88,6 +88,7 @@
 			<p class='message' class:whisper>
 				<span
 					class='name'
+					class:official={playerId == undefined}
 					on:click={() => populateReply(name)}
 					on:contextmenu={typeof playerId === 'number' && playerId !== state.playerId ? (event => showContextMenu(event, {[`Mute ${name}`]: () => onMutePlayer(playerId, true)})) : null}
 				>{team ? `[${team}] ${name}` : name}</span>&nbsp;{message}
@@ -125,6 +126,11 @@
 		cursor: pointer;
 		font-weight: bold;
 		white-space: nowrap;
+	}
+
+	.official {
+		color: #fffd2a;
+		text-shadow: 0px 0px 3px #381616;
 	}
 
 	input {
