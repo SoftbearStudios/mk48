@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::settings::Settings;
 use crate::shader::Shader;
 use crate::texture::Texture;
 use crate::{console_log, has_webp};
@@ -11,7 +12,7 @@ use sprite_sheet::UvSpriteSheet;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ops::{Mul, Range};
-use std::slice;
+use std::{mem, slice};
 use wasm_bindgen::JsCast;
 use web_sys::{
     HtmlCanvasElement, OesStandardDerivatives, OesVertexArrayObject, WebGlBuffer,
@@ -25,8 +26,6 @@ pub struct Renderer {
     text_shader: Shader,
     canvas: HtmlCanvasElement,
     oes_vao: OesVertexArrayObject,
-    #[allow(unused)]
-    oes_standard_derivatives: OesStandardDerivatives,
     pub gl: Gl,
     sprite_buffer: RenderBuffer<PosUvAlpha>,
     sprite_mesh: MeshBuffer<PosUvAlpha>,
@@ -46,7 +45,7 @@ pub struct Renderer {
 
 impl Renderer {
     // Creates a new WebGl 1.0 render, attaching it to the canvas element with the id "canvas."
-    pub fn new(sprite_path: &str, sprite_sheet: UvSpriteSheet) -> Self {
+    pub fn new(settings: Settings, sprite_path: &str, sprite_sheet: UvSpriteSheet) -> Self {
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.get_element_by_id("canvas").unwrap();
         let canvas: web_sys::HtmlCanvasElement =
@@ -80,11 +79,16 @@ impl Renderer {
             .unwrap()
             .unchecked_into::<OesVertexArrayObject>();
 
-        let oes_standard_derivatives = gl
-            .get_extension("OES_standard_derivatives")
-            .unwrap()
-            .unwrap()
-            .unchecked_into::<OesStandardDerivatives>();
+        if settings.render_waves {
+            let oes_standard_derivatives = gl
+                .get_extension("OES_standard_derivatives")
+                .unwrap()
+                .unwrap()
+                .unchecked_into::<OesStandardDerivatives>();
+
+            // No need to access this from Rust later.
+            mem::forget(oes_standard_derivatives);
+        }
 
         let sprite_shader = Shader::new(
             &gl,
@@ -100,14 +104,29 @@ impl Renderer {
             &["position", "color", "created"],
         );
 
+        let background_frag_template = include_str!("../shaders/background.frag");
+        let mut background_frag_source = String::with_capacity(background_frag_template.len() + 20);
+
+        if settings.render_foam {
+            background_frag_source += "#define FOAM 1.0\n";
+        }
+        if settings.render_waves {
+            background_frag_source += "#define WAVES 1.0\n";
+        }
+        background_frag_source += background_frag_template;
+
         let background_shader = Shader::new(
             &gl,
             include_str!("../shaders/background.vert"),
-            include_str!("../shaders/background.frag"),
+            &background_frag_source,
             &["position"],
         );
 
-        let (sand_path, grass_path) = if has_webp() {
+        let (sand_path, grass_path) = if !settings.render_terrain_textures {
+            // TODO: Kludge, using the principle that if the texture never loads, the placeholder
+            // color will be used.
+            ("/dummy.png", "/dummy.png")
+        } else if has_webp() {
             ("/sand.webp", "/grass.webp")
         } else {
             ("/sand.png", "/grass.png")
@@ -160,7 +179,6 @@ impl Renderer {
             canvas,
             gl,
             oes_vao,
-            oes_standard_derivatives,
             sprite_mesh,
             sprite_buffer,
             sprite_shader,

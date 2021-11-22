@@ -277,4 +277,44 @@ impl Repo {
         }
         sent
     }
+
+    /// Admins can send chats from any alias (although no PlayerId).
+    pub fn admin_send_chat(
+        &mut self,
+        arena_id: ArenaId,
+        alias: PlayerAlias,
+        message: &str,
+    ) -> bool {
+        debug!(
+            "admin_send_chat(arena={:?}, alias={:?}): {}",
+            arena_id, alias, &message
+        );
+        let mut sent = false;
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+            let trimmed = trim_spaces(message);
+
+            let message = Rc::new(MessageDto {
+                alias,
+                date_sent: get_unix_time_now(),
+                player_id: None,
+                team_captain: false,
+                team_name: None,
+                text: String::from(trimmed),
+                whisper: false,
+            });
+
+            for (_, session) in Session::iter_mut(&mut arena.sessions) {
+                session.inbox.push(Rc::clone(&message));
+                sent = true;
+            }
+            arena.newbie_messages.push(Rc::clone(&message));
+        }
+        if !sent {
+            warn!(
+                "send_chat(arena={:?}, alias={:?}) failed: {}",
+                arena_id, alias, &message
+            );
+        }
+        sent
+    }
 }

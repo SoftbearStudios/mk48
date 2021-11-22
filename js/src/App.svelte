@@ -28,6 +28,7 @@
 	import About from './page/About.svelte';
 	import Privacy from './page/Privacy.svelte';
 	import Terms from './page/Terms.svelte';
+	import Settings from './page/Settings.svelte';
 	import Ships from './page/Ships.svelte';
 	import Changelog from './page/Changelog.svelte';
 	import Chat from './lib/Chat.svelte';
@@ -45,7 +46,7 @@
 	import {getMouseButton} from './util/compatibility.js';
 	import {mapRanges} from './util/math.js';
 	import {onMount} from 'svelte';
-	import {volume} from './util/settings.js';
+	import {renderFoam, renderTerrainTextures, volume, renderWaves} from './util/settings.js';
 	import {outboundEnabled} from './lib/Link.svelte';
 
 	let canvas, chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
@@ -69,7 +70,13 @@
 			invitationId = hash.split("/").pop();
 		}
 
-		client.run(storage.arenaId, storage.sessionId, invitationId);
+		const settings = {
+			renderFoam: get(renderFoam),
+			renderTerrainTextures: get(renderTerrainTextures),
+			renderWaves: get(renderWaves),
+		};
+
+		client.run(settings, storage.arenaId, storage.sessionId, invitationId);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 
 		// Make client accessible (for debugging only).
@@ -426,7 +433,7 @@
 	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
 {/if}
 <ContextMenu/>
-<Router routes={{'/help': Help, '/about': About, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
+<Router routes={{'/help': Help, '/about': About, '/settings': Settings, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
 
 <svelte:head>
 	<title>mk48.io</title>

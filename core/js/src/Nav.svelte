@@ -13,6 +13,7 @@
     <a class="navbtn" href="/referrers" use:link use:active>Referrers</a>
     <a class="navbtn" href="/userAgents" use:link use:active>User Agents</a>
     <a class="navbtn" href="/series/{periods[0]}/{resolutions[0]}" use:link use:active={'/series/*/*'}>Series</a>
+    <a class="navbtn" href="/chat" use:link use:active>Chat</a>
     <div class="selections">
         <slot/>
         {#if !$games}

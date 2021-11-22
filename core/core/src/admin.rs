@@ -191,6 +191,21 @@ impl Repo {
                 let user_agents = self.get_user_agent_ids();
                 result = Ok(AdminUpdate::UserAgentsRequested { user_agents })
             }
+            AdminRequest::SendChat {
+                arena_id,
+                alias,
+                message,
+            } => {
+                let mut sent = false;
+                if let Some(arena_id) = arena_id {
+                    sent |= self.admin_send_chat(arena_id, alias, &message);
+                } else {
+                    for arena_id in self.arenas.keys().cloned().collect::<Vec<_>>() {
+                        sent |= self.admin_send_chat(arena_id, alias, &message);
+                    }
+                }
+                result = Ok(AdminUpdate::ChatSent { sent })
+            }
             _ => result = Err("cannot process admin request synchronously"),
         }
 

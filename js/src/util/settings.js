@@ -72,4 +72,7 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 };
 
 export const chatOpen = settingStore('chat', true);
+export const renderWaves = settingStore('renderWaves', true);
+export const renderFoam = settingStore('renderFoam', true);
+export const renderTerrainTextures = settingStore('renderTerrainTextures', true);
 export const volume = settingStore('volume', 1.0);

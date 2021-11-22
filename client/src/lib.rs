@@ -17,6 +17,7 @@ mod animation;
 mod audio;
 mod particle;
 mod reconn_web_socket;
+mod settings;
 mod text_cache;
 mod web_socket;
 
@@ -327,7 +328,8 @@ pub fn handle_drop_web_sockets(core: bool, server: bool) {
 
 /// run is the entry point for actually taking arguments.
 #[wasm_bindgen]
-pub fn run(aid: Option<String>, sid: Option<String>, inv_id: Option<String>) {
+pub fn run(settings: JsValue, aid: Option<String>, sid: Option<String>, inv_id: Option<String>) {
+    let settings = serde_wasm_bindgen::from_value(settings).unwrap_or_default();
     let arena_id = aid
         .and_then(|id| NonZeroU32::from_str(&id).ok())
         .map(|id| ArenaId(id));
@@ -340,6 +342,7 @@ pub fn run(aid: Option<String>, sid: Option<String>, inv_id: Option<String>) {
     unsafe {
         // SAFETY: This has to run before any calls to borrow_game()
         *GAME.get_mut() = MaybeUninit::new(RefCell::new(Game::new(
+            settings,
             arena_id.zip(session_id),
             invitation_id,
         )));

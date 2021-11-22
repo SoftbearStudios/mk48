@@ -5,6 +5,7 @@
     import Router from 'svelte-spa-router'
     import {game, games} from './util.js';
     import Summary from './Summary.svelte';
+    import Chat from './Chat.svelte';
     import Day from './Day.svelte';
     import Referrers, {referrers} from './Referrers.svelte';
     import UserAgents, {userAgents} from './UserAgents.svelte';
@@ -17,6 +18,7 @@
         '/referrers': Referrers,
         '/userAgents': UserAgents,
         '/series/:period/:resolution': Series,
+        '/chat': Chat,
     }
 </script>
 

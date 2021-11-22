@@ -13,10 +13,13 @@
 
 	<h2>2021</h2>
 
-	<h3>11/19/2021</h3>
+	<h3>11/21/2021</h3>
 
 	<ul>
+		<li>Add a settings menu, and some graphics settings that may help on older hardware.</li>
+		<li>Fix a graphical issue with terrain border that affected some integrated GPUs.</li>
 		<li>Server chat messages have a colored name, to make it more difficult to impersonate the server.</li>
+		<li>The server can now send various semi-automated messages.</li>
 	</ul>
 
 	<h3>11/11/2021</h3>

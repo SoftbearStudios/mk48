@@ -38,6 +38,12 @@ pub enum AdminRequest {
         conditions: RestartDto,
     },
     RequestUserAgents,
+    SendChat {
+        // If None, goes to all arenas.
+        arena_id: Option<ArenaId>,
+        alias: PlayerAlias,
+        message: String,
+    },
 }
 
 // Client requests are from the browser to the core service.
@@ -138,6 +144,9 @@ pub enum ServerRequest {
 #[cfg_attr(feature = "client", rtype(result = "()"))]
 #[derive(Debug, Serialize, Deserialize)]
 pub enum AdminUpdate {
+    ChatSent {
+        sent: bool,
+    },
     DayRequested {
         series: Arc<[(UnixTime, MetricsDataPointDto)]>,
     },

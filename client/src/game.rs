@@ -7,6 +7,7 @@ use crate::input::Input;
 use crate::particle::Particle;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
+use crate::settings::Settings;
 use crate::text_cache::TextCache;
 use crate::texture::Texture;
 use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol, FpsMonitor};
@@ -108,6 +109,7 @@ impl Game {
     const CONTROL_PERIOD: f32 = 0.1;
 
     pub fn new(
+        settings: Settings,
         saved_session_tuple: Option<(ArenaId, SessionId)>,
         invitation_id: Option<InvitationId>,
     ) -> Self {
@@ -118,7 +120,7 @@ impl Game {
         };
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
 
-        let renderer = Renderer::new(sprite_path, sprite_sheet);
+        let renderer = Renderer::new(settings, sprite_path, sprite_sheet);
 
         let audio_sprite_sheet =
             serde_json::from_str(include_str!("./sprites_audio.json")).unwrap();
