@@ -15,6 +15,7 @@ pub struct ArenaId(pub NonZeroU32);
 pub enum GameId {
     Mazean,
     Mk48,
+    Redacted,
 }
 
 #[repr(transparent)]

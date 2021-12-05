@@ -5,16 +5,16 @@ use crate::animation::Animation;
 use crate::audio::AudioPlayer;
 use crate::input::Input;
 use crate::particle::Particle;
-use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::Renderer;
 use crate::settings::Settings;
 use crate::text_cache::TextCache;
 use crate::texture::Texture;
-use crate::util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol, FpsMonitor};
 use crate::{
     has_webp, ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel,
     TeamPlayerModel,
 };
+use client_util::reconn_web_socket::ReconnWebSocket;
+use client_util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol, FpsMonitor};
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
@@ -850,6 +850,85 @@ impl Game {
                 - 0.1)
                 .clamp(0.0, 10.0);
 
+            // If reloads are known before and after, and one goes from zero to non-zero, it was fired.
+            if let Some(entity_type) = model.entity_type() {
+                let data: &EntityData = entity_type.data();
+                if view.entity_type() == model.entity_type()
+                    && view.reloads_known()
+                    && model.reloads_known()
+                    && view.turrets_known()
+                {
+                    let model_reloads = model.reloads();
+                    for (i, &old) in view.reloads().iter().enumerate() {
+                        let new = model_reloads[i];
+
+                        if new == Ticks::ZERO || old != Ticks::ZERO {
+                            // Wasn't just fired
+                            continue;
+                        }
+
+                        let armament = &data.armaments[i];
+                        let armament_entity_data = armament.entity_type.data();
+
+                        if !matches!(
+                            armament_entity_data.sub_kind,
+                            EntitySubKind::Shell | EntitySubKind::Rocket | EntitySubKind::Missile
+                        ) {
+                            // Don't generate particles.
+                            continue;
+                        }
+
+                        let boat_velocity = view.transform().direction.to_vec()
+                            * view.transform().velocity.to_mps();
+
+                        let armament_transform =
+                            *view.transform() + data.armament_transform(view.turrets(), i);
+
+                        let direction_vector: Vec2 = if armament.vertical {
+                            // Straight up.
+                            Vec2::ZERO
+                        } else {
+                            armament_transform.direction.into()
+                        };
+
+                        let mut rng = thread_rng();
+
+                        let forward_offset = armament
+                            .turret
+                            .and_then(|t| data.turrets[t].entity_type)
+                            .map(|t| t.data().length * 0.4)
+                            .unwrap_or(2.0);
+                        let forward_velocity = 0.5 * armament_entity_data.speed.to_mps().min(100.0);
+
+                        let collection = if view.altitude().is_submerged() {
+                            &mut self.sea_level_particles
+                        } else {
+                            &mut self.airborne_particles
+                        };
+
+                        // Muzzle flash.
+                        let amount = 10;
+                        for i in 0..amount {
+                            collection.push(Particle {
+                                position: armament_transform.position
+                                    + direction_vector * forward_offset,
+                                velocity: boat_velocity
+                                    + direction_vector
+                                        * forward_velocity
+                                        * (i as f32 * (1.0 / amount as f32))
+                                    + direction_vector.perp()
+                                        * forward_velocity
+                                        * 0.15
+                                        * (rng.gen::<f32>() - 0.5),
+                                radius: (armament_entity_data.width * 5.0).clamp(1.0, 3.0),
+                                color: -1.0,
+                                created: time_seconds,
+                            });
+                        }
+                    }
+                }
+            }
+
             // Don't interpolate view's guidance if this is the player's boat, so that it doesn't jerk around.
             view.interpolate_towards(
                 model,
@@ -1324,12 +1403,13 @@ impl Game {
                         || contact.transform().velocity
                             > Velocity::from_mps(EntityData::CAVITATION_VELOCITY))
                 {
+                    let collection = if contact.altitude().is_airborne() {
+                        &mut self.airborne_particles
+                    } else {
+                        &mut self.sea_level_particles
+                    };
+
                     for _ in 0..amount {
-                        let collection = if contact.altitude().is_airborne() {
-                            &mut self.airborne_particles
-                        } else {
-                            &mut self.sea_level_particles
-                        };
                         collection.push(Particle {
                             position: contact.transform().position
                                 - direction_vector * (data.length * 0.485)
@@ -1337,6 +1417,7 @@ impl Game {
                             velocity: direction_vector
                                 * contact.transform().velocity.to_mps()
                                 * 0.75,
+                            radius: 1.0,
                             color: 1.0,
                             created: time_seconds,
                         });
@@ -1353,6 +1434,7 @@ impl Game {
                                     + tangent_vector * exhaust.position_side
                                     + gen_radius(&mut rng, 1.5),
                                 velocity: gen_radius(&mut rng, 6.0),
+                                radius: 1.0,
                                 color: if entity_type == EntityType::OilPlatform {
                                     -1.0
                                 } else {
@@ -1391,8 +1473,12 @@ impl Game {
                 self.sea_level_particles.swap_remove(i);
             } else {
                 let particle = &self.sea_level_particles[i];
-                self.renderer
-                    .add_particle(particle.position, particle.color, particle.created);
+                self.renderer.add_particle(
+                    particle.position,
+                    particle.radius,
+                    particle.color,
+                    particle.created,
+                );
                 i += 1;
             }
         }
@@ -1414,8 +1500,12 @@ impl Game {
             if time_seconds >= particle.created + 1.5 {
                 self.airborne_particles.swap_remove(i);
             } else {
-                self.renderer
-                    .add_particle(particle.position, particle.color, particle.created);
+                self.renderer.add_particle(
+                    particle.position,
+                    particle.radius,
+                    particle.color,
+                    particle.created,
+                );
                 i += 1;
             }
         }

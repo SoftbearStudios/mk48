@@ -48,7 +48,7 @@ impl<'a> ContactRef<'a> {
     }
 
     fn reloads_arc(&self) -> Option<&Arc<[Ticks]>> {
-        if self.entity.is_boat() && (self.visible || self.known) {
+        if self.reloads_known() {
             Some(&self.entity.extension().reloads)
         } else {
             None
@@ -56,7 +56,7 @@ impl<'a> ContactRef<'a> {
     }
 
     fn turrets_arc(&self) -> Option<&Arc<[Angle]>> {
-        if self.entity.is_boat() {
+        if self.turrets_known() {
             Some(&self.entity.extension().turrets)
         } else {
             None
@@ -105,6 +105,11 @@ impl<'a> ContactTrait for ContactRef<'a> {
     }
 
     #[inline]
+    fn reloads_known(&self) -> bool {
+        self.entity.is_boat() && (self.visible || self.known)
+    }
+
+    #[inline]
     fn transform(&self) -> &Transform {
         &self.entity.transform
     }
@@ -112,5 +117,10 @@ impl<'a> ContactTrait for ContactRef<'a> {
     #[inline]
     fn turrets(&self) -> &[Angle] {
         self.turrets_arc().map_or(&ANGLE_ARRAY_ZERO, |a| a.as_ref())
+    }
+
+    #[inline]
+    fn turrets_known(&self) -> bool {
+        self.entity.is_boat()
     }
 }

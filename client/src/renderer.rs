@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::has_webp;
 use crate::settings::Settings;
 use crate::shader::Shader;
 use crate::texture::Texture;
-use crate::{console_log, has_webp};
+use client_util::console_log;
 use common::transform::Transform;
 use glam::{vec2, Mat2, Mat3, Vec2, Vec4};
 use serde::Serialize;
@@ -101,7 +102,7 @@ impl Renderer {
             &gl,
             include_str!("../shaders/particle.vert"),
             include_str!("../shaders/particle.frag"),
-            &["position", "color", "created"],
+            &["position", "color", "radius", "created"],
         );
 
         let background_frag_template = include_str!("../shaders/background.frag");
@@ -303,9 +304,13 @@ impl Renderer {
     }
 
     /// add_particle queues a particle for drawing.
-    pub fn add_particle(&mut self, pos: Vec2, color: f32, time: f32) {
-        self.particle_mesh
-            .push_vertex(Particle { pos, color, time });
+    pub fn add_particle(&mut self, pos: Vec2, radius: f32, color: f32, time: f32) {
+        self.particle_mesh.push_vertex(Particle {
+            pos,
+            radius,
+            color,
+            time,
+        });
     }
 
     /// add_triangle_graphic adds a transformed equilateral triangle to the graphics queue, pointing
@@ -380,14 +385,15 @@ impl Renderer {
         assert!(radius > 0.0, "radius must be positive");
 
         let angle_span = range.end - range.start;
-        let mut segments = (radius.sqrt() * (40.0 * std::f32::consts::PI) / angle_span) as i32;
-        if segments < 2 {
-            // Nothing to draw, avoid corruption later on.
+        if angle_span <= 0.0 {
+            // Nothing to draw.
             return;
         }
 
+        let mut segments = (6.0 * radius * angle_span / (2.0 * std::f32::consts::PI)) as i32;
+
         // Set maximum to prevent indices from overflowing.
-        segments = segments.min(((u16::MAX - 3) / 2) as i32);
+        segments = segments.clamp(2, ((u16::MAX - 3) / 2) as i32);
         let segments = segments as u32;
 
         // Algorithm: Build a circle outline segment by segment, going counterclockwise. Vertices
@@ -807,13 +813,15 @@ pub struct Particle {
     /// -1 to 1: Fire to black
     ///  0 to 1: Black to white
     pub color: f32,
+    pub radius: f32,
     pub time: f32,
 }
 
 impl Vertex for Particle {
-    const FLOATS: usize = 4;
+    const FLOATS: usize = 5;
     fn bind_attribs(attribs: &mut Attribs<Self>) {
         attribs.floats(2);
+        attribs.floats(1);
         attribs.floats(1);
         attribs.floats(1);
     }

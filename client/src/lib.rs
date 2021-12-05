@@ -12,14 +12,11 @@ mod renderer;
 mod shader;
 mod texture;
 #[macro_use]
-mod util;
 mod animation;
 mod audio;
 mod particle;
-mod reconn_web_socket;
 mod settings;
 mod text_cache;
-mod web_socket;
 
 use crate::game::Game;
 use common::altitude::Altitude;
@@ -365,6 +362,12 @@ pub fn start() -> Result<(), JsValue> {
     }
 
     Ok(())
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    pub fn log(s: &str);
 }
 
 /// parse_enum deserializes a string into an enum, panicking if it doesn't match any variant.

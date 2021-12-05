@@ -105,6 +105,10 @@
 		filter: brightness(0.7);
 	}
 
+	input {
+		width: 9em;
+	}
+
 	button {
 		background-color: transparent;
 		border: 0;

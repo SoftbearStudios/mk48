@@ -9,6 +9,7 @@ pub struct Particle {
     pub velocity: Vec2,
     /// See documentation of crate::renderer::Particle::color.
     pub color: f32,
+    pub radius: f32,
     pub created: f32,
 }
 

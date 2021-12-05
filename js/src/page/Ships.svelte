@@ -45,8 +45,4 @@
 	table.item {
 		background-color: #00000011;
 	}
-
-	img {
-		width: 30em;
-	}
 </style>

@@ -183,8 +183,11 @@ impl Repo {
         let censored_text = Censor::new(team_name.0.chars())
             .with_censor_first_character_threshold(Type::INAPPROPRIATE)
             .censor();
-        let trimmed_text = trim_spaces(&censored_text);
-        let censored_team_name = TeamName::new(trimmed_text);
+
+        // While TeamName supports more than 6 bytes, this is a limited allowance for multi-byte characters.
+        // The intended hard limit is 6 codepoints.
+        let trimmed_text: String = trim_spaces(&censored_text).chars().take(6).collect();
+        let censored_team_name = TeamName::new(&trimmed_text);
 
         if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {

@@ -6,6 +6,7 @@
  * Copyright (c) 2020 Softbear Studios - All Rights Reserved
  */
 pub mod admin;
+pub mod app;
 mod arena;
 mod bot;
 mod chat;

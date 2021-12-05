@@ -6,7 +6,7 @@
 <script context='module'>
 	import entityData from '../data/entities.json';
 
-	function levelToScore(level) {
+	export function levelToScore(level) {
 		// Must match server code
 		return (level * level + Math.pow(2, Math.max(level - 3, 0)) - 2) * 10;
 	}
@@ -71,7 +71,7 @@
 </script>
 
 <div class='box' class:columns>
-	<Section name={`${$t('panel.upgrade.labelPrefix')} ${data.level + 1}`} headerAlign='center'>
+	<Section name={($t('panel.upgrade.label.ready')).replace("{level}", data.level + 1)} headerAlign='center'>
 		<div class='upgrades' class:columns>
 			{#each upgrades as upgradeType}
 				<Sprite

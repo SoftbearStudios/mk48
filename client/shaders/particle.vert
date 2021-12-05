@@ -1,6 +1,6 @@
 attribute vec2 position;
 attribute float color;
-attribute float alpha;
+attribute float radius;
 attribute float created;
 uniform mat3 uView;
 uniform float uTime;
@@ -18,5 +18,5 @@ void main() {
         // Passthrough color.
         vColor = vec3(color);
     }
-    gl_PointSize = uWindowSize * length((uView * vec3(1.0, 0.0, 0.0))) * (1.0 + life * 2.0);
+    gl_PointSize = uWindowSize * length((uView * vec3(1.0, 0.0, 0.0))) * (1.0 + life * 2.0) * radius;
 }

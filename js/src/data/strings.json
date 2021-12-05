@@ -187,6 +187,9 @@
 					"single/week": "Weekly Leaderboard"
 				}
 			},
+			"online": {
+				"label": "{players} online"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -270,6 +273,10 @@
 				"label": "Fleet"
 			},
 			"upgrade": {
+				"label": {
+					"progress": "{percent} to level {level}",
+					"ready": "Upgrade to level {level}"
+				},
 				"labelMiddle": "to level",
 				"labelPrefix": "Upgrade to level"
 			}
@@ -336,6 +343,10 @@
 				"destroyer": {
 					"hint": "¡Tu barco está equipado con una variedad de armas!",
 					"name": "destructor"
+				},
+				"dreadnought": {
+					"hint": "¡Tu barco tiene poderosos cañones!",
+					"name": "acorazado"
 				},
 				"dredger": {
 					"hint": "¡Tu barco puede crear y destruir tierra!",
@@ -413,7 +424,7 @@
 				}
 			}
 		},
-		"label": "Spanish",
+		"label": "Español",
 		"page": {
 			"about": {
 				"title": "Sobre Mk48.io"
@@ -431,6 +442,9 @@
 			},
 			"privacy": {
 				"title": "Política de privacidad de Mk48.io"
+			},
+			"settings": {
+				"title": "Ajustes"
 			},
 			"ships": {
 				"intro": "La siguiente es una lista de todos los barcos del juego y sus armas. Tenga en cuenta que ciertos valores son aproximados y pueden verse afectados por otros factores. Por ejemplo, el daño del arma depende de la ubicación del impacto.",
@@ -469,6 +483,9 @@
 					"single/week": "Tabla semanal"
 				}
 			},
+			"online": {
+				"label": "{players} en línea"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -483,6 +500,9 @@
 			},
 			"sidebar": {
 				"action": {
+					"settings": {
+						"hint": "Ajustes"
+					},
 					"zoomIn": {
 						"hint": "Acercarse"
 					},
@@ -548,6 +568,10 @@
 				"label": "Flota"
 			},
 			"upgrade": {
+				"label": {
+					"progress": "{percent} al nivel {level}",
+					"ready": "Actualiza al nivel {level}"
+				},
 				"labelMiddle": "a nivel",
 				"labelPrefix": "Actualizar a nivel"
 			}
@@ -614,6 +638,10 @@
 				"destroyer": {
 					"hint": "Ваш корабль оснащен разнообразным вооружением!",
 					"name": "миноносец"
+				},
+				"dreadnought": {
+					"hint": "У вашего корабля мощные пушки!",
+					"name": "дредноут"
 				},
 				"dredger": {
 					"hint": "Ваш корабль может создавать и разрушать землю!",
@@ -691,7 +719,7 @@
 				}
 			}
 		},
-		"label": "Russian",
+		"label": "русский",
 		"page": {
 			"about": {
 				"title": "О Mk48.io"
@@ -709,6 +737,9 @@
 			},
 			"privacy": {
 				"title": "Политика конфиденциальности Mk48.io"
+			},
+			"settings": {
+				"title": "Настройки"
 			},
 			"ships": {
 				"intro": "Здесь расположен список всех кораблей в игре, а так же их оружий. Обратите внимание, что некоторые значения не точные и могут быть подвержены влиянию других факторов. Например: урон от определенного оружия - зависит от места попадания",
@@ -747,6 +778,9 @@
 					"single/week": "Еженедельная таблица лидеров"
 				}
 			},
+			"online": {
+				"label": "{players} онлайн"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -761,6 +795,9 @@
 			},
 			"sidebar": {
 				"action": {
+					"settings": {
+						"hint": "Настройки"
+					},
 					"zoomIn": {
 						"hint": "Увеличить"
 					},
@@ -826,6 +863,10 @@
 				"label": "Флот"
 			},
 			"upgrade": {
+				"label": {
+					"progress": "{percent} до {level} уровня",
+					"ready": "Перейти на уровень {level}"
+				},
 				"labelMiddle": "до уровня",
 				"labelPrefix": "Перейти на уровень"
 			}
@@ -892,6 +933,10 @@
 				"destroyer": {
 					"hint": "Votre vaisseau est équipé d'une variété d'armes!",
 					"name": "destructeur"
+				},
+				"dreadnought": {
+					"hint": "Votre navire est doté de puissants canons !",
+					"name": "cuirassé"
 				},
 				"dredger": {
 					"hint": "Votre navire peut créer et détruire des terres!",
@@ -969,7 +1014,7 @@
 				}
 			}
 		},
-		"label": "French",
+		"label": "Français",
 		"page": {
 			"about": {
 				"title": "À propos de Mk48.io"
@@ -987,6 +1032,9 @@
 			},
 			"privacy": {
 				"title": "Politique de confidentialité de Mk48.io"
+			},
+			"settings": {
+				"title": "Paramètres"
 			},
 			"ships": {
 				"intro": "Ce qui suit est une liste de tous les navires du jeu et de leurs armes. Notez que certaines valeurs sont approximatives et peuvent être affectées par d'autres facteurs. Par exemple, les dégâts de l'arme dépendent de l'emplacement de l'impact.",
@@ -1025,6 +1073,9 @@
 					"single/week": "Classement hebdomadaire"
 				}
 			},
+			"online": {
+				"label": "{players} en ligne"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -1039,6 +1090,9 @@
 			},
 			"sidebar": {
 				"action": {
+					"settings": {
+						"hint": "Paramètres"
+					},
 					"zoomIn": {
 						"hint": "Agrandir"
 					},
@@ -1104,6 +1158,10 @@
 				"label": "Flotte"
 			},
 			"upgrade": {
+				"label": {
+					"progress": "{percent} au niveau {level}",
+					"ready": "Passer au niveau {level}"
+				},
 				"labelMiddle": "à niveau",
 				"labelPrefix": "Passer au niveau"
 			}
@@ -1170,6 +1228,10 @@
 				"destroyer": {
 					"hint": "你的船配备了各种武器!",
 					"name": "驱逐舰"
+				},
+				"dreadnought": {
+					"hint": "你的船有强大的大炮!",
+					"name": "无畏"
 				},
 				"dredger": {
 					"hint": "你的船可以创造和摧毁土地!",
@@ -1247,7 +1309,7 @@
 				}
 			}
 		},
-		"label": "Chinese (Simplified)",
+		"label": "简体中文",
 		"page": {
 			"about": {
 				"title": "关于 Mk48.io"
@@ -1265,6 +1327,9 @@
 			},
 			"privacy": {
 				"title": "Mk48.io 隐私政策"
+			},
+			"settings": {
+				"title": "竖"
 			},
 			"ships": {
 				"intro": "以下是游戏中所有船只及其武器的列表。请注意，某些值是近似值，可能会受到其他因素的影响。例如，武器伤害取决于命中位置。",
@@ -1303,6 +1368,9 @@
 					"single/week": "每周排行榜"
 				}
 			},
+			"online": {
+				"label": "{players}名球员"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -1317,6 +1385,9 @@
 			},
 			"sidebar": {
 				"action": {
+					"settings": {
+						"hint": "竖"
+					},
 					"zoomIn": {
 						"hint": "放大"
 					},
@@ -1382,6 +1453,10 @@
 				"label": "舰队"
 			},
 			"upgrade": {
+				"label": {
+					"progress": "{percent} 到 {level} 级",
+					"ready": "升级到级别 {level}"
+				},
 				"labelMiddle": "至",
 				"labelPrefix": "升级到"
 			}
@@ -1397,6 +1472,892 @@
 		"setting": {
 			"volume": {
 				"label": "音量"
+			}
+		}
+	},
+	"de": {
+		"boat": "Boot",
+		"death": {
+			"border": {
+				"message": "In die Grenze gekracht!"
+			},
+			"collision": {
+				"message": "In {playerOrEntityLabel} gekracht!"
+			},
+			"ramming": {
+				"message": "Von {player} gerammt!"
+			},
+			"sinking": {
+				"message": "Von {player} mit {entityKind} versenkt!"
+			},
+			"terrain": {
+				"message": "Ins Land gekracht!"
+			}
+		},
+		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "Helicopter"
+				},
+				"plane": {
+					"name": "Flugzeug"
+				}
+			},
+			"boat": {
+				"battleship": {
+					"hint": "Dein Schiff hat starke Kanonen und viel Panzerung!",
+					"name": "Kriegsschiff"
+				},
+				"carrier": {
+					"hint": "Dein Schiff kann Fluggeräte abheben lassen welche Waffen besitzen!",
+					"name": "Flugzeugträger"
+				},
+				"corvette": {
+					"hint": "Dein Schiff ist klein und schwierig zu treffen!",
+					"name": "Korvette"
+				},
+				"cruiser": {
+					"hint": "Dein Schiff ist mit Anti-Schiff und Anti-U-Boot Waffen ausgerüstet!",
+					"name": "Kreuzer"
+				},
+				"destroyer": {
+					"hint": "Dein Schiff ist mit einer Menge verschiedener Waffen ausgerüstet!",
+					"name": "Zerstörer"
+				},
+				"dreadnought": {
+					"hint": "Dein Schiff hat starke Kanonen!",
+					"name": "Schlachtschiff"
+				},
+				"dredger": {
+					"hint": "Dein Schiff kann Land erschaffen und zerstören!",
+					"name": "Baggerschiff"
+				},
+				"hovercraft": {
+					"hint": "Dein Schiff kann sich auf Wasser und Land fortbewegen!",
+					"name": "Luftkissenfahrzeug"
+				},
+				"lcs": {
+					"hint": "Dein Schiff kann tödliche Waffen in der Nähe von Inselgruppen abfeuern!",
+					"name": "Küstennahes Kampfschiff"
+				},
+				"minelayer": {
+					"hint": "Dein Schiff kann tötliche Minen legen!",
+					"name": "Minenleger"
+				},
+				"mtb": {
+					"hint": "Dein Schiff hat Waffen um andere Schiffe zu versenken!",
+					"name": "Motor-Torpedo Boot"
+				},
+				"pirate": {
+					"name": "Pirat"
+				},
+				"ram": {
+					"hint": "Dein Schiff kann andere Schiffe rammen!",
+					"name": "Rammbock"
+				},
+				"submarine": {
+					"hint": "Dein Schiff kann Waffen unterwasser abfeuern!",
+					"name": "U-Boot"
+				},
+				"tanker": {
+					"hint": "Dein Schiff kriegt zwei mal so viele Punkte für Öl-Fässer!",
+					"name": "Tanker"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "Echolot Täuschkörper"
+				}
+			},
+			"obstacle": {
+				"structure": {
+					"name": "Struktur"
+				}
+			},
+			"weapon": {
+				"depositor": {
+					"name": "Ablagerer"
+				},
+				"depthCharge": {
+					"name": "Wasserbombe"
+				},
+				"mine": {
+					"name": "Mine"
+				},
+				"missile": {
+					"name": "Lenkrakete"
+				},
+				"rocket": {
+					"name": "Rakete"
+				},
+				"rocketTorpedo": {
+					"name": "Anti-U-Boot Rakete"
+				},
+				"sam": {
+					"name": "Flugabwehrrakete"
+				},
+				"shell": {
+					"name": "Kanone"
+				},
+				"torpedo": {
+					"name": "Torpedo"
+				}
+			}
+		},
+		"label": "Deutsch",
+		"page": {
+			"about": {
+				"title": "Über Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Achtung: Diese Informationen sind vielleicht nicht immer 100% aktuell.",
+				"title": "Mk48.io Updates"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk49.io ist ein Mehrspieler Kampfschiffspiel. Du startest als kleines Boot und sammels <b>Kisten</b> auf um Punkte zu bekommen (Um dein Schiff aufzubessern). Auch wenn eine kleine Menge Kisten einfach so herumschwimmt ist es viel effektiver andere Schiff zu versenken um viele mal mehr Punkte zu bekommen. </p>",
+					"title": "Grundlagen"
+				},
+				"title": "Mk48.io Hilfe"
+			},
+			"privacy": {
+				"title": "Mk48.io Datenschutz"
+			},
+			"settings": {
+				"title": "Einstellungen"
+			},
+			"ships": {
+				"intro": "Dies ist eine Liste aller Schiffe im Spiel und ihrer Waffen. Bitte denke daran dass alle Werte Durschnitte sind. Zum Beispiel hängt Schaden auch von der Einschlagsstelle ab.",
+				"title": "Mk48.io Schiffe"
+			},
+			"terms": {
+				"title": "Mk48.io AGB"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Drücke Enter um eine Nachricht zu senden",
+						"hintTeam": "Drücke Enter um eine Nachricht an alle zu schicken oder Shift+Enter um eine Nachricht an deine Teammitglieder zu schicken.",
+						"label": "Nachricht"
+					}
+				},
+				"label": "Radio"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Klicke und halte um dich zu bewegen. Klick kurz um zu feuern.",
+					"zoom": "Scrolle um herauszuzoomen."
+				},
+				"touch": {
+					"movement": "Tippe und halte um dich zu bewegen. Tippe kurz um zu feuern.",
+					"zoom": "Ziehe die Finger zusammen um herauszuzoomen."
+				}
+			},
+			"leaderboard": {
+				"label": "Bestenliste",
+				"type": {
+					"single/all": "Bestenliste (Jemals)",
+					"single/day": "Bestenliste (Täglich)",
+					"single/week": "Bestenliste (Wöchentlich)"
+				}
+			},
+			"online": {
+				"label": "{players} Spieler"
+			},
+			"ship": {
+				"action": {
+					"active": {
+						"hint": "Dein {sensors} hilft dir mehr zu sehen, aber es verrät auch deine Position.",
+						"label": "Aktive Sensoren"
+					},
+					"surface": {
+						"hint": "Du kannst jederzeit auftauchen aber die Tauchtiefe ist von der Wassertiefe begrenzt.",
+						"label": "Tauchen"
+					}
+				}
+			},
+			"sidebar": {
+				"action": {
+					"settings": {
+						"hint": "Einstellungen"
+					},
+					"zoomIn": {
+						"hint": "Reinzoomen"
+					},
+					"zoomOut": {
+						"hint": "Rauszoomen"
+					}
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "Über"
+					},
+					"help": {
+						"label": "Hilfe"
+					},
+					"privacy": {
+						"label": "Datenschutz"
+					},
+					"spawn": {
+						"label": "Spielen"
+					},
+					"terms": {
+						"label": "AGB"
+					}
+				},
+				"connectionLost": "Die Schlacht ist vorbei. Du kannst es in wenigen Momenten erneut versuchen.",
+				"invitePrefix": "Mit Einladungsnummer",
+				"label": "Mk48.io"
+			},
+			"status": {
+				"score": "Punkt",
+				"scorePlural": "Punkte"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Annehmen"
+					},
+					"create": {
+						"label": "Erstellen"
+					},
+					"deny": {
+						"label": "Anlehnen"
+					},
+					"invite": {
+						"hint": "Gieb diesen Link an andere Spieler weiter um sie direkt in deinem Team zu haben.",
+						"label": "Link kopieren"
+					},
+					"kick": {
+						"label": "Rauswerfen"
+					},
+					"leave": {
+						"label": "Verlassen"
+					},
+					"name": {
+						"label": "Flottenname"
+					},
+					"request": {
+						"label": "Anfragen"
+					}
+				},
+				"full": "Team voll",
+				"label": "Flotte"
+			},
+			"upgrade": {
+				"label": {
+					"progress": "{percent} bis Level {level}",
+					"ready": "Auf Level {level} upgraden"
+				},
+				"labelMiddle": "von Level",
+				"labelPrefix": "Auf Level {level} upgraden"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Radar"
+			},
+			"sonar": {
+				"label": "Echolot"
+			}
+		},
+		"setting": {
+			"volume": {
+				"label": "Lautstärke"
+			}
+		}
+	},
+	"ja": {
+		"boat": "舟",
+		"death": {
+			"border": {
+				"message": "国境に激突!"
+			},
+			"collision": {
+				"message": "{playerOrEntityLabel}にクラッシュしました!"
+			},
+			"ramming": {
+				"message": "{player}に突っ込まれました!"
+			},
+			"sinking": {
+				"message": "{entityKind}で{player}に沈められました!"
+			},
+			"terrain": {
+				"message": "地面に激突!"
+			}
+		},
+		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "ヘリコプター"
+				},
+				"plane": {
+					"name": "飛行機"
+				}
+			},
+			"boat": {
+				"battleship": {
+					"hint": "あなたの船は強力な銃とたくさんの鎧を持っています!",
+					"name": "戦艦"
+				},
+				"carrier": {
+					"hint": "あなたの船は彼ら自身の武器で航空機を発射することができます!",
+					"name": "空母"
+				},
+				"corvette": {
+					"hint": "あなたの船は小さくて打撃が難しいです!",
+					"name": "コルベット"
+				},
+				"cruiser": {
+					"hint": "あなたの船には対艦兵器と対潜水艦兵器が装備されています!",
+					"name": "クルーザー"
+				},
+				"destroyer": {
+					"hint": "あなたの船にはさまざまな武器が装備されています!",
+					"name": "駆逐艦"
+				},
+				"dreadnought": {
+					"hint": "あなたの船には強力な大砲があります!",
+					"name": "ドレッドノート"
+				},
+				"dredger": {
+					"hint": "あなたの船は土地を作り、破壊することができます!",
+					"name": "地面に激突!"
+				},
+				"hovercraft": {
+					"hint": "あなたのボートは陸と水の両方を旅することができます!",
+					"name": "ホバークラフト"
+				},
+				"lcs": {
+					"hint": "あなたのボートは小さな島のグループの中から致命的な武器を解き放つことができます!",
+					"name": "沿海域戦闘艦"
+				},
+				"minelayer": {
+					"hint": "あなたのボートは致命的な磁気地雷を置くことができます",
+					"name": "機雷敷設艦"
+				},
+				"mtb": {
+					"hint": "あなたのボートには他のボートを沈めるための武器があります!",
+					"name": "モーター魚雷艇"
+				},
+				"pirate": {
+					"name": "海賊"
+				},
+				"ram": {
+					"hint": "あなたのボートは他のボートにぶつかるように設計されています!",
+					"name": "牡羊"
+				},
+				"submarine": {
+					"hint": "あなたのボートは水中から武器を届けることができます!",
+					"name": "潜水艦"
+				},
+				"tanker": {
+					"hint": "あなたのボートは石油バレルから2倍の価値を得ます!",
+					"name": "タンカー"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "ソナーデコイ"
+				}
+			},
+			"obstacle": {
+				"structure": {
+					"name": "構造"
+				}
+			},
+			"weapon": {
+				"depositor": {
+					"name": "寄託者"
+				},
+				"depthCharge": {
+					"name": "爆雷"
+				},
+				"mine": {
+					"name": "機雷"
+				},
+				"missile": {
+					"name": "ミサイル"
+				},
+				"rocket": {
+					"name": "ロケット"
+				},
+				"rocketTorpedo": {
+					"name": "ロケット魚雷"
+				},
+				"sam": {
+					"name": "地対空ミサイル"
+				},
+				"shell": {
+					"name": "弾丸"
+				},
+				"torpedo": {
+					"name": "魚雷"
+				}
+			}
+		},
+		"label": "日本",
+		"page": {
+			"about": {
+				"title": "Mk48.ioについて"
+			},
+			"changelog": {
+				"disclaimer": "警告：この変更ログは常に完全に最新であるとは限りません",
+				"title": "Mk48.io変更ログ"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.ioは、マルチプレイヤーの海戦ゲームです。あなたは小さな船から始めて、スコアを上げるために（船をレベルアップするために）<b>木枠</b>を消費します。少量の箱が自然にスポーンしますが、他の船を沈めるとスコアが直接上がり、さらに多くの箱がスポーンします。</p>",
+					"title": "基本"
+				},
+				"title": "Mk48.ioヘルプガイド"
+			},
+			"privacy": {
+				"title": "Mk48.ioプライバシーポリシー"
+			},
+			"settings": {
+				"title": "設定"
+			},
+			"ships": {
+				"intro": "以下は、ゲーム内のすべての船とその武器のリストです。特定の値は概算であり、他の要因の影響を受ける可能性があることに注意してください。たとえば、武器のダメージはヒット場所によって異なります。",
+				"title": "Mk48.ioが出荷されます"
+			},
+			"terms": {
+				"title": "Mk48.io利用規約"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Enterキーを押して送信します",
+						"hintTeam": "Enterキーを押して送信するか、Shift + Enterキーを押してチームのみに送信します",
+						"label": "メッセージ"
+					}
+				},
+				"label": "無線"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "クリックして押し続けると移動し、クリックして魚雷を発射します",
+					"zoom": "スクロールしてズームアウトすると、見やすくなります"
+				},
+				"touch": {
+					"movement": "移動する方向にタッチし、タップして魚雷を発射します",
+					"zoom": "ピンチしてズームアウトすると見やすくなります"
+				}
+			},
+			"leaderboard": {
+				"label": "リーダーボード",
+				"type": {
+					"single/all": "史上最高のリーダーボード",
+					"single/day": "デイリーリーダーボード",
+					"single/week": "ウィークリーリーダーボード"
+				}
+			},
+			"online": {
+				"label": "{players}オンライン"
+			},
+			"ship": {
+				"action": {
+					"active": {
+						"hint": "アクティブな{sensors}は、より多くの情報を確認するのに役立ちますが、自分の位置を示す可能性もあります",
+						"label": "アクティブセンサー"
+					},
+					"surface": {
+						"hint": "いつでも船を浮上させることができますが、ダイビングは水深によって制限されることがあります。",
+						"label": "水面"
+					}
+				}
+			},
+			"sidebar": {
+				"action": {
+					"settings": {
+						"hint": "設定"
+					},
+					"zoomIn": {
+						"hint": "ズームイン"
+					},
+					"zoomOut": {
+						"hint": "ズームアウトする"
+					}
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "だいたい"
+					},
+					"help": {
+						"label": "ヘルプ"
+					},
+					"privacy": {
+						"label": "プライバシー"
+					},
+					"spawn": {
+						"label": "演奏する"
+					},
+					"terms": {
+						"label": "条項"
+					}
+				},
+				"connectionLost": "戦いは終わった。すぐにやり直してください。",
+				"invitePrefix": "招待コードの使用"
+			},
+			"status": {
+				"score": "点数",
+				"scorePlural": "点数"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "承認"
+					},
+					"create": {
+						"label": "作成"
+					},
+					"deny": {
+						"label": "拒否"
+					},
+					"invite": {
+						"hint": "まだゲームに参加していないプレーヤーにこのリンクを提供して、チームに直接参加できるようにします",
+						"label": "招待をコピー"
+					},
+					"kick": {
+						"label": "追放"
+					},
+					"leave": {
+						"label": "離れる"
+					},
+					"name": {
+						"label": "艦隊名"
+					},
+					"request": {
+						"label": "参加をリクエストする"
+					}
+				},
+				"full": "チームがいっぱい",
+				"label": "海軍"
+			},
+			"upgrade": {
+				"label": {
+					"progress": "レベル{level}まで{percent}",
+					"ready": "レベル{level}にアップグレードする"
+				},
+				"labelMiddle": "レベルに",
+				"labelPrefix": "レベルにアップグレード"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "レーダー"
+			},
+			"sonar": {
+				"label": "ソナー"
+			}
+		},
+		"setting": {
+			"volume": {
+				"label": "音量"
+			}
+		}
+	},
+	"vi": {
+		"boat": "con thuyền",
+		"death": {
+			"border": {
+				"message": "Đập vào biên giới!"
+			},
+			"collision": {
+				"message": "Đã đâm vào {playerOrEntityLabel}!"
+			},
+			"ramming": {
+				"message": "Bị tấn công bởi {player}!"
+			},
+			"sinking": {
+				"message": "Chìm đắm bởi {player} với {entityKind}!"
+			},
+			"terrain": {
+				"message": "Đập xuống đất!"
+			}
+		},
+		"kind": {
+			"aircraft": {
+				"heli": {
+					"name": "máy bay trực thăng"
+				},
+				"plane": {
+					"name": "phi cơ"
+				}
+			},
+			"boat": {
+				"battleship": {
+					"hint": "Tàu của bạn có súng mạnh và nhiều áo giáp!",
+					"name": "tàu chiến"
+				},
+				"carrier": {
+					"hint": "Tàu của bạn có thể phóng máy bay với vũ khí của riêng mình!",
+					"name": "tàu sân bay"
+				},
+				"corvette": {
+					"hint": "Tàu của bạn nhỏ và khó đánh!",
+					"name": "tàu hộ tống"
+				},
+				"cruiser": {
+					"hint": "Tàu của bạn được trang bị vũ khí chống hạm và chống tàu ngầm!",
+					"name": "tàu tuần dương"
+				},
+				"destroyer": {
+					"hint": "Tàu của bạn được trang bị nhiều loại vũ khí!",
+					"name": "kẻ huỷ diệt"
+				},
+				"dreadnought": {
+					"hint": "Tàu của bạn có những khẩu đại bác mạnh mẽ!",
+					"name": "thiết giáp hạm"
+				},
+				"dredger": {
+					"hint": "Tàu của bạn có thể tạo ra và phá hủy đất liền!",
+					"name": "tàu cuốc"
+				},
+				"hovercraft": {
+					"hint": "Thuyền của bạn có thể đi cả trên cạn và dưới nước!",
+					"name": "thủy phi cơ"
+				},
+				"lcs": {
+					"hint": "Thuyền của bạn có thể giải phóng vũ khí chết người từ trong các nhóm đảo nhỏ!",
+					"name": "tàu chiến đấu ven biển"
+				},
+				"minelayer": {
+					"hint": "Thuyền của bạn có thể đặt những quả mìn từ trường chết người",
+					"name": "thợ mỏ"
+				},
+				"mtb": {
+					"hint": "Thuyền của bạn có vũ khí để đánh chìm thuyền khác!",
+					"name": "thuyền máy phóng ngư lôi"
+				},
+				"pirate": {
+					"name": "cướp biển"
+				},
+				"ram": {
+					"hint": "Thuyền của bạn được thiết kế để đâm những chiếc thuyền khác!",
+					"name": "máy đem nước lên"
+				},
+				"submarine": {
+					"hint": "Thuyền của bạn có thể cung cấp vũ khí từ dưới nước!",
+					"name": "tàu ngầm"
+				},
+				"tanker": {
+					"hint": "Thuyền của bạn nhận được gấp đôi giá trị từ thùng dầu!",
+					"name": "tàu chở dầu"
+				}
+			},
+			"decoy": {
+				"sonar": {
+					"name": "mồi nhử sonar"
+				}
+			},
+			"obstacle": {
+				"structure": {
+					"name": "vật kiến trúc"
+				}
+			},
+			"weapon": {
+				"depositor": {
+					"name": "người gửi tiền"
+				},
+				"depthCharge": {
+					"name": "xạc sâu"
+				},
+				"mine": {
+					"name": "mìn"
+				},
+				"missile": {
+					"name": "hỏa tiễn"
+				},
+				"rocket": {
+					"name": "tên lửa"
+				},
+				"rocketTorpedo": {
+					"name": "ngư lôi tên lửa"
+				},
+				"sam": {
+					"name": "tên lửa đất đối không"
+				},
+				"shell": {
+					"name": "vỏ bọc"
+				},
+				"torpedo": {
+					"name": "điện ngư"
+				}
+			}
+		},
+		"label": "Tiếng Việt",
+		"page": {
+			"about": {
+				"title": "Về Mk48.io"
+			},
+			"changelog": {
+				"disclaimer": "Cảnh báo: Bảng thay đổi này có thể không phải lúc nào cũng được cập nhật đầy đủ",
+				"title": "Mk48.io Changelog"
+			},
+			"help": {
+				"basics": {
+					"html": "<p>Mk48.io là một trò chơi chiến đấu hải quân nhiều người chơi. Bạn bắt đầu từ một con tàu nhỏ và tiêu thụ <b>thùng</b> để tăng điểm (để lên cấp cho con tàu của bạn). Trong khi một số lượng nhỏ các thùng sinh ra tự nhiên, việc đánh chìm các tàu khác trực tiếp làm tăng điểm số của bạn và sinh ra nhiều thùng khác.</p>",
+					"title": "Khái niệm cơ bản"
+				},
+				"title": "Hướng dẫn trợ giúp Mk48.io"
+			},
+			"privacy": {
+				"title": "Chính sách quyền riêng tư của Mk48.io"
+			},
+			"settings": {
+				"title": "Cài đặt"
+			},
+			"ships": {
+				"intro": "Sau đây là danh sách tất cả các tàu trong trò chơi, và vũ khí của chúng. Lưu ý rằng các giá trị nhất định là gần đúng và có thể bị ảnh hưởng bởi các yếu tố khác. Ví dụ, sát thương của vũ khí phụ thuộc vào vị trí trúng đích.",
+				"title": "Tàu Mk48.io"
+			},
+			"terms": {
+				"title": "Mk48.io Điều khoản dịch vụ"
+			}
+		},
+		"panel": {
+			"chat": {
+				"action": {
+					"send": {
+						"hint": "Nhấn Enter để gửi",
+						"hintTeam": "Nhấn Enter để gửi hoặc Shift + Enter để chỉ gửi cho nhóm",
+						"label": "Thông điệp"
+					}
+				},
+				"label": "Đài"
+			},
+			"instruction": {
+				"mouse": {
+					"movement": "Nhấp và giữ để di chuyển, nhấp để bắn ngư lôi",
+					"zoom": "Cuộn để thu nhỏ để xem tốt hơn"
+				},
+				"touch": {
+					"movement": "Chạm vào một hướng để di chuyển, chạm để bắn ngư lôi",
+					"zoom": "Chụm để thu nhỏ để có chế độ xem tốt hơn"
+				}
+			},
+			"leaderboard": {
+				"label": "Bảng xếp hạng",
+				"type": {
+					"single/all": "Bảng xếp hạng mọi thời đại",
+					"single/day": "Bảng xếp hạng hàng ngày",
+					"single/week": "Bảng xếp hạng hàng tuần"
+				}
+			},
+			"online": {
+				"label": "{players} trực tuyến"
+			},
+			"ship": {
+				"action": {
+					"active": {
+						"hint": "{sensors} đang hoạt động giúp bạn nhìn thấy nhiều hơn, nhưng cũng có thể làm mất đi vị trí của bạn",
+						"label": "Cảm biến hoạt động"
+					},
+					"surface": {
+						"hint": "Bạn có thể nổi con tàu của mình bất cứ khi nào bạn muốn, nhưng việc lặn đôi khi bị giới hạn bởi độ sâu của nước.",
+						"label": "Mặt"
+					}
+				}
+			},
+			"sidebar": {
+				"action": {
+					"settings": {
+						"hint": "Cài đặt"
+					},
+					"zoomIn": {
+						"hint": "Phóng to"
+					},
+					"zoomOut": {
+						"hint": "Thu nhỏ"
+					}
+				}
+			},
+			"splash": {
+				"action": {
+					"about": {
+						"label": "Về"
+					},
+					"help": {
+						"label": "Cứu giúp"
+					},
+					"privacy": {
+						"label": "Sự riêng tư"
+					},
+					"spawn": {
+						"label": "Chơi"
+					},
+					"terms": {
+						"label": "Điều kiện"
+					}
+				},
+				"connectionLost": "Trận chiến kết thúc. Hãy thử bắt đầu lại trong thời gian ngắn.",
+				"invitePrefix": "Sử dụng mã mời"
+			},
+			"status": {
+				"score": "điểm",
+				"scorePlural": "điểm"
+			},
+			"team": {
+				"action": {
+					"accept": {
+						"label": "Chấp nhận"
+					},
+					"create": {
+						"label": "Tạo ra"
+					},
+					"deny": {
+						"label": "Từ chối"
+					},
+					"invite": {
+						"hint": "Cung cấp liên kết này cho những người chơi chưa tham gia trò chơi để cho phép họ tham gia trực tiếp vào nhóm của bạn",
+						"label": "Sao chép lời mời"
+					},
+					"kick": {
+						"label": "Trục xuất"
+					},
+					"leave": {
+						"label": "Rời bỏ"
+					},
+					"name": {
+						"label": "Tên hạm đội"
+					},
+					"request": {
+						"label": "thỉnh cầu"
+					}
+				},
+				"full": "Đội đầy đủ",
+				"label": "Hạm đội"
+			},
+			"upgrade": {
+				"label": {
+					"progress": "{percent} lên cấp {level}",
+					"ready": "Nâng cấp lên cấp {level}"
+				},
+				"labelMiddle": "đến mức",
+				"labelPrefix": "Nâng cấp lên cấp độ"
+			}
+		},
+		"sensor": {
+			"radar": {
+				"label": "Rađa"
+			},
+			"sonar": {
+				"label": "Sonar"
+			}
+		},
+		"setting": {
+			"volume": {
+				"label": "Âm lượng"
 			}
 		}
 	},
@@ -1560,6 +2521,9 @@
 					"single/week": "Weekly Leaderbork"
 				}
 			},
+			"online": {
+				"label": "{players} borks"
+			},
 			"ship": {
 				"action": {
 					"active": {
@@ -1617,6 +2581,9 @@
 				"label": "Borks"
 			},
 			"upgrade": {
+				"label": {
+					"ready": "Bork to level {level}"
+				},
 				"labelPrefix": "Bork to level"
 			}
 		}

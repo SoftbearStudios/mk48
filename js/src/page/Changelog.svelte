@@ -5,6 +5,7 @@
 
 <script>
 	import Page from './Page.svelte';
+	import Link from '../lib/Link.svelte';
 	import t from '../lib/translation.js';
 </script>
 
@@ -12,6 +13,22 @@
 	<p>Warning: This changelog may not always be fully up to date</p>
 
 	<h2>2021</h2>
+
+	<h3>12/4/2021</h3>
+
+	<ul>
+		<li>Add "Freccia" destroyer.</li>
+		<li>Add "Oberon" submarine.</li>
+		<li>Add "Dreadnought" dreadnought (heh).</li>
+		<li>Add German (thanks to Blackfur), Japanese, and Vietnamese translations.</li>
+		<li>Add muzzle flash effect.</li>
+		<li>Add <a href='#/levels'>levels</a> page.</li>
+		<li>Reorganize levels, the respawn level cap is increased to 4.</li>
+		<li>Mark 48 torpedo does 33% more damage.</li>
+		<li>Allow a <Link href="https://raw.githubusercontent.com/finnbear/rustrict/master/src/safe.txt">short list of
+		safe messages</Link> while muted.</li>
+		<li>Fix bearing display.</li>
+	</ul>
 
 	<h3>11/21/2021</h3>
 

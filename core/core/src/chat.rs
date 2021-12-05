@@ -57,6 +57,7 @@ impl ChatHistory {
 
         let inappropriate = analysis.is(threshold);
         let severely_inappropriate = analysis.is(Type::INAPPROPRIATE & Type::SEVERE);
+        let safe = analysis.is(Type::SAFE);
 
         if inappropriate {
             if analysis.is(Type::SEVERE) {
@@ -129,8 +130,8 @@ impl ChatHistory {
 
         if severely_inappropriate {
             Err("Message held for severe profanity")
-        } else if inappropriate_spam {
-            Err("You have been temporarily muted due to profanity/spam")
+        } else if inappropriate_spam && !safe {
+            Err("Your chat has been temporarily restricted due to profanity/spam")
         } else if (frequency_spam || repetition_spam) && !whisper {
             Err("You have been temporarily muted due to excessive frequency")
         } else {

@@ -9,6 +9,7 @@ use actix_web::http::header;
 use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
+use bincode::Options;
 use core_protocol::web_socket::WebSocketFormat;
 use log::{debug, info, warn};
 use serde::de::DeserializeOwned;
@@ -165,7 +166,12 @@ where
         self.set_keep_alive();
         match ws_message {
             Ok(ws::Message::Binary(bin)) => {
-                match bincode::deserialize(bin.as_ref()) {
+                match bincode::DefaultOptions::new()
+                    .with_limit(1024 * 1024)
+                    .with_fixint_encoding()
+                    .allow_trailing_bytes()
+                    .deserialize(bin.as_ref())
+                {
                     Ok(request) => {
                         self.format = WebSocketFormat::Binary;
                         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Request {

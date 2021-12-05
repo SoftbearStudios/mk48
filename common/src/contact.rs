@@ -28,9 +28,15 @@ pub trait ContactTrait {
 
     fn reloads(&self) -> &[Ticks];
 
+    /// Whether reloads() will return real data or all zeroes.
+    fn reloads_known(&self) -> bool;
+
     fn transform(&self) -> &Transform;
 
     fn turrets(&self) -> &[Angle];
+
+    /// Whether turrets() will return real data or all zeroes.
+    fn turrets_known(&self) -> bool;
 
     #[inline]
     fn is_boat(&self) -> bool {
@@ -168,6 +174,11 @@ impl ContactTrait for Contact {
     }
 
     #[inline]
+    fn reloads_known(&self) -> bool {
+        self.reloads.is_some()
+    }
+
+    #[inline]
     fn transform(&self) -> &Transform {
         &self.transform
     }
@@ -177,5 +188,10 @@ impl ContactTrait for Contact {
         self.turrets
             .as_ref()
             .map_or(&ANGLE_ARRAY_ZERO, |a| a.as_ref())
+    }
+
+    #[inline]
+    fn turrets_known(&self) -> bool {
+        self.turrets.is_some()
     }
 }

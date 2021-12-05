@@ -123,53 +123,58 @@ for (const entityType of Object.keys(entityDatas)) {
 			break;
 	}
 
-	if (entityData.damage == undefined) {
-		switch (entityData.kind) {
-			case 'boat':
-				// Damage means health (i.e. how much damage before death)
-				const factor = 20 / 10 / 60;
-				entityData.damage = Math.max(factor, factor * entityData.length);
-				break;
-			case 'weapon':
-				// Damage means damage dealt
-				switch (entityData.subkind) {
-					case 'torpedo':
-						entityData.damage = 0.27 * Math.pow(entityData.length, 0.7);
-						// NOTE: This makes homing torpedoes do less damage.
-						/*
-						if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
-							entityData.damage -= 0.1;
-						}
-						*/
-						break;
-					case 'mine':
-						entityData.damage = 1.5;
-						break;
-					case 'rocket':
-					case 'missile':
-						entityData.damage = 0.19 * Math.pow(entityData.length, 0.7);
-						break;
-					case 'shell':
-						//entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
-						//console.log(entityData.label + ", " + (0.5 * Math.pow(entityData.length, 0.35) < 0.14 * Math.pow(entityData.length, 3)));
+    let damageMultiplier = null;
+    if (entityData.damage != undefined) {
+        damageMultiplier = entityData.damage;
+    }
+    switch (entityData.kind) {
+        case 'boat':
+            // Damage means health (i.e. how much damage before death)
+            const factor = 20 / 10 / 60;
+            entityData.damage = Math.max(factor, factor * entityData.length);
+            break;
+        case 'weapon':
+            // Damage means damage dealt
+            switch (entityData.subkind) {
+                case 'torpedo':
+                    entityData.damage = 0.27 * Math.pow(entityData.length, 0.7);
+                    // NOTE: This makes homing torpedoes do less damage.
+                    /*
+                    if (Array.isArray(entityData.sensors) && entityData.sensors.length > 0) {
+                        entityData.damage -= 0.1;
+                    }
+                    */
+                    break;
+                case 'mine':
+                    entityData.damage = 1.5;
+                    break;
+                case 'rocket':
+                case 'missile':
+                    entityData.damage = 0.19 * Math.pow(entityData.length, 0.7);
+                    break;
+                case 'shell':
+                    //entityData.damage = 0.55 * Math.pow(entityData.length, 0.3);
+                    //console.log(entityData.label + ", " + (0.5 * Math.pow(entityData.length, 0.35) < 0.14 * Math.pow(entityData.length, 3)));
 
-						const normal = 0.5 * Math.pow(entityData.length, 0.35);
-						const special = 0.14 * Math.pow(entityData.length, 3);
+                    const normal = 0.5 * Math.pow(entityData.length, 0.35);
+                    const special = 0.14 * Math.pow(entityData.length, 3);
 
-						if (entityData.width > 0.3) {
-						    entityData.damage = Math.max(normal, special);
-						} else {
-						    // Very long, small shells do not benefit from "special" damage calculation.
-						    entityData.damage = normal;
-						}
-						break;
-					case 'depthCharge':
-						entityData.damage = 0.8;
-						break;
-				}
-				break;
-		}
-	}
+                    if (entityData.width > 0.3) {
+                        entityData.damage = Math.max(normal, special);
+                    } else {
+                        // Very long, small shells do not benefit from "special" damage calculation.
+                        entityData.damage = normal;
+                    }
+                    break;
+                case 'depthCharge':
+                    entityData.damage = 0.8;
+                    break;
+            }
+            break;
+    }
+    if (damageMultiplier != null) {
+        entityData.damage *= damageMultiplier;
+    }
 
 	if (entityData.reload == undefined) {
 		switch (entityData.kind) {

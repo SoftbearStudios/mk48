@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::console_log;
+use client_util::console_log;
 use std::collections::HashMap;
 use web_sys::{WebGlProgram, WebGlRenderingContext as Gl, WebGlShader, WebGlUniformLocation};
 
@@ -15,7 +15,6 @@ impl Shader {
     /// to their index in the input.
     pub fn new(gl: &Gl, vertex: &str, fragment: &str, attributes: &[&'static str]) -> Self {
         let vert_shader = Self::compile_shader(gl, Gl::VERTEX_SHADER, vertex).unwrap();
-
         let frag_shader = Self::compile_shader(gl, Gl::FRAGMENT_SHADER, fragment).unwrap();
 
         let program = Self::link_program(gl, &vert_shader, &frag_shader, attributes).unwrap();
@@ -75,7 +74,7 @@ impl Shader {
 
     /// link_program links the two shaders to form a shader program. It indexes attribute locations
     /// in the exact order they appear in the input.
-    pub fn link_program(
+    fn link_program(
         context: &Gl,
         vert_shader: &WebGlShader,
         frag_shader: &WebGlShader,

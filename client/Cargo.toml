@@ -9,22 +9,22 @@ license = "AGPL-3.0-or-later"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-js-sys = "0.3.52"
-wasm-bindgen = {version = "0.2.75", features = ["serde-serialize"] }
-wasm-bindgen-futures = "0.4.26"
-console_error_panic_hook = "0.1.6"
-serde = "1.0.127"
-serde_json = "1.0.66"
-serde-wasm-bindgen = "0.3.0"
-glam = {version="0.18.0", features=["scalar-math"]}
+js-sys = "0.3"
+wasm-bindgen = {version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+console_error_panic_hook = "0.1"
+serde = "1.0"
+serde_json = "1.0"
+serde-wasm-bindgen = "0.3"
+glam = {version="0.18", features=["scalar-math"]}
 common = {path="../common", features=["js"]}
 instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
-rand = "0.8.4"
-bincode = "1.3.3"
+rand = "0.8"
 core_protocol = {path="../core/core_protocol"}
-arrayvec = "0.7.1"
+client_util = {path="../core/client_util"}
+arrayvec = "0.7"
 sprite_sheet = {path="../sprite_sheet"}
-itertools = "0.10.1"
+itertools = "0.10"
 
 [dependencies.web-sys]
 version = "0.3.4"

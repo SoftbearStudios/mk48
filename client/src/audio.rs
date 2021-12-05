@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use client_util::console_log;
 use js_sys::ArrayBuffer;
 use sprite_sheet::AudioSpriteSheet;
 use std::cell::RefCell;

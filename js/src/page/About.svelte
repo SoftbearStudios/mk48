@@ -37,7 +37,7 @@
 	<p>Mk48.io is an online multiplayer ship combat game created by Softbear
 	Studios. The goal is to level up your ship by collecting crates and sinking
 	other ships. There are <a href='#/ships'>{shipTypeCount} ships</a> and {weaponSubTypeCount} weapon types to chose from, spread
-	over {shipLevelMax} progressively more powerful levels.</p>
+	over <a href='#/levels'>{shipLevelMax} progressively more powerful levels</a>.</p>
 
 	<p>To learn more about the game, visit the <a href='#/help'>Help page</a>
 	You can also view the <a href='#/changelog'>Changelog page</a> to see what changed recently.</p>

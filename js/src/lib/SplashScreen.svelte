@@ -30,7 +30,13 @@
 
 	function getRandomSpawnable() {
 		const spawnable = getSpawnable();
-		return spawnable[Math.floor(Math.random() * spawnable.length)];
+		while (true) {
+			const pick = spawnable[Math.floor(Math.random() * spawnable.length)];
+			// Olympias can be manually chosen, but due to its slow speed, will not be randomly picked.
+			if (pick !== 'olympias') {
+				return pick;
+			}
+		}
 	}
 
 	// Sends a message to the parent of this iframe, usually

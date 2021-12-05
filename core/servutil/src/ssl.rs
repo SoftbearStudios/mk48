@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use log::warn;
+use actix_web::dev::Server;
+use futures::{pin_mut, select, FutureExt};
+use log::{error, info, warn};
 use rustls::server::{NoClientAuth, ServerConfig};
 use rustls_pemfile;
 use std::fs;
@@ -117,5 +119,54 @@ impl<'a> Ssl<'a> {
 
     pub fn available_certificate_expiry(&self) -> Instant {
         Self::certificate_expiry(self.certificate_file)
+    }
+}
+
+/// Returns when either the server has stopped (Err) or the SSL needs renewal (Ok).
+pub async fn run_until_ssl_renewal<'a>(server: Server, ssl: &Option<Ssl<'a>>) -> Result<(), ()> {
+    if let Some(ssl) = ssl {
+        // This handle can be sent the stop command, and it will stop the original server
+        // which has been moved by then.
+        let server_handle = server.handle();
+
+        let renewal = async move {
+            let mut interval =
+                tokio::time::interval(tokio::time::Duration::from_secs(12 * 60 * 60));
+
+            // Eat first tick.
+            interval.tick().await;
+
+            loop {
+                interval.tick().await;
+
+                if ssl.can_renew() {
+                    warn!("Checking if certificate can be renewed...yes");
+                    // Stopping this future will trigger a restart.
+                    break;
+                } else {
+                    info!("Checking if certificate can be renewed...no");
+                }
+            }
+        };
+
+        //let fused_server = (Box::new(running_server) as Box<dyn futures::Future<Output=Result<(), std::io::Error>>>);
+        let fused_server = server.fuse();
+        let fused_renewal = renewal.fuse();
+
+        pin_mut!(fused_server, fused_renewal);
+
+        select! {
+            res = fused_server => {
+                error!("server result: {:?}", res);
+                Err(())
+            },
+            () = fused_renewal => {
+                server_handle.stop(true).await;
+                Ok(())
+            }
+        }
+    } else {
+        let _ = server.await;
+        Err(())
     }
 }

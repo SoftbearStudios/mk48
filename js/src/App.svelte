@@ -30,6 +30,7 @@
 	import Terms from './page/Terms.svelte';
 	import Settings from './page/Settings.svelte';
 	import Ships from './page/Ships.svelte';
+	import Levels from './page/Levels.svelte';
 	import Changelog from './page/Changelog.svelte';
 	import Chat from './lib/Chat.svelte';
 	import Instructions from './lib/Instructions.svelte';
@@ -414,7 +415,7 @@
 		</div>
 	{/if}
 	{#if $state && $state.liveboard}
-		<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? `${$state.playerCount} online` : null}/>
+		<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? $t('panel.online.label').replace('{players}', $state.playerCount) : null}/>
 	{:else}
 		<div><!--placeholder--></div>
 	{/if}
@@ -433,7 +434,7 @@
 	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
 {/if}
 <ContextMenu/>
-<Router routes={{'/help': Help, '/about': About, '/settings': Settings, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/changelog': Changelog}}></Router>
+<Router routes={{'/help': Help, '/about': About, '/settings': Settings, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/levels': Levels, '/changelog': Changelog}}></Router>
 
 <svelte:head>
 	<title>mk48.io</title>

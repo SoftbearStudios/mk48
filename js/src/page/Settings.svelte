@@ -5,7 +5,9 @@
 
 <script>
 	import Page from './Page.svelte';
-	import t from '../lib/translation.js';
+	import t, {setLanguage, translateAs} from '../lib/translation.js';
+	import strings from '../data/strings.json';
+	import storage from '../util/storage.js';
 
     import {chatOpen, renderFoam, renderTerrainTextures, renderWaves} from '../util/settings.js';
 </script>
@@ -31,6 +33,14 @@
         Show Chat
     </label>
 
+    <select class='language' value={storage.language} on:change={e => setLanguage(e.target.value)}>
+        {#each Object.keys(strings) as lang}
+            {#if Object.keys(strings[lang]).length > 0}
+                <option value={lang}>{translateAs(lang, 'label')}</option>
+            {/if}
+        {/each}
+    </select>
+
     <p>Warning: Graphics settings take effect after <b>refreshing the page</b>.</p>
 
     <p>Note: None of these settings are intended to improve performance. They are for personal preferences or hardware support.</p>
@@ -41,5 +51,9 @@
 	    display: block;
 		user-select: none;
 		margin-bottom: 0.4em;
+	}
+
+	select {
+	    background-color: #0075ff;
 	}
 </style>

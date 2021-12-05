@@ -29,7 +29,7 @@ fn main() {
 
     // NOTE: Pre-multiplication is not compatible with WebP, so avoid doing it here.
 
-    let optimize = false;
+    let optimize = true;
     pack_sprite_sheet(
         |entity_type| {
             let data: &'static EntityData = entity_type.data();

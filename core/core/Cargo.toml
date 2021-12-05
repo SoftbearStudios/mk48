@@ -18,34 +18,34 @@ path = "src/main.rs"
 [dependencies]
 actix = "0.12"
 actix-codec = "0.4"
-actix-service = "2.0.0"
-actix-web = "4.0.0-beta.10"
+actix-service = "2.0"
+actix-web = "4.0.0-beta.13"
 actix-web-actors = "4.0.0-beta.7"
-actix-files = "0.6.0-beta.8"
+actix-files = "0.6.0-beta.9"
 async-trait = "0.1"
-arrayvec = "0.7.1"
-csv = "1.1.6"
+arrayvec = "0.7"
+csv = "1.1"
 chrono = { version = "0.4.19", features = ["serde"] }
-core_protocol = {path="../core_protocol", features=["server"] }
+core_protocol = { path="../core_protocol", features=["server"] }
 servutil = {path="../servutil" }
 enum-iterator = "0.7.0"
 env_logger = "0.9"
-futures = "0.3.1"
+futures = "0.3"
 rand = "0.8"
-serde = { version = "1.0.126", features = ["derive", "rc"] }
-serde_json = "1.0.64"
-lazy_static = "1.4.0"
-rustrict = "0.1.30"
-ringbuffer = "0.8.2"
-log = "0.4.14"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+lazy_static = "1.4"
+rustrict = "0.1.34"
+ringbuffer = "0.8"
+log = "0.4"
 aws-config = { git = "https://github.com/awslabs/aws-sdk-rust", branch = "main", package = "aws-config" }
 aws-sdk-dynamodb = { git = "https://github.com/awslabs/aws-sdk-rust", branch="main", package = "aws-sdk-dynamodb" }
 serde_dynamo = { git = "https://github.com/zenlist/serde_dynamo", branch = "3.0.0-alpha.0", default_features=false, features=["aws_sdk"] }
-uaparser = "0.4.0"
-variant_count = "1.1.0"
-sysinfo = "0.20.5"
+uaparser = "0.4"
+variant_count = "1.1"
+sysinfo = "0.21"
 
 [build-dependencies]
-base64 = "0.13.0"
-rand = "0.8.4"
-reqwest = {version = "0.11.5", default_features=false, features = ["blocking", "rustls-tls"]}
+base64 = "0.13"
+rand = "0.8"
+reqwest = {version = "0.11", default_features=false, features = ["blocking", "rustls-tls"]}

@@ -32,17 +32,23 @@
 	}
 
 	$: progress = upgradeProgress(alive.type, state.score || 0);
+
+	function progressLabel(t, progress, nextLevel) {
+		let basis = t('panel.upgrade.label.progress');
+
+		return basis.replace("{percent}", `${Math.round(progress * 100)}%`).replace("{level}", nextLevel);
+	}
 </script>
 
 <div transition:fly="{{y: 100}}">
 	<h2>
 		{state.score || 0} {$t('panel.status.score' + (state.score === 1 ? '' : 'Plural'))} —
 		{toKnotsString(alive.velocity)} —
-		{Math.round(((alive.direction + Math.PI / 2) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(alive.direction)}] —
+		{Math.round(((Math.PI / 2 - alive.direction) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(alive.direction)}] —
 		({positionString(alive.position.x, 'E', 'W')}, {positionString(alive.position.y, 'N', 'S')})
 	</h2>
 	{#if hasUpgrades(alive.type)}
-		<Meter value={progress}>{Math.round(progress * 100)}% {$t('panel.upgrade.labelMiddle')} {entityData[alive.type].level + 1}</Meter>
+		<Meter value={progress}>{progressLabel($t, progress, entityData[alive.type].level + 1)}</Meter>
 	{/if}
 </div>
 

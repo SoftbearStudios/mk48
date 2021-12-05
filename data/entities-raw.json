@@ -73,7 +73,7 @@
 		"link": "https://en.wikipedia.org/wiki/Akula-class_submarine",
 		"kind": "boat",
 		"subkind": "submarine",
-		"level": 5,
+		"level": 6,
 		"length": 113.3,
 		"width": 20.137,
 		"draft": 9.7,
@@ -124,7 +124,7 @@
 		"link": "https://en.wikipedia.org/wiki/Arleigh_Burke-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 4,
+		"level": 5,
 		"length": 154,
 		"width": 20,
 		"draft": 9.3,
@@ -256,7 +256,7 @@
 		"link": "https://en.wikipedia.org/wiki/German_battleship_Bismarck",
 		"kind": "boat",
 		"subkind": "battleship",
-		"level": 6,
+		"level": 7,
 		"length": 241.6,
 		"width": 36,
 		"draft": 9.3,
@@ -309,6 +309,62 @@
 		"exhausts": [
 			{
 				"positionForward": -1
+			}
+		]
+	},
+	"dreadnought": {
+		"label": "Dreadnought",
+		"link": "https://en.wikipedia.org/wiki/HMS_Dreadnought_(1906)",
+		"kind": "boat",
+		"subkind": "dreadnought",
+		"level": 4,
+		"length": 160.9,
+		"width": 25.1406,
+		"draft": 9,
+		"speed": 10.80,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [],
+		"turrets": [
+			{
+				"type": "markBVIII",
+				"positionForward": 37.5478,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 50
+			},
+			{
+				"type": "markBVIII",
+				"positionForward": 11.8998,
+				"positionSide": 8.04308,
+				"speed": "slow",
+				"symmetrical": true,
+				"azimuthFL": 10,
+				"azimuthBR": 180
+			},
+			{
+				"type": "markBVIII",
+				"positionForward": -19.2312,
+				"positionSide": 0,
+				"angle": 180,
+				"speed": "slow",
+				"azimuth": 40
+			},
+			{
+				"type": "markBVIII",
+				"positionForward": -45.5178,
+				"angle": 180,
+				"speed": "slow",
+				"azimuthB": 40
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 20.8012
+			},
+			{
+				"positionForward": -5.8322
 			}
 		]
 	},
@@ -562,7 +618,7 @@
 		"link": "https://en.wikipedia.org/wiki/Fletcher-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 3,
+		"level": 4,
 		"length": 114.8,
 		"width": 12,
 		"draft": 5.3,
@@ -715,6 +771,103 @@
 			}
 		]
 	},
+	"freccia": {
+		"label": "Freccia",
+		"link": "https://en.wikipedia.org/wiki/Freccia-class_destroyer",
+		"kind": "boat",
+		"subkind": "destroyer",
+		"level": 3,
+		"length": 96.15,
+		"width": 9.3896,
+		"draft": 4,
+		"speed": 15.44,
+		"sensors": {
+			"visual": {},
+			"radar": {}
+		},
+		"armaments": [
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.533,
+				"angle": 0,
+				"turret": 0,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"angle": 0,
+				"turret": 0,
+				"external": true
+			},
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0.533,
+				"angle": 0,
+				"turret": 1,
+				"symmetrical": true,
+				"external": true
+			},
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": 0.25,
+				"positionSide": 0,
+				"angle": 0,
+				"turret": 1,
+				"external": true
+			},
+			{
+				"type": "mark9",
+				"positionForward": -45.75,
+				"positionSide": 1.83,
+				"angle": 180,
+				"symmetrical": true,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"positionForward": -9.39937,
+				"positionSide": 0,
+				"speed": "medium",
+				"azimuth": 40
+			},
+			{
+				"positionForward": -21.8755,
+				"positionSide": 0,
+				"speed": "medium",
+				"azimuth": 40
+			},
+			{
+				"type": "ansaldo",
+				"positionForward": 28.8815,
+				"positionSide": 0,
+				"speed": "medium",
+				"azimuthB": 30
+			},
+			{
+				"type": "ansaldo",
+				"positionForward": -31.6105,
+				"positionSide": 0,
+				"angle": 180,
+				"speed": "medium",
+				"azimuthB": 20
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 7.9804
+			}
+		]
+	},
 	"freedom": {
 		"label": "Freedom",
 		"link": "https://en.wikipedia.org/wiki/Freedom-class_littoral_combat_ship",
@@ -810,7 +963,7 @@
 		"link": "https://en.wikipedia.org/wiki/Golf-class_submarine",
 		"kind": "boat",
 		"subkind": "submarine",
-		"level": 3,
+		"level": 4,
 		"length": 98.4,
 		"width": 8.2,
 		"draft": 8.5,
@@ -911,7 +1064,7 @@
 		"link": "https://en.wikipedia.org/wiki/Kirov-class_battlecruiser",
 		"kind": "boat",
 		"subkind": "cruiser",
-		"level": 7,
+		"level": 8,
 		"length": 252,
 		"width": 28.793,
 		"draft": 9.1,
@@ -1009,7 +1162,7 @@
 		"link": "https://en.wikipedia.org/wiki/Kolkata-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 5,
+		"level": 6,
 		"length": 163,
 		"width": 17.4,
 		"draft": 6.5,
@@ -1161,7 +1314,7 @@
 		"link": "https://en.wikipedia.org/wiki/Leander-class_cruiser_(1931)",
 		"kind": "boat",
 		"subkind": "cruiser",
-		"level": 4,
+		"level": 5,
 		"length": 169.1,
 		"width": 17.1,
 		"draft": 5.8,
@@ -1419,7 +1572,7 @@
 		"link": "https://en.wikipedia.org/wiki/Montana-class_battleship",
 		"kind": "boat",
 		"subkind": "battleship",
-		"level": 7,
+		"level": 8,
 		"length": 280.80,
 		"width": 36.93,
 		"draft": 10.97,
@@ -1580,7 +1733,7 @@
 		"link": "https://en.wikipedia.org/wiki/Ohio-class_submarine",
 		"kind": "boat",
 		"subkind": "submarine",
-		"level": 6,
+		"level": 7,
 		"length": 170,
 		"width": 13,
 		"draft": 10.8,
@@ -1663,6 +1816,43 @@
 				"symmetrical": true,
 				"external": false,
 				"vertical": true
+			}
+		]
+	},
+	"oberon": {
+		"label": "Oberon",
+		"link": "https://en.wikipedia.org/wiki/Oberon-class_submarine",
+		"kind": "boat",
+		"subkind": "submarine",
+		"level": 3,
+		"length": 90,
+		"width": 8.25,
+		"draft": 5.5,
+		"depth": 200,
+		"speed": 8.9408,
+		"sensors": {
+			"visual": {},
+			"sonar": {}
+		},
+		"armaments": [
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": 40,
+				"positionSide": 0.5,
+				"angle": 2,
+				"symmetrical": true,
+				"count": 3,
+				"external": false
+			},
+			{
+				"type": "mark18",
+				"width": 0.533,
+				"positionForward": -41.4,
+				"positionSide": 0.3,
+				"angle": 180,
+				"symmetrical": true,
+				"external": false
 			}
 		]
 	},
@@ -1770,7 +1960,7 @@
 		"link": "https://en.wikipedia.org/wiki/Skipjack-class_submarine",
 		"kind": "boat",
 		"subkind": "submarine",
-		"level": 4,
+		"level": 5,
 		"length": 76.71,
 		"width": 9.65,
 		"draft": 4.825,
@@ -1844,7 +2034,7 @@
 		"link": "https://en.wikipedia.org/wiki/Town-class_cruiser_(1936)",
 		"kind": "boat",
 		"subkind": "cruiser",
-		"level": 5,
+		"level": 6,
 		"length": 180.3,
 		"width": 20.77676,
 		"draft": 6.28,
@@ -1957,7 +2147,7 @@
 		"link": "https://en.wikipedia.org/wiki/Type_055_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 6,
+		"level": 7,
 		"length": 180,
 		"width": 20,
 		"draft": 6.6,
@@ -2212,7 +2402,7 @@
 		"link": "https://en.wikipedia.org/wiki/Japanese_battleship_Yamato",
 		"kind": "boat",
 		"subkind": "battleship",
-		"level": 8,
+		"level": 9,
 		"length": 263,
 		"width": 40.0664,
 		"draft": 11,
@@ -2273,7 +2463,7 @@
 		"link": "https://en.wikipedia.org/wiki/Yasen-class_submarine",
 		"kind": "boat",
 		"subkind": "submarine",
-		"level": 7,
+		"level": 8,
 		"length": 130,
 		"width": 19.8046875,
 		"draft": 10,
@@ -2384,7 +2574,7 @@
 		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
-		"level": 7,
+		"level": 8,
 		"length": 190,
 		"width": 24.6,
 		"draft": 8.4,
@@ -2636,6 +2826,25 @@
 			{
 				"type": "130x720mmR",
 				"angle": 0
+			}
+		]
+	},
+	"ansaldo": {
+		"label": "50-calibre Ansaldo",
+		"link": "https://en.wikipedia.org/wiki/List_of_120_mm_Italian_naval_guns",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 6.65,
+		"positionForward": 1.5985,
+		"width": 3.481,
+		"armaments": [
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"positionSide": 0.3149,
+				"symmetrical": true,
+				"external": false
 			}
 		]
 	},
@@ -2980,7 +3189,7 @@
 				"type": "mark8",
 				"angle": 0,
 				"positionForward": 12,
-				"positionSide": 7.5,
+				"positionSide": 3.16,
 				"symmetrical": true,
 				"external": false,
 				"hidden": true
@@ -3084,6 +3293,7 @@
 		"length": 5.8,
 		"width": 0.533,
 		"speed": 28.2944,
+		"damage": 1.33,
 		"range": 38000,
 		"sensors": {
 			"sonar": {}
@@ -3101,6 +3311,24 @@
 			{
 				"type": "lrlap",
 				"angle": 0
+			}
+		]
+	},
+	"markBVIII": {
+		"label": "Mark BVIII",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 18.15,
+		"positionForward": 4.0505,
+		"width": 8.1533,
+		"armaments": [
+			{
+				"type": "300x1400mmR",
+				"angle": 0,
+				"positionForward": 3,
+				"positionSide": 1.19819,
+				"symmetrical": true,
+				"external": false
 			}
 		]
 	},
