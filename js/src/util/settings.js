@@ -76,3 +76,6 @@ export const renderWaves = settingStore('renderWaves', true);
 export const renderFoam = settingStore('renderFoam', true);
 export const renderTerrainTextures = settingStore('renderTerrainTextures', true);
 export const volume = settingStore('volume', 1.0);
+export const antialias = settingStore('antialias', true);
+export const resolution = settingStore('resolution', 1.0, 0.25, 1.0);
+export const fpsCounter = settingStore('fpsCounter', false);

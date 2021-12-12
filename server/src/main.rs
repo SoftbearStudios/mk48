@@ -12,26 +12,22 @@
 
 use crate::protocol::Authenticate;
 use actix::prelude::*;
-use actix_tls::accept::rustls::TlsStream;
-use actix_web::dev::Service;
-use actix_web::http::header::CACHE_CONTROL;
-use actix_web::http::Version;
+use actix_web::dev::{Service, Url};
+use actix_web::http::header::{ACCEPT, CACHE_CONTROL};
+use actix_web::http::uri::PathAndQuery;
+use actix_web::http::Uri;
 use actix_web::middleware::DefaultHeaders;
-use actix_web::rt::net::TcpStream;
 use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use actix_web_middleware_redirect_https::RedirectHTTPS;
 use common::entity::EntityType;
 use common::protocol::{Command, Update};
-use connection_leak_detector::{ConnectionLeakDetector, Encryption, Protocol, Verdict};
 use core::app::core_services;
 use core_protocol::dto::InvitationDto;
-use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::web_socket::WebSocketFormat;
 use env_logger;
-use lazy_static::lazy_static;
-use log::{error, warn, LevelFilter};
+use log::LevelFilter;
 use serde::Deserialize;
 use servutil::app::{include_dir, static_files};
 use servutil::cloud::Cloud;
@@ -42,11 +38,6 @@ use servutil::tcp::{
 };
 use servutil::watchdog;
 use servutil::web_socket::WebSocket;
-use std::fs::OpenOptions;
-use std::net::SocketAddr;
-use std::str::FromStr;
-use std::sync::Mutex;
-use std::time::Duration;
 use structopt::StructOpt;
 
 mod arena;
@@ -117,14 +108,6 @@ struct Options {
     private_key_path: Option<String>,
 }
 
-lazy_static! {
-    pub static ref CONNECTION_LEAK_DETECTOR: Mutex<ConnectionLeakDetector> = Mutex::new({
-        let mut detector = ConnectionLeakDetector::new();
-        detector.set_log_path("/tmp/cld.csv");
-        detector
-    });
-}
-
 #[derive(Deserialize)]
 struct WebSocketFormatQuery {
     format: Option<WebSocketFormat>,
@@ -159,7 +142,11 @@ fn main() {
     // SAFETY: As per spec, only called once (before .data()) is called.
     unsafe {
         EntityType::init();
-        noise::init()
+        noise::init();
+
+        for typ in EntityType::iter() {
+            rustrict::add_word(typ.to_str(), rustrict::Type::SAFE);
+        }
     }
 
     let options = Options::from_args();
@@ -190,60 +177,11 @@ fn main() {
     if options.debug_watchdog || true {
         logger.filter_module("servutil::watchdog", LevelFilter::Info);
         logger.filter_module("servutil::linode", LevelFilter::Warn);
+        logger.filter_module("servutil::ssl", LevelFilter::Info);
     }
     logger.init();
 
     let _ = actix_web::rt::System::new().block_on(async move {
-        let (cld_send, mut cld_recv) = lockfree::channel::mpsc::create::<(
-            SocketAddr,
-            Option<Protocol>,
-            Option<Encryption>,
-            Option<Verdict>,
-        )>();
-
-        actix_web::rt::spawn(async move {
-            let mut i = 3600;
-            loop {
-                {
-                    let mut cld = CONNECTION_LEAK_DETECTOR.lock().unwrap();
-
-                    while let Ok((addr, protocol, encryption, verdict)) = cld_recv.recv() {
-                        cld.mark_connection(&addr, protocol, encryption, verdict);
-                    }
-
-                    if i % 60 == 0 {
-                        if let Err(e) = cld.update() {
-                            error!("CLD error: {:?}", e);
-                        }
-                    }
-
-                    i += 1;
-
-                    if i >= 3600 {
-                        let leaked: Vec<_> = cld.iter_leaked_connections().collect();
-                        match serde_json::to_string(&leaked) {
-                            Ok(serialized) => {
-                                match OpenOptions::new()
-                                    .create(true)
-                                    .write(true)
-                                    .open(format!("/tmp/dat_cld_{}.csv", get_unix_time_now()))
-                                {
-                                    Ok(mut file) => {
-                                        use std::io::Write;
-                                        let _ = write!(file, "{}", serialized);
-                                    }
-                                    Err(e) => error!("couldn't open CLD data file: {:?}", e),
-                                }
-                            }
-                            Err(e) => error!("couldn't serialize CLD data: {:?}", e),
-                        }
-                        i = 0;
-                    }
-                }
-                actix_web::rt::time::sleep(Duration::from_secs(1)).await;
-            }
-        });
-
         let cloud = options
             .linode_personal_access_token
             .map(|t| Box::new(Linode::new(&t)) as Box<dyn Cloud>);
@@ -281,50 +219,35 @@ fn main() {
             ssl.as_mut().map(|ssl| ssl.set_renewed());
             let immut_ssl = &ssl;
 
-            // First clone due to loop.
-            let cld_send = cld_send.clone();
-            let cld_send_on_connect = cld_send.clone();
-
             let mut server = HttpServer::new(move || {
                 // Rust let's you get away with cloning one closure deep, not all the way to a nested closure.
                 let core_clone = iter_core.to_owned();
                 let srv_clone = iter_srv.to_owned();
-                let cld_send = cld_send.clone();
 
                 App::new()
-                    .wrap_fn(move |req, srv| {
-                        if let Some(addr) = req
-                            .connection_info()
-                            .remote_addr()
-                            .and_then(|s| SocketAddr::from_str(s).ok())
+                    .wrap_fn(move |mut req, srv| {
+                        if let Some(accepted) =
+                            req.headers().get(ACCEPT).and_then(|v| v.to_str().ok())
                         {
-                            let mut protocol = match req.version() {
-                                Version::HTTP_09 => Protocol::Http09,
-                                Version::HTTP_10 => Protocol::Http10,
-                                Version::HTTP_11 => Protocol::Http11,
-                                Version::HTTP_2 => Protocol::Http2,
-                                Version::HTTP_3 => Protocol::Http3,
-                                _ => Protocol::Tcp,
-                            };
-                            if let Some(upgrade) = req.headers().get("upgrade") {
-                                if upgrade == "websocket" {
-                                    protocol = Protocol::WebSocket;
+                            if accepted.contains("image/webp") {
+                                if let Some(redirect) = match req.path() {
+                                    "/sprites_css.png" => Some("/sprites_css.webp"),
+                                    "/sprites_webgl.png" => Some("/sprites_webgl.webp"),
+                                    "/sand.png" => Some("/sand.webp"),
+                                    "/grass.png" => Some("/grass.webp"),
+                                    _ => None,
+                                } {
+                                    let mut parts = req.uri().clone().into_parts();
+                                    parts.path_and_query =
+                                        Some(PathAndQuery::from_static(redirect));
+                                    if let Ok(uri) = Uri::from_parts(parts) {
+                                        req.head_mut().uri = uri.clone();
+                                        req.match_info_mut().set(Url::new(uri));
+                                    }
                                 }
                             }
-                            let encryption = match req.connection_info().scheme() {
-                                "http" | "ws" => Encryption::None,
-                                "https" | "wss" => Encryption::Tls,
-                                _ => Encryption::Unknown,
-                            };
-                            let _ = cld_send.send((
-                                addr,
-                                Some(protocol),
-                                Some(encryption),
-                                Some(Verdict::MadeRequest),
-                            ));
-                        } else {
-                            warn!("Ghost connection (no remote address)");
                         }
+
                         srv.call(req)
                     })
                     .wrap(RedirectHTTPS::default().set_enabled(use_ssl))
@@ -347,28 +270,7 @@ fn main() {
                     .wrap(DefaultHeaders::new().header(CACHE_CONTROL, "no-cache"))
                     .configure(static_files(&include_dir!("../js/public")))
             })
-            .on_connect(move |conn, ext| {
-                let (plain, encryption) =
-                    if let Some(rustls) = conn.downcast_ref::<TlsStream<TcpStream>>() {
-                        (rustls.get_ref().0, Encryption::Tls)
-                    } else if let Some(plain) = conn.downcast_ref::<TcpStream>() {
-                        (plain, Encryption::None)
-                    } else {
-                        debug_assert!(false);
-                        return;
-                    };
-
-                if let Ok(addr) = plain.peer_addr() {
-                    let _ = cld_send_on_connect.send((
-                        addr,
-                        None,
-                        Some(encryption),
-                        Some(Verdict::New),
-                    ));
-                }
-
-                on_connect_enable_nodelay(conn, ext);
-            });
+            .on_connect(on_connect_enable_nodelay);
 
             if let Some(ssl) = immut_ssl {
                 server = server

@@ -14,6 +14,14 @@
 
 	<h2>2021</h2>
 
+	<h3>12/11/2021</h3>
+
+	<ul>
+		<li>Add "Seawolf" submarine.</li>
+		<li>Add more settings, including FPS counter.</li>
+		<li>Optimize particles speed and texture bandwidth.</li>
+	</ul>
+
 	<h3>12/4/2021</h3>
 
 	<ul>

@@ -13,7 +13,7 @@ pub struct Texture {
     // Width and height not always known/used.
     width: u32,
     height: u32,
-    pub(crate) aspect: f32, // height / width. NAN if unknown.
+    pub aspect: f32, // height / width. NAN if unknown.
 }
 
 impl Texture {
@@ -51,7 +51,7 @@ impl Texture {
 
         gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
 
-        Self::unbind(&gl);
+        unbind_texture_cfg_debug(&gl);
 
         Self {
             inner: texture,
@@ -95,7 +95,7 @@ impl Texture {
 
                 gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
 
-                Self::unbind(&gl);
+                unbind_texture_cfg_debug(&gl);
 
                 return;
             }
@@ -165,7 +165,7 @@ impl Texture {
 
         gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
 
-        Self::unbind(&gl);
+        unbind_texture_cfg_debug(&gl);
 
         Self {
             inner: texture,
@@ -212,7 +212,7 @@ impl Texture {
         );
         gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
 
-        Self::unbind(&gl);
+        unbind_texture_cfg_debug(&gl);
 
         let img = Rc::new(web_sys::HtmlImageElement::new().unwrap());
 
@@ -262,7 +262,7 @@ impl Texture {
 
                 gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
 
-                Self::unbind(&gl);
+                unbind_texture_cfg_debug(&gl);
             }) as Box<dyn FnMut()>);
             img.set_onload(Some(closure.as_ref().unchecked_ref()));
             closure.forget();
@@ -280,12 +280,71 @@ impl Texture {
     }
 
     /// Bind a texture for affecting subsequent draw calls.
-    pub fn bind(&self, gl: &Gl) {
-        gl.bind_texture(Gl::TEXTURE_2D, Some(&self.inner));
+    pub fn bind<'a>(&self, gl: &'a Gl, index: usize) -> TextureBinding<'a> {
+        TextureBinding::new(gl, index, self)
+    }
+}
+
+#[allow(unused)]
+pub struct TextureBinding<'a> {
+    gl: &'a Gl,
+    index: usize,
+}
+
+impl<'a> TextureBinding<'a> {
+    fn new(gl: &'a Gl, index: usize, texture: &Texture) -> Self {
+        active_texture(gl, index);
+
+        // Make sure binding was cleared.
+        debug_assert!(
+            gl.get_parameter(Gl::TEXTURE_BINDING_2D).unwrap().is_null(),
+            "texture already bound"
+        );
+
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&texture.inner));
+        Self { gl, index }
     }
 
-    /// Unbinds any currently bound texture.
-    pub fn unbind(gl: &Gl) {
-        gl.bind_texture(Gl::TEXTURE_2D, None);
+    /// only for shader.rs
+    /// It is unsafe because the TextureBinding must have been previously forgotten.
+    pub(crate) unsafe fn from_static(gl: &'a Gl, index: usize) -> Self {
+        Self { gl, index }
     }
+}
+
+impl<'a> Drop for TextureBinding<'a> {
+    fn drop(&mut self) {
+        // Unbind (not required in release mode).
+        #[cfg(debug_assertions)]
+        {
+            active_texture(self.gl, self.index);
+            unbind_texture(self.gl);
+        }
+    }
+}
+
+#[allow(unused)]
+fn unbind_texture(gl: &Gl) {
+    gl.bind_texture(Gl::TEXTURE_2D, None);
+}
+
+/// Unbinds the texture only in debug mode.
+#[allow(unused)]
+fn unbind_texture_cfg_debug(gl: &Gl) {
+    #[cfg(debug_assertions)]
+    unbind_texture(gl)
+}
+
+fn active_texture(gl: &Gl, index: usize) {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    // Don't do redundant calls.
+    static ACTIVE_TEXTURE: AtomicUsize = AtomicUsize::new(0);
+    if index == ACTIVE_TEXTURE.load(Ordering::Relaxed) {
+        return;
+    }
+    ACTIVE_TEXTURE.store(index, Ordering::Relaxed);
+
+    assert!(index < 32, "only 32 textures supported");
+    gl.active_texture(Gl::TEXTURE0 + index as u32);
 }

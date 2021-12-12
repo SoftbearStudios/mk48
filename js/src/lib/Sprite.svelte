@@ -5,7 +5,6 @@
 
 <script>
 	import spriteSheet from "../data/sprites_css.json";
-	import {hasWebP} from "../util/compatibility.js";
 	import IconButton from './IconButton.svelte';
 
 	export let name;
@@ -18,7 +17,7 @@
 </script>
 
 {#if sprite}
-    <div {title} class:consumed class:webp={hasWebP()} on:click style={`background-position: -${sprite.x}px -${sprite.y}px; width: ${sprite.width}px; height: ${sprite.height}px;`}>
+    <div {title} class:consumed on:click style={`background-position: -${sprite.x}px -${sprite.y}px; width: ${sprite.width}px; height: ${sprite.height}px;`}>
         {#if icon}
             <IconButton tooltip={iconTitle} icons={[icon]} size={1.5} onChange={onIconClick}/>
         {/if}
@@ -30,10 +29,6 @@
 		background-image: url("/sprites_css.png");
 		display: inline-block;
 		text-align: center;
-	}
-
-	div.webp {
-		background-image: url("/sprites_css.webp");
 	}
 
 	div.consumed {

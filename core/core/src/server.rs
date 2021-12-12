@@ -103,11 +103,11 @@ impl Core {
                     continue;
                 }
                 if let Some(bots) = act.repo.read_available_bots(server.arena_id.unwrap()) {
-                    for (player_id, session_id) in bots.iter() {
+                    for (player_id, session_id) in bots {
                         log_err(addr.do_send(ObserverUpdate::Send {
                             message: ServerUpdate::BotReady {
-                                player_id: *player_id,
-                                session_id: *session_id,
+                                player_id,
+                                session_id,
                             },
                         }))
                     }

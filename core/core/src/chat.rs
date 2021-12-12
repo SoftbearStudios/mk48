@@ -53,6 +53,12 @@ impl ChatHistory {
             })
             .censor_and_analyze();
 
+        let censored = String::from(trim_spaces(&censored));
+
+        if censored.len() == 0 {
+            return Err("Your message was empty after censoring");
+        }
+
         self.total += 1.0;
 
         let inappropriate = analysis.is(threshold);
@@ -101,9 +107,7 @@ impl ChatHistory {
         if self.date_updated == 0 {
             self.date_updated = now;
         } else if seconds > 0.0 {
-            let fade_rate = if self.inappropriate > 3.0 && inappropriate_fraction > 0.3 {
-                0.999
-            } else if self.inappropriate > 2.0 && inappropriate_fraction > 0.2 {
+            let fade_rate = if self.inappropriate > 1.5 && inappropriate_fraction > 0.2 {
                 0.99
             } else if inappropriate_fraction > 0.1 {
                 0.98
@@ -123,7 +127,7 @@ impl ChatHistory {
         let repetition_threshold_total = 3;
 
         let frequency_spam = self.total >= 7.0;
-        let inappropriate_spam = self.inappropriate > 2.0 && inappropriate_fraction > 0.20;
+        let inappropriate_spam = self.inappropriate > 1.9 && inappropriate_fraction > 0.20;
         let repetition_spam = self.total as i32 > repetition_threshold_total
             && length_standard_deviation < 3.0
             && length_specific_deviation < 3;

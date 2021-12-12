@@ -4,15 +4,19 @@
 use crate::animation::Animation;
 use crate::audio::AudioPlayer;
 use crate::input::Input;
-use crate::particle::Particle;
+use crate::particle::{Particle, ParticleSystem};
 use crate::renderer::Renderer;
 use crate::settings::Settings;
 use crate::text_cache::TextCache;
 use crate::texture::Texture;
 use crate::{
-    has_webp, ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel,
-    TeamPlayerModel,
+    ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel, TeamPlayerModel,
 };
+use web_sys::{
+    WebGlRenderingContext as Gl,
+};
+use arrayvec::ArrayVec;
+use client_util::rate_limiter::RateLimiter;
 use client_util::reconn_web_socket::ReconnWebSocket;
 use client_util::{domain_name, gray, host, referrer, rgb, rgba, ws_protocol, FpsMonitor};
 use common::altitude::Altitude;
@@ -49,8 +53,8 @@ pub struct Game {
     liveboard: Vec<LiveboardDto>,
     /// Created invitation
     created_invitation_id: Option<InvitationId>,
-    sea_level_particles: Vec<Particle>,
-    airborne_particles: Vec<Particle>,
+    sea_level_particles: ParticleSystem,
+    airborne_particles: ParticleSystem,
     animations: Vec<Animation>,
     terrain: Terrain,
     player_count: u32,
@@ -75,7 +79,10 @@ pub struct Game {
     pub(crate) core_web_socket: ReconnWebSocket<ClientUpdate, ClientRequest>,
     terrain_texture: Option<Texture>,
     text_cache: TextCache,
-    fps_monitor: FpsMonitor,
+    recent_fps_monitor: FpsMonitor,
+    statistical_fps_monitor: FpsMonitor,
+    /// Updating the GUI is costly in terms of performance.
+    state_rate_limiter: RateLimiter,
 }
 
 /// A contact that may be locally controlled by simulated elsewhere (by the server).
@@ -113,14 +120,9 @@ impl Game {
         saved_session_tuple: Option<(ArenaId, SessionId)>,
         invitation_id: Option<InvitationId>,
     ) -> Self {
-        let sprite_path = if has_webp() {
-            "/sprites_webgl.webp"
-        } else {
-            "/sprites_webgl.png"
-        };
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
 
-        let renderer = Renderer::new(settings, sprite_path, sprite_sheet);
+        let renderer = Renderer::new(settings, "/sprites_webgl.png", sprite_sheet);
 
         let audio_sprite_sheet =
             serde_json::from_str(include_str!("./sprites_audio.json")).unwrap();
@@ -136,7 +138,7 @@ impl Game {
             host()
         };
 
-        let core_web_socket = ReconnWebSocket::new(
+        let mut core_web_socket = ReconnWebSocket::new(
             &format!("{}://{}/client/ws/", ws_protocol(), host),
             WebSocketFormat::Json,
             Some(ClientRequest::CreateSession {
@@ -147,12 +149,15 @@ impl Game {
             }),
         );
 
+        if let Some(max) = renderer.gl.get_parameter(Gl::MAX_TEXTURE_SIZE).ok().and_then(|f| f.as_f64()) {
+            core_web_socket.send(ClientRequest::Trace {message: format!("MAX_TEXTURE_SIZE={}", max)});
+        }
+
         Self {
             input: Input::new(),
             zoom: 10.0,
             last_time_seconds: 0.0,
             last_control_seconds: 0.0,
-            renderer,
             audio_player,
             contacts: HashMap::new(),
             chats: Vec::new().into(),
@@ -162,8 +167,8 @@ impl Game {
             leaderboards: HashMap::new(),
             liveboard: Vec::new(),
             teams: HashMap::new(),
-            sea_level_particles: Vec::new(),
-            airborne_particles: Vec::new(),
+            sea_level_particles: ParticleSystem::new(&renderer.gl, &renderer.oes_vao),
+            airborne_particles: ParticleSystem::new(&renderer.gl, &renderer.oes_vao),
             animations: Vec::new(),
             terrain: Terrain::new(),
             player_id: None,
@@ -180,7 +185,12 @@ impl Game {
             world_radius: 10000.0,
             saved_camera: None,
             created_invitation_id: None,
-            fps_monitor: FpsMonitor::new(),
+            recent_fps_monitor: FpsMonitor::new(5.0),
+            statistical_fps_monitor: FpsMonitor::new(120.0),
+            state_rate_limiter: RateLimiter::new(1.0 / 10.0),
+
+            // Needs to be the last thing so it can be borrowed.
+            renderer,
         }
     }
 
@@ -663,6 +673,13 @@ impl Game {
         })
     }
 
+    #[allow(dead_code)]
+    pub fn trace(&mut self, message: String) {
+        self.core_web_socket.send(ClientRequest::Trace {
+            message
+        });
+    }
+
     /// Performs time_seconds of game logic, and renders a frame of game state.
     pub fn frame(&mut self, time_seconds: f32) {
         if self.core_web_socket.is_closed() {
@@ -717,6 +734,9 @@ impl Game {
                     while self.chats.len() > 10 {
                         self.chats.pop_front();
                     }
+
+                    // It is worth re-rendering to show chats faster.
+                    self.state_rate_limiter.fast_track();
                 }
                 ClientUpdate::SenderMuted {..} => {}
                 ClientUpdate::PlayerAccepted{..} => {}
@@ -796,7 +816,7 @@ impl Game {
         }
 
         // Don't let this be negative, or assumptions will be broken.
-        let delta_seconds = (time_seconds - self.last_time_seconds).clamp(0.005, 0.5);
+        let delta_seconds = (time_seconds - self.last_time_seconds).clamp(0.001, 0.5);
         self.last_time_seconds = time_seconds;
 
         // The distance from player's boat to the closest visible member of each team, for the purpose of sorting and
@@ -961,7 +981,6 @@ impl Game {
 
         // The player's boat may have moved, so get the camera again.
         let (camera, zoom) = self.camera();
-        self.renderer.reset(camera, zoom);
         let mouse_world_position = self.mouse_world_position(camera, zoom);
 
         // Both width and height must be odd numbers so there is an equal distance from the center
@@ -1029,16 +1048,6 @@ impl Game {
         } else {
             (500.0, 0.0)
         };
-
-        self.renderer.render_background(
-            self.terrain_texture.as_ref().unwrap(),
-            &terrain_matrix,
-            camera,
-            visual_range,
-            visual_restriction,
-            self.world_radius,
-            time_seconds,
-        );
 
         // Prepare to sort sprites.
         let mut sortable_sprites = Vec::with_capacity(self.contacts.len() * 5);
@@ -1241,6 +1250,10 @@ impl Game {
                                 if armament.entity_type != EntityType::Depositor {
                                     if let Some(turret_index) = armament.turret {
                                         let turret = &data.turrets[turret_index];
+                                        let turret_radius = turret
+                                            .entity_type
+                                            .map(|e| e.data().radius)
+                                            .unwrap_or(0.0);
                                         let contact_direction = contact.transform().direction;
                                         let transform = *contact.transform()
                                             + Transform::from_position(turret.position());
@@ -1252,21 +1265,20 @@ impl Game {
                                         let thickness = hud_thickness * 2.0;
                                         let color = hud_color;
 
-                                        let azimuth_line = |renderer: &mut Renderer, angle: f32| {
+                                        // Aim line is only helpful on small turrets.
+                                        if turret_radius < inner {
+                                            let angle = (contact_direction
+                                                + contact.turrets()[turret_index])
+                                                .to_radians();
                                             let dir_mat = Mat2::from_angle(angle);
-                                            renderer.add_line_graphic(
+                                            self.renderer.add_line_graphic(
                                                 transform.position + dir_mat * vec2(inner, 0.0),
                                                 transform.position + dir_mat * vec2(outer, 0.0),
                                                 thickness,
                                                 color,
                                             );
-                                        };
+                                        }
 
-                                        azimuth_line(
-                                            &mut self.renderer,
-                                            (contact_direction + contact.turrets()[turret_index])
-                                                .to_radians(),
-                                        );
                                         let left_back = (contact_direction + turret.angle
                                             - turret.azimuth_bl
                                             + Angle::PI)
@@ -1282,19 +1294,6 @@ impl Game {
                                         let right_front = (contact_direction + turret.angle
                                             - turret.azimuth_fr)
                                             .to_radians();
-                                        if turret.azimuth_br != Angle::ZERO
-                                            || turret.azimuth_bl != Angle::ZERO
-                                        {
-                                            azimuth_line(&mut self.renderer, right_back);
-                                            azimuth_line(&mut self.renderer, left_back);
-                                        }
-
-                                        if turret.azimuth_fr != Angle::ZERO
-                                            || turret.azimuth_fl != Angle::ZERO
-                                        {
-                                            azimuth_line(&mut self.renderer, left_front);
-                                            azimuth_line(&mut self.renderer, right_front);
-                                        }
 
                                         if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
                                             self.renderer.add_arc_graphic(
@@ -1446,7 +1445,7 @@ impl Game {
                     }
                 }
             } else {
-                self.renderer.render_sprite(
+                self.renderer.add_sprite(
                     "contact",
                     None,
                     Vec2::splat(10.0),
@@ -1460,68 +1459,57 @@ impl Game {
         sortable_sprites.sort_unstable_by(|a, b| a.4.partial_cmp(&b.4).unwrap());
         for sprite in sortable_sprites {
             self.renderer
-                .render_sprite(sprite.0, sprite.1, sprite.2, sprite.3, sprite.5);
+                .add_sprite(sprite.0, sprite.1, sprite.2, sprite.3, sprite.5);
         }
 
-        // Calculate powf once for particles.
-        let powf_0_25_seconds = 0.25f32.powf(delta_seconds);
-
-        // Update sea-level particles.
-        let mut i = 0;
-        while i < self.sea_level_particles.len() {
-            if self.sea_level_particles[i].update(delta_seconds, powf_0_25_seconds) {
-                self.sea_level_particles.swap_remove(i);
-            } else {
-                let particle = &self.sea_level_particles[i];
-                self.renderer.add_particle(
-                    particle.position,
-                    particle.radius,
-                    particle.color,
-                    particle.created,
-                );
-                i += 1;
-            }
+        // Create text textures before pipeline starts.
+        for (_, _, _, text) in text_queue.iter() {
+            self.text_cache.insert(&self.renderer.gl, &text);
         }
-        self.renderer.render_particles(time_seconds);
 
-        // Render sprites in between sea level particles and airborne particles.
-        self.renderer.render_sprites();
+        // Render pipeline.
+        {
+            self.renderer.start(camera, zoom);
 
-        // Update airborne particles.
-        let mut i = 0;
-        while i < self.airborne_particles.len() {
-            let particle = &mut self.airborne_particles[i];
+            self.renderer.render_background(
+                self.terrain_texture.as_ref().unwrap(),
+                &terrain_matrix,
+                camera,
+                visual_range,
+                visual_restriction,
+                self.world_radius,
+                time_seconds,
+            );
 
-            // Apply wind.
-            particle.velocity += vec2(14.0, 3.0) * delta_seconds;
+            // Update and render sea-level particles.
+            self.sea_level_particles.expire_particles(time_seconds);
+            self.sea_level_particles
+                .render(&mut self.renderer, time_seconds, Vec2::ZERO);
 
-            particle.update(delta_seconds, powf_0_25_seconds);
+            // Render sprites in between sea level particles and airborne particles.
+            self.renderer.render_sprites();
 
-            if time_seconds >= particle.created + 1.5 {
-                self.airborne_particles.swap_remove(i);
-            } else {
-                self.renderer.add_particle(
-                    particle.position,
-                    particle.radius,
-                    particle.color,
-                    particle.created,
-                );
-                i += 1;
-            }
-        }
-        self.renderer.render_particles(time_seconds);
+            // Update and render airborne particles.
+            self.airborne_particles.expire_particles(time_seconds);
+            self.airborne_particles
+                .render(&mut self.renderer, time_seconds, vec2(14.0, 3.0) * 0.5);
 
-        self.renderer.render_graphics();
+            // Finally render graphics and text on top.
+            self.renderer.render_graphics();
 
-        for (position, scale, color, text) in text_queue {
-            let name_texture = self.text_cache.get(&self.renderer.gl, &text);
+            let text_cache = &self.text_cache;
             self.renderer
-                .render_text(position, scale, color, name_texture);
+                .render_text(text_queue.into_iter().map(|(pos, scale, color, text)| {
+                    let texture = text_cache.get(&text).unwrap();
+                    (pos, scale, color, texture)
+                }));
+
+            self.renderer.finish();
         }
 
         // Buffer until later so as not to borrow the websocket early. The web socket's lifetime is tied
         // to the deserialized updates it produces (because serde_json can reference the raw json buffer).
-        let mut to_send = Vec::with_capacity(3);
+        let mut to_send = ArrayVec::<Command, 3>::new();
         let mut reset_input = false;
 
         let status = if let Some(player_contact) = self.player_contact() {
@@ -1688,126 +1676,130 @@ impl Game {
             }
         };
 
-        let team_id = self
-            .player_id
-            .and_then(|p| self.players.get(&p))
-            .and_then(|p| p.team_id);
+        if self.state_rate_limiter.update(delta_seconds) {
+            let team_id = self
+                .player_id
+                .and_then(|p| self.players.get(&p))
+                .and_then(|p| p.team_id);
 
-        crate::set_state(&State {
-            player_id: self.player_id,
-            team_name: team_id
-                .and_then(|id| self.teams.get(&id))
-                .map(|t| t.team_name),
-            invitation_id: self.created_invitation_id,
-            score: self.score,
-            player_count: self.player_count,
-            status,
-            chats: self
-                .chats
-                .iter()
-                .filter_map(|chat| {
-                    Some(ChatModel {
-                        name: chat.alias.clone(),
-                        player_id: chat.player_id,
-                        team: chat.team_name.clone(),
-                        message: chat.text.clone(),
-                        whisper: chat.whisper,
-                    })
-                })
-                .collect(),
-            liveboard: self
-                .liveboard
-                .iter()
-                .filter_map(|item| {
-                    let player = self.players.get(&item.player_id);
-                    if let Some(player) = player {
-                        let team_name = player
-                            .team_id
-                            .and_then(|team_id| self.teams.get(&team_id))
-                            .map(|team| team.team_name);
-                        Some(LeaderboardItemModel {
-                            name: player.alias.clone(),
-                            team: team_name,
-                            score: item.score,
+            crate::set_state(&State {
+                player_id: self.player_id,
+                team_name: team_id
+                    .and_then(|id| self.teams.get(&id))
+                    .map(|t| t.team_name),
+                invitation_id: self.created_invitation_id,
+                score: self.score,
+                player_count: self.player_count,
+                fps: self.recent_fps_monitor.last_sample().unwrap_or(0.0),
+                status,
+                chats: self
+                    .chats
+                    .iter()
+                    .filter_map(|chat| {
+                        Some(ChatModel {
+                            name: chat.alias.clone(),
+                            player_id: chat.player_id,
+                            team: chat.team_name.clone(),
+                            message: chat.text.clone(),
+                            whisper: chat.whisper,
                         })
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-            leaderboards: self
-                .leaderboards
-                .iter()
-                .map(|(period, leaderboard)| {
-                    (
-                        *period,
-                        leaderboard
-                            .iter()
-                            .map(|item| LeaderboardItemModel {
-                                name: item.alias,
-                                team: None,
+                    })
+                    .collect(),
+                liveboard: self
+                    .liveboard
+                    .iter()
+                    .filter_map(|item| {
+                        let player = self.players.get(&item.player_id);
+                        if let Some(player) = player {
+                            let team_name = player
+                                .team_id
+                                .and_then(|team_id| self.teams.get(&team_id))
+                                .map(|team| team.team_name);
+                            Some(LeaderboardItemModel {
+                                name: player.alias.clone(),
+                                team: team_name,
                                 score: item.score,
                             })
-                            .collect(),
-                    )
-                })
-                .collect(),
-            team_members: if team_id.is_some() {
-                self.players
-                    .values()
-                    .filter(|p| p.team_id == team_id)
-                    .map(|p| TeamPlayerModel {
-                        player_id: p.player_id,
-                        name: p.alias,
-                        captain: p.team_captain,
+                        } else {
+                            None
+                        }
                     })
-                    .sorted_by(|a, b| b.captain.cmp(&a.captain).then(a.name.cmp(&b.name)))
-                    .collect()
-            } else {
-                vec![]
-            },
-            team_captain: team_id.is_some()
-                && self
-                    .player_id
-                    .and_then(|id| self.players.get(&id))
-                    .map(|p| p.team_captain)
-                    .unwrap_or(false),
-            team_join_requests: self
-                .joiners
-                .iter()
-                .filter_map(|id| {
-                    self.players.get(id).map(|player| TeamPlayerModel {
-                        player_id: player.player_id,
-                        name: player.alias.clone(),
-                        captain: false,
+                    .collect(),
+                leaderboards: self
+                    .leaderboards
+                    .iter()
+                    .map(|(period, leaderboard)| {
+                        (
+                            *period,
+                            leaderboard
+                                .iter()
+                                .map(|item| LeaderboardItemModel {
+                                    name: item.alias,
+                                    team: None,
+                                    score: item.score,
+                                })
+                                .collect(),
+                        )
                     })
-                })
-                .collect(),
-            teams: self
-                .teams
-                .iter()
-                .sorted_by(|&(a, _), &(b, _)| {
-                    team_proximity
-                        .get(a)
-                        .unwrap_or(&f32::INFINITY)
-                        .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
-                        .unwrap()
-                })
-                .map(|(team_id, team)| TeamModel {
-                    team_id: *team_id,
-                    name: team.team_name,
-                    joining: self.joins.contains(team_id),
-                })
-                .take(5)
-                .collect(),
-        });
+                    .collect(),
+                team_members: if team_id.is_some() {
+                    self.players
+                        .values()
+                        .filter(|p| p.team_id == team_id)
+                        .map(|p| TeamPlayerModel {
+                            player_id: p.player_id,
+                            name: p.alias,
+                            captain: p.team_captain,
+                        })
+                        .sorted_by(|a, b| b.captain.cmp(&a.captain).then(a.name.cmp(&b.name)))
+                        .collect()
+                } else {
+                    vec![]
+                },
+                team_captain: team_id.is_some()
+                    && self
+                        .player_id
+                        .and_then(|id| self.players.get(&id))
+                        .map(|p| p.team_captain)
+                        .unwrap_or(false),
+                team_join_requests: self
+                    .joiners
+                    .iter()
+                    .filter_map(|id| {
+                        self.players.get(id).map(|player| TeamPlayerModel {
+                            player_id: player.player_id,
+                            name: player.alias.clone(),
+                            captain: false,
+                        })
+                    })
+                    .collect(),
+                teams: self
+                    .teams
+                    .iter()
+                    .sorted_by(|&(a, _), &(b, _)| {
+                        team_proximity
+                            .get(a)
+                            .unwrap_or(&f32::INFINITY)
+                            .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
+                            .unwrap()
+                    })
+                    .map(|(team_id, team)| TeamModel {
+                        team_id: *team_id,
+                        name: team.team_name,
+                        joining: self.joins.contains(team_id),
+                    })
+                    .take(5)
+                    .collect(),
+            });
+        }
 
         if reset_input {
             self.input.reset();
         }
         self.text_cache.tick();
 
-        if let Some(fps) = self.fps_monitor.update(delta_seconds) {
+        self.recent_fps_monitor.update(delta_seconds);
+        if let Some(fps) = self.statistical_fps_monitor.update(delta_seconds) {
             if !self.core_web_socket.is_closed() {
                 self.core_web_socket.send(ClientRequest::TallyFps { fps });
             }

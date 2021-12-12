@@ -16,7 +16,7 @@ impl TextCache {
         Self::default()
     }
 
-    pub fn get(&mut self, gl: &Gl, text: &str) -> &Texture {
+    pub fn insert(&mut self, gl: &Gl, text: &str) {
         let texture = self
             .textures
             .raw_entry_mut()
@@ -28,7 +28,10 @@ impl TextCache {
             .1;
 
         texture.1 = 0;
-        &texture.0
+    }
+
+    pub fn get(&self, text: &str) -> Option<&Texture> {
+        self.textures.get(text).map(|(t, _)| t)
     }
 
     pub fn tick(&mut self) {

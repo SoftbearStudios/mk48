@@ -15,6 +15,7 @@
 	import {fly} from 'svelte/transition';
 	import {hasUpgrades, upgradeProgress} from './Upgrades.svelte';
 	import entityData from '../data/entities.json';
+	import {fpsCounter} from '../util/settings.js';
 
 	export let state;
 	$: alive = state.status.alive;
@@ -36,7 +37,7 @@
 	function progressLabel(t, progress, nextLevel) {
 		let basis = t('panel.upgrade.label.progress');
 
-		return basis.replace("{percent}", `${Math.round(progress * 100)}%`).replace("{level}", nextLevel);
+		return basis.replace("{percent}", `${Math.floor(progress * 100)}%`).replace("{level}", nextLevel);
 	}
 </script>
 
@@ -46,6 +47,7 @@
 		{toKnotsString(alive.velocity)} —
 		{Math.round(((Math.PI / 2 - alive.direction) * 180 / Math.PI % 360 + 360) % 360)}° [{directionString(alive.direction)}] —
 		({positionString(alive.position.x, 'E', 'W')}, {positionString(alive.position.y, 'N', 'S')})
+		{$fpsCounter ? `— ${state.fps.toFixed(1)} fps` : ''}
 	</h2>
 	{#if hasUpgrades(alive.type)}
 		<Meter value={progress}>{progressLabel($t, progress, entityData[alive.type].level + 1)}</Meter>

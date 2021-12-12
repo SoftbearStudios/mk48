@@ -33,18 +33,86 @@ fn main() {
     pack_sprite_sheet(
         |entity_type| {
             let data: &'static EntityData = entity_type.data();
-            let min_width = if data.kind == EntityKind::Boat {
-                200
+            if true {
+                fn boat_meters_to_pixels(meters: f32) -> f32 {
+                    fn f(x: f32) -> f32 {
+                        63.0 * x.sqrt()
+                    }
+                    f(meters).min(meters * f(18.0) / 18.0)
+                }
+
+                EntityPackParams {
+                    width: match data.kind {
+                        EntityKind::Weapon | EntityKind::Aircraft | EntityKind::Decoy => {
+                            let mut scale: f32 = 0.0;
+                            for typ in EntityType::iter() {
+                                let dat: &EntityData = typ.data();
+                                if dat.kind != EntityKind::Boat {
+                                    continue;
+                                }
+                                let mut found = false;
+                                for armament in &dat.armaments {
+                                    if armament.entity_type == entity_type {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if found {
+                                    scale = scale.max(
+                                        boat_meters_to_pixels(dat.length) * data.length
+                                            / dat.length,
+                                    );
+                                }
+                            }
+                            if scale == 0.0 {
+                                panic!("{:?} is not used", entity_type);
+                            }
+                            scale
+                        }
+                        EntityKind::Turret => {
+                            let mut scale: f32 = 0.0;
+                            for typ in EntityType::iter() {
+                                let dat: &EntityData = typ.data();
+                                if dat.kind != EntityKind::Boat {
+                                    continue;
+                                }
+                                let mut found = false;
+                                for turret in &dat.turrets {
+                                    if turret.entity_type == Some(entity_type) {
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if found {
+                                    scale = scale.max(
+                                        boat_meters_to_pixels(dat.length) * data.length
+                                            / dat.length,
+                                    );
+                                }
+                            }
+                            if scale == 0.0 {
+                                panic!("{:?} is not used", entity_type);
+                            }
+                            scale
+                        }
+                        _ => boat_meters_to_pixels(data.length),
+                    }
+                    .clamp(4.0, 1024.0) as u32,
+                }
             } else {
-                48
-            } as f32;
-            EntityPackParams {
-                width: map_ranges(
-                    entity_type.data().length,
-                    0f32..200f32,
-                    min_width..1024f32,
-                    true,
-                ) as u32,
+                let min_width = if data.kind == EntityKind::Boat {
+                    200
+                } else {
+                    4
+                } as f32;
+                EntityPackParams {
+                    width: map_ranges(
+                        entity_type.data().length,
+                        0f32..200f32,
+                        min_width..1024f32,
+                        true,
+                    ) as u32,
+                }
             }
         },
         true,

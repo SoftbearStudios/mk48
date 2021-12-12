@@ -1955,6 +1955,45 @@
 			}
 		]
 	},
+	"seawolf": {
+		"label": "Seawolf",
+		"link": "https://en.wikipedia.org/wiki/Seawolf-class_submarine",
+		"kind": "boat",
+		"subkind": "submarine",
+		"level": 9,
+		"length": 108,
+		"width": 17.6133,
+		"draft": 11,
+		"depth": 400,
+		"speed": 18.00556,
+		"stealth": 0.5,
+		"sensors": {
+			"visual": {},
+			"radar": {},
+			"sonar": {}
+		},
+		"armaments": [
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"count": 4,
+				"symmetrical": true,
+				"external": false
+			},
+			{
+				"type": "mk70",
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
+			}
+		]
+	},
 	"skipjack": {
 		"label": "Skipjack",
 		"link": "https://en.wikipedia.org/wiki/Skipjack-class_submarine",

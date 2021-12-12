@@ -42,10 +42,15 @@ impl<'a> Ssl<'a> {
         fs::metadata(self.certificate_file).is_ok() && fs::metadata(self.private_key_file).is_ok()
     }
 
-    /// Returns if the certificate in the file system is newer (by at least a day).
-    pub fn can_renew(&self) -> bool {
-        self.available_certificate_expiry()
-            > self.installed_certificate_expiry + Duration::from_secs(24 * 60 * 60)
+    /// Returns if the certificate in the file system is newer, and the current certificate
+    /// will expire imminently.
+    pub fn should_renew(&self) -> bool {
+        let expiry = self.available_certificate_expiry();
+        expiry
+            .checked_duration_since(Instant::now())
+            .map(|d| d < Duration::from_secs(5 * 24 * 60 * 60))
+            .unwrap_or(true)
+            && expiry > self.installed_certificate_expiry + Duration::from_secs(60 * 60)
     }
 
     /// Call when the renewed certificate is introduced.
@@ -139,7 +144,7 @@ pub async fn run_until_ssl_renewal<'a>(server: Server, ssl: &Option<Ssl<'a>>) ->
             loop {
                 interval.tick().await;
 
-                if ssl.can_renew() {
+                if ssl.should_renew() {
                     warn!("Checking if certificate can be renewed...yes");
                     // Stopping this future will trigger a restart.
                     break;

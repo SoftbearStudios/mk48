@@ -19,7 +19,7 @@ pub(crate) struct EntityPackParams {
     pub(crate) width: u32,
 }
 
-const WEBP_QUALITY: f32 = 99.5;
+const WEBP_QUALITY: f32 = 90.0;
 
 pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
     entity_params: E,
@@ -73,7 +73,10 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
             let height = image.height();
             let aspect = width as f32 / height as f32;
             if params.width > width {
-                println!("Warning upscaling {}", &image_name)
+                println!(
+                    "Warning upscaling {} from {} to {}",
+                    &image_name, width, params.width
+                )
             }
 
             let resized = resize(

@@ -43,7 +43,7 @@ export default {
 		svelte({
 			compilerOptions: {
 				// enable run-time checks when not in production
-				dev: !production
+				dev: !production || !!process.env.DEBUG
 			},
 			emitCss: false
 		}),
@@ -51,7 +51,7 @@ export default {
 		// a separate file - better for performance
 		css({ output: 'bundle.css' }),
 		json(),
-		rust({ serverPath: '/build/' }),
+		rust({ serverPath: '/build/', debug: !!process.env.DEBUG }),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In
@@ -74,7 +74,7 @@ export default {
 
 		// If we're building for production (npm run build
 		// instead of npm run dev), minify
-		production && terser()
+		production && !process.env.DEBUG && terser()
 	],
 	watch: {
 		clearScreen: false

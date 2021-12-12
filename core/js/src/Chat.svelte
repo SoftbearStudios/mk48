@@ -42,7 +42,7 @@
 <Nav/>
 
 <main>
-    <form on:submit={sendChat}>
+    <form on:submit|preventDefault={sendChat}>
         <input type="text" minlength="1" placeholder="Alias" bind:value={alias}/>
         <br/>
         <select on:change={event => message = PRESETS[event.target.value]}>

@@ -74,7 +74,7 @@ impl Repo {
                 info!("{} bots to add", bots_to_add);
                 let mut excluded_aliases = HashSet::new();
                 for (session_id, session) in arena.sessions.iter() {
-                    if session.bot {
+                    if session.bot && session.date_terminated.is_none() {
                         excluded_aliases.insert(session.alias);
 
                         if let Some(play) = session.plays.last() {

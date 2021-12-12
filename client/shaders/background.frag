@@ -55,10 +55,7 @@ float noise(vec3 p){
 
 void main() {
     float h = texture2D(uSampler, vUv).a * 1.0;
-
-    // This noise, while potentially faster, behaves poorely on some iGPUs.
-    //float nHeight = noise(vPosition * 0.1);
-    float nHeight = noise(vec3(vPosition.x, vPosition.y, 0.0) * 0.1);
+    float nHeight = noise(vec3(vPosition * 0.1, 0.0));
 
     // Noise must always increase height, as input texture is stratified by 4 bit representation, meaning that any
     // decrease could make the edge very noisy.

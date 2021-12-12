@@ -47,7 +47,7 @@
 	import {getMouseButton} from './util/compatibility.js';
 	import {mapRanges} from './util/math.js';
 	import {onMount} from 'svelte';
-	import {renderFoam, renderTerrainTextures, volume, renderWaves} from './util/settings.js';
+	import {antialias, renderFoam, renderTerrainTextures, volume, renderWaves, resolution} from './util/settings.js';
 	import {outboundEnabled} from './lib/Link.svelte';
 
 	let canvas, chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
@@ -72,6 +72,7 @@
 		}
 
 		const settings = {
+			antialias: get(antialias),
 			renderFoam: get(renderFoam),
 			renderTerrainTextures: get(renderTerrainTextures),
 			renderWaves: get(renderWaves),
@@ -372,16 +373,16 @@
 		});
 	}
 
-	function processWindowDimension(dim) {
-		return Math.floor(dim * (window.devicePixelRatio || 1.0));
+	function processWindowDimension(dim, res) {
+		return Math.floor(dim * res * (window.devicePixelRatio || 1.0));
 	}
 </script>
 
 <canvas
 	id='canvas'
 	bind:this={canvas}
-	width={processWindowDimension(innerWidth)}
-	height={processWindowDimension(innerHeight)}
+	width={processWindowDimension(innerWidth, $resolution)}
+	height={processWindowDimension(innerHeight, $resolution)}
 	on:mousedown|preventDefault={onMouseButton}
 	on:mouseup|preventDefault={onMouseButton}
 	on:mousemove|preventDefault={onMouseMove}

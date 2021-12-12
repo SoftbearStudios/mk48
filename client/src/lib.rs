@@ -6,17 +6,19 @@
 #![feature(drain_filter)]
 #![feature(must_not_suspend)]
 
-mod game;
-mod input;
-mod renderer;
-mod shader;
-mod texture;
 #[macro_use]
 mod animation;
 mod audio;
+mod buffer;
+mod deque;
+mod game;
+mod input;
 mod particle;
+mod renderer;
 mod settings;
+mod shader;
 mod text_cache;
+mod texture;
 
 use crate::game::Game;
 use common::altitude::Altitude;
@@ -126,6 +128,7 @@ pub struct State {
     invitation_id: Option<InvitationId>,
     score: u32,
     player_count: u32,
+    fps: f32,
     status: Status,
     chats: Vec<ChatModel>,
     liveboard: Vec<LeaderboardItemModel>,

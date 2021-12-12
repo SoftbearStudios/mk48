@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::has_webp;
+use crate::buffer::*;
 use crate::settings::Settings;
 use crate::shader::Shader;
 use crate::texture::Texture;
@@ -10,38 +10,52 @@ use common::transform::Transform;
 use glam::{vec2, Mat2, Mat3, Vec2, Vec4};
 use serde::Serialize;
 use sprite_sheet::UvSpriteSheet;
-use std::marker::PhantomData;
-use std::mem::size_of;
+use std::mem;
 use std::ops::{Mul, Range};
-use std::{mem, slice};
 use wasm_bindgen::JsCast;
 use web_sys::{
-    HtmlCanvasElement, OesStandardDerivatives, OesVertexArrayObject, WebGlBuffer,
-    WebGlRenderingContext as Gl, WebGlVertexArrayObject,
+    HtmlCanvasElement, OesStandardDerivatives, OesVertexArrayObject, WebGlRenderingContext as Gl,
 };
 
+pub struct KhrParallelShaderCompile;
+impl KhrParallelShaderCompile {
+    pub const COMPLETION_STATUS_KHR: u32 = 37297;
+}
+
 pub struct Renderer {
-    background_geometry: RenderBuffer<Pos>,
-    background_shader: Shader,
-    text_geometry: RenderBuffer<PosUvColor>,
-    text_shader: Shader,
-    canvas: HtmlCanvasElement,
-    oes_vao: OesVertexArrayObject,
+    pub canvas: HtmlCanvasElement,
     pub gl: Gl,
+    pub khr: Option<KhrParallelShaderCompile>,
+    pub oes_vao: OesVertexArrayObject,
+    pub particle_shader: Shader,
+    pub sprite_sheet: UvSpriteSheet,
+    pub view_matrix: Mat3,
+
+    background_geometry: RenderBuffer<Vec2>,
+    background_shader: Shader,
+    graphic_buffer: RenderBuffer<PosColor>,
+    graphic_mesh: MeshBuffer<PosColor>,
+    graphic_shader: Shader,
+    grass_texture: Texture,
+    sand_texture: Texture,
     sprite_buffer: RenderBuffer<PosUvAlpha>,
     sprite_mesh: MeshBuffer<PosUvAlpha>,
     sprite_shader: Shader,
-    particle_mesh: MeshBuffer<Particle>,
-    particle_buffer: RenderBuffer<Particle>,
-    particle_shader: Shader,
-    graphic_mesh: MeshBuffer<PosColor>,
-    graphic_buffer: RenderBuffer<PosColor>,
-    graphic_shader: Shader,
-    pub sprite_sheet: UvSpriteSheet,
     sprite_texture: Texture,
-    sand_texture: Texture,
-    grass_texture: Texture,
-    view_matrix: Mat3,
+    text_geometry: RenderBuffer<Vec2>,
+    text_shader: Shader,
+}
+
+macro_rules! include_shader {
+    ($gl: expr, $name:literal, $($attribute:literal),+) => {
+        Shader::new(
+            $gl,
+            include_str!(concat!(concat!("../shaders/", $name), ".vert")),
+            include_str!(concat!(concat!("../shaders/", $name), ".frag")),
+            $name,
+            &[$($attribute, )+],
+        )
+    }
 }
 
 impl Renderer {
@@ -62,7 +76,7 @@ impl Renderer {
 
         let options = serde_wasm_bindgen::to_value(&ContextOptions {
             alpha: true,
-            antialias: true,
+            antialias: settings.antialias,
             premultiplied_alpha: true,
         })
         .unwrap();
@@ -73,6 +87,11 @@ impl Renderer {
             .unwrap()
             .dyn_into::<Gl>()
             .unwrap();
+
+        let khr = gl
+            .get_extension("KHR_parallel_shader_compile")
+            .unwrap()
+            .map(|_| KhrParallelShaderCompile);
 
         let oes_vao = gl
             .get_extension("OES_vertex_array_object")
@@ -91,19 +110,12 @@ impl Renderer {
             mem::forget(oes_standard_derivatives);
         }
 
-        let sprite_shader = Shader::new(
-            &gl,
-            include_str!("../shaders/sprite.vert"),
-            include_str!("../shaders/sprite.frag"),
-            &["position", "uv", "alpha"],
-        );
-
-        let particle_shader = Shader::new(
-            &gl,
-            include_str!("../shaders/particle.vert"),
-            include_str!("../shaders/particle.frag"),
-            &["position", "color", "radius", "created"],
-        );
+        // Create shaders.
+        let sprite_shader = include_shader!(&gl, "sprite", "position", "uv", "alpha");
+        let particle_shader =
+            include_shader!(&gl, "particle", "position", "velocity", "color", "radius", "created");
+        let graphic_shader = include_shader!(&gl, "graphic", "position", "color");
+        let text_shader = include_shader!(&gl, "text", "position", "uv", "color");
 
         let background_frag_template = include_str!("../shaders/background.frag");
         let mut background_frag_source = String::with_capacity(background_frag_template.len() + 20);
@@ -120,6 +132,7 @@ impl Renderer {
             &gl,
             include_str!("../shaders/background.vert"),
             &background_frag_source,
+            "background",
             &["position"],
         );
 
@@ -127,36 +140,19 @@ impl Renderer {
             // TODO: Kludge, using the principle that if the texture never loads, the placeholder
             // color will be used.
             ("/dummy.png", "/dummy.png")
-        } else if has_webp() {
-            ("/sand.webp", "/grass.webp")
         } else {
             ("/sand.png", "/grass.png")
         };
 
+        // Load textures.
         let sand_texture = Texture::load(&gl, sand_path, Some([213, 176, 107]), true);
         let grass_texture = Texture::load(&gl, grass_path, Some([71, 85, 45]), true);
 
-        let graphic_shader = Shader::new(
-            &gl,
-            include_str!("../shaders/graphic.vert"),
-            include_str!("../shaders/graphic.frag"),
-            &["position", "color"],
-        );
-
-        let text_shader = Shader::new(
-            &gl,
-            include_str!("../shaders/text.vert"),
-            include_str!("../shaders/text.frag"),
-            &["position", "uv", "color"],
-        );
-
         let sprite_texture = Texture::load(&gl, sprite_path, None, false);
 
+        // Create buffers.
         let sprite_mesh = MeshBuffer::new();
         let sprite_buffer = RenderBuffer::new(&gl, &oes_vao);
-
-        let particle_mesh = MeshBuffer::new();
-        let particle_buffer = RenderBuffer::new(&gl, &oes_vao);
 
         let graphic_mesh = MeshBuffer::new();
         let graphic_buffer = RenderBuffer::new(&gl, &oes_vao);
@@ -164,11 +160,26 @@ impl Renderer {
         let mut background_geometry = RenderBuffer::new(&gl, &oes_vao);
         background_geometry.buffer(
             &gl,
-            vertices_from_floats::<Pos>(&[-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0]),
+            &[
+                vec2(-1.0, 1.0),
+                vec2(1.0, 1.0),
+                vec2(-1.0, -1.0),
+                vec2(1.0, -1.0),
+            ],
             &[2, 0, 1, 2, 1, 3],
         );
 
-        let text_geometry = RenderBuffer::new(&gl, &oes_vao);
+        let mut text_geometry = RenderBuffer::new(&gl, &oes_vao);
+        text_geometry.buffer(
+            &gl,
+            &[
+                vec2(-0.5, 0.5),
+                vec2(0.5, 0.5),
+                vec2(-0.5, -0.5),
+                vec2(0.5, -0.5),
+            ],
+            &[2, 0, 1, 2, 1, 3],
+        );
 
         gl.clear_color(0.0, 0.20784314, 0.45490196, 1.0);
         gl.enable(Gl::BLEND);
@@ -177,26 +188,25 @@ impl Renderer {
         gl.blend_func(Gl::ONE, Gl::ONE_MINUS_SRC_ALPHA);
 
         Self {
+            background_geometry,
+            background_shader,
             canvas,
             gl,
-            oes_vao,
-            sprite_mesh,
-            sprite_buffer,
-            sprite_shader,
-            particle_mesh,
-            particle_buffer,
-            particle_shader,
-            background_shader,
-            background_geometry,
-            text_geometry,
-            graphic_mesh,
             graphic_buffer,
+            graphic_mesh,
             graphic_shader,
+            grass_texture,
+            khr,
+            oes_vao,
+            particle_shader,
+            sand_texture,
+            sprite_buffer,
+            sprite_mesh,
+            sprite_shader,
             sprite_sheet,
             sprite_texture,
+            text_geometry,
             text_shader,
-            sand_texture,
-            grass_texture,
             view_matrix: Mat3::ZERO,
         }
     }
@@ -222,33 +232,35 @@ impl Renderer {
 
     /// Returns the aspect ratio (width/height) of the canvas.
     pub fn aspect(&self) -> f32 {
-        let width = self.canvas.width();
-        let height = self.canvas.height();
+        let width = self.canvas.client_width();
+        let height = self.canvas.client_height();
         width as f32 / height as f32
     }
 
-    /// reset resets the renderer, by clearing all added meshes, changing the aspect ratio if necessary,
+    /// start starts the renderer changing the aspect ratio if necessary,
     /// clearing the screen, and setting a new view matrix.
-    pub fn reset(&mut self, camera: Vec2, zoom: f32) {
-        self.sprite_mesh.clear();
-        self.particle_mesh.clear();
-        self.graphic_mesh.clear();
-
-        let width = self.canvas.width();
-        let height = self.canvas.height();
-        let aspect = width as f32 / height as f32;
+    pub fn start(&mut self, camera: Vec2, zoom: f32) {
+        let aspect = self.aspect();
 
         // This matrix is manually inverted.
         self.view_matrix =
             Mat3::from_scale(vec2(1.0, aspect) / zoom).mul_mat3(&Mat3::from_translation(-camera));
 
-        self.gl.viewport(0, 0, width as i32, height as i32);
+        self.gl.viewport(
+            0,
+            0,
+            self.canvas.width() as i32,
+            self.canvas.height() as i32,
+        );
         self.gl.clear(Gl::COLOR_BUFFER_BIT);
     }
 
+    /// finish currently does nothing.
+    pub fn finish(&mut self) {}
+
     /// render_sprite adds a sprite to the drawing queue.
     /// Returns whether the current frame of the animation is past the end, if applicable.
-    pub fn render_sprite(
+    pub fn add_sprite(
         &mut self,
         sprite: &str,
         frame: Option<usize>,
@@ -301,16 +313,6 @@ impl Renderer {
         for v in vertices {
             self.sprite_mesh.push_vertex(v);
         }
-    }
-
-    /// add_particle queues a particle for drawing.
-    pub fn add_particle(&mut self, pos: Vec2, radius: f32, color: f32, time: f32) {
-        self.particle_mesh.push_vertex(Particle {
-            pos,
-            radius,
-            color,
-            time,
-        });
     }
 
     /// add_triangle_graphic adds a transformed equilateral triangle to the graphics queue, pointing
@@ -390,7 +392,10 @@ impl Renderer {
             return;
         }
 
-        let mut segments = (6.0 * radius * angle_span / (2.0 * std::f32::consts::PI)) as i32;
+        // Number of segments to approximate an arc.
+        // The radius.sqrt() helps even out the quality surprisingly well.
+        let mut segments =
+            (10.0 * radius.sqrt() * angle_span * (1.0 / (std::f32::consts::PI * 2.0))) as i32;
 
         // Set maximum to prevent indices from overflowing.
         segments = segments.clamp(2, ((u16::MAX - 3) / 2) as i32);
@@ -426,11 +431,13 @@ impl Renderer {
         // Calculate before extending vertices.
         let starting_index = vertices.len() as u32;
 
+        let angle_per_segment = angle_span / segments as f32;
+
         // Use extend instead of loop to allow pre-allocation.
         vertices.extend(
             array::IntoIter::new([PosColor { pos: a, color }, PosColor { pos: b, color }]).chain(
                 (1..=segments).into_iter().flat_map(|i| {
-                    let angle = range.start + angle_span * i as f32 / segments as f32;
+                    let angle = i as f32 * angle_per_segment + range.start;
                     let mat = Mat2::from_angle(angle);
 
                     let c = center + mat * initial_a;
@@ -462,61 +469,31 @@ impl Renderer {
         );
     }
 
-    /// render_text immediately draws text to the screen.
-    /// scale refers to the scale on the vertical axis.
-    pub fn render_text(&mut self, pos: Vec2, scale: f32, color: Vec4, texture: &Texture) {
-        self.gl.active_texture(Gl::TEXTURE0);
-        texture.bind(&self.gl);
+    /// render_text immediately draws any number of text textures to the screen.
+    /// Requires an iterator of position, scale, color, and texture.
+    /// Scale refers to the scale on the vertical axis.
+    pub fn render_text<'a, I: IntoIterator<Item = (Vec2, f32, Vec4, &'a Texture)>>(
+        &mut self,
+        iter: I,
+    ) {
+        if let Some(mut shader) = self.text_shader.bind(&self.gl, self.khr.as_ref()) {
+            let buffer = self.text_geometry.bind(&self.gl, &self.oes_vao);
 
-        self.text_shader.bind(&self.gl);
-        self.gl
-            .uniform1i(self.text_shader.uniform(&self.gl, "uSampler"), 0);
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.text_shader.uniform(&self.gl, "uView"),
-            false,
-            &self.view_matrix.to_cols_array(),
-        );
+            for (pos, scale, color, texture) in iter {
+                shader.uniform_texture("uSampler", &texture, 0);
 
-        let mat = Mat3::from_scale_angle_translation(vec2(scale / texture.aspect, scale), 0.0, pos);
+                let mat = Mat3::from_scale_angle_translation(
+                    vec2(scale / texture.aspect, scale),
+                    0.0,
+                    pos,
+                );
 
-        let verts: Vec<PosUvColor> = [
-            PosUvColor {
-                pos: vec2(-0.5, 0.5),
-                uv: vec2(0.0, 0.0),
-                color,
-            },
-            PosUvColor {
-                pos: vec2(0.5, 0.5),
-                uv: vec2(1.0, 0.0),
-                color,
-            },
-            PosUvColor {
-                pos: vec2(-0.5, -0.5),
-                uv: vec2(0.0, 1.0),
-                color,
-            },
-            PosUvColor {
-                pos: vec2(0.5, -0.5),
-                uv: vec2(1.0, 1.0),
-                color,
-            },
-        ]
-        .iter()
-        .map(|vert| PosUvColor {
-            pos: mat.transform_point2(vert.pos),
-            uv: vert.uv,
-            color: vert.color,
-        })
-        .collect();
+                shader.uniform_matrix3f("uView", &self.view_matrix.mul(mat));
+                shader.uniform4f("uColor", color);
 
-        self.text_geometry
-            .buffer(&self.gl, &verts, &[2, 0, 1, 2, 1, 3]);
-        self.text_geometry.bind(&self.gl, &self.oes_vao);
-        self.text_geometry.draw(&self.gl, Gl::TRIANGLES);
-
-        render_buffer_unbind(&self.oes_vao);
-        Texture::unbind(&self.gl);
-        Shader::unbind(&self.gl);
+                buffer.draw(Gl::TRIANGLES);
+            }
+        }
     }
 
     /// render_sprites immediately renders all sprites queued for drawing.
@@ -524,60 +501,19 @@ impl Renderer {
         if self.sprite_mesh.is_empty() {
             return;
         }
-        self.gl.active_texture(Gl::TEXTURE0);
-        self.sprite_texture.bind(&self.gl);
 
-        self.sprite_shader.bind(&self.gl);
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.sprite_shader.uniform(&self.gl, "uView"),
-            false,
-            &self.view_matrix.to_cols_array(),
-        );
-        self.gl
-            .uniform1i(self.sprite_shader.uniform(&self.gl, "uSampler"), 0);
+        if let Some(mut shader) = self.sprite_shader.bind(&self.gl, self.khr.as_ref()) {
+            shader.uniform_texture("uSampler", &self.sprite_texture, 0);
+            shader.uniform_matrix3f("uView", &self.view_matrix);
 
-        self.sprite_mesh.push_default_quads();
-        self.sprite_buffer.buffer_mesh(&self.gl, &self.sprite_mesh);
+            self.sprite_mesh.push_default_quads();
+            self.sprite_buffer.buffer_mesh(&self.gl, &self.sprite_mesh);
 
-        self.sprite_buffer.bind(&self.gl, &self.oes_vao);
-        self.sprite_buffer.draw(&self.gl, Gl::TRIANGLES);
-
-        render_buffer_unbind(&self.oes_vao);
-        Texture::unbind(&self.gl);
-        Shader::unbind(&self.gl);
-    }
-
-    /// render_particles immediately renders all particles queued for drawing.
-    pub fn render_particles(&mut self, time: f32) {
-        if self.particle_mesh.is_empty() {
-            return;
+            let buffer = self.sprite_buffer.bind(&self.gl, &self.oes_vao);
+            buffer.draw(Gl::TRIANGLES);
         }
-        self.particle_shader.bind(&self.gl);
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.particle_shader.uniform(&self.gl, "uView"),
-            false,
-            &self.view_matrix.to_cols_array(),
-        );
-        self.gl
-            .uniform1f(self.particle_shader.uniform(&self.gl, "uTime"), time);
 
-        self.gl.uniform1f(
-            self.particle_shader.uniform(&self.gl, "uWindowSize"),
-            self.canvas.width() as f32 * 0.5,
-        );
-
-        self.particle_mesh.push_default_points();
-        self.particle_buffer
-            .buffer_mesh(&self.gl, &self.particle_mesh);
-
-        self.particle_buffer.bind(&self.gl, &self.oes_vao);
-        self.particle_buffer.draw(&self.gl, Gl::POINTS);
-
-        render_buffer_unbind(&self.oes_vao);
-        Shader::unbind(&self.gl);
-
-        // Clear particles (as multiple batches may be drawn).
-        self.particle_mesh.clear();
+        self.sprite_mesh.clear();
     }
 
     /// render_graphics immediately renders all graphics queued for drawing.
@@ -585,21 +521,18 @@ impl Renderer {
         if self.graphic_mesh.is_empty() {
             return;
         }
-        self.graphic_shader.bind(&self.gl);
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.graphic_shader.uniform(&self.gl, "uView"),
-            false,
-            &self.view_matrix.to_cols_array(),
-        );
 
-        self.graphic_buffer
-            .buffer_mesh(&self.gl, &self.graphic_mesh);
+        if let Some(mut shader) = self.graphic_shader.bind(&self.gl, self.khr.as_ref()) {
+            shader.uniform_matrix3f("uView", &self.view_matrix);
 
-        self.graphic_buffer.bind(&self.gl, &self.oes_vao);
-        self.graphic_buffer.draw(&self.gl, Gl::TRIANGLES);
+            self.graphic_buffer
+                .buffer_mesh(&self.gl, &self.graphic_mesh);
 
-        render_buffer_unbind(&self.oes_vao);
-        Shader::unbind(&self.gl);
+            let buffer = self.graphic_buffer.bind(&self.gl, &self.oes_vao);
+            buffer.draw(Gl::TRIANGLES);
+        }
+
+        self.graphic_mesh.clear()
     }
 
     /// render_background immediately renders the background, including terrain.
@@ -613,145 +546,29 @@ impl Renderer {
         world_radius: f32,
         time: f32,
     ) {
-        self.gl.active_texture(Gl::TEXTURE0);
-        texture.bind(&self.gl);
+        if let Some(mut shader) = self.background_shader.bind(&self.gl, self.khr.as_ref()) {
+            shader.uniform_texture("uSampler", &texture, 0);
+            shader.uniform_texture("uSand", &self.sand_texture, 1);
+            shader.uniform_texture("uGrass", &self.grass_texture, 2);
 
-        self.gl.active_texture(Gl::TEXTURE1);
-        self.sand_texture.bind(&self.gl);
+            shader.uniform_matrix3f("uView", &self.view_matrix.inverse()); // NOTE: Inverted.
+            shader.uniform_matrix3f("uTexture", &matrix);
+            shader.uniform1f("uTime", time);
+            shader.uniform1f("uBorder", world_radius);
+            shader.uniform1f("uVisual", visual_radius);
+            shader.uniform2f("uMiddle", middle);
+            shader.uniform1f("uRestrict", visual_restriction);
 
-        self.gl.active_texture(Gl::TEXTURE2);
-        self.grass_texture.bind(&self.gl);
-
-        self.background_shader.bind(&self.gl);
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.background_shader.uniform(&self.gl, "uView"),
-            false,
-            &self.view_matrix.inverse().to_cols_array(), // NOTE: Inverted.
-        );
-        self.gl
-            .uniform1i(self.background_shader.uniform(&self.gl, "uSampler"), 0);
-        self.gl
-            .uniform1i(self.background_shader.uniform(&self.gl, "uSand"), 1);
-        self.gl
-            .uniform1i(self.background_shader.uniform(&self.gl, "uGrass"), 2);
-
-        self.gl.uniform_matrix3fv_with_f32_array(
-            self.background_shader.uniform(&self.gl, "uTexture"),
-            false,
-            &matrix.to_cols_array(),
-        );
-        self.gl
-            .uniform1f(self.background_shader.uniform(&self.gl, "uTime"), time);
-        self.gl.uniform1f(
-            self.background_shader.uniform(&self.gl, "uBorder"),
-            world_radius,
-        );
-        self.gl.uniform1f(
-            self.background_shader.uniform(&self.gl, "uVisual"),
-            visual_radius,
-        );
-        self.gl.uniform2fv_with_f32_array(
-            self.background_shader.uniform(&self.gl, "uMiddle"),
-            middle.as_ref(),
-        );
-        self.gl.uniform1f(
-            self.background_shader.uniform(&self.gl, "uRestrict"),
-            visual_restriction,
-        );
-
-        self.background_geometry.bind(&self.gl, &self.oes_vao);
-        self.background_geometry.draw(&self.gl, Gl::TRIANGLES);
-
-        render_buffer_unbind(&self.oes_vao);
-        Shader::unbind(&self.gl);
-    }
-}
-
-/// Vertex is any vertex data consisting of floats.
-trait Vertex: Sized {
-    const FLOATS: usize;
-    fn size() -> usize {
-        Self::FLOATS * 4
-    }
-    fn bind_attribs(attribs: &mut Attribs<Self>);
-}
-
-struct Attribs<'a, V: Vertex> {
-    gl: &'a Gl,
-    bytes: u32,
-    index: u32,
-    vertex: PhantomData<V>,
-}
-
-impl<'a, V: Vertex> Attribs<'a, V> {
-    fn new(gl: &'a Gl) -> Self {
-        Self {
-            gl,
-            bytes: 0,
-            index: 0,
-            vertex: PhantomData,
+            let buffer = self.background_geometry.bind(&self.gl, &self.oes_vao);
+            buffer.draw(Gl::TRIANGLES);
         }
     }
-
-    fn attrib(&mut self) -> u32 {
-        let i = self.index;
-        self.gl.enable_vertex_attrib_array(i);
-        self.index += 1;
-        i
-    }
-
-    fn offset(&mut self, bytes: usize) -> i32 {
-        let b = self.bytes;
-        self.bytes += bytes as u32;
-        b as i32
-    }
-
-    fn floats(&mut self, count: usize) {
-        self.gl.vertex_attrib_pointer_with_i32(
-            self.attrib(),
-            count as i32,
-            Gl::FLOAT,
-            false,
-            V::size() as i32,
-            self.offset(count * size_of::<f32>()),
-        );
-    }
 }
 
-impl<'a, V: Vertex> Drop for Attribs<'a, V> {
-    fn drop(&mut self) {
-        // Make sure all attributes were added.
-        assert_eq!(self.bytes as usize, V::size());
-        // Check safety of slice::from_raw_parts.
-        assert_eq!(size_of::<V>(), V::size());
-    }
-}
-
-/// Pos stores a vertex with (only) a given position.
-#[repr(C)]
-pub struct Pos {
-    pub pos: Vec2,
-}
-
-impl Vertex for Pos {
-    const FLOATS: usize = 2;
+/// Vec2 stores a vertex with (only) a given position.
+impl Vertex for Vec2 {
     fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-    }
-}
-
-/// PosUv stores a vertex with (only) a given position and texture coordinate.
-#[repr(C)]
-pub struct PosUv {
-    pub pos: Vec2,
-    pub uv: Vec2,
-}
-
-impl Vertex for PosUv {
-    const FLOATS: usize = 4;
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-        attribs.floats(2);
+        Vec2::bind_attrib(attribs);
     }
 }
 
@@ -764,28 +581,10 @@ pub struct PosUvAlpha {
 }
 
 impl Vertex for PosUvAlpha {
-    const FLOATS: usize = 5;
     fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-        attribs.floats(2);
-        attribs.floats(1);
-    }
-}
-
-/// PosUvColor stores a vertex with (only) a given position, texture coordinate, and color.
-#[repr(C)]
-pub struct PosUvColor {
-    pub pos: Vec2,
-    pub uv: Vec2,
-    pub color: Vec4,
-}
-
-impl Vertex for PosUvColor {
-    const FLOATS: usize = 8;
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-        attribs.floats(2);
-        attribs.floats(4);
+        Vec2::bind_attrib(attribs);
+        Vec2::bind_attrib(attribs);
+        f32::bind_attrib(attribs);
     }
 }
 
@@ -798,205 +597,8 @@ pub struct PosColor {
 }
 
 impl Vertex for PosColor {
-    const FLOATS: usize = 6;
     fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-        attribs.floats(4);
-    }
-}
-
-/// Particle stores a vertex with (only) a given position, indexed color, and time (useful for particles).
-#[repr(C)]
-pub struct Particle {
-    pub pos: Vec2,
-    /// Possible values:
-    /// -1 to 1: Fire to black
-    ///  0 to 1: Black to white
-    pub color: f32,
-    pub radius: f32,
-    pub time: f32,
-}
-
-impl Vertex for Particle {
-    const FLOATS: usize = 5;
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        attribs.floats(2);
-        attribs.floats(1);
-        attribs.floats(1);
-        attribs.floats(1);
-    }
-}
-
-type Index = u16;
-type Quad = [Index; 4];
-
-/// MeshBuffer allows building a mesh in RAM.
-struct MeshBuffer<V: Vertex> {
-    vertices: Vec<V>,
-    indices: Vec<Index>,
-    default_indices: bool,
-}
-
-impl<V: Vertex> MeshBuffer<V> {
-    fn new() -> Self {
-        Self {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-            default_indices: false,
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.vertices.is_empty()
-    }
-
-    fn push_vertex(&mut self, vertex: V) {
-        self.vertices.push(vertex);
-    }
-
-    fn push_quad(&mut self, quad: Quad) {
-        self.indices
-            .extend_from_slice(&[quad[0], quad[1], quad[2], quad[1], quad[3], quad[2]]);
-    }
-
-    fn push_default_quads(&mut self) {
-        assert!(self.indices.is_empty());
-        let n = self.vertices.len();
-        assert_eq!(n % 4, 0);
-        let quads = n / 4;
-
-        for quad in 0..quads {
-            let i = quad as Index * 4;
-            self.push_quad([i, i + 1, i + 2, i + 3]);
-        }
-    }
-
-    fn push_default_points(&mut self) {
-        assert!(self.indices.is_empty());
-        self.default_indices = true;
-    }
-
-    fn clear(&mut self) {
-        self.vertices.clear();
-        self.indices.clear();
-    }
-}
-
-/// RenderBuffer facilitates buffering a mesh to the GPU.
-struct RenderBuffer<V: Vertex> {
-    vertices: WebGlBuffer,
-    indices: WebGlBuffer,
-    vao: WebGlVertexArrayObject,
-    index_count: u32,
-    vertex_count: Index,
-    vertex: PhantomData<V>,
-}
-
-impl<V: Vertex> RenderBuffer<V> {
-    fn new(gl: &Gl, oes: &OesVertexArrayObject) -> Self {
-        let buffer = Self {
-            vertices: gl.create_buffer().unwrap(),
-            indices: gl.create_buffer().unwrap(), // TODO create indices lazily.
-            vao: oes.create_vertex_array_oes().unwrap(),
-            index_count: 0,
-            vertex_count: 0,
-            vertex: PhantomData,
-        };
-
-        // Bind buffers to vao.
-        oes.bind_vertex_array_oes(Some(&buffer.vao));
-        buffer.bind_without_vao(gl);
-        oes.bind_vertex_array_oes(None);
-
-        buffer
-    }
-
-    // bind_without_vao binds all the buffers to the vao.
-    fn bind_without_vao(&self, gl: &Gl) {
-        // Bind attributes.
-        gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&self.vertices));
-        V::bind_attribs(&mut Attribs::new(gl));
-
-        // Bind index buffer.
-        gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, Some(&self.indices));
-    }
-
-    // bind must happen once before any number of draws.
-    pub fn bind(&self, _gl: &Gl, oes: &OesVertexArrayObject) {
-        oes.bind_vertex_array_oes(Some(&self.vao));
-    }
-
-    // draw draws the buffer.
-    // It assumes that it is bound.
-    fn draw(&self, gl: &Gl, primitive: u32) {
-        if self.index_count != 0 {
-            gl.draw_elements_with_i32(primitive, self.index_count as i32, Gl::UNSIGNED_SHORT, 0);
-        } else if self.vertex_count != 0 {
-            let vertex_size = match primitive {
-                Gl::TRIANGLES => 3,
-                Gl::POINTS => 1,
-                _ => panic!("unknown primitive"),
-            };
-            gl.draw_arrays(primitive, 0, (self.vertex_count / vertex_size) as i32)
-        }
-    }
-
-    fn buffer_mesh(&mut self, gl: &Gl, mesh: &MeshBuffer<V>) {
-        assert!(
-            mesh.vertices.is_empty() || mesh.default_indices || !mesh.indices.is_empty(),
-            "mesh has vertices but no indices"
-        );
-        self.buffer(gl, mesh.vertices.as_slice(), mesh.indices.as_slice());
-    }
-
-    // buffer moves the data from floats to the WebGL buffer.
-    // If indices.is_empty() it performs array based rendering.
-    fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[Index]) {
-        self.index_count = indices.len() as u32;
-        self.vertex_count = vertices.len() as Index;
-
-        // Convert vertex slice to float slice.
-        let floats = unsafe {
-            let ptr = &vertices[0] as *const V as *const f32;
-            let len = vertices.len() * V::FLOATS;
-            slice::from_raw_parts(ptr, len)
-        };
-
-        // Buffer vertices.
-        gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&self.vertices));
-        unsafe {
-            // Points to raw rust memory so can't allocate while in use.
-            let vert_array = js_sys::Float32Array::view(floats);
-            gl.buffer_data_with_array_buffer_view(Gl::ARRAY_BUFFER, &vert_array, Gl::STATIC_DRAW);
-        }
-
-        // Buffer indices.
-        gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, Some(&self.indices));
-        unsafe {
-            // Points to raw rust memory so can't allocate while in use.
-            let elem_array = js_sys::Uint16Array::view(indices);
-            gl.buffer_data_with_array_buffer_view(
-                Gl::ELEMENT_ARRAY_BUFFER,
-                &elem_array,
-                Gl::STATIC_DRAW,
-            );
-        }
-    }
-}
-
-/// render_buffer_unbind unbinds the currently bound RenderBuffer, if any.
-pub fn render_buffer_unbind(oes: &OesVertexArrayObject) {
-    oes.bind_vertex_array_oes(None);
-}
-
-/// vertices_from_floats reinterprets a slice of floats as a slice of vertices, panicking if the
-/// given number of floats is not evenly divided by the vertex size.
-fn vertices_from_floats<V: Vertex>(floats: &[f32]) -> &[V] {
-    assert_eq!(floats.len() % V::FLOATS, 0);
-
-    unsafe {
-        let ptr = &floats[0] as *const f32 as *const V;
-        let len = floats.len() / V::FLOATS;
-        slice::from_raw_parts(ptr, len)
+        Vec2::bind_attrib(attribs);
+        Vec4::bind_attrib(attribs);
     }
 }

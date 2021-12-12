@@ -22,6 +22,8 @@ use rand::{thread_rng, Rng};
 pub struct Bot {
     /// Bot's chance of attacking, randomized to improve variety of bots.
     aggression: f32,
+    /// Amount to offset steering by. This creates more interesting behavior.
+    steer_bias: Angle,
     /// Amount to offset aiming by. This creates more interesting hit patterns.
     aim_bias: Vec2,
     /// Maximum level bot will try to upgrade to, randomized to improve variety of bots.
@@ -45,6 +47,7 @@ impl Bot {
         Self {
             // Raise aggression to a power such that lower values are more common.
             aggression: rng.gen::<f32>().powi(2) * Self::MAX_AGGRESSION,
+            steer_bias: rng.gen::<Angle>() * 0.1,
             aim_bias: gen_radius(&mut rng, 10.0),
             // Bias towards lower levels.
             level_ambition: random_level(&mut rng).min(random_level(&mut rng)),
@@ -149,7 +152,10 @@ impl Bot {
                                 || health_percent < 1.0 / 3.0
                         }
                         EntityKind::Aircraft => true,
-                        EntityKind::Weapon => contact_data.sub_kind == EntitySubKind::Missile,
+                        EntityKind::Weapon => matches!(
+                            contact_data.sub_kind,
+                            EntitySubKind::Missile | EntitySubKind::Torpedo
+                        ),
                         EntityKind::Obstacle => {
                             repel(
                                 &mut movement,
@@ -183,15 +189,22 @@ impl Bot {
                     }
 
                     let armament_entity_data: &EntityData = armament.entity_type.data();
-                    match armament_entity_data.kind {
-                        EntityKind::Weapon | EntityKind::Aircraft => {}
-                        _ => continue,
+                    if !matches!(
+                        armament_entity_data.kind,
+                        EntityKind::Weapon | EntityKind::Aircraft | EntityKind::Decoy
+                    ) {
+                        continue;
                     }
 
                     let relevant = match enemy_data.kind {
                         EntityKind::Aircraft | EntityKind::Weapon => {
                             if enemy.altitude().is_airborne() {
                                 matches!(armament_entity_data.sub_kind, EntitySubKind::Sam)
+                            } else if enemy_data.sub_kind == EntitySubKind::Torpedo
+                                && enemy_data.sensors.sonar.range > 0.0
+                            {
+                                armament_entity_data.kind == EntityKind::Decoy
+                                    && armament_entity_data.sub_kind == EntitySubKind::Sonar
                             } else {
                                 false
                             }
@@ -243,7 +256,12 @@ impl Bot {
                     let angle = Angle::from(enemy.transform().position - transform.position);
 
                     let mut angle_diff = (angle - transform.direction).abs();
-                    if armament.vertical || armament_entity_data.kind == EntityKind::Aircraft {
+                    if armament.vertical
+                        || matches!(
+                            armament_entity_data.kind,
+                            EntityKind::Aircraft | EntityKind::Decoy
+                        )
+                    {
                         angle_diff = Angle::ZERO;
                     }
 
@@ -261,16 +279,23 @@ impl Bot {
 
             ret.push(Command::Control(Control {
                 guidance: Some(Guidance {
-                    direction_target: Angle::from(movement),
+                    direction_target: Angle::from(movement) + self.steer_bias,
                     velocity_target: data.speed * 0.8,
                 }),
                 angular_velocity_target: None,
                 altitude_target: if data.sub_kind == EntitySubKind::Submarine {
-                    Some(if health_percent > self.aggression {
-                        Altitude::ZERO
+                    // More positive values mean want to surface, more negative values mean want to dive.
+                    let surface_bias =
+                        health_percent - self.aggression * (1.0 / Self::MAX_AGGRESSION);
+
+                    // Hysteresis.
+                    if boat.altitude().is_submerged() && surface_bias >= 0.1 {
+                        Some(Altitude::ZERO)
+                    } else if !boat.altitude().is_submerged() && surface_bias <= -0.1 {
+                        Some(Altitude::MIN)
                     } else {
-                        Altitude::MIN
-                    })
+                        None
+                    }
                 } else {
                     None
                 },

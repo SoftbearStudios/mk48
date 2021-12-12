@@ -3705,6 +3705,115 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"seawolf": {
+		"label": "Seawolf",
+		"link": "https://en.wikipedia.org/wiki/Seawolf-class_submarine",
+		"kind": "boat",
+		"subkind": "submarine",
+		"level": 9,
+		"length": 108,
+		"width": 17.6133,
+		"draft": 11,
+		"depth": 400,
+		"speed": 18.00556,
+		"stealth": 0.5,
+		"sensors": {
+			"visual": {
+				"range": 816
+			},
+			"radar": {
+				"range": 1162
+			},
+			"sonar": {
+				"range": 635
+			}
+		},
+		"armaments": [
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": -4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": -4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": -4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mark48",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": -4.73435,
+				"angle": 0,
+				"external": false
+			},
+			{
+				"type": "mk70",
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			},
+			{
+				"type": "mk70",
+				"positionForward": 37.7849,
+				"positionSide": -4.73435,
+				"angle": 0,
+				"external": false,
+				"hidden": true
+			}
+		],
+		"damage": 3.6,
+		"turrets": [],
+		"exhausts": []
+	},
 	"skipjack": {
 		"label": "Skipjack",
 		"link": "https://en.wikipedia.org/wiki/Skipjack-class_submarine",
