@@ -312,6 +312,11 @@ pub fn handle_web_socket_format(format: String) {
     }
 }
 
+#[wasm_bindgen(js_name = "handleCinematic")]
+pub fn handle_cinematic(cinematic: bool) {
+    borrow_game().cinematic = cinematic;
+}
+
 /// For testing purposes only.
 #[wasm_bindgen(js_name = "handleDropWebSocket")]
 pub fn handle_drop_web_sockets(core: bool, server: bool) {

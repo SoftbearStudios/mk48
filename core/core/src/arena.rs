@@ -107,19 +107,24 @@ impl Arena {
         Self::static_captain_of_team(&self.sessions, team_id)
     }
 
-    pub fn get_liveboard(&self, include_bots: bool) -> (Vec<LiveboardDto>, u32) {
+    /// Returns a tuple consisting of the liveboard, the minimum score on the liveboard, and
+    /// a boolean representing if the liveboard scores are worthy of leaderboard placement.
+    pub fn get_liveboard(&self, include_bots: bool) -> (Vec<LiveboardDto>, u32, bool) {
         // TODO: Collect into heap for better performance.
         let mut liveboard = Vec::new();
+        let mut real_players = 0;
         for session in self.sessions.values() {
-            if session.bot && !include_bots {
-                continue;
-            }
             if !session.live {
                 continue;
             }
             if let Some(play) = session.plays.last() {
                 if play.date_stop.is_some() {
                     // Even if session remains live, remove from liveboard when play stops.
+                    continue;
+                }
+                if !session.bot {
+                    real_players += 1;
+                } else if !include_bots {
                     continue;
                 }
                 if let Some(score) = play.score {
@@ -133,13 +138,16 @@ impl Arena {
             }
         }
         liveboard.sort_by(|a, b| b.score.cmp(&a.score));
+
         liveboard.truncate(10);
         let min_score = if liveboard.len() == 10 {
             liveboard.last().unwrap().score
         } else {
             0
         };
-        (liveboard, min_score)
+
+        let leaderboard_worthy = real_players >= self.rules.leaderboard_min_players;
+        (liveboard, min_score, leaderboard_worthy)
     }
 
     pub fn get_mut<'a>(

@@ -15,7 +15,7 @@
 	import {fly} from 'svelte/transition';
 	import {hasUpgrades, upgradeProgress} from './Upgrades.svelte';
 	import entityData from '../data/entities.json';
-	import {fpsCounter} from '../util/settings.js';
+	import {cinematic, fpsCounter} from '../util/settings.js';
 
 	export let state;
 	$: alive = state.status.alive;
@@ -41,7 +41,7 @@
 	}
 </script>
 
-<div transition:fly="{{y: 100}}">
+<div class:cinematic={$cinematic} transition:fly="{{y: 100}}">
 	<h2>
 		{state.score || 0} {$t('panel.status.score' + (state.score === 1 ? '' : 'Plural'))} —
 		{toKnotsString(alive.velocity)} —
@@ -58,6 +58,11 @@
 	div {
 		text-align: center;
 		user-select: none;
+		transition: opacity 0.25s;
+	}
+
+	div.cinematic:not(:hover) {
+		opacity: 0;
 	}
 
 	h2 {

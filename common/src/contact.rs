@@ -5,7 +5,6 @@ use crate::altitude::Altitude;
 use crate::angle::Angle;
 use crate::entity::*;
 use crate::guidance::Guidance;
-use crate::protocol::Control;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::util::map_ranges;
@@ -126,10 +125,8 @@ impl Contact {
     }
 
     /// Applies a control message to a contact (can be used to predict its outcome).
-    pub fn predict_control(&mut self, control: &Control) {
-        if let Some(guidance) = control.guidance {
-            self.guidance = guidance;
-        }
+    pub fn predict_guidance(&mut self, guidance: &Guidance) {
+        self.guidance = *guidance;
     }
 }
 

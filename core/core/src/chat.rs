@@ -6,13 +6,14 @@ use crate::repo::Repo;
 use crate::session::Session;
 use crate::team::Team;
 use core_protocol::dto::MessageDto;
-use core_protocol::id::{ArenaId, PlayerId, SessionId};
+use core_protocol::id::{ArenaId, GameId, PlayerId, SessionId};
 use core_protocol::metrics::RatioMetric;
 use core_protocol::name::{trim_spaces, PlayerAlias, TeamName};
 use core_protocol::{get_unix_time_now, UnixTime};
-use log::{debug, warn};
+use log::{debug, error, warn};
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer, RingBufferExt, RingBufferWrite};
 use rustrict::{Censor, Type};
+use std::fs::OpenOptions;
 use std::rc::Rc;
 
 #[derive(Default)]
@@ -321,5 +322,34 @@ impl Repo {
             );
         }
         sent
+    }
+}
+
+/// Logs a chat message to a file.
+pub fn log_chat(
+    chat_log: &str,
+    game_id: Option<GameId>,
+    whisper: bool,
+    ok: bool,
+    alias: &str,
+    message: &str,
+) {
+    match OpenOptions::new().create(true).append(true).open(chat_log) {
+        Ok(file) => {
+            let mut wtr = csv::Writer::from_writer(file);
+            if let Err(e) = wtr.write_record(&[
+                &format!("{}", get_unix_time_now()),
+                &game_id
+                    .map(|id| format!("{:?}", id))
+                    .unwrap_or(String::from("-")),
+                &format!("{:?}", whisper),
+                &format!("{}", ok),
+                alias,
+                message,
+            ]) {
+                error!("Error logging chat: {:?}", e);
+            }
+        }
+        Err(e) => error!("Error logging chat: {:?}", e),
     }
 }

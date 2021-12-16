@@ -32,7 +32,7 @@ void main() {
 
     // Instead of making particles less than 1px, reduce their alpha.
     gl_PointSize = max(size, 1.0);
-    float alpha = min(size * size, 1.0) * (life * -0.2 + 0.2);
+    float alpha = min(size * size, 1.0) * ((1.0 - life) * 0.15);
 
     vColor = vec4(solidColor, alpha);
 }

@@ -320,6 +320,7 @@ impl Actor for Server {
                                 bot_percent: 50,
                                 default_score: Some(0),
                                 show_bots_on_liveboard: false,
+                                leaderboard_min_players: 10,
                                 team_size_max: 6,
                             }),
                             saved_arena_id: None,

@@ -3,6 +3,7 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub mod angle;
 pub mod dto;
 pub mod id;
 pub mod metrics;

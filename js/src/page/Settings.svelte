@@ -9,7 +9,7 @@
 	import strings from '../data/strings.json';
 	import storage from '../util/storage.js';
 
-    import {antialias, chatOpen, fpsCounter, renderFoam, renderTerrainTextures, renderWaves, resolution} from '../util/settings.js';
+    import {antialias, chatOpen, cinematic, fpsCounter, renderFoam, renderTerrainTextures, renderWaves, resolution} from '../util/settings.js';
 
     // Serializes settings that require a restart.
     function serializeRefreshSettings(antialias, renderFoam, renderTerrainTextures, renderWaves) {
@@ -30,6 +30,11 @@
     <label>
         <input type="checkbox" bind:checked={$fpsCounter}/>
         Show FPS Counter
+    </label>
+
+    <label>
+        <input type="checkbox" bind:checked={$cinematic}/>
+        Cinematic Mode
     </label>
 
     <select value={storage.language} on:change={e => setLanguage(e.target.value)}>

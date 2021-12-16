@@ -164,6 +164,7 @@ lazy_static! {
             source: "timbeek.com/Mk48.io OST - Epic Moments4_B_Short1.mp3",
             author: Some("Tim Beek"),
             volume: -4.0,
+            end: Some(9.0),
             ..Sound::default()
         },
         Sound {
@@ -171,6 +172,8 @@ lazy_static! {
             source: "freesound.org/372181__amholma__ocean-noise-surf.wav",
             author: Some("amholma"),
             url: Some("https://freesound.org/people/amholma/sounds/372181/"),
+            start: Some(1.0),
+            end: Some(6.0),
             volume: -3.0,
             ..Sound::default()
         },
@@ -327,14 +330,16 @@ pub(crate) fn pack_audio_sprite_sheet(
     let sprites: HashMap<_, _> = raws
         .into_iter()
         .map(|(sound, raw)| {
+            const SIZEOF_FLOAT16: usize = 2;
+
             let sprite = AudioSprite {
-                start: audio.len() as f32 / (2 * sample_rate * channels) as f32,
-                duration: raw.len() as f32 / (2 * sample_rate * channels) as f32,
+                start: audio.len() as f32 / (channels * sample_rate * SIZEOF_FLOAT16) as f32,
+                duration: raw.len() as f32 / (channels * sample_rate * SIZEOF_FLOAT16) as f32,
             };
 
             audio.extend(raw.into_iter());
-            // Gap of silence.
-            audio.extend(iter::repeat(0u8).take(channels * sample_rate * 2));
+            // Gap of silence (half second).
+            audio.extend(iter::repeat(0u8).take(channels * sample_rate * SIZEOF_FLOAT16 / 2));
 
             // Write manifest line.
             if let Some(url) = sound.url {

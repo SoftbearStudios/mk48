@@ -11,12 +11,15 @@ use instant::Instant;
 /// Input keeps track of the simplest types of user input.
 #[derive(Debug)]
 pub struct Input {
-    pub mouse_left_click: bool,
+    mouse_left_click: bool,
     mouse_left_down_time: Option<Instant>,
     pub mouse_right_down: bool,
     pub mouse_position: Vec2,
     pub shoot: bool,
     pub pay: bool,
+    /// Was holding either mouse button previous frame.
+    pub holding: bool,
+    pub reversing: bool,
     pub stop: bool,
     pub joystick: Option<Vec2>, // Some if joystick is active, None otherwise.
     pub active: bool,
@@ -38,6 +41,8 @@ impl Input {
             mouse_position: Vec2::ZERO,
             shoot: false,
             pay: false,
+            holding: false,
+            reversing: false,
             stop: false,
             joystick: None,
             active: true,
@@ -47,21 +52,24 @@ impl Input {
         }
     }
 
+    /// Gets the current zoom multiplier.
     pub fn zoom(&self) -> f32 {
         self.zoom
     }
 
-    // Returns true if and only if the left mouse button is down long enough for it to not represent
-    // a click if it was to be released.
+    /// Returns true if the left mouse was clicked, clearing the flag for next time.
+    pub fn take_left_mouse_click(&mut self) -> bool {
+        let ret = self.mouse_left_click;
+        self.mouse_left_click = false;
+        ret
+    }
+
+    /// Returns true if and only if the left mouse button is down long enough for it to not represent
+    /// a click if it was to be released.
     pub fn mouse_left_down_not_click(&self) -> bool {
         self.mouse_left_down_time
             .map(|time| time.elapsed() > Self::MOUSE_CLICK_MAX)
             .unwrap_or(false)
-    }
-
-    // Resets input flags.
-    pub fn reset(&mut self) {
-        self.mouse_left_click = false;
     }
 
     pub fn handle_mouse_button(&mut self, button: MouseButton, down: bool) {

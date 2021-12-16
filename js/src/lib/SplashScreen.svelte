@@ -12,6 +12,7 @@
 	import strings from '../data/strings.json';
 	import Link, {outboundEnabled} from './Link.svelte';
 	import {summarizeType} from './Ship.svelte';
+	import {cinematic} from '../util/settings.js';
 
 	export let state;
 	export let onSpawn;
@@ -105,9 +106,11 @@
 
 		return message;
 	}
+
+	let transition = $cinematic ? {duration: 500, delay: 5000} : {duration: 500, delay: 1000};
 </script>
 
-<div class='splash' in:fade="{{duration: 500, delay: 1000}}" on:introstart={() => transitioning = true} on:introend={() => transitioning = false}>
+<div class='splash' in:fade={transition} on:introstart={() => transitioning = true} on:introend={() => transitioning = false}>
 	<h2>{$t('panel.splash.label')}</h2>
 	{#if state.status.spawning.connectionLost}
 		<p>{$t('panel.splash.connectionLost')}</p>
@@ -136,7 +139,7 @@
 	</span>
 </div>
 
-<div class='translation' in:fade="{{duration: 500, delay: 1000}}">
+<div class='translation' in:fade={transition}>
 	<h3>Language</h3>
 	<select class='language' value={storage.language} on:change={e => setLanguage(e.target.value)}>
 		{#each Object.keys(strings) as lang}

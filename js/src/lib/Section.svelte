@@ -5,6 +5,7 @@
 
 <script>
 	import {slide} from 'svelte/transition';
+	import {cinematic} from '../util/settings.js';
 
 	export let name = '';
 	export let headerAlign = 'left';
@@ -17,7 +18,7 @@
 	}
 </script>
 
-<div class=container>
+<div class=container class:cinematic={$cinematic}>
 	<h2 on:click={toggleOpen} style={`text-align: ${headerAlign};`}>
 		{name}
 		{#if emblem && !open}
@@ -48,6 +49,11 @@
 
 	div.container {
 		position: relative;
+		transition: opacity 0.25s;
+	}
+
+	div.cinematic:not(:hover) {
+		opacity: 0;
 	}
 
 	div.emblem {

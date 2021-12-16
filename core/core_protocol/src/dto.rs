@@ -145,6 +145,8 @@ pub struct RulesDto {
     pub default_score: Option<u32>,
     /// Do bots appear on the live leaderboard? (bots never appear on the persistent leaderboard)
     pub show_bots_on_liveboard: bool,
+    /// Leaderboard won't be touched if player count is below.
+    pub leaderboard_min_players: u32,
     /// Maximum number of players in a team before no more can be accepted.
     pub team_size_max: u32,
 }
@@ -156,6 +158,7 @@ impl Default for RulesDto {
             bot_percent: 0,
             default_score: None,
             show_bots_on_liveboard: false,
+            leaderboard_min_players: 0,
             team_size_max: 6,
         }
     }

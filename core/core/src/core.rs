@@ -102,8 +102,8 @@ impl Core {
                     .repo
                     .get_liveboards(false)
                     .into_iter()
-                    .map(|(arena_id, game_id, leaderboard)| {
-                        let mut player_scores: Vec<Score> = leaderboard
+                    .map(|(arena_id, game_id, liveboard, leaderboard_worthy)| {
+                        let mut player_scores: Vec<Score> = liveboard
                             .into_iter()
                             .filter_map(|item| {
                                 if let Some(name) =
@@ -120,7 +120,7 @@ impl Core {
                             })
                             .collect();
 
-                        if act.database_read_only {
+                        if !leaderboard_worthy || act.database_read_only {
                             // Don't actually update any scores (but still read leaderboard).
                             warn!("Would have written to leaderboard database, but was inhibited");
                             player_scores.clear();

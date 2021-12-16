@@ -14,6 +14,21 @@
 
 	<h2>2021</h2>
 
+	<h3>12/18/2021</h3>
+
+	<ul>
+		<li>Fix some input and scaling bugs.</li>
+		<li>Mouse controls now allow going in reverse.</li>
+		<li>Collectibles no longer block weapons, except torpedoes.</li>
+		<li>Add cinematic mode, accessible via settings menu, that disables GUI.</li>
+	</ul>
+
+	<h3>12/12/2021</h3>
+
+	<ul>
+		<li>During an update, we may allow you to remain on an old server, but scores achieved after most other players have left are not leaderboard-worthy.</li>
+	</ul>
+
 	<h3>12/11/2021</h3>
 
 	<ul>

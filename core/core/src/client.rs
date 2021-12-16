@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::chat::log_chat;
 use crate::core::*;
 use crate::repo::*;
 use crate::session::Session;
@@ -8,13 +9,11 @@ use crate::user_agent::parse_user_agent;
 use actix::prelude::*;
 use core_protocol::id::*;
 use core_protocol::rpc::{ClientRequest, ClientUpdate};
-use core_protocol::*;
 use log::{info, trace, warn};
 use serde::{Deserialize, Serialize};
 use servutil::observer::*;
 use servutil::user_agent::UserAgent;
 use std::collections::hash_map::Entry;
-use std::fs::OpenOptions;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -519,20 +518,15 @@ impl Repo {
                     if let Some(chat_log) = chat_log {
                         if let Some(arena) = self.arenas.get(&arena_id) {
                             if let Some(session) = arena.sessions.get(&session_id) {
-                                if let Ok(file) =
-                                    OpenOptions::new().create(true).append(true).open(chat_log)
-                                {
+                                log_chat(
+                                    chat_log,
+                                    Some(arena.game_id),
+                                    whisper,
                                     // player_id being Some means the message went through.
-                                    let mut wtr = csv::Writer::from_writer(file);
-                                    let _ = wtr.write_record(&[
-                                        &format!("{}", get_unix_time_now()),
-                                        &format!("{:?}", arena.game_id),
-                                        &format!("{:?}", whisper),
-                                        &format!("{}", player_id.is_some()),
-                                        &session.alias.0.to_string(),
-                                        &message,
-                                    ]);
-                                }
+                                    player_id.is_some(),
+                                    &session.alias.0.to_string(),
+                                    &message,
+                                );
                             }
                         }
                     }

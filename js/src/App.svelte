@@ -47,7 +47,7 @@
 	import {getMouseButton} from './util/compatibility.js';
 	import {mapRanges} from './util/math.js';
 	import {onMount} from 'svelte';
-	import {antialias, renderFoam, renderTerrainTextures, volume, renderWaves, resolution} from './util/settings.js';
+	import {antialias, cinematic, renderFoam, renderTerrainTextures, volume, renderWaves, resolution} from './util/settings.js';
 	import {outboundEnabled} from './lib/Link.svelte';
 
 	let canvas, chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
@@ -60,6 +60,7 @@
 	$: client && typeof altitudeTarget === 'number' && client.handleAltitudeTarget(altitudeTarget);
 	$: client && typeof armamentSelection === 'string' && client.handleArmamentSelection(armamentSelection);
 	$: client && client.handleVolume($volume);
+	$: client && client.handleCinematic($cinematic);
 
 	onMount(async () => {
 		client = await wasm();
@@ -340,6 +341,21 @@
 		}
 	}
 
+	function onBlurCanvas() {
+		if (client) {
+			client.handleMouseButton(0, false);
+			client.handleMouseButton(2, false);
+		}
+	}
+
+	function onChangeWindowFocused(focused) {
+		if (!focused) {
+			for (const key of ['stop', 'forward', 'backward', 'left', 'right']) {
+				keyboard[key] = false;
+			}
+		}
+	}
+
 	// Originates from iframe parent.
 	// Also handled by lib/SplashScreen.svelte
 	function onMessage(event) {
@@ -389,6 +405,7 @@
 	on:touchstart={onTouch}
 	on:touchend={onTouch}
 	on:touchmove={onMouseMove}
+	on:blur={onBlurCanvas}
 	on:wheel|preventDefault={onWheel}
 	on:contextmenu|preventDefault
 ></canvas>
@@ -421,16 +438,21 @@
 		<div><!--placeholder--></div>
 	{/if}
 </div>
-{#if $state && $state.status}
-	{#if $state.status.alive}
-		<div class='bottom bar'>
-			<Ship bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
-			<Status state={$state}/>
-			<Chat bind:this={chatRef} state={$state} {onSendChat} {onMutePlayer}/>
-		</div>
-		<Hint type={$state.status.alive.type}/>
-	{:else if $state.status.spawning}
-		<SplashScreen state={$state} {onSpawn}/>
+
+{#if client}
+	{#if $state && $state.status}
+		{#if $state.status.alive}
+			<div class='bottom bar'>
+				<Ship bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
+				<Status state={$state}/>
+				<Chat bind:this={chatRef} state={$state} {onSendChat} {onMutePlayer}/>
+			</div>
+			{#if !$cinematic}
+				<Hint type={$state.status.alive.type}/>
+			{/if}
+		{:else if $state.status.spawning}
+			<SplashScreen state={$state} {onSpawn}/>
+		{/if}
 	{/if}
 	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
 {/if}
@@ -443,6 +465,8 @@
 <svelte:window
 	bind:innerWidth bind:innerHeight
 	on:keydown={onKey} on:keyup={onKey}
+	on:blur={() => onChangeWindowFocused(false)}
+	on:focus={() => onChangeWindowFocused(true)}
 	on:message={onMessage}
 	on:error={onError} on:unhandledrejection={onError}
 />
@@ -455,6 +479,7 @@
 	:global(body) {
 		margin: 0;
 		padding: 0;
+		touch-action: pan-y;
 	}
 
 	canvas {

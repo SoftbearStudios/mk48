@@ -358,8 +358,8 @@ impl World {
 
                                 // Colliding with center of boat is more deadly
                                 let front_pos = other_boat.transform.position + other_boat.transform.direction.to_vec() * (other_data.length * 0.5);
-                                let front_dist2 = front_pos.distance_squared(boat.transform.position);
-                                damage *= collision_multiplier(front_dist2, data.radius.powi(2));
+                                let front_d2 = front_pos.distance_squared(boat.transform.position);
+                                damage *= collision_multiplier(front_d2, data.radius.powi(2), data.sub_kind == EntitySubKind::Submarine);
                                 damage *= boat.extension().spawn_protection();
 
                                 match data.sub_kind {
@@ -372,7 +372,7 @@ impl World {
                                     }
                                     EntitySubKind::Submarine => {
                                         // Subs take more damage from ramming because they are fRaGiLe.
-                                        damage *= 2.0
+                                        damage *= 1.5
                                     }
                                     _ => ()
                                 }
@@ -402,16 +402,19 @@ impl World {
                             mutate(boat, Mutation::CollidedWithBoat{other_player: Arc::clone(other_boat.player.as_ref().unwrap()), damage, ram: other_data.sub_kind == EntitySubKind::Ram, impulse});
                         }
                     } else if boats.len() == 1 && weapons.len() == 1 && !friendly {
-                        let dist2 = boats[0]
+                        let boat_data = boats[0].data();
+                        let weapon_data = weapons[0].data();
+
+                        let d2 = boats[0]
                             .transform
                             .position
                             .distance_squared(weapons[0].transform.position);
-                        let r2 = boats[0].data().radius.powi(2);
+                        let r2 = boat_data.radius.powi(2);
 
-                        let damage_resistance = boats[0].data().resistance_to_subkind(weapons[0].data().sub_kind) * boats[0].extension().spawn_protection();
+                        let damage_resistance = boat_data.resistance_to_subkind(weapon_data.sub_kind) * boats[0].extension().spawn_protection();
 
                         let damage = Ticks::from_damage(
-                            weapons[0].data().damage * collision_multiplier(dist2, r2) * damage_resistance,
+                            weapon_data.damage * collision_multiplier(d2, r2, boat_data.sub_kind == EntitySubKind::Submarine) * damage_resistance,
                         );
 
                         mutate(
@@ -447,10 +450,11 @@ impl World {
                         // No-op; boats don't collide with decoys.
                     } else if weapons.len() == 1
                         && collectibles.len() == 1
-                        && collectibles[0].entity_type == EntityType::Coin
+                        && (collectibles[0].entity_type == EntityType::Coin || weapons[0].data().sub_kind != EntitySubKind::Torpedo)
                     {
                         // No-op; don't allow coins (possibly placed by players) to interfere
                         // with enemy weapons.
+                        // Also all non-torpedo weapons won't hit crates.
                     } else if !friendly {
                         // Aside from some edge cases, just remove both entities.
                         for e in [entity, other_entity] {
@@ -494,7 +498,12 @@ impl World {
     }
 }
 
-/// Computes mutlipier for damage such that hits closer to center of boat do more damage.
-fn collision_multiplier(d2: f32, r2: f32) -> f32 {
-    (0f32.max(r2 - d2 + 90.0) / r2).clamp(0.5, 1.5)
+/// Computes multiplier for damage such that hits closer to center of boat do more damage.
+/// Graph comparing old system (red) to new system (sub yellow, boat red): https://www.desmos.com/calculator/crwtc3u4f3
+fn collision_multiplier(d2: f32, r2: f32, is_sub: bool) -> f32 {
+    let min = match is_sub {
+        false => 0.6,
+        true => 0.8,
+    };
+    ((r2 - d2) / r2 * (1.0 - min) + min).clamp(min, 1.0)
 }

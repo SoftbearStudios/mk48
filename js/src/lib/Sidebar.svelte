@@ -13,7 +13,7 @@
 	import ZoomIn from "svelte-bootstrap-icons/lib/ZoomIn";
 	import ZoomOut from "svelte-bootstrap-icons/lib/ZoomOut";
 	import t from './translation.js';
-	import {volume} from '../util/settings.js';
+	import {cinematic, volume} from '../util/settings.js';
 	import {push} from 'svelte-spa-router'
 
 
@@ -21,7 +21,7 @@
 	export let onCopyInvitationLink;
 </script>
 
-<div>
+<div class:cinematic={$cinematic}>
 	<IconButton tooltip={$t('panel.team.action.invite.label')} onChange={onCopyInvitationLink} icons={[Invite]}/>
 	<br/>
 	<IconButton tooltip={$t('panel.sidebar.action.zoomIn.hint')} onChange={() => onZoom(-8)} icons={[ZoomIn]}/>
@@ -41,5 +41,10 @@
 		padding: 0.5em;
 		right: 0;
 		user-select: none;
+		transition: opacity 0.25s;
+	}
+
+	div.cinematic:not(:hover) {
+		opacity: 0;
 	}
 </style>

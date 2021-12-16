@@ -34,6 +34,7 @@
 		<li>Placing a higher burden on the game's server(s) than two instances of the official game client would (opening more than two connections at a time, sending messages at a higher frequency, or otherwise compromising the integrity of the server(s)).</li>
 		<li>Violating any applicable law, or violating the rights or privacy of others.</li>
 		<li>Claiming to offer a downloadable version of the game (as one does not exist).</li>
+		<li>Attempting to bypass our policy preventing leaderboard score attempts on non-public servers.</li>
 	</ol>
 
 	<h2>Liability</h2>

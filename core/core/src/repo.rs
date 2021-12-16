@@ -69,7 +69,7 @@ impl Repo {
         if let Some(arena) = self.arenas.get(&arena_id) {
             let leaderboard_initializer = arena.leaderboards.clone();
 
-            let (liveboard, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
+            let (liveboard, _, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
             let liveboard_initializer = liveboard.into();
 
             let message_initializer = arena
@@ -121,15 +121,15 @@ impl Repo {
     }
 
     // Returns the liveboards for all arenas.
-    pub fn get_liveboards(&self, include_bots: bool) -> Vec<(ArenaId, GameId, Vec<LiveboardDto>)> {
+    pub fn get_liveboards(
+        &self,
+        include_bots: bool,
+    ) -> Vec<(ArenaId, GameId, Vec<LiveboardDto>, bool)> {
         self.arenas
             .iter()
             .map(|(arena_id, arena)| {
-                (
-                    *arena_id,
-                    arena.game_id,
-                    arena.get_liveboard(include_bots).0,
-                )
+                let (liveboard, _, leaderboard_worthy) = arena.get_liveboard(include_bots);
+                (*arena_id, arena.game_id, liveboard, leaderboard_worthy)
             })
             .collect()
     }
@@ -387,7 +387,8 @@ impl Repo {
             }
             trace!("liveboard_changed for arena {:?}", arena_id);
             arena.liveboard_changed = false;
-            let (leaderboard, min_score) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
+            let (leaderboard, min_score, _) =
+                arena.get_liveboard(arena.rules.show_bots_on_liveboard);
             arena.liveboard_min_score = min_score;
             changed_liveboards.push((*arena_id, leaderboard.into()));
         }

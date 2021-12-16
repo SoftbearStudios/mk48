@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::chat::log_chat;
 use crate::core::*;
 use crate::metrics::Metrics;
 use crate::repo::*;
@@ -86,7 +87,9 @@ impl Handler<ParameterizedAdminRequest> for Core {
 
             // Handle synchronous requests.
             _ => {
-                let result = self.repo.handle_admin_sync(request);
+                let result = self
+                    .repo
+                    .handle_admin_sync(request, self.chat_log.as_deref());
                 Box::pin(fut::ready(result))
             }
         } // match request
@@ -138,7 +141,11 @@ fn referrer_user_agent_id_filter(
 }
 
 impl Repo {
-    fn handle_admin_sync(&mut self, request: AdminRequest) -> Result<AdminUpdate, &'static str> {
+    fn handle_admin_sync(
+        &mut self,
+        request: AdminRequest,
+        chat_log: Option<&str>,
+    ) -> Result<AdminUpdate, &'static str> {
         let result;
         match request {
             AdminRequest::RequestDay {
@@ -204,6 +211,11 @@ impl Repo {
                         sent |= self.admin_send_chat(arena_id, alias, &message);
                     }
                 }
+
+                if let Some(chat_log) = chat_log {
+                    log_chat(chat_log, None, false, sent, &alias.0.to_string(), &message);
+                }
+
                 result = Ok(AdminUpdate::ChatSent { sent })
             }
             _ => result = Err("cannot process admin request synchronously"),

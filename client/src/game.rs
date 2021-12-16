@@ -12,9 +12,6 @@ use crate::texture::Texture;
 use crate::{
     ChatModel, DeathReasonModel, LeaderboardItemModel, State, Status, TeamModel, TeamPlayerModel,
 };
-use web_sys::{
-    WebGlRenderingContext as Gl,
-};
 use arrayvec::ArrayVec;
 use client_util::rate_limiter::RateLimiter;
 use client_util::reconn_web_socket::ReconnWebSocket;
@@ -41,6 +38,7 @@ use glam::{vec2, Mat2, Mat3, Vec2};
 use itertools::Itertools;
 use rand::{thread_rng, Rng};
 use std::collections::{HashMap, HashSet, VecDeque};
+use web_sys::WebGlRenderingContext as Gl;
 
 pub struct Game {
     contacts: HashMap<EntityId, NetworkContact>,
@@ -70,7 +68,9 @@ pub struct Game {
     player_id: Option<PlayerId>,
     entity_id: Option<EntityId>,
     pub input: Input,
-    // Actual zoom ratio (smoothed over time).
+    /// Cinematic mode, in which GUI elements are toned down.
+    pub cinematic: bool,
+    /// Actual zoom ratio (smoothed over time).
     zoom: f32,
     renderer: Renderer,
     pub audio_player: AudioPlayer,
@@ -149,12 +149,20 @@ impl Game {
             }),
         );
 
-        if let Some(max) = renderer.gl.get_parameter(Gl::MAX_TEXTURE_SIZE).ok().and_then(|f| f.as_f64()) {
-            core_web_socket.send(ClientRequest::Trace {message: format!("MAX_TEXTURE_SIZE={}", max)});
+        if let Some(max) = renderer
+            .gl
+            .get_parameter(Gl::MAX_TEXTURE_SIZE)
+            .ok()
+            .and_then(|f| f.as_f64())
+        {
+            core_web_socket.send(ClientRequest::Trace {
+                message: format!("MAX_TEXTURE_SIZE={}", max),
+            });
         }
 
         Self {
             input: Input::new(),
+            cinematic: false,
             zoom: 10.0,
             last_time_seconds: 0.0,
             last_control_seconds: 0.0,
@@ -508,9 +516,11 @@ impl Game {
             .map(|id| &self.contacts.get(&id).unwrap().view)
     }
 
-    fn player_contact_mut(&mut self) -> Option<&mut NetworkContact> {
-        self.entity_id
-            .map(move |id| self.contacts.get_mut(&id).unwrap())
+    fn maybe_contact_mut(
+        contacts: &mut HashMap<EntityId, NetworkContact>,
+        entity_id: Option<EntityId>,
+    ) -> Option<&mut NetworkContact> {
+        entity_id.map(move |id| contacts.get_mut(&id).unwrap())
     }
 
     fn camera(&self) -> (Vec2, f32) {
@@ -675,9 +685,7 @@ impl Game {
 
     #[allow(dead_code)]
     pub fn trace(&mut self, message: String) {
-        self.core_web_socket.send(ClientRequest::Trace {
-            message
-        });
+        self.core_web_socket.send(ClientRequest::Trace { message });
     }
 
     /// Performs time_seconds of game logic, and renders a frame of game state.
@@ -1161,12 +1169,13 @@ impl Game {
                 }
                 for (i, turret) in data.turrets.iter().enumerate() {
                     if let Some(entity_type) = turret.entity_type {
+                        let pos = turret.position();
                         add_sortable_entity(
                             &mut sortable_sprites,
                             entity_type,
                             *contact.transform()
                                 + Transform {
-                                    position: turret.position(),
+                                    position: pos,
                                     direction: contact.turrets()[i],
                                     velocity: Velocity::ZERO,
                                 }
@@ -1175,7 +1184,7 @@ impl Game {
                                     direction: Angle::ZERO,
                                     velocity: Velocity::ZERO,
                                 },
-                            altitude + 0.01,
+                            altitude + 0.02 - (pos.x.abs() + pos.y.abs()) * 0.0001,
                             alpha,
                         );
                     }
@@ -1187,9 +1196,13 @@ impl Game {
                 match data.kind {
                     EntityKind::Boat => {
                         // Is this player's own boat?
-                        if self.player_id.is_some() && contact.player_id() == self.player_id {
+                        if self.player_id.is_some()
+                            && contact.player_id() == self.player_id
+                            && !self.cinematic
+                        {
                             // Radii
                             let hud_color = rgba(255, 255, 255, 255 / 3);
+                            let reverse_color = rgba(255, 75, 75, 120);
                             let hud_thickness = 0.0025 * zoom;
 
                             // Throttle rings.
@@ -1217,7 +1230,11 @@ impl Game {
                                     false,
                                 ),
                                 hud_thickness,
-                                hud_color,
+                                if contact.transform().velocity < Velocity::ZERO {
+                                    reverse_color
+                                } else {
+                                    hud_color
+                                },
                             );
                             // 4. Target speed
                             self.renderer.add_circle_graphic(
@@ -1229,20 +1246,42 @@ impl Game {
                                     true,
                                 ),
                                 hud_thickness,
-                                hud_color,
+                                if contact.guidance().velocity_target < Velocity::ZERO {
+                                    reverse_color
+                                } else {
+                                    hud_color
+                                },
                             );
 
                             // Target bearing line.
-                            let dir_mat =
-                                Mat2::from_angle(contact.guidance().direction_target.to_radians());
-                            self.renderer.add_line_graphic(
-                                contact.transform().position
-                                    + dir_mat * vec2(data.radii().start, 0.0),
-                                contact.transform().position
-                                    + dir_mat * vec2(data.radii().end, 0.0),
-                                hud_thickness,
-                                hud_color,
-                            );
+                            {
+                                let guidance = contact.guidance();
+                                let mut direction = guidance.direction_target;
+                                let mut color = hud_color;
+
+                                // Is reversing.
+                                // Fix ambiguity when loading guidance from server.
+                                if guidance.velocity_target < Velocity::ZERO
+                                    || guidance.velocity_target == Velocity::ZERO
+                                        && self.input.reversing
+                                {
+                                    // Flip dir if going backwards.
+                                    direction += Angle::PI;
+                                    // Reversing color.
+                                    color = reverse_color;
+                                    // TODO BEEP BEEP BEEP
+                                }
+
+                                let dir_mat = Mat2::from_angle(direction.to_radians());
+                                self.renderer.add_line_graphic(
+                                    contact.transform().position
+                                        + dir_mat * vec2(data.radii().start, 0.0),
+                                    contact.transform().position
+                                        + dir_mat * vec2(data.radii().end, 0.0),
+                                    hud_thickness,
+                                    color,
+                                );
+                            }
 
                             // Turret azimuths
                             if let Some(i) = self.find_best_armament(contact, false) {
@@ -1377,7 +1416,9 @@ impl Game {
                             text,
                         ));
                     }
-                    EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
+                    EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft
+                        if !self.cinematic =>
+                    {
                         let triangle_position =
                             contact.transform().position + vec2(0.0, overlay_vertical_position);
                         self.renderer.add_triangle_graphic(
@@ -1391,10 +1432,12 @@ impl Game {
                 }
 
                 // Add particles.
+                let mut rng = thread_rng();
                 let direction_vector: Vec2 = contact.transform().direction.into();
                 let tangent_vector = direction_vector.perp();
-                let amount = (data.width * (1.0 / 7.5)) as usize + 1;
-                let mut rng = thread_rng();
+                let speed = contact.transform().velocity.to_mps();
+
+                let amount = ((data.width * 0.1 + speed * 0.007) as usize).max(1);
 
                 // Wake/trail particles.
                 if contact.transform().velocity != Velocity::ZERO
@@ -1408,14 +1451,25 @@ impl Game {
                         &mut self.sea_level_particles
                     };
 
-                    for _ in 0..amount {
+                    let spread = match (data.kind, data.sub_kind) {
+                        (EntityKind::Weapon, EntitySubKind::Torpedo) => 0.16,
+                        (EntityKind::Weapon, EntitySubKind::Shell) => 0.0,
+                        _ => 0.1,
+                    };
+
+                    let start = contact.transform().position;
+                    let end = start + direction_vector * speed * delta_seconds;
+
+                    let factor = 1.0 / amount as f32;
+                    for i in 0..amount {
+                        let pos = start.lerp(end, i as f32 * factor);
+
+                        let r = rng.gen::<f32>() - 0.5;
                         collection.push(Particle {
-                            position: contact.transform().position
-                                - direction_vector * (data.length * 0.485)
-                                + tangent_vector * (data.width * (rng.gen::<f32>() - 0.5) * 0.25),
-                            velocity: direction_vector
-                                * contact.transform().velocity.to_mps()
-                                * 0.75,
+                            position: pos - direction_vector * (data.length * 0.485)
+                                + tangent_vector * (data.width * r * 0.25),
+                            velocity: direction_vector * (speed * 0.75)
+                                + tangent_vector * (speed * r * spread),
                             radius: 1.0,
                             color: 1.0,
                             created: time_seconds,
@@ -1507,67 +1561,110 @@ impl Game {
             self.renderer.finish();
         }
 
-        // Buffer until later so as not to borrow the websocket early. The web socket's lifetime is tied
-        // to the deserialized updates it produces (because serde_json can reference the raw json buffer).
-        let mut to_send = ArrayVec::<Command, 3>::new();
-        let mut reset_input = false;
+        let status = if let Some(player_contact) =
+            Self::maybe_contact_mut(&mut self.contacts, self.entity_id)
+        {
+            let mut guidance = None;
 
-        let status = if let Some(player_contact) = self.player_contact() {
-            let direction_target =
-                Angle::from_atan2(self.input.mouse_position.y, self.input.mouse_position.x);
+            {
+                let player_contact = &player_contact.view;
+                let max_speed = player_contact.data().speed.to_mps();
 
-            if time_seconds > self.last_control_seconds + Self::CONTROL_PERIOD {
-                let mut guidance = None;
-
-                if self.input.mouse_right_down
-                    || self.input.mouse_left_down_not_click()
-                    || self.input.joystick.is_some()
-                    || self.input.stop
-                {
-                    let max_speed = player_contact.data().speed.to_mps();
-
-                    if let Some(joystick) = self.input.joystick {
-                        guidance = Some(Guidance {
-                            direction_target: player_contact.transform().direction
-                                + Angle::from_radians(0.5 * joystick.x),
-                            velocity_target: if self.input.stop {
-                                Velocity::ZERO
-                            } else if joystick.y.abs() > 0.05 {
-                                player_contact.transform().velocity
-                                    + Velocity::from_mps(0.25 * max_speed * joystick.y)
-                            } else {
-                                player_contact.guidance().velocity_target
-                            },
-                        })
-                    };
-
-                    if self.input.mouse_right_down || self.input.mouse_left_down_not_click() {
-                        guidance = Some(Guidance {
-                            // Limit turning while "stopped"
-                            direction_target: if self.input.stop {
-                                player_contact.transform().direction
-                                    + (direction_target - player_contact.transform().direction)
-                                        .clamp_magnitude(Angle::from_radians(0.5))
-                            } else {
-                                direction_target
-                            },
-                            velocity_target: if self.input.stop {
-                                Velocity::ZERO
-                            } else {
-                                Velocity::from_mps(util::map_ranges(
-                                    mouse_world_position
-                                        .distance(player_contact.transform().position),
-                                    player_contact.data().radii(),
-                                    0.0..max_speed,
-                                    true,
-                                ))
-                            },
-                        });
-                    };
+                if let Some(joystick) = self.input.joystick {
+                    guidance = Some(Guidance {
+                        direction_target: player_contact.transform().direction
+                            + Angle::from_radians(0.5 * joystick.x),
+                        velocity_target: if self.input.stop {
+                            Velocity::ZERO
+                        } else if joystick.y.abs() > 0.05 {
+                            player_contact.transform().velocity
+                                + Velocity::from_mps(0.25 * max_speed * joystick.y)
+                        } else {
+                            player_contact.guidance().velocity_target
+                        },
+                    });
                 }
 
+                if self.input.mouse_right_down || self.input.mouse_left_down_not_click() {
+                    let current_dir = player_contact.transform().direction;
+                    let mut direction_target =
+                        Angle::from_atan2(self.input.mouse_position.y, self.input.mouse_position.x);
+
+                    // Only do when start holding.
+                    if !self.input.holding {
+                        // Back 90 degrees turns on reverse.
+                        let delta = direction_target - current_dir;
+                        self.input.reversing =
+                            delta != delta.clamp_magnitude(Angle::from_degrees(270.0 / 2.0));
+                        self.input.holding = true;
+                    }
+
+                    // If reversing flip angle.
+                    if self.input.reversing {
+                        direction_target += Angle::PI
+                    }
+
+                    if self.input.stop {
+                        // Limit turning while "stopped"
+                        direction_target = current_dir
+                            + (direction_target - player_contact.transform().direction)
+                                .clamp_magnitude(Angle::from_radians(0.5));
+                    }
+
+                    guidance = Some(Guidance {
+                        direction_target,
+                        velocity_target: if self.input.stop {
+                            Velocity::ZERO
+                        } else {
+                            let mut velocity = Velocity::from_mps(util::map_ranges(
+                                mouse_world_position.distance(player_contact.transform().position),
+                                player_contact.data().radii(),
+                                0.0..max_speed,
+                                true,
+                            ));
+                            if self.input.reversing {
+                                velocity = -velocity;
+                            }
+                            velocity
+                        },
+                    });
+                } else {
+                    self.input.holding = false;
+                    self.input.reversing = false;
+                }
+            }
+
+            if let Some(guidance) = guidance.as_ref() {
+                player_contact.model.predict_guidance(guidance);
+                player_contact.view.predict_guidance(guidance);
+            }
+
+            // Re-borrow as immutable.
+            let player_contact = self.player_contact().unwrap();
+
+            let status = Status::Alive {
+                entity_type: player_contact.entity_type().unwrap(),
+                position: player_contact.transform().position.into(),
+                direction: player_contact.transform().direction,
+                velocity: player_contact.transform().velocity,
+                altitude: player_contact.altitude(),
+                armament_consumption: Some(player_contact.reloads().into()), // TODO fix to clone arc
+            };
+
+            if time_seconds > self.last_control_seconds + Self::CONTROL_PERIOD {
+                self.last_control_seconds = time_seconds;
+
+                let left_click = self.input.take_left_mouse_click();
+
+                // Re-borrow as immutable.
+                let player_contact = self.player_contact().unwrap();
+
+                // Buffer until later so as not to borrow the websocket early. The web socket's lifetime is tied
+                // to the deserialized updates it produces (because serde_json can reference the raw json buffer).
+                let mut to_send = ArrayVec::<Command, 3>::new();
+
                 to_send.push(Command::Control(Control {
-                    guidance,
+                    guidance: Some(*player_contact.guidance()), // TODO don't send if hasn't changed.
                     angular_velocity_target: None,
                     altitude_target: if player_contact.data().sub_kind == EntitySubKind::Submarine {
                         Some(self.input.altitude_target)
@@ -1584,7 +1681,7 @@ impl Game {
                     }));
                 }
 
-                if self.input.mouse_left_click || self.input.shoot {
+                if left_click || self.input.shoot {
                     if let Some(i) = self.find_best_armament(player_contact, true) {
                         to_send.push(Command::Fire(Fire {
                             index: i as u8,
@@ -1593,28 +1690,9 @@ impl Game {
                     }
                 }
 
-                reset_input = true;
-            }
-
-            let status = Status::Alive {
-                entity_type: player_contact.entity_type().unwrap(),
-                position: player_contact.transform().position.into(),
-                direction: player_contact.transform().direction,
-                velocity: player_contact.transform().velocity,
-                altitude: player_contact.altitude(),
-                armament_consumption: Some(player_contact.reloads().into()), // TODO fix to clone arc
-            };
-
-            for command in to_send.into_iter() {
-                if let Command::Control(control) = &command {
-                    self.last_control_seconds = time_seconds;
-
-                    // Predict control outcome on boat, which exists if control is being sent.
-                    let boat = self.player_contact_mut().unwrap();
-                    boat.model.predict_control(control);
-                    boat.view.predict_control(control);
+                for command in to_send.into_iter() {
+                    self.server_web_socket.as_mut().unwrap().send(command);
                 }
-                self.server_web_socket.as_mut().unwrap().send(command);
             }
 
             status
@@ -1793,9 +1871,6 @@ impl Game {
             });
         }
 
-        if reset_input {
-            self.input.reset();
-        }
         self.text_cache.tick();
 
         self.recent_fps_monitor.update(delta_seconds);
