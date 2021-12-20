@@ -42,7 +42,7 @@ impl ChatHistory {
             Type::INAPPROPRIATE
         } else {
             // Don't allow moderately mean words and spam.
-            Type::INAPPROPRIATE | (Type::MEAN & Type::MODERATE) | (Type::SPAM & Type::MODERATE)
+            Type::INAPPROPRIATE | (Type::MEAN & Type::MODERATE_OR_HIGHER) | (Type::SPAM & Type::MODERATE_OR_HIGHER)
         };
 
         let (censored, analysis) = Censor::from_str(message)

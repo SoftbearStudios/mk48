@@ -43,6 +43,13 @@
 		"width": 3,
 		"speed": 15
 	},
+	"acacia": {
+		"label": "Acacia",
+		"kind": "obstacle",
+		"subkind": "tree",
+		"length": 6,
+		"width": 6
+	},
 	"hq": {
 		"label": "HQ",
 		"kind": "obstacle",
@@ -365,6 +372,103 @@
 			},
 			{
 				"positionForward": -5.8322
+			}
+		]
+	},
+	"clemenceau": {
+		"label": "Clemenceau",
+		"link": "https://en.wikipedia.org/wiki/Clemenceau-class_aircraft_carrier",
+		"kind": "boat",
+		"subkind": "carrier",
+		"level": 9,
+		"length": 265,
+		"width": 48.6523,
+		"draft": 8.6,
+		"speed": 16.46223,
+		"sensors": {
+			"visual": {},
+			"radar": {}
+		},
+		"armaments": [
+			{
+				"type": "superEtendard",
+				"positionForward": 69.5306,
+				"positionSide": 4.49494,
+				"angle": 3,
+				"count": 3,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": -29.9657,
+				"positionSide": 12.5451,
+				"angle": 8.5,
+				"count": 3,
+				"external": true
+			},
+			{
+				"type": "superFrelon",
+				"positionForward": 47.67,
+				"positionSide": -12.75,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "superFrelon",
+				"positionForward": -44,
+				"positionSide": -13,
+				"angle": 0,
+				"external": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "100mm",
+				"positionForward": 71.4858,
+				"positionSide": 16.5069,
+				"speed": "medium",
+				"azimuthBR": 170
+			},
+			{
+				"type": "100mm",
+				"positionForward": 59.623,
+				"positionSide": 16.5069,
+				"speed": "medium",
+				"azimuthBR": 170
+			},
+			{
+				"type": "100mm",
+				"positionForward": -80.893,
+				"positionSide": -19.6996,
+				"angle": 175,
+				"speed": "medium",
+				"azimuthBR": 175
+			},
+			{
+				"type": "100mm",
+				"positionForward": -93.5151,
+				"positionSide": -19.6996,
+				"angle": 175,
+				"speed": "medium",
+				"azimuthBR": 175
+			},
+			{
+				"type": "crotale",
+				"positionForward": 67.9671,
+				"positionSide": -18.7743,
+				"speed": "fast"
+			},
+			{
+				"type": "crotale",
+				"positionForward": -82.5578,
+				"positionSide": 18.0462,
+				"speed": "fast"
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 4.03893,
+				"positionSide": -15.8169
 			}
 		]
 	},
@@ -2698,6 +2802,24 @@
 			}
 		]
 	},
+	"100mm": {
+		"label": "100mm Gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 6.7,
+		"positionForward": 1.034,
+		"width": 4.1875,
+		"armaments": [
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"symmetrical": false,
+				"external": false,
+				"hidden": false
+			}
+		]
+	},
 	"2m3m": {
 		"label": "2M-3M",
 		"link": "http://www.navweaps.com/Weapons/WNRussian_25mm-79_2m-3.php",
@@ -3041,6 +3163,39 @@
 		"speed": 438.912,
 		"range": 1000
 	},
+	"crotale": {
+		"label": "Crotale",
+		"link": "https://en.wikipedia.org/wiki/Crotale_(missile)",
+		"kind": "turret",
+		"subkind": "missile",
+		"length": 3.575,
+		"width": 2.374,
+		"positionForward": 0.08,
+		"armaments": [
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.947,
+				"symmetrical": true,
+				"external": false
+			}
+		]
+	},
+	"vt1": {
+		"label": "Crotale VT-1",
+		"link": "https://en.wikipedia.org/wiki/Crotale_(missile)",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 2.35,
+		"width": 0.34,
+		"speed": 1200,
+		"range": 6000,
+		"sensors": {
+			"radar": {}
+		}
+	},
 	"depositor": {
 		"label": "Depositor",
 		"kind": "weapon",
@@ -3078,6 +3233,20 @@
 		"width": 0.4575,
 		"speed": 1325.2,
 		"range": 50000,
+		"sensors": {
+			"radar": {}
+		}
+	},
+	"exocet": {
+		"label": "Exocet",
+		"link": "https://en.wikipedia.org/wiki/Exocet",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 5,
+		"length": 6,
+		"width": 0.9375,
+		"speed": 319,
+		"range": 100000,
 		"sensors": {
 			"radar": {}
 		}
@@ -3214,6 +3383,20 @@
 				"type": "mark18"
 			}
 		]
+	},
+	"magic": {
+		"label": "Magic",
+		"link": "https://en.wikipedia.org/wiki/R.550_Magic",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 2.72,
+		"width": 0.5,
+		"speed": 1190,
+		"range": 11000,
+		"sensors": {
+			"radar": {}
+		}
 	},
 	"mark7": {
 		"label": "Mark 7",
@@ -3690,6 +3873,51 @@
 		"sensors": {
 			"sonar": {}
 		}
+	},
+	"superFrelon": {
+		"label": "Super Frelon",
+		"link": "https://en.wikipedia.org/wiki/A%C3%A9rospatiale_SA_321_Super_Frelon",
+		"kind": "aircraft",
+		"subkind": "heli",
+		"level": 5,
+		"length": 23.1,
+		"width": 18.949,
+		"speed": 69,
+		"range": 1020000,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [
+			{
+				"type": "mark54",
+				"positionSide": 0.75,
+				"symmetrical": true
+			}
+		]
+	},
+	"superEtendard": {
+		"label": "Super Étendard",
+		"link": "https://en.wikipedia.org/wiki/Dassault-Breguet_Super_%C3%89tendard",
+		"kind": "aircraft",
+		"subkind": "plane",
+		"level": 7,
+		"length": 14.31,
+		"width": 9.4468,
+		"speed": 334.7222,
+		"range": 1820000,
+		"sensors": {
+			"visual": {}
+		},
+		"armaments": [
+			{
+				"type": "exocet"
+			},
+			{
+				"type": "magic",
+				"positionForward": -1.75,
+				"positionSide": 2.2
+			}
+		]
 	},
 	"tomahawk": {
 		"label": "Tomahawk",

@@ -272,7 +272,7 @@ impl Renderer {
             let animation = &self.sprite_sheet.animations.get(sprite).unwrap();
             &animation[frame]
         } else {
-            &self.sprite_sheet.sprites.get(sprite).unwrap()
+            &self.sprite_sheet.sprites.get(sprite).expect(sprite)
         };
 
         let uvs = &sprite.uvs;

@@ -331,6 +331,12 @@ pub fn handle_drop_web_sockets(core: bool, server: bool) {
     }
 }
 
+/// Enables logging of latency-related info.
+#[wasm_bindgen(js_name = "handleDebugLatency")]
+pub fn handle_debug_latency(debug_latency: bool) {
+    borrow_game().debug_latency = debug_latency;
+}
+
 /// run is the entry point for actually taking arguments.
 #[wasm_bindgen]
 pub fn run(settings: JsValue, aid: Option<String>, sid: Option<String>, inv_id: Option<String>) {

@@ -47,7 +47,7 @@ fn main() {
                             let mut scale: f32 = 0.0;
                             for typ in EntityType::iter() {
                                 let dat: &EntityData = typ.data();
-                                if dat.kind != EntityKind::Boat {
+                                if !matches!(dat.kind, EntityKind::Boat | EntityKind::Aircraft) {
                                     continue;
                                 }
                                 let mut found = false;
@@ -95,6 +95,7 @@ fn main() {
                             }
                             scale
                         }
+                        EntityKind::Obstacle => boat_meters_to_pixels(data.length) * 0.85,
                         _ => boat_meters_to_pixels(data.length),
                     }
                     .clamp(4.0, 1024.0) as u32,

@@ -235,33 +235,60 @@ impl World {
                                     }
                                 }
 
-                                // Aircraft/ASROC (simulate weapons and anti-aircraft)
-                                let asroc = weapon_data.sub_kind == EntitySubKind::Rocket && !weapon_data.armaments.is_empty();
-                                if (weapon_data.kind == EntityKind::Aircraft || asroc) && target_data.kind == EntityKind::Boat {
-                                    // Small window of opportunity to fire
-                                    // Uses lifespan as torpedo consumption
-                                    if (weapon.ticks > Ticks::from_secs(3.0 * weapon_data.armaments.len() as f32) || asroc) && weapon.collides_with(target, 1.7+ target_data.length*0.01+weapon.hash()*0.5) {
-                                        mutate(weapon, Mutation::FireAll);
+                                // Aircraft/ASROC (simulate weapons and anti-aircraft).
+                                let fireall_sub_kind = if weapon_data.sub_kind == EntitySubKind::Rocket && !weapon_data.armaments.is_empty() && target_data.kind == EntityKind::Boat {
+                                    Some(weapon_data.armaments[0].entity_type.data().sub_kind)
+                                } else if weapon_data.kind == EntityKind::Aircraft {
+                                    match target_data.kind {
+                                        EntityKind::Boat => {
+                                            weapon_data.armaments.iter().map(|a| a.entity_type.data().sub_kind).find(|&s| {
+                                                if s == EntitySubKind::Sam {
+                                                    return false;
+                                                }
+                                                if s == EntitySubKind::Missile && target.altitude.is_submerged() {
+                                                    return false;
+                                                }
+                                                true
 
-                                        if asroc {
+                                            })
+                                        }
+                                        EntityKind::Aircraft => {
+                                            weapon_data.armaments.iter().map(|a| a.entity_type.data().sub_kind).find(|&s| s == EntitySubKind::Sam)
+                                        }
+                                        _ => None
+                                    }
+                                } else {
+                                    None
+                                };
+
+                                if let Some(sub_kind) = fireall_sub_kind {
+                                    // If more than one weapon is being fired, then it takes proportionally longer to reload.
+                                    let amount = weapon_data.armaments.iter().filter(|a| a.entity_type.data().sub_kind == sub_kind).count();
+
+                                    // Small window of opportunity to fire.
+                                    // Uses aircraft lifespan as weapon consumption.
+                                    if (weapon.ticks > Ticks::from_secs(3.0 * amount as f32) || weapon_data.sub_kind == EntitySubKind::Rocket) && weapon.collides_with(target, 1.7 + target_data.length*0.01+weapon.hash() * 0.5) {
+                                        mutate(weapon, Mutation::FireAll(sub_kind));
+
+                                        if weapon_data.sub_kind == EntitySubKind::Rocket {
                                             // ASROC expires when dropping torpedo.
                                             potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "asroc");
                                         }
                                     }
+                                }
 
-                                    // Automatic anti-aircraft has a chance of killing aircraft.
-                                    if target_data.anti_aircraft > 0.0 && weapon_data.kind == EntityKind::Aircraft {
-                                        let d2 = weapon.transform.position.distance_squared(target.transform.position);
-                                        let r2 = (target_data.radius * 1.5).powi(2);
+                                // Automatic anti-aircraft has a chance of killing aircraft.
+                                if target_data.anti_aircraft > 0.0 && weapon_data.kind == EntityKind::Aircraft && target_data.kind == EntityKind::Boat {
+                                    let d2 = weapon.transform.position.distance_squared(target.transform.position);
+                                    let r2 = (target_data.radius * 1.5).powi(2);
 
-                                        // In range of aa.
-                                        if d2 <= r2 {
-                                            let chance = (1.0 - d2/r2) * target_data.anti_aircraft;
-                                            if thread_rng().gen_bool(chance.clamp(0.0, 1.0) as f64) {
-                                                potential_limited_reload(weapon, false);
-                                                debug_remove!(weapon, "shot down");
-                                            }
+                                    // In range of aa.
+                                    if d2 <= r2 {
+                                        let chance = (1.0 - d2/r2) * target_data.anti_aircraft;
+                                        if thread_rng().gen_bool(chance.clamp(0.0, 1.0) as f64) {
+                                            potential_limited_reload(weapon, false);
+                                            debug_remove!(weapon, "shot down");
                                         }
                                     }
                                 }

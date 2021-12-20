@@ -55,6 +55,16 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"acacia": {
+		"label": "Acacia",
+		"kind": "obstacle",
+		"subkind": "tree",
+		"length": 6,
+		"width": 6,
+		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
 	"hq": {
 		"label": "HQ",
 		"kind": "obstacle",
@@ -713,6 +723,203 @@
 		],
 		"antiAircraft": 0.132,
 		"damage": 5.363333333333333
+	},
+	"clemenceau": {
+		"label": "Clemenceau",
+		"link": "https://en.wikipedia.org/wiki/Clemenceau-class_aircraft_carrier",
+		"kind": "boat",
+		"subkind": "carrier",
+		"level": 9,
+		"length": 265,
+		"width": 48.6523,
+		"draft": 8.6,
+		"speed": 16.46223,
+		"sensors": {
+			"visual": {
+				"range": 1130
+			},
+			"radar": {
+				"range": 1397.5
+			}
+		},
+		"armaments": [
+			{
+				"type": "superEtendard",
+				"positionForward": 69.5306,
+				"positionSide": 4.49494,
+				"angle": 0.05235987755982989,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": 69.5306,
+				"positionSide": 4.49494,
+				"angle": 0.05235987755982989,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": 69.5306,
+				"positionSide": 4.49494,
+				"angle": 0.05235987755982989,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": -29.9657,
+				"positionSide": 12.5451,
+				"angle": 0.14835298641951802,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": -29.9657,
+				"positionSide": 12.5451,
+				"angle": 0.14835298641951802,
+				"external": true
+			},
+			{
+				"type": "superEtendard",
+				"positionForward": -29.9657,
+				"positionSide": 12.5451,
+				"angle": 0.14835298641951802,
+				"external": true
+			},
+			{
+				"type": "superFrelon",
+				"positionForward": 47.67,
+				"positionSide": -12.75,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "superFrelon",
+				"positionForward": -44,
+				"positionSide": -13,
+				"angle": 0,
+				"external": true
+			},
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 0
+			},
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 1
+			},
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 2
+			},
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false,
+				"turret": 3
+			},
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.947,
+				"external": false,
+				"turret": 4
+			},
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.947,
+				"external": false,
+				"turret": 4
+			},
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.947,
+				"external": false,
+				"turret": 5
+			},
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.947,
+				"external": false,
+				"turret": 5
+			}
+		],
+		"turrets": [
+			{
+				"type": "100mm",
+				"positionForward": 71.4858,
+				"positionSide": 16.5069,
+				"speed": 1.413716694115407,
+				"azimuthBR": 2.9670597283903604,
+				"angle": 0
+			},
+			{
+				"type": "100mm",
+				"positionForward": 59.623,
+				"positionSide": 16.5069,
+				"speed": 1.413716694115407,
+				"azimuthBR": 2.9670597283903604,
+				"angle": 0
+			},
+			{
+				"type": "100mm",
+				"positionForward": -80.893,
+				"positionSide": -19.6996,
+				"angle": 3.0543261909900763,
+				"speed": 1.413716694115407,
+				"azimuthBR": 3.0543261909900767
+			},
+			{
+				"type": "100mm",
+				"positionForward": -93.5151,
+				"positionSide": -19.6996,
+				"angle": 3.0543261909900763,
+				"speed": 1.413716694115407,
+				"azimuthBR": 3.0543261909900767
+			},
+			{
+				"type": "crotale",
+				"positionForward": 67.9671,
+				"positionSide": -18.7743,
+				"speed": 1.8849555921538759,
+				"angle": 0
+			},
+			{
+				"type": "crotale",
+				"positionForward": -82.5578,
+				"positionSide": 18.0462,
+				"speed": 1.8849555921538759,
+				"angle": 0
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": 4.03893,
+				"positionSide": -15.8169
+			}
+		],
+		"antiAircraft": 0.22,
+		"damage": 8.833333333333334
 	},
 	"dredger": {
 		"label": "Dredger",
@@ -5309,6 +5516,25 @@
 		"antiAircraft": 0.156,
 		"damage": 6.333333333333333
 	},
+	"100mm": {
+		"label": "100mm Gun",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 6.7,
+		"positionForward": 1.034,
+		"width": 4.1875,
+		"armaments": [
+			{
+				"type": "127x680mmR",
+				"angle": 0,
+				"positionForward": 2,
+				"external": false,
+				"hidden": false
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
 	"2m3m": {
 		"label": "2M-3M",
 		"link": "http://www.navweaps.com/Weapons/WNRussian_25mm-79_2m-3.php",
@@ -5766,6 +5992,53 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"crotale": {
+		"label": "Crotale",
+		"link": "https://en.wikipedia.org/wiki/Crotale_(missile)",
+		"kind": "turret",
+		"subkind": "missile",
+		"length": 3.575,
+		"width": 2.374,
+		"positionForward": 0.08,
+		"armaments": [
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.947,
+				"external": false
+			},
+			{
+				"type": "vt1",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.947,
+				"external": false
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
+	"vt1": {
+		"label": "Crotale VT-1",
+		"link": "https://en.wikipedia.org/wiki/Crotale_(missile)",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 2.35,
+		"width": 0.34,
+		"speed": 1000,
+		"sensors": {
+			"radar": {
+				"range": 1003.525
+			}
+		},
+		"lifespan": 3.78125,
+		"reload": 16,
+		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
 	"depositor": {
 		"label": "Depositor",
 		"kind": "weapon",
@@ -5819,6 +6092,27 @@
 		},
 		"lifespan": 4.109819121447028,
 		"reload": 16,
+		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
+	"exocet": {
+		"label": "Exocet",
+		"link": "https://en.wikipedia.org/wiki/Exocet",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 5,
+		"length": 6,
+		"width": 0.9375,
+		"speed": 319,
+		"sensors": {
+			"radar": {
+				"range": 1009
+			}
+		},
+		"lifespan": 4.751837123664671,
+		"damage": 0.6659773764173665,
+		"reload": 12,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -6003,6 +6297,26 @@
 		"lifespan": 73.63043705554827,
 		"limited": true,
 		"reload": 10,
+		"turrets": [],
+		"exhausts": []
+	},
+	"magic": {
+		"label": "Magic",
+		"link": "https://en.wikipedia.org/wiki/R.550_Magic",
+		"kind": "weapon",
+		"subkind": "sam",
+		"level": 5,
+		"length": 2.72,
+		"width": 0.5,
+		"speed": 1000,
+		"sensors": {
+			"radar": {
+				"range": 1004.08
+			}
+		},
+		"lifespan": 3.8644986449864502,
+		"reload": 16,
+		"armaments": [],
 		"turrets": [],
 		"exhausts": []
 	},
@@ -6707,6 +7021,66 @@
 		"damage": 1.1473679862215587,
 		"reload": 12,
 		"armaments": [],
+		"turrets": [],
+		"exhausts": []
+	},
+	"superFrelon": {
+		"label": "Super Frelon",
+		"link": "https://en.wikipedia.org/wiki/A%C3%A9rospatiale_SA_321_Super_Frelon",
+		"kind": "aircraft",
+		"subkind": "heli",
+		"level": 5,
+		"length": 23.1,
+		"width": 18.949,
+		"speed": 69,
+		"sensors": {
+			"visual": {
+				"range": 646.2
+			}
+		},
+		"armaments": [
+			{
+				"type": "mark54",
+				"positionSide": 0.75
+			},
+			{
+				"type": "mark54",
+				"positionSide": -0.75
+			}
+		],
+		"lifespan": 72.46376811594203,
+		"limited": true,
+		"reload": 10,
+		"turrets": [],
+		"exhausts": []
+	},
+	"superEtendard": {
+		"label": "Super Étendard",
+		"link": "https://en.wikipedia.org/wiki/Dassault-Breguet_Super_%C3%89tendard",
+		"kind": "aircraft",
+		"subkind": "plane",
+		"level": 7,
+		"length": 14.31,
+		"width": 9.4468,
+		"speed": 140,
+		"sensors": {
+			"visual": {
+				"range": 628.62
+			}
+		},
+		"armaments": [
+			{
+				"type": "exocet"
+			},
+			{
+				"type": "magic",
+				"positionForward": -1.75,
+				"positionSide": 2.2
+			}
+		],
+		"lifespan": 35.714285714285715,
+		"limited": true,
+		"reload": 10,
 		"turrets": [],
 		"exhausts": []
 	},

@@ -6,6 +6,7 @@ use crate::contact_ref::ContactRef;
 use crate::player::{PlayerTuple, Status};
 use crate::world::World;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
+use common::ticks::Ticks;
 use common::util::*;
 use glam::Vec2;
 
@@ -27,7 +28,7 @@ impl World {
         };
 
         // Players, whether alive or dead, can see other entities based on these parameters.
-        let (visual_range, radar_range, sonar_range, position, active, abs_vel) =
+        let (visual_range, radar_range, sonar_range, inner_circle, position, active, abs_vel) =
             if let Some(entity) = player_entity {
                 let data = entity.data();
                 let sensors = &data.sensors;
@@ -52,6 +53,7 @@ impl World {
                         visual_range,
                         radar_range,
                         sonar_range,
+                        data.radii().start,
                         entity.transform.position,
                         entity.extension().is_active(),
                         entity.transform.velocity.abs().to_mps(),
@@ -69,15 +71,16 @@ impl World {
                 let elapsed = time.elapsed().as_secs_f32();
                 // Fade out visibility over time to save bandwidth.
                 let range = map_ranges(elapsed, 10.0..2.0, 0.0..visual_range, true).max(500.0);
-                (range, range, range, position, true, 0.0)
+                (range, range, range, 0.0, position, true, 0.0)
             } else {
-                (500.0, 500.0, 500.0, Vec2::ZERO, true, 0.0)
+                (500.0, 500.0, 500.0, 0.0, Vec2::ZERO, true, 0.0)
             };
 
         let visual_range_inv = visual_range.powi(-2);
         let radar_range_inv = radar_range.powi(-2);
         let sonar_range_inv = sonar_range.powi(-2);
         let max_range = visual_range.max(radar_range.max(sonar_range));
+        let inner_circle_squared = inner_circle.powi(2);
 
         let contacts = player_entity
             .into_iter()
@@ -186,8 +189,16 @@ impl World {
                     if visual_range_inv.is_finite() {
                         let mut visual_ratio = default_ratio * visual_range_inv;
                         if altitude.is_submerged() {
+                            let min = if data.kind == EntityKind::Boat
+                                && entity.extension().reloads.iter().any(|&t| t > Ticks::ZERO)
+                            {
+                                // A submarine that has fired recently is visible, for practical reasons.
+                                0.05
+                            } else {
+                                0.0
+                            };
                             visual_ratio /=
-                                map_ranges(altitude.to_norm(), -0.5..1.0, 0.05..0.8, true);
+                                map_ranges(altitude.to_norm(), -0.5..1.0, min..0.8, true);
                         }
                         visible = visual_ratio < 1.0;
                         uncertainty = uncertainty.min(visual_ratio);
@@ -212,7 +223,7 @@ impl World {
                 let has_type = data.kind == EntityKind::Collectible
                     || friendly
                     || uncertainty < 0.5
-                    || distance_squared < 100f32.powi(2);
+                    || distance_squared < inner_circle_squared;
 
                 Some(ContactRef::new(entity, visible, known, has_type))
             });

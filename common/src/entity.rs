@@ -204,6 +204,12 @@ impl EntityData {
         // Shells start with all their velocity.
         if weapon_data.sub_kind == EntitySubKind::Shell {
             transform.velocity = weapon_data.speed
+        } else if weapon_data.sub_kind == EntitySubKind::Plane {
+            // Planes must attain minimum airspeed.
+            transform.velocity = weapon_data.speed * 0.5;
+        } else if armament.turret.is_some() && weapon_data.sub_kind == EntitySubKind::Torpedo {
+            // Compressed gas.
+            transform.velocity = Velocity::from_mps(10.0);
         } else if !armament.vertical {
             // Minimal launch velocity (except if vertical, in which case only initial velocity is up).
             transform.velocity = Velocity::from_mps(1.0);
@@ -403,13 +409,8 @@ impl EntityType {
 
     /// reduced lifespan returns a lifespan to start an entity's life at, so as to make it expire
     /// in desired_lifespan ticks
-    #[allow(dead_code)]
     pub fn reduced_lifespan(self, desired_lifespan: Ticks) -> Ticks {
-        let data = self.data();
-        if data.lifespan > desired_lifespan {
-            return data.lifespan - desired_lifespan;
-        }
-        data.lifespan
+        self.data().lifespan.saturating_sub(desired_lifespan)
     }
 
     /// can_spawn_as returns whether it is possible to spawn as the entity type, which may depend

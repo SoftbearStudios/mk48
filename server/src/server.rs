@@ -317,7 +317,7 @@ impl Actor for Server {
                             region: RegionId::Usa,
                             rules: Some(RulesDto {
                                 bot_min: self2.min_players as u32,
-                                bot_percent: 50,
+                                bot_percent: if self2.min_players == 0 { 0 } else { 50 },
                                 default_score: Some(0),
                                 show_bots_on_liveboard: false,
                                 leaderboard_min_players: 10,

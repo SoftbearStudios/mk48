@@ -942,7 +942,7 @@ dependencies = [
  "rand 0.8.4",
  "reqwest",
  "ringbuffer",
- "rustrict",
+ "rustrict 0.2.2",
  "serde",
  "serde_dynamo",
  "serde_json",
@@ -2437,9 +2437,25 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.1.39"
+version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b0f9ba6d7283623048b27517d2b5589ad44cf62dffedde3be150ef23bb9c646"
+checksum = "5f0aef48cd3294b9703fb93dfeabd8ab1b20864fbaada4666eda88faa25a5d52"
+dependencies = [
+ "bitflags",
+ "csv",
+ "doc-comment",
+ "itertools",
+ "lazy_static",
+ "rustc-hash",
+ "unicode-normalization",
+ "unicode_categories",
+]
+
+[[package]]
+name = "rustrict"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63681d8c53c7c22c71010b60e40db5aa6c0eb60c404226ccf6ac350e59833852"
 dependencies = [
  "bitflags",
  "csv",
@@ -2644,7 +2660,7 @@ dependencies = [
  "rand 0.8.4",
  "rayon",
  "ringbuffer",
- "rustrict",
+ "rustrict 0.1.42",
  "serde",
  "serde_bytes",
  "serde_json",

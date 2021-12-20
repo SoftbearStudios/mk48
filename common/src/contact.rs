@@ -7,7 +7,6 @@ use crate::entity::*;
 use crate::guidance::Guidance;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
-use crate::util::map_ranges;
 use core_protocol::id::*;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -101,7 +100,7 @@ impl Contact {
         interpolate_guidance: bool,
         delta_seconds: f32,
     ) {
-        let lerp = map_ranges(delta_seconds, 0.0..2.0, 0.0..1.0, true);
+        let lerp = delta_seconds.clamp(0.0, 1.0);
 
         assert_eq!(self.id, model.id);
         self.altitude = self.altitude.lerp(model.altitude, lerp);
@@ -118,7 +117,7 @@ impl Contact {
             direction: self
                 .transform
                 .direction
-                .lerp(model.transform.direction, (lerp * 3.0).min(1.0)),
+                .lerp(model.transform.direction, lerp),
             velocity: self.transform.velocity.lerp(model.transform.velocity, lerp),
         };
         self.turrets = model.turrets.clone();

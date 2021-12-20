@@ -17,6 +17,7 @@ Sounds are either licensed under CC0/public domain or via transfer of Copyright
  - [horn](https://freesound.org/people/reznik_Krkovicka/sounds/532339/) by Reznik Krkovicka
  - [impact](https://freesound.org/people/qubodup/sounds/67468/) by qubodup
  - intense by [Tim Beek](https://timbeek.com)
+ - [jet](https://freesound.org/people/Vax6131/sounds/105222/) by Vax6131
  - [ocean](https://freesound.org/people/amholma/sounds/372181/) by amholma
  - [rocket](https://freesound.org/people/qubodup/sounds/67541/) by qubodup
  - [shell](https://freesound.org/people/qubodup/sounds/162365/) by qubodup

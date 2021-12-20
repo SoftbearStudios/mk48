@@ -14,13 +14,18 @@
 
 	<h2>2021</h2>
 
-	<h3>12/18/2021</h3>
+	<h3>12/19/2021</h3>
 
 	<ul>
+		<li>Add "Clemenceau" aircraft carrier and associated weapons and aircraft.</li>
+		<li>Add "Acacia" tree.</li>
+		<li>Lessened damage reduction for hitting bow or stern.</li>
+		<li>Decrease visibility of subs for ships without sonar, if they didn't fire recently.</li>
 		<li>Fix some input and scaling bugs.</li>
 		<li>Mouse controls now allow going in reverse.</li>
 		<li>Collectibles no longer block weapons, except torpedoes.</li>
 		<li>Add cinematic mode, accessible via settings menu, that disables GUI.</li>
+		<li>Improve movement in the presence of high network latency.</li>
 	</ul>
 
 	<h3>12/12/2021</h3>

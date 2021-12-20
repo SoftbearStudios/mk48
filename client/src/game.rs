@@ -63,8 +63,6 @@ pub struct Game {
     session_id: Option<SessionId>,
     death_reason: Option<DeathReason>,
     last_time_seconds: f32,
-    /// Time last sent Control command.
-    last_control_seconds: f32,
     player_id: Option<PlayerId>,
     entity_id: Option<EntityId>,
     pub input: Input,
@@ -72,6 +70,7 @@ pub struct Game {
     pub cinematic: bool,
     /// Actual zoom ratio (smoothed over time).
     zoom: f32,
+    pub debug_latency: bool,
     renderer: Renderer,
     pub audio_player: AudioPlayer,
     score: u32,
@@ -81,6 +80,8 @@ pub struct Game {
     text_cache: TextCache,
     recent_fps_monitor: FpsMonitor,
     statistical_fps_monitor: FpsMonitor,
+    /// Don't overload network.
+    control_rate_limiter: RateLimiter,
     /// Updating the GUI is costly in terms of performance.
     state_rate_limiter: RateLimiter,
 }
@@ -114,6 +115,8 @@ impl NetworkContact {
 impl Game {
     /// Time, in seconds, between sending Control commands.
     const CONTROL_PERIOD: f32 = 0.1;
+    /// Approximate one-way network latency, in seconds.
+    const LATENCY_ESTIMATE: f32 = 0.1;
 
     pub fn new(
         settings: Settings,
@@ -163,9 +166,9 @@ impl Game {
         Self {
             input: Input::new(),
             cinematic: false,
+            debug_latency: false,
             zoom: 10.0,
             last_time_seconds: 0.0,
-            last_control_seconds: 0.0,
             audio_player,
             contacts: HashMap::new(),
             chats: Vec::new().into(),
@@ -195,6 +198,7 @@ impl Game {
             created_invitation_id: None,
             recent_fps_monitor: FpsMonitor::new(5.0),
             statistical_fps_monitor: FpsMonitor::new(120.0),
+            control_rate_limiter: RateLimiter::new(Self::CONTROL_PERIOD),
             state_rate_limiter: RateLimiter::new(1.0 / 10.0),
 
             // Needs to be the last thing so it can be borrowed.
@@ -392,6 +396,9 @@ impl Game {
                 // Mutable borrow after immutable borrows.
                 let network_contact = self.contacts.get_mut(&id).unwrap();
                 network_contact.model = contact.clone();
+
+                // Compensate for the fact that the data is a little old.
+                Self::propagate_contact(&mut network_contact.model, Self::LATENCY_ESTIMATE);
             } else {
                 self.new_contact(&contact);
                 if contact.player_id() == self.player_id && contact.is_boat() {
@@ -440,6 +447,7 @@ impl Game {
             .map(|c| c.altitude())
             .unwrap_or(Altitude::ZERO);
         let mut aircraft_volume: f32 = 0.0;
+        let mut jet_volume: f32 = 0.0;
         let mut need_to_dodge: f32 = 0.0;
 
         for (_, NetworkContact { view: contact, .. }) in self.contacts.iter() {
@@ -455,7 +463,11 @@ impl Game {
                 let volume = self.volume_at(contact.transform().position);
 
                 if data.kind == EntityKind::Aircraft {
-                    aircraft_volume += volume;
+                    if matches!(entity_type, EntityType::SuperEtendard) {
+                        jet_volume += volume;
+                    } else {
+                        aircraft_volume += volume;
+                    }
                 }
 
                 if self.entity_id.is_some() && distance < 250.0 {
@@ -495,6 +507,11 @@ impl Game {
                 .play_with_volume("aircraft", (aircraft_volume + 1.0).ln());
         }
 
+        if jet_volume > 0.01 {
+            self.audio_player
+                .play_with_volume("jet", (jet_volume + 1.0).ln());
+        }
+
         if need_to_dodge >= 3.0 {
             self.play_music("dodge");
         }
@@ -511,6 +528,7 @@ impl Game {
         self.terrain.apply_update(&update.terrain);
     }
 
+    /// Returns the "view" of the player's boat's contact, if the player has a boat.
     fn player_contact(&self) -> Option<&Contact> {
         self.entity_id
             .map(|id| &self.contacts.get(&id).unwrap().view)
@@ -688,6 +706,30 @@ impl Game {
         self.core_web_socket.send(ClientRequest::Trace { message });
     }
 
+    /// Simulate delta_seconds passing, by updating guidance and kinematics.
+    fn propagate_contact(contact: &mut Contact, delta_seconds: f32) {
+        if let Some(entity_type) = contact.entity_type() {
+            let guidance = *contact.guidance();
+            let max_speed = match entity_type.data().sub_kind {
+                // Wait until risen to surface.
+                EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::Sam
+                    if contact.altitude().is_submerged() =>
+                {
+                    EntityData::SURFACING_PROJECTILE_SPEED_LIMIT
+                }
+                _ => f32::INFINITY,
+            };
+
+            contact.transform_mut().apply_guidance(
+                entity_type.data(),
+                guidance,
+                max_speed,
+                delta_seconds,
+            );
+        }
+        contact.transform_mut().do_kinematics(delta_seconds);
+    }
+
     /// Performs time_seconds of game logic, and renders a frame of game state.
     pub fn frame(&mut self, time_seconds: f32) {
         if self.core_web_socket.is_closed() {
@@ -835,6 +877,11 @@ impl Game {
         self.update_camera(delta_seconds);
         let (camera, _) = self.camera();
 
+        let debug_latency_player_entity_id = if self.debug_latency {
+            self.entity_id
+        } else {
+            None
+        };
         // A subset of game logic.
         for NetworkContact {
             model, view, error, ..
@@ -859,23 +906,33 @@ impl Game {
                 }
             }
 
-            //crate::console_log!("err: {}, pos: {}, dir: {}, vel: {}", *error, model.transform().position.distance_squared(view.transform().position) * 0.01, (model.transform().direction - view.transform().direction).abs().to_radians(), model.transform().velocity.difference(view.transform().velocity).to_mps());
-            *error = (*error
-                + model
-                    .transform()
-                    .position
-                    .distance_squared(view.transform().position)
-                    * 0.1
-                + (model.transform().direction - view.transform().direction)
-                    .abs()
-                    .to_radians()
-                + model
-                    .transform()
-                    .velocity
-                    .difference(view.transform().velocity)
-                    .to_mps()
-                    * 0.02
-                - 0.1)
+            let positional_inaccuracy = model
+                .transform()
+                .position
+                .distance_squared(view.transform().position);
+            let directional_inaccuracy = (model.transform().direction - view.transform().direction)
+                .abs()
+                .to_radians();
+            let velocity_inaccuracy = model
+                .transform()
+                .velocity
+                .difference(view.transform().velocity)
+                .to_mps();
+
+            if Some(view.id()) == debug_latency_player_entity_id {
+                client_util::console_log!(
+                    "err: {:.2}, pos: {:.2}, dir: {:.2}, vel: {:.2}",
+                    *error,
+                    positional_inaccuracy.sqrt(),
+                    directional_inaccuracy,
+                    velocity_inaccuracy
+                );
+            }
+            *error = (*error * 0.5f32.powf(delta_seconds)
+                + delta_seconds
+                    * (positional_inaccuracy * 0.4
+                        + directional_inaccuracy * 2.0
+                        + velocity_inaccuracy * 0.08))
                 .clamp(0.0, 10.0);
 
             // If reloads are known before and after, and one goes from zero to non-zero, it was fired.
@@ -934,7 +991,7 @@ impl Game {
                             &mut self.airborne_particles
                         };
 
-                        // Muzzle flash.
+                        // Add muzzle flash particles.
                         let amount = 10;
                         for i in 0..amount {
                             collection.push(Particle {
@@ -964,26 +1021,7 @@ impl Game {
                 delta_seconds * (*error),
             );
             for contact in [model, view] {
-                if let Some(entity_type) = contact.entity_type() {
-                    let guidance = *contact.guidance();
-                    let max_speed = match entity_type.data().sub_kind {
-                        // Wait until risen to surface.
-                        EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::Sam
-                            if contact.altitude().is_submerged() =>
-                        {
-                            EntityData::SURFACING_PROJECTILE_SPEED_LIMIT
-                        }
-                        _ => f32::INFINITY,
-                    };
-
-                    contact.transform_mut().apply_guidance(
-                        entity_type.data(),
-                        guidance,
-                        max_speed,
-                        delta_seconds,
-                    );
-                }
-                contact.transform_mut().do_kinematics(delta_seconds);
+                Self::propagate_contact(contact, delta_seconds);
             }
         }
 
@@ -1283,7 +1321,7 @@ impl Game {
                                 );
                             }
 
-                            // Turret azimuths
+                            // Turret azimuths.
                             if let Some(i) = self.find_best_armament(contact, false) {
                                 let armament = &data.armaments[i];
                                 if armament.entity_type != EntityType::Depositor {
@@ -1592,10 +1630,10 @@ impl Game {
 
                     // Only do when start holding.
                     if !self.input.holding {
-                        // Back 90 degrees turns on reverse.
+                        // Back 60 degrees turns on reverse.
                         let delta = direction_target - current_dir;
                         self.input.reversing =
-                            delta != delta.clamp_magnitude(Angle::from_degrees(270.0 / 2.0));
+                            delta != delta.clamp_magnitude(Angle::from_degrees(300.0 / 2.0));
                         self.input.holding = true;
                     }
 
@@ -1651,9 +1689,7 @@ impl Game {
                 armament_consumption: Some(player_contact.reloads().into()), // TODO fix to clone arc
             };
 
-            if time_seconds > self.last_control_seconds + Self::CONTROL_PERIOD {
-                self.last_control_seconds = time_seconds;
-
+            if self.control_rate_limiter.update(delta_seconds) {
                 let left_click = self.input.take_left_mouse_click();
 
                 // Re-borrow as immutable.

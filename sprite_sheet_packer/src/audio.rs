@@ -141,6 +141,16 @@ lazy_static! {
             ..Sound::default()
         },
         Sound {
+            name: "jet",
+            source: "freesound.org/105222__vax6131__hawk-jets.wav",
+            author: Some("Vax6131"),
+            url: Some("https://freesound.org/people/Vax6131/sounds/105222/"),
+            start: Some(53.0),
+            end: Some(54.0),
+            volume: -3.5,
+            ..Sound::default()
+        },
+        Sound {
             name: "horn",
             source: "freesound.org/532339__reznik-krkovicka__horn-mild.mp3",
             author: Some("Reznik Krkovicka"),

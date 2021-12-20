@@ -40,6 +40,10 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.speed *= 0.75;
 						break;
 				}
+				break;
+			case 'aircraft':
+			    entityData.speed = Math.min(entityData.speed, 140);
+			    break;
 		}
 
 		entityData.speed = Math.min(entityData.speed, 1000);

@@ -51,14 +51,14 @@ pub(crate) enum Mutation {
         altitude_target: Altitude,
         signal_strength: f32,
     },
-    FireAll,
+    FireAll(EntitySubKind),
 }
 
 impl Mutation {
     /// absolute_priority returns the priority of this mutation, higher means higher priority (going first).
     pub fn absolute_priority(&self) -> i8 {
         match self {
-            Self::FireAll => 127, // so that ASROC can fire before expiring
+            Self::FireAll(_) => 127, // so that ASROC can fire before expiring
             Self::Remove(_) => 126,
             Self::HitBy(_, _, _) => 125,
             Self::CollidedWithBoat { .. } => 124,
@@ -214,7 +214,7 @@ impl Mutation {
                 transform.direction = Angle::from(delta);
                 transform.velocity = velocity;
             }
-            Self::FireAll => {
+            Self::FireAll(sub_kind) => {
                 let entity = &mut entities[index];
 
                 // Reset entity lifespan (because it is actively engaging in battle.
@@ -225,30 +225,34 @@ impl Mutation {
                     .armaments
                     .iter()
                     .enumerate()
-                    .map(|(i, armament)| {
-                        let mut armament_entity = Entity::new(
-                            armament.entity_type,
-                            Some(Arc::clone(entity.player.as_ref().unwrap())),
-                        );
+                    .filter_map(|(i, armament)| {
+                        if armament.entity_type.data().sub_kind == sub_kind {
+                            let mut armament_entity = Entity::new(
+                                armament.entity_type,
+                                Some(Arc::clone(entity.player.as_ref().unwrap())),
+                            );
 
-                        armament_entity.ticks = armament
-                            .entity_type
-                            .reduced_lifespan(Ticks::from_secs(10.0));
-                        armament_entity.transform =
-                            entity.transform + data.armament_transform(&[], i);
-                        armament_entity.altitude = entity.altitude;
-                        armament_entity.guidance = Guidance {
-                            direction_target: entity.transform.direction, // TODO: Randomize
-                            velocity_target: armament.entity_type.data().speed,
-                        };
+                            armament_entity.ticks = armament
+                                .entity_type
+                                .reduced_lifespan(Ticks::from_secs(10.0));
+                            armament_entity.transform =
+                                entity.transform + data.armament_transform(&[], i);
+                            armament_entity.altitude = entity.altitude;
+                            armament_entity.guidance = Guidance {
+                                direction_target: entity.transform.direction, // TODO: Randomize
+                                velocity_target: armament.entity_type.data().speed,
+                            };
 
-                        // Max drop velocity.
-                        armament_entity.transform.velocity = armament_entity
-                            .transform
-                            .velocity
-                            .clamp_magnitude(Velocity::from_mps(40.0));
+                            // Max drop velocity.
+                            armament_entity.transform.velocity = armament_entity
+                                .transform
+                                .velocity
+                                .clamp_magnitude(Velocity::from_mps(40.0));
 
-                        armament_entity
+                            Some(armament_entity)
+                        } else {
+                            None
+                        }
                     })
                     .collect();
 

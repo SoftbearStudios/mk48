@@ -341,7 +341,7 @@
 		}
 	}
 
-	function onBlurCanvas() {
+	function onMouseLeave(event) {
 		if (client) {
 			client.handleMouseButton(0, false);
 			client.handleMouseButton(2, false);
@@ -405,7 +405,8 @@
 	on:touchstart={onTouch}
 	on:touchend={onTouch}
 	on:touchmove={onMouseMove}
-	on:blur={onBlurCanvas}
+	on:blur={onMouseLeave}
+	on:mouseleave={onMouseLeave}
 	on:wheel|preventDefault={onWheel}
 	on:contextmenu|preventDefault
 ></canvas>
