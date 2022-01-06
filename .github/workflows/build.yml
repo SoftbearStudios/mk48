@@ -19,7 +19,7 @@ jobs:
     - uses: egor-tensin/setup-clang@v1
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly
+        toolchain: nightly-2021-10-28
         override: true
         components: rustfmt, clippy
     - name: Build Server
