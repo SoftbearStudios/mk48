@@ -12,18 +12,18 @@ use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
-use core::core::Core;
-use core::server::{ParametrizedServerRequest, ServerState};
 use core_protocol::dto::{InvitationDto, RulesDto};
 use core_protocol::id::*;
 use core_protocol::name::Location;
 use core_protocol::rpc::{ServerRequest, ServerUpdate};
+use core_server::core::Core;
+use core_server::server::{ParametrizedServerRequest, ServerState};
 use log::{debug, error, info, trace, warn};
 use rayon::prelude::*;
-use servutil::benchmark;
-use servutil::benchmark::Timer;
-use servutil::benchmark_scope;
-use servutil::observer::{ObserverMessage, ObserverUpdate};
+use server_util::benchmark;
+use server_util::benchmark::Timer;
+use server_util::benchmark_scope;
+use server_util::observer::{ObserverMessage, ObserverUpdate};
 use std::collections::HashMap;
 use std::process;
 use std::sync::Arc;
@@ -146,7 +146,7 @@ impl Server {
                 .with_min_len(16)
                 .map(|(i, (bot, shared_data))| {
                     let update = world.get_player_complete(&shared_data.player);
-                    let bot_action = bot.update(update);
+                    let bot_action = bot.update(update, shared_data.player.borrow().player_id);
                     Self::update_core_status(&core, &addr, world, shared_data);
                     (i, bot_action)
                 })
@@ -474,8 +474,8 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
         _: &mut Self::Context,
     ) -> Self::Result {
         trace!("Game server received server update: {:?}", update);
-        match update {
-            ObserverUpdate::Send { message } => match message {
+        if let ObserverUpdate::Send { message } = update {
+            match message {
                 ServerUpdate::ArenaStarted { arena_id } => {
                     self.arena_id = Some(arena_id);
                 }
@@ -491,7 +491,7 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
                         for (_, client_data) in self.clients.iter_mut() {
                             let mut player = client_data.data.player.borrow_mut();
                             if player.player_id == change.player_id {
-                                player.team_id = change.team_id;
+                                player.change_team(change.team_id);
                             }
                         }
                     }
@@ -516,8 +516,7 @@ impl Handler<ObserverUpdate<ServerUpdate>> for Server {
                         ))
                     }
                 }
-            },
-            _ => {}
+            }
         }
     }
 }

@@ -226,15 +226,17 @@ impl Mutation {
                     .iter()
                     .enumerate()
                     .filter_map(|(i, armament)| {
-                        if armament.entity_type.data().sub_kind == sub_kind {
+                        let armament_data: &EntityData = armament.entity_type.data();
+                        if armament_data.sub_kind == sub_kind {
                             let mut armament_entity = Entity::new(
                                 armament.entity_type,
                                 Some(Arc::clone(entity.player.as_ref().unwrap())),
                             );
 
-                            armament_entity.ticks = armament
-                                .entity_type
-                                .reduced_lifespan(Ticks::from_secs(10.0));
+                            armament_entity.ticks =
+                                armament.entity_type.reduced_lifespan(Ticks::from_secs(
+                                    100.0 / armament_data.speed.to_mps().clamp(10.0, 30.0),
+                                ));
                             armament_entity.transform =
                                 entity.transform + data.armament_transform(&[], i);
                             armament_entity.altitude = entity.altitude;

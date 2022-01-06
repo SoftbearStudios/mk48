@@ -6,7 +6,7 @@ use crate::angle::Angle;
 use crate::velocity::Velocity;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Guidance {
     pub direction_target: Angle,
     pub velocity_target: Velocity,

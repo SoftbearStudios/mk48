@@ -61,6 +61,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -163,6 +172,8 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
+ "bincode",
+ "common_util",
  "core_protocol",
  "enum-iterator",
  "fast_hilbert",
@@ -174,6 +185,16 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
+]
+
+[[package]]
+name = "common_util"
+version = "0.1.0"
+dependencies = [
+ "core_protocol",
+ "glam",
+ "rand",
+ "serde",
 ]
 
 [[package]]
@@ -191,6 +212,7 @@ dependencies = [
  "enum-iterator",
  "glam",
  "rand",
+ "rustrict",
  "serde",
  "unicode_categories",
  "variant_count",
@@ -288,6 +310,12 @@ dependencies = [
  "adler32",
  "byteorder",
 ]
+
+[[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "either"
@@ -773,6 +801,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustrict"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0af670e6e75afa981a9d2e74c1c66402f34918f7cf47221e63c40345c2e9728"
+dependencies = [
+ "doc-comment",
+ "unicode_categories",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -834,7 +872,6 @@ dependencies = [
 name = "sprite_sheet"
 version = "0.1.0"
 dependencies = [
- "common",
  "glam",
  "serde",
  "serde_json",

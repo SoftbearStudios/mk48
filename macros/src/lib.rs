@@ -11,6 +11,7 @@ use quote::quote;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 
@@ -62,44 +63,61 @@ pub fn entity_type(item: TokenStream) -> TokenStream {
         .iter()
         .map(|s| EntityType::new(s.to_string()))
         .collect();
-    let entity_type_tostrings: Vec<EntityTypeToString> = entity_type_strings
+
+    let entity_type_as_strs: Vec<EntityTypeAsStr> = entity_type_strings
         .iter()
-        .map(|s| EntityTypeToString::new(s.to_string()))
+        .map(|s| EntityTypeAsStr::new(s.to_string()))
         .collect();
-    let entity_type_tostrs: Vec<EntityTypeToStr> = entity_type_strings
+
+    let entity_type_from_strs: Vec<EntityTypeFromStr> = entity_type_strings
         .iter()
-        .map(|s| EntityTypeToStr::new(s.to_string()))
+        .map(|s| EntityTypeFromStr::new(s.to_string()))
         .collect();
-    //let entity_type_todatas: Vec<EntityTypeToData> = entity_type_strings.iter().map(|s| EntityTypeToData::new(s.to_string())).collect();
+
+    let entity_type_from_u8s: Vec<EntityTypeFromU8> = entity_type_strings
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            EntityTypeFromU8::new(
+                s.to_string(),
+                i.try_into()
+                    .expect("u8 cannot fit more than 256 entity types"),
+            )
+        })
+        .collect();
 
     let result = quote! {
         #[repr(u8)]
-        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, enum_iterator::IntoEnumIterator, serde::Serialize, serde::Deserialize)]
+        #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, enum_iterator::IntoEnumIterator)]
         pub enum EntityType {
             #(#entity_types),*
         }
 
         impl EntityType {
-            pub fn to_str(&self) -> &'static str {
+            pub fn as_str(&self) -> &'static str {
                 match self {
-                    #(#entity_type_tostrs),*
+                    #(#entity_type_as_strs),*
                 }
             }
 
-            /*
-            pub fn data(&self) -> &EntityData {
-                match self {
-                    #(#entity_tpye_todatas),*
-                }
+            pub fn from_str(s: &str) -> Option<Self> {
+                Some(match s {
+                    #(#entity_type_from_strs),*,
+                    _ => return None
+                })
             }
-             */
+
+            pub fn from_u8(i: u8) -> Option<Self> {
+                Some(match i {
+                    #(#entity_type_from_u8s),*,
+                    _ => return None
+                })
+            }
         }
 
         impl ToString for EntityType {
             fn to_string(&self) -> String {
-                match self {
-                    #(#entity_type_tostrings),*
-                }
+                String::from(self.as_str())
             }
         }
 
@@ -126,7 +144,7 @@ impl quote::ToTokens for EntityType {
 
         let ts: proc_macro2::TokenStream = {
             quote! {
-               #[serde(rename = #name)] #ident
+               #ident
             }
         }
         .into();
@@ -135,22 +153,22 @@ impl quote::ToTokens for EntityType {
     }
 }
 
-struct EntityTypeToString(String);
+struct EntityTypeAsStr(String);
 
-impl EntityTypeToString {
+impl EntityTypeAsStr {
     pub fn new(name: String) -> Self {
         Self(name)
     }
 }
 
-impl quote::ToTokens for EntityTypeToString {
+impl quote::ToTokens for EntityTypeAsStr {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let name = self.0.to_owned();
         let ident = name_to_ident(name.to_owned());
 
         let ts: proc_macro2::TokenStream = {
             quote! {
-               EntityType::#ident => String::from(#name)
+               Self::#ident => #name
             }
         }
         .into();
@@ -159,22 +177,22 @@ impl quote::ToTokens for EntityTypeToString {
     }
 }
 
-struct EntityTypeToStr(String);
+struct EntityTypeFromStr(String);
 
-impl EntityTypeToStr {
+impl EntityTypeFromStr {
     pub fn new(name: String) -> Self {
         Self(name)
     }
 }
 
-impl quote::ToTokens for EntityTypeToStr {
+impl quote::ToTokens for EntityTypeFromStr {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let name = self.0.to_owned();
-        let ident = name_to_ident(name.to_owned());
+        let ident = name_to_ident(self.0.to_owned());
 
         let ts: proc_macro2::TokenStream = {
             quote! {
-               EntityType::#ident => #name
+               #name => Self::#ident
             }
         }
         .into();
@@ -183,35 +201,29 @@ impl quote::ToTokens for EntityTypeToStr {
     }
 }
 
-/*
-struct EntityTypeToData(String);
+struct EntityTypeFromU8(String, u8);
 
-impl EntityTypeToData {
-    pub fn new(name: String) -> Self {
-        Self(name)
+impl EntityTypeFromU8 {
+    pub fn new(name: String, index: u8) -> Self {
+        Self(name, index)
     }
 }
 
-impl quote::ToTokens for EntityTypeToData {
+impl quote::ToTokens for EntityTypeFromU8 {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let name = self.0.to_owned();
-        let ident = name_to_ident(name.to_owned());
+        let index = self.1;
+        let ident = name_to_ident(self.0.to_owned());
 
         let ts: proc_macro2::TokenStream = {
             quote! {
-               EntityType::#ident => {
-                    const data = EntityData{
-
-                    }
-                    &data
-               }
+               #index => Self::#ident
             }
-        }.into();
+        }
+        .into();
 
         tokens.extend(ts);
     }
 }
- */
 
 fn name_to_ident(mut name: String) -> proc_macro2::Ident {
     name = name.replace("0", "Zero");

@@ -9,14 +9,14 @@
 	import strings from '../data/strings.json';
 	import storage from '../util/storage.js';
 
-    import {antialias, chatOpen, cinematic, fpsCounter, renderFoam, renderTerrainTextures, renderWaves, resolution} from '../util/settings.js';
+    import {antialias, chatOpen, cinematic, fpsCounter, renderTerrainTextures, waveQuality, resolution} from '../util/settings.js';
 
     // Serializes settings that require a restart.
-    function serializeRefreshSettings(antialias, renderFoam, renderTerrainTextures, renderWaves) {
-        return JSON.stringify({antialias, renderFoam, renderTerrainTextures, renderWaves});
+    function serializeRefreshSettings(antialias, renderTerrainTextures, waveQuality) {
+        return JSON.stringify({antialias, renderTerrainTextures, waveQuality});
     }
 
-    const initialRefreshSettings = serializeRefreshSettings($antialias, $renderFoam, $renderTerrainTextures, $renderWaves);
+    const initialRefreshSettings = serializeRefreshSettings($antialias, $renderTerrainTextures, $waveQuality);
 </script>
 
 <Page title={$t('page.settings.title')}>
@@ -48,16 +48,6 @@
     <h3>Graphics</h3>
 
     <label>
-        <input type="checkbox" bind:checked={$renderWaves}/>
-        Render Waves
-    </label>
-
-    <label>
-        <input type="checkbox" bind:checked={$renderFoam}/>
-        Render Foam
-    </label>
-
-    <label>
         <input type="checkbox" bind:checked={$renderTerrainTextures}/>
         Render Terrain Textures
     </label>
@@ -67,13 +57,20 @@
         Antialiasing
     </label>
 
+    <select value={$waveQuality} on:change={e => waveQuality.set(parseInt(e.target.value))}>
+        <option value={0}>No Waves</option>
+        <option value={1}>Good Waves</option>
+        <option value={2}>Great Waves</option>
+        <option value={3}>Fantastic Waves</option>
+    </select>
+
     <select value={$resolution} on:change={e => resolution.set(parseFloat(e.target.value))}>
         {#each [1.0, 0.5] as res}
             <option value={res}>{res * 100}% Resolution</option>
         {/each}
     </select>
 
-    {#if initialRefreshSettings !== serializeRefreshSettings($antialias, $renderFoam, $renderTerrainTextures, $renderWaves)}
+    {#if initialRefreshSettings !== serializeRefreshSettings($antialias, $renderTerrainTextures, $waveQuality)}
         <button on:click={() => location.reload(true)}>Apply Changes</button>
     {/if}
 

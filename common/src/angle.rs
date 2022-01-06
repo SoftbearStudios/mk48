@@ -3,4 +3,4 @@
 
 // Angle is very sharable code. However, it is more game related than core_protocol related, so
 // it is imported from common.
-pub use core_protocol::angle::Angle;
+pub use common_util::angle::Angle;

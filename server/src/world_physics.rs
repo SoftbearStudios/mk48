@@ -3,7 +3,7 @@
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
-use crate::player::Status;
+use crate::player::{Flags, Status};
 use crate::world::World;
 use crate::world_mutation::Mutation;
 use common::altitude::Altitude;
@@ -16,9 +16,9 @@ use common::velocity::Velocity;
 use glam::Vec2;
 use rand::Rng;
 use rayon::prelude::*;
-use servutil::benchmark::Timer;
-use servutil::benchmark_scope;
-use std::sync::Mutex;
+use server_util::benchmark::Timer;
+use server_util::benchmark_scope;
+use std::sync::{Arc, Mutex};
 
 /// Fate terminates the physics for a particular entity with a single fate.
 enum Fate {
@@ -43,6 +43,7 @@ impl World {
         let limited_reloads = Mutex::new(Vec::new()); // Of form (player_entity_index, limited_entity_type).
         let terrain_mutations = Mutex::new(Vec::new());
         let barrel_spawns = Mutex::new(Vec::new());
+        let reset_flags = Mutex::new(Vec::new());
 
         // Call when any entity that is potentially a weapon is removed, to make sure it is reloaded
         // if it is a limited armament. No need to call if the player is definitely not alive.
@@ -81,9 +82,16 @@ impl World {
                     }
                 }
 
-                if data.limited && !entity.borrow_player().status.is_alive() {
-                    // Player is definitely not alive, impossible to reload limited armament.
-                    return Some((index, Fate::Remove(DeathReason::Unknown)));
+                if data.limited {
+                    if let Status::Alive { flags, .. } = &entity.borrow_player().status {
+                        // Delete limited armaments on upgrade.
+                        if flags.upgraded {
+                            return Some((index, Fate::Remove(DeathReason::Unknown)));
+                        }
+                    } else {
+                        // Player is definitely not alive, impossible to reload limited armament.
+                        return Some((index, Fate::Remove(DeathReason::Unknown)));
+                    }
                 }
 
                 let mut max_speed = data.speed.to_mps();
@@ -156,6 +164,21 @@ impl World {
                                         entity.ticks = entity.ticks.saturating_sub(delta);
                                     }
                                 }
+                                EntitySubKind::Mine => {
+                                    // Delete mines when leaving populated team.
+                                    if let Status::Alive { flags, .. } =
+                                        &entity.borrow_player().status
+                                    {
+                                        if flags.left_populated_team {
+                                            // Current mines aren't limited but they could be in the future.
+                                            potential_limited_reload(entity);
+                                            return Some((
+                                                index,
+                                                Fate::Remove(DeathReason::Unknown),
+                                            ));
+                                        }
+                                    }
+                                }
                                 _ => {}
                             }
                         }
@@ -167,6 +190,15 @@ impl World {
                             2.0,
                             delta,
                         );
+
+                        if let Status::Alive { flags, .. } = &entity.borrow_player().status {
+                            if *flags != Flags::default() {
+                                reset_flags
+                                    .lock()
+                                    .unwrap()
+                                    .push(Arc::clone(entity.player.as_ref().unwrap()));
+                            }
+                        }
                     }
                     EntityKind::Obstacle => {
                         let rate: f32 = match entity.entity_type {
@@ -322,6 +354,12 @@ impl World {
                 velocity,
                 Ticks::ZERO,
             );
+        }
+
+        for player in reset_flags.into_inner().unwrap() {
+            if let Status::Alive { flags, .. } = &mut player.borrow_mut().status {
+                *flags = Flags::default();
+            }
         }
 
         // Sorted in reverse to remove correctly.

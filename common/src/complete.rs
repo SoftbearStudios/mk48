@@ -5,7 +5,6 @@ use crate::contact::*;
 use crate::death_reason::DeathReason;
 use crate::protocol::*;
 use crate::terrain::Terrain;
-use core_protocol::id::PlayerId;
 use std::mem;
 
 pub trait CompleteTrait<'a> {
@@ -27,8 +26,6 @@ pub trait CompleteTrait<'a> {
     fn world_radius(&self) -> f32;
 
     fn terrain(&self) -> &Terrain;
-
-    fn player_id(&self) -> PlayerId;
 }
 
 pub struct Complete<'a> {
@@ -72,10 +69,5 @@ impl<'a> CompleteTrait<'a> for Complete<'a> {
     #[inline]
     fn terrain(&self) -> &Terrain {
         self.terrain
-    }
-
-    #[inline]
-    fn player_id(&self) -> PlayerId {
-        self.update.player_id
     }
 }

@@ -12,7 +12,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 type AltitudeRepr = i8;
 
 // Note: pub(crate) is intentional.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Altitude(pub AltitudeRepr);
 
 #[allow(dead_code)]
@@ -117,12 +117,6 @@ impl Altitude {
         } else {
             self - other
         }
-    }
-}
-
-impl Default for Altitude {
-    fn default() -> Self {
-        Self::ZERO
     }
 }
 

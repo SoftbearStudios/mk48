@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::ops::Add;
 
 /// Transform stores a position, direction, and single-component velocity (along the direction).
-#[derive(Copy, Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
     pub position: Vec2,
     pub direction: Angle,

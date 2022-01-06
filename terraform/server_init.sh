@@ -46,10 +46,10 @@ table inet filter {
 		ct state new add @ipv4 { ip saddr ct count over 64 } counter reject
 
 		# Limit connection rate per source IP
-		ct state new add @ipv4_timeout { ip saddr timeout 30s limit rate over 12/second burst 128 packets } counter drop
+		# ct state new add @ipv4_timeout { ip saddr timeout 30s limit rate over 12/second burst 128 packets } counter drop
 
 		# Limit packet rate per source IP
-		ct state { established, related } add @ipv4_timeout { ip saddr timeout 30s limit rate over 2048/second burst 4096 packets } counter drop
+		# ct state { established, related } add @ipv4_timeout { ip saddr timeout 30s limit rate over 2048/second burst 4096 packets } counter drop
 	}
 
 	chain inbound_ipv6 {
@@ -142,7 +142,7 @@ Group=root
 Restart=always
 RestartSec=3
 EnvironmentFile=/etc/environment
-ExecStart=/root/server --server-id $SERVER_ID -v -v --debug-game --chat-log /root/chat.log --domain $DOMAIN_HOME --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
+ExecStart=/root/server --server-id $SERVER_ID --chat-log /root/chat.log --domain $DOMAIN_HOME --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
 
 [Install]
 WantedBy=multi-user.target

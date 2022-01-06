@@ -5,5 +5,4 @@ terrain.png
 *.data
 *.data.old
 serde-test/*
-terraform/kubernetes/*
 .ssh/*

@@ -47,8 +47,8 @@
 		"label": "Acacia",
 		"kind": "obstacle",
 		"subkind": "tree",
-		"length": 6,
-		"width": 6
+		"length": 8,
+		"width": 8
 	},
 	"hq": {
 		"label": "HQ",
@@ -316,6 +316,57 @@
 		"exhausts": [
 			{
 				"positionForward": -1
+			}
+		]
+	},
+	"buyan": {
+		"label": "Buyan",
+		"link": "https://en.wikipedia.org/wiki/Buyan-class_corvette",
+		"kind": "boat",
+		"subkind": "corvette",
+		"level": 4,
+		"length": 75,
+		"width": 11.133,
+		"draft": 2.5,
+		"speed": 13.34,
+		"stealth": 0.5,
+		"sensors": {
+			"visual": {},
+			"radar": {},
+			"sonar": {}
+		},
+		"armaments": [
+			{
+				"type": "kalibr",
+				"positionForward": -3.4,
+				"positionSide": 0.32,
+				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "a190",
+				"positionForward": 20.4954,
+				"positionSide": 0,
+				"speed": "medium",
+				"azimuthB": 40
+			},
+			{
+				"type": "ratepKomar",
+				"positionForward": 15.6236,
+				"positionSide": 0,
+				"speed": "fast",
+				"azimuthB": 60
+			},
+			{
+				"type": "ratepKomar",
+				"positionForward": -17.8952,
+				"positionSide": 0,
+				"angle": 180,
+				"speed": "fast",
+				"azimuthB": 40
 			}
 		]
 	},
@@ -1163,6 +1214,20 @@
 			"visual": {}
 		}
 	},
+	"kalibr": {
+		"label": "Kalibr",
+		"link": "https://en.wikipedia.org/wiki/3M-54_Kalibr",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 4,
+		"length": 8.1,
+		"width": 4.11328,
+		"speed": 265.04,
+		"range": 540000,
+		"sensors": {
+			"radar": {}
+		}
+	},
 	"kirov": {
 		"label": "Kirov",
 		"link": "https://en.wikipedia.org/wiki/Kirov-class_battlecruiser",
@@ -1996,7 +2061,7 @@
 				"positionSide": 2.5,
 				"angle": 2,
 				"symmetrical": true,
-				"external": true
+				"external": false
 			},
 			{
 				"type": "p15",
@@ -2005,7 +2070,7 @@
 				"positionSide": 2.5,
 				"angle": 2,
 				"symmetrical": true,
-				"external": true
+				"external": false
 			}
 		],
 		"turrets": [
@@ -2083,9 +2148,19 @@
 				"positionForward": 37.7849,
 				"positionSide": 4.73435,
 				"angle": 0,
-				"count": 4,
+				"count": 3,
 				"symmetrical": true,
 				"external": false
+			},
+			{
+				"type": "tomahawk",
+				"width": 0.533,
+				"positionForward": 37.7849,
+				"positionSide": 4.73435,
+				"angle": 0,
+				"symmetrical": true,
+				"external": false,
+				"hidden": true
 			},
 			{
 				"type": "mk70",
@@ -2306,7 +2381,7 @@
 				"type": "yj18",
 				"positionForward": 44,
 				"positionSide": 1.5,
-				"count": 3,
+				"count": 4,
 				"symmetrical": true,
 				"vertical": true
 			},
@@ -2974,6 +3049,21 @@
 		"sensors": {
 			"sonar": {}
 		}
+	},
+	"a190": {
+		"label": "AK-130",
+		"link": "https://en.wikipedia.org/wiki/AK-100_(naval_gun)",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 9.45,
+		"positionForward": 2.17111,
+		"width": 3.691,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0
+			}
+		]
 	},
 	"ak130": {
 		"label": "AK-130",
@@ -3807,6 +3897,25 @@
 		"sensors": {
 			"radar": {}
 		}
+	},
+	"ratepKomar": {
+		"label": "Komar",
+		"link": "https://en.wikipedia.org/wiki/9K38_Igla#Variants",
+		"kind": "turret",
+		"subkind": "missile",
+		"length": 1.874,
+		"width": 2.05,
+		"positionForward": 0,
+		"armaments": [
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.75,
+				"symmetrical": true,
+				"external": false
+			}
+		]
 	},
 	"rbs15": {
 		"label": "RBS-15",

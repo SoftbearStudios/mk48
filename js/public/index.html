@@ -17,11 +17,14 @@
 	<link rel='shortcut icon' type='image/png' href='/favicon.png'>
 	<meta property="og:image" content="https://mk48.io/logo-712.png"/>
 
+	<!-- Any backwards-incompatible changes will compromise ServerId-redirect-based update, as clients will get the
+	old version of this file, and new versions of everything else. -->
+
 	<!-- Ensure bundle.js is the first HTTP request -->
 	<link rel="preload" href="/build/bundle.js" as="script">
 	<script defer src='/build/bundle.js'></script>
 	<link rel="preload" href="/build/client.wasm" as="fetch" crossorigin="anonymous">
-	<link rel="preload" href="/sprites_webgl.png" as="image">
+	<link rel="preload" href="/sprites_webgl.png" as="image" crossorigin="anonymous">
 </head>
 
 <body style="background-color: #003474;">

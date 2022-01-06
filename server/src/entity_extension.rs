@@ -5,6 +5,7 @@ use common::altitude::Altitude;
 use common::angle::Angle;
 use common::entity::*;
 use common::ticks::Ticks;
+use common::util::make_mut_slice;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ fn arc_default_n<T: Default>(n: usize) -> Arc<[T]> {
 
 impl EntityExtension {
     /// How long spawn protection lasts (it linearly fades over this time).
-    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::RATE.0 * 15);
+    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::RATE.0 * 20);
 
     /// new allocates a new entity extension, sized to a particular entity type.
     pub fn new(entity_type: EntityType) -> Self {
@@ -100,19 +101,6 @@ impl Default for EntityExtension {
             active_cooldown: Ticks::ZERO,
             reloads: arc_default_n(0),
             turrets: arc_default_n(0),
-        }
-    }
-}
-
-/// make_mut_slice derives a mutable slice from an Arc, cloning the Arc if necessary.
-fn make_mut_slice<T: Clone>(arc: &mut Arc<[T]>) -> &mut [T] {
-    let mut_ref = unsafe { &mut *(arc as *mut Arc<[T]>) };
-
-    match Arc::get_mut(mut_ref) {
-        Some(x) => x,
-        None => {
-            *arc = arc.iter().cloned().collect();
-            Arc::get_mut(arc).unwrap()
         }
     }
 }

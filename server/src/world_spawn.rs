@@ -12,10 +12,10 @@ use common::transform::Transform;
 use common::util::gen_radius;
 use common::velocity::Velocity;
 use glam::Vec2;
-use log::warn;
+use log::{info, warn};
 use rand::Rng;
-use servutil::benchmark::Timer;
-use servutil::benchmark_scope;
+use server_util::benchmark::Timer;
+use server_util::benchmark_scope;
 
 impl World {
     /// Target square meters of world per square meter of player vision.
@@ -42,9 +42,9 @@ impl World {
             let mut rng = rand::thread_rng();
             let mut radius = initial_radius.max(1.0);
             let center = entity.transform.position;
-            let mut threshold = 5f32;
+            let mut threshold = 6f32;
 
-            let mut governor = 0;
+            let mut governor: u32 = if entity.is_boat() { 128 } else { 8 };
 
             // Always randomize on first iteration
             while entity.transform.position == center || !self.can_spawn(&entity, threshold) {
@@ -54,10 +54,10 @@ impl World {
                 entity.transform.direction = rng.gen();
 
                 radius = (radius * 1.1).min(self.radius * 0.85);
-                threshold = 0.15 + threshold * 0.85; // Approaches 1.0
+                threshold = 0.05 + threshold * 0.95; // Approaches 1.0
 
-                governor += 1;
-                if governor > 128 {
+                governor -= 1;
+                if governor == 0 {
                     // Don't take down the server just because cannot
                     // spawn an entity.
                     break;
@@ -67,6 +67,15 @@ impl World {
             // Without this, some entities would rotate to angle 0 after spawning.
             // TODO: Maybe not within the scope of this function.
             entity.guidance.direction_target = entity.transform.direction;
+
+            if entity.data().kind == EntityKind::Boat {
+                info!(
+                    "Took {} attempts to spawn {:?} (threshold = {}).",
+                    128 - governor,
+                    entity.entity_type,
+                    threshold
+                );
+            }
         }
 
         let t = entity.entity_type;
@@ -87,8 +96,9 @@ impl World {
         }
     }
 
-    // Threshold ranges from [1,infinity), and makes the spawning more picky.
-    // e.g. threshold=2 means that twice the normal radius must be clear of obstacles.
+    /// Threshold ranges from [1,infinity), and makes the spawning more picky.
+    /// e.g. threshold=2 means that twice the normal radius must be clear of obstacles.
+    /// below threshold=2, obstacles only matter if they actually intersect.
     pub fn can_spawn(&self, entity: &Entity, threshold: f32) -> bool {
         if threshold < 1.0 {
             panic!("invalid threshold {}", threshold);
@@ -101,13 +111,14 @@ impl World {
 
         let data = entity.data();
 
-        // Extra space between entities
-        let radius = data.radius;
-        let max_t = (radius + EntityData::MAX_RADIUS) * threshold;
+        // Maximum distance over which collision with any other entity is possible.
+        let max_collision_radius = data.radius + EntityData::MAX_RADIUS;
 
         match data.kind {
             EntityKind::Decoy | EntityKind::Weapon => {
-                for (_, other_entity) in self.entities.iter_radius(entity.transform.position, max_t)
+                for (_, other_entity) in self
+                    .entities
+                    .iter_radius(entity.transform.position, max_collision_radius)
                 {
                     if other_entity.data().kind == EntityKind::Obstacle
                         && entity.collides_with(other_entity, 0.0)
@@ -130,13 +141,16 @@ impl World {
         // Slow, conservative check.
         if self.terrain.land_in_square(
             entity.transform.position,
-            (entity.data().radius * 2.0 + 100.0) * threshold,
+            (entity.data().radius + common::terrain::SCALE) * 2.0 * threshold,
         ) != data.is_land_based()
         {
             return false;
         }
 
-        for (_, other_entity) in self.entities.iter_radius(entity.transform.position, max_t) {
+        for (_, other_entity) in self
+            .entities
+            .iter_radius(entity.transform.position, max_collision_radius * threshold)
+        {
             let other_data = other_entity.data();
 
             if other_data.kind == EntityKind::Collectible {
@@ -144,13 +158,18 @@ impl World {
                 continue;
             }
 
-            let t = (radius + other_data.radius) * threshold;
-            if entity
+            let distance_squared = entity
                 .transform
                 .position
-                .distance_squared(other_entity.transform.position)
-                <= t.powi(2)
-            {
+                .distance_squared(other_entity.transform.position);
+            let collision_distance = data.radius + other_data.radius;
+            let safe_distance = collision_distance
+                * if entity.is_boat() && other_entity.is_boat() && other_entity.data().level > 2 {
+                    threshold
+                } else {
+                    (threshold * 0.5).max(1.0)
+                };
+            if distance_squared <= safe_distance.powi(2) {
                 return false;
             }
         }

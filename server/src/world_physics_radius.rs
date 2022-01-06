@@ -11,11 +11,12 @@ use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::*;
 use common::ticks::Ticks;
+use common::util::hash_u32_to_f32;
 use common::velocity::Velocity;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use servutil::benchmark::Timer;
-use servutil::benchmark_scope;
+use server_util::benchmark::Timer;
+use server_util::benchmark_scope;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -176,10 +177,8 @@ impl World {
 
                         if !friendly {
                             // Mines also gravitate towards boats.
-                            if boats.len() == 1 && weapons.len() == 1 && altitude_overlap && weapons[0].data().sub_kind == EntitySubKind::Mine {
-                                if weapons[0].is_in_close_proximity_to(&boats[0]) {
-                                    mutate(weapons[0], Mutation::Attraction(boats[0].transform.position - weapons[0].transform.position, Velocity::from_mps(5.0)));
-                                }
+                            if boats.len() == 1 && weapons.len() == 1 && altitude_overlap && weapons[0].data().sub_kind == EntitySubKind::Mine && weapons[0].is_in_close_proximity_to(boats[0]) {
+                                mutate(weapons[0], Mutation::Attraction(boats[0].transform.position - weapons[0].transform.position, Velocity::from_mps(5.0)));
                             }
 
                             // Make sure to consider case of 2 weapons, a SAM and a missile, not
@@ -196,28 +195,36 @@ impl World {
                                     // Home towards target/decoy
                                     // Sensor activates after 1 second.
                                     if weapons[0].ticks > Ticks::from_secs(1.0) {
-                                        let relevant;
-
-                                        match weapon_data.sub_kind {
+                                        // Different targets are relevant to each weapon.
+                                        let relevant = match weapon_data.sub_kind {
                                             EntitySubKind::Sam => {
-                                                relevant = target_data.kind == EntityKind::Aircraft || target_data.sub_kind == EntitySubKind::Missile || target_data.sub_kind == EntitySubKind::Rocket;
+                                                target_data.kind == EntityKind::Aircraft || target_data.sub_kind == EntitySubKind::Missile || target_data.sub_kind == EntitySubKind::Rocket
                                             },
                                             EntitySubKind::Torpedo => {
-                                                relevant = target_data.kind == EntityKind::Boat || target_data.kind == EntityKind::Decoy;
+                                                target_data.kind == EntityKind::Boat || target_data.kind == EntityKind::Decoy
                                             },
-                                            _ => {
-                                                relevant = target_data.kind == EntityKind::Boat;
+                                            EntitySubKind::Missile => {
+                                                target_data.kind == EntityKind::Boat && weapon.altitude_overlapping(target)
                                             }
-                                        }
+                                            _ => {
+                                                target_data.kind == EntityKind::Boat
+                                            }
+                                        };
 
                                         if relevant {
-                                            let diff = target.transform.position - weapon.transform.position;
+                                            // Consider a position slightly ahead of the weapon so that
+                                            // targets intersecting the weapon don't produce a
+                                            // degenerate angle.
+                                            let seeker_position = weapon.transform.position + weapon.transform.direction.to_vec() * weapon.transform.velocity.to_mps().max(2.0);
+                                            let target_position = target.closest_point_on_keel_to(seeker_position, 0.5);
+                                            let diff = target_position - weapon.transform.position;
                                             let angle = Angle::from(diff);
 
                                             // Should not go off target.
                                             let angle_target_diff = (angle - weapon.guidance.direction_target).abs();
                                             // Cannot sense beyond this angle.
                                             let angle_diff = (angle - weapon.transform.direction).abs();
+
                                             if angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
                                                 let mut size = target_data.radius;
                                                 if target_data.kind == EntityKind::Decoy {
@@ -225,10 +232,11 @@ impl World {
                                                     size += 200.0;
                                                 } else if target_data.kind == EntityKind::Boat && target_data.sensors.any() && target.extension().is_active() {
                                                     // So do boats with active sensors.
-                                                    size += 100.0;
+                                                    size += 75.0;
                                                 }
 
-                                                let strength = size / EntityData::MAX_RADIUS - diff.length() / radius - angle_diff.to_radians() / Angle::MAX.to_radians();
+                                                let randomness = 0.25 * hash_u32_to_f32(target.id.get() ^ weapon.id.get());
+                                                let strength = size / EntityData::MAX_RADIUS - diff.length_squared() / radius.powi(2) - angle_diff.to_radians() / Angle::MAX.to_radians() + randomness;
                                                 mutate(weapon, Mutation::Guidance {direction_target: angle, altitude_target: target.altitude, signal_strength: strength});
                                             }
                                         }
@@ -293,12 +301,12 @@ impl World {
                                     }
                                 }
                             }
-                        } else if boats.len() == 1 && weapons.len() == 1 && boats[0].has_same_player(&weapons[0]) &&
+                        } else if boats.len() == 1 && weapons.len() == 1 && boats[0].has_same_player(weapons[0]) &&
                             weapons[0].data().kind == EntityKind::Aircraft &&
-                            weapons[0].ticks > Ticks::from_secs(5.0) && weapons[0].can_land_on(&boats[0]) {
+                            weapons[0].ticks > Ticks::from_secs(5.0) && weapons[0].can_land_on(boats[0]) {
 
                             // Reload instantly since landed.
-                            potential_limited_reload(&weapons[0], true);
+                            potential_limited_reload(weapons[0], true);
                             debug_remove!(weapons[0], "landed");
                         }
 
@@ -339,6 +347,7 @@ impl World {
                             ),
                         );
 
+                        // Collecting your own coins does not have auxiliary benefits.
                         if !friendly {
                             mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.0)));
                             mutate(boats[0], Mutation::Reload(collectibles[0].data().reload));
@@ -355,6 +364,8 @@ impl World {
                         let base_damage = if friendly {
                             Ticks::ZERO
                         } else {
+                            // Boats with more health have more structural integrity, and therefore
+                            // deal more damage during a collision.
                             fn damage_contribution(boat: &Entity) -> Ticks {
                                 let damage = boat.ticks;
                                 let max_health = boat.data().max_health();
@@ -404,21 +415,15 @@ impl World {
                                     _ => ()
                                 }
 
-                                match other_data.sub_kind {
-                                    EntitySubKind::Ram => {
-                                        // Un-reduce recoil.
-                                        relative_mass *= 2.0;
-                                        // Rams deal more damage while ramming.
-                                        damage *= RAM_DAMAGE_MULTIPLIER
-                                    }
-                                    _ => ()
+                                if other_data.sub_kind == EntitySubKind::Ram {
+                                    // Un-reduce recoil.
+                                    relative_mass *= 2.0;
+                                    // Rams deal more damage while ramming.
+                                    damage *= RAM_DAMAGE_MULTIPLIER
                                 }
                             }
 
-                            let pos_diff = boat.transform.position - other_boat.transform.position;
-
-                            // Closest point to boat's center on other_boat's keel (a line segment from bow to stern).
-                            let closest_point_on_other_keel = other_boat.transform.position + pos_diff.project_onto(other_boat.transform.direction.to_vec()).clamp_length_max(other_data.length * 0.5);
+                            let closest_point_on_other_keel = other_boat.closest_point_on_keel_to(boat.transform.position, 1.0);
 
                             // Direction of repulsion.
                             let pos_diff_closest_point_on_other_keel = (boat.transform.position - closest_point_on_other_keel).normalize_or_zero();
@@ -452,14 +457,18 @@ impl World {
                                 damage,
                             ),
                         );
-                        potential_limited_reload(&weapons[0], false);
+                        potential_limited_reload(weapons[0], false);
                         debug_remove!(weapons[0], "hit");
                     } else if boats.len() == 1 && obstacles.len() == 1 {
-                        let pos_diff = (boats[0].transform.position - obstacles[0].transform.position).normalize_or_zero();
+                        if matches!(obstacles[0].data().sub_kind, EntitySubKind::Tree) {
+                            debug_remove!(obstacles[0], "crushed");
+                        } else {
+                            let pos_diff = (boats[0].transform.position - obstacles[0].transform.position).normalize_or_zero();
 
-                        let impulse = Velocity::from_mps(6.0 * pos_diff.dot(boats[0].transform.direction.to_vec())).clamp_magnitude(Velocity::from_mps(30.0));
+                            let impulse = Velocity::from_mps(6.0 * pos_diff.dot(boats[0].transform.direction.to_vec())).clamp_magnitude(Velocity::from_mps(30.0));
 
-                        mutate(boats[0], Mutation::CollidedWithObstacle{impulse, entity_type: obstacles[0].entity_type});
+                            mutate(boats[0], Mutation::CollidedWithObstacle{impulse, entity_type: obstacles[0].entity_type});
+                        }
                     } else if collectibles.len() == 1
                         && obstacles.len() == 1
                     {

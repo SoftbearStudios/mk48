@@ -8,7 +8,7 @@ use rayon::prelude::*;
 use std::convert::{TryFrom, TryInto};
 use std::ops::{Index, IndexMut, RangeInclusive};
 
-const SIZE: usize = 32;
+const SIZE: usize = 32 * common::world::SIZE;
 const SCALE: f32 = 800.0;
 
 /// An efficient collection of entities.
@@ -150,7 +150,7 @@ impl Entities {
     }
 
     pub fn add_internal(&mut self, mut entity: Entity) {
-        assert!(entity.id != unset_entity_id());
+        assert_ne!(entity.id, unset_entity_id());
         let sector_id = entity.transform.position.try_into().unwrap();
         let sector = self.mut_sector(sector_id);
         if entity.is_boat() {
@@ -159,7 +159,7 @@ impl Entities {
         sector.entities.push(entity);
     }
 
-    /// When an entity moves, it may reside in a different sector. This functions to commit that
+    /// When an entity moves, it may reside in a different sector. This function commits that
     /// change to the `Entities` state.
     pub fn move_sector(&mut self, index: EntityIndex) {
         let sector_id = index.0;
@@ -183,7 +183,7 @@ impl Entities {
         new_sector.entities.push(entity);
     }
 
-    /// Removes an entity (not meant to be called by clients).
+    /// Don't use directly. Wrapped by world's remove.
     pub fn remove_internal(&mut self, index: EntityIndex, death_reason: DeathReason) -> Entity {
         let sector_id = index.0;
         let i = index.1 as usize;
@@ -203,7 +203,7 @@ impl Entities {
         entity
     }
 
-    /// Removes an entity if a condition is satisfied (not meant to be called by clients).
+    /// Don't use directly. Wrapped by world's remove if.
     pub fn remove_if_internal<P, R>(&mut self, predicate: P, remove: R)
     where
         P: Fn(&Entity) -> bool + Sync,

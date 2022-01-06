@@ -12,32 +12,35 @@
 
 use crate::protocol::Authenticate;
 use actix::prelude::*;
-use actix_web::dev::{Service, Url};
-use actix_web::http::header::{ACCEPT, CACHE_CONTROL};
+use actix_cors::Cors;
+use actix_web::dev::{Service, ServiceResponse, Url};
+use actix_web::http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, LOCATION};
 use actix_web::http::uri::PathAndQuery;
-use actix_web::http::Uri;
-use actix_web::middleware::DefaultHeaders;
-use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
+use actix_web::http::{Method, Uri};
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use actix_web_middleware_redirect_https::RedirectHTTPS;
 use common::entity::EntityType;
 use common::protocol::{Command, Update};
-use core::app::core_services;
 use core_protocol::dto::InvitationDto;
 use core_protocol::id::*;
 use core_protocol::web_socket::WebSocketFormat;
-use env_logger;
+use core_server::app::core_services;
+
+use futures::TryFutureExt;
 use log::LevelFilter;
 use serde::Deserialize;
-use servutil::app::{include_dir, static_files};
-use servutil::cloud::Cloud;
-use servutil::linode::Linode;
-use servutil::ssl::{run_until_ssl_renewal, Ssl};
-use servutil::tcp::{
+use server_util::app::{include_dir, static_files};
+use server_util::cloud::Cloud;
+use server_util::linode::Linode;
+use server_util::ssl::{run_until_ssl_renewal, Ssl};
+use server_util::tcp::{
     max_connections_per_worker, on_connect_enable_nodelay, BACKLOG, KEEP_ALIVE, SHUTDOWN_TIMEOUT,
 };
-use servutil::watchdog;
-use servutil::web_socket::WebSocket;
+use server_util::watchdog;
+use server_util::web_socket::WebSocket;
+use std::pin::Pin;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Arc;
 use structopt::StructOpt;
 
 mod arena;
@@ -67,24 +70,26 @@ struct Options {
     /// Minimum player count (to be achieved by adding bots)
     #[structopt(short = "p", long, default_value = "30")]
     min_players: usize,
-    /// Verbosity
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: usize,
     /// Log incoming HTTP requests
-    #[structopt(long)]
-    debug_http: bool,
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "warn"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "error"))]
+    debug_http: LevelFilter,
     /// Log game diagnostics
-    #[structopt(long)]
-    debug_game: bool,
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "info"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "error"))]
+    debug_game: LevelFilter,
     /// Log core diagnostics
-    #[structopt(long)]
-    debug_core: bool,
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "info"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "error"))]
+    debug_core: LevelFilter,
     /// Log socket diagnostics
-    #[structopt(long)]
-    debug_sockets: bool,
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "warn"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "error"))]
+    debug_sockets: LevelFilter,
     /// Log watchdog diagnostics
-    #[structopt(long)]
-    debug_watchdog: bool,
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "info"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "warn"))]
+    debug_watchdog: LevelFilter,
     /// Log chats
     #[structopt(long)]
     chat_log: Option<String>,
@@ -138,6 +143,9 @@ async fn ws_index(
     }
 }
 
+/// 0 is no redirect.
+static REDIRECT_TO_SERVER_ID: AtomicU8 = AtomicU8::new(0);
+
 fn main() {
     // SAFETY: As per spec, only called once (before .data()) is called.
     unsafe {
@@ -145,7 +153,7 @@ fn main() {
         noise::init();
 
         for typ in EntityType::iter() {
-            rustrict::add_word(typ.to_str(), rustrict::Type::SAFE);
+            rustrict::add_word(typ.as_str(), rustrict::Type::SAFE);
         }
     }
 
@@ -153,32 +161,15 @@ fn main() {
 
     let mut logger = env_logger::builder();
     logger.format_timestamp(None);
-    let level = match options.verbose {
-        0 => LevelFilter::Error,
-        1 => LevelFilter::Warn,
-        2 => LevelFilter::Info,
-        3 => LevelFilter::Debug,
-        _ => LevelFilter::Trace,
-    };
-    if options.debug_game {
-        logger.filter_module(module_path!(), level);
-    }
-    if options.debug_core {
-        logger.filter_module("core", level);
-        logger.filter_module("core_protocol", level);
-    }
-    if options.debug_sockets {
-        logger.filter_module("servutil::web_socket", level);
-    }
-    if options.debug_http {
-        logger.filter_module("actix_web", LevelFilter::Info);
-        logger.filter_module("actix_server", LevelFilter::Info);
-    }
-    if options.debug_watchdog || true {
-        logger.filter_module("servutil::watchdog", LevelFilter::Info);
-        logger.filter_module("servutil::linode", LevelFilter::Warn);
-        logger.filter_module("servutil::ssl", LevelFilter::Info);
-    }
+    logger.filter_module(module_path!(), options.debug_game);
+    logger.filter_module("core_server", options.debug_core);
+    logger.filter_module("core_protocol", options.debug_core);
+    logger.filter_module("server_util::web_socket", options.debug_sockets);
+    logger.filter_module("actix_web", options.debug_http);
+    logger.filter_module("actix_server", options.debug_http);
+    logger.filter_module("server_util::watchdog", options.debug_watchdog);
+    logger.filter_module("server_util::linode", options.debug_watchdog);
+    logger.filter_module("server_util::ssl", options.debug_watchdog);
     logger.init();
 
     let _ = actix_web::rt::System::new().block_on(async move {
@@ -186,14 +177,20 @@ fn main() {
             .linode_personal_access_token
             .map(|t| Box::new(Linode::new(&t)) as Box<dyn Cloud>);
 
-        let core = core::core::Core::start(
-            core::core::Core::new(options.chat_log, options.database_read_only).await,
+        let core = core_server::core::Core::start(
+            core_server::core::Core::new(
+                options.chat_log,
+                options.database_read_only,
+                Some(&REDIRECT_TO_SERVER_ID),
+            )
+            .await,
         );
         let srv = server::Server::start(server::Server::new(
             ServerId::new(options.server_id),
             options.min_players,
             core.to_owned(),
         ));
+        let domain = Arc::new(options.domain.clone());
         if let Some((cloud, domain)) = cloud.zip(options.domain) {
             // Safety: Only happens once.
             unsafe {
@@ -206,7 +203,7 @@ fn main() {
             .as_ref()
             .zip(options.private_key_path.as_ref())
             .map(|(certificate_file, private_key_file)| {
-                Ssl::new(&certificate_file, &private_key_file).unwrap()
+                Ssl::new(certificate_file, private_key_file).unwrap()
             });
 
         let use_ssl = ssl.is_some();
@@ -214,18 +211,92 @@ fn main() {
         loop {
             let iter_core = core.to_owned();
             let iter_srv = srv.to_owned();
+            let domain_clone = Arc::clone(&domain);
 
             // If ssl exists, safe to assume whatever certificates exist are now installed.
-            ssl.as_mut().map(|ssl| ssl.set_renewed());
+            if let Some(ssl) = ssl.as_mut() {
+                ssl.set_renewed();
+            }
             let immut_ssl = &ssl;
 
             let mut server = HttpServer::new(move || {
                 // Rust let's you get away with cloning one closure deep, not all the way to a nested closure.
                 let core_clone = iter_core.to_owned();
                 let srv_clone = iter_srv.to_owned();
+                let domain_clone = Arc::clone(&domain_clone);
+
+                #[cfg(not(debug_assertions))]
+                let domain_clone_cors = domain_clone.as_ref().as_ref().map(|d| {
+                    [
+                        format!("://{}", d),
+                        format!(".{}", d),
+                        String::from("http://localhost:8000"),
+                    ]
+                });
 
                 App::new()
+                    // Compile times are O(3^n) on middlewares, so consolidate tasks into as few
+                    // middlewares as possible.
                     .wrap_fn(move |mut req, srv| {
+                        // Redirect HTTP to HTTPS.
+                        if use_ssl && req.connection_info().scheme() != "https" {
+                            let url =
+                                format!("https://{}{}", req.connection_info().host(), req.uri());
+                            let response = req.into_response(
+                                HttpResponse::MovedPermanently()
+                                    .insert_header((LOCATION, url))
+                                    .finish(),
+                            );
+                            return Box::pin(fut::ready(Ok(response)))
+                                as Pin<
+                                    Box<
+                                        dyn std::future::Future<
+                                            Output = Result<ServiceResponse, actix_web::Error>,
+                                        >,
+                                    >,
+                                >;
+                        }
+
+                        // Don't redirect index so the url remains intact.
+                        // Don't redirect admin, so the server remains controllable.
+                        let dont_redirect = if let Some(before_hash) = req.path().split('#').next()
+                        {
+                            before_hash.starts_with("/admin")
+                                || before_hash.is_empty()
+                                || before_hash == "/"
+                        } else {
+                            true
+                        };
+                        if !dont_redirect {
+                            if let Some((domain, server_id)) = domain_clone
+                                .as_ref()
+                                .as_ref()
+                                .zip(ServerId::new(REDIRECT_TO_SERVER_ID.load(Ordering::Relaxed)))
+                            {
+                                let redirect = format!(
+                                    "{}://{}.{}{}",
+                                    req.uri().scheme_str().unwrap_or("https"),
+                                    server_id.0.get(),
+                                    domain,
+                                    req.path()
+                                );
+                                let response = req.into_response(
+                                    HttpResponse::TemporaryRedirect()
+                                        .insert_header((LOCATION, redirect))
+                                        .finish(),
+                                );
+                                return Box::pin(fut::ready(Ok(response)))
+                                    as Pin<
+                                        Box<
+                                            dyn std::future::Future<
+                                                Output = Result<ServiceResponse, actix_web::Error>,
+                                            >,
+                                        >,
+                                    >;
+                            }
+                        }
+
+                        // Some hard-coded redirections.
                         if let Some(accepted) =
                             req.headers().get(ACCEPT).and_then(|v| v.to_str().ok())
                         {
@@ -248,10 +319,51 @@ fn main() {
                             }
                         }
 
-                        srv.call(req)
+                        // Do the request.
+                        Box::pin(srv.call(req).map_ok(|mut res| {
+                            // Add some universal default headers.
+                            for (key, value) in [(CACHE_CONTROL, "no-cache")] {
+                                if !res.headers().contains_key(key.clone()) {
+                                    res.headers_mut()
+                                        .insert(key, HeaderValue::from_static(value));
+                                }
+                            }
+                            res
+                        }))
+                            as Pin<
+                                Box<
+                                    dyn std::future::Future<
+                                        Output = Result<ServiceResponse, actix_web::Error>,
+                                    >,
+                                >,
+                            >
                     })
-                    .wrap(RedirectHTTPS::default().set_enabled(use_ssl))
-                    .wrap(middleware::Logger::default())
+                    .wrap(
+                        Cors::default()
+                            .allow_any_header()
+                            .allowed_methods([
+                                Method::GET,
+                                Method::HEAD,
+                                Method::POST,
+                                Method::OPTIONS,
+                            ])
+                            .allowed_origin_fn(move |origin, _head| {
+                                #[cfg(debug_assertions)]
+                                {
+                                    let _ = origin;
+                                    true
+                                }
+
+                                #[cfg(not(debug_assertions))]
+                                if let Some(domains) = domain_clone_cors.as_ref() {
+                                    domains.iter().any(|domain| {
+                                        origin.as_bytes().ends_with(domain.as_bytes())
+                                    })
+                                } else {
+                                    true
+                                }
+                            }),
+                    )
                     .service(web::resource("/ws/{session_id}/").route(web::get().to(
                         move |r: HttpRequest,
                               stream: web::Payload,
@@ -267,7 +379,6 @@ fn main() {
                         },
                     )))
                     .configure(core_services(core_clone))
-                    .wrap(DefaultHeaders::new().header(CACHE_CONTROL, "no-cache"))
                     .configure(static_files(&include_dir!("../js/public")))
             })
             .on_connect(on_connect_enable_nodelay);
@@ -290,7 +401,10 @@ fn main() {
                 .backlog(BACKLOG)
                 .run();
 
-            if let Err(_) = run_until_ssl_renewal(running_server, immut_ssl).await {
+            if run_until_ssl_renewal(running_server, immut_ssl)
+                .await
+                .is_err()
+            {
                 break;
             }
         }

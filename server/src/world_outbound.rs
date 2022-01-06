@@ -8,7 +8,7 @@ use crate::world::World;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
 use common::ticks::Ticks;
 use common::util::*;
-use glam::Vec2;
+use glam::{vec2, Vec2};
 
 impl World {
     /// get_player_complete gets the complete update for a player, corresponding to everything they
@@ -27,66 +27,99 @@ impl World {
             _ => None,
         };
 
+        struct Camera {
+            active: bool,
+            inner: f32,
+            position: Vec2,
+            radar: f32,
+            sonar: f32,
+            speed: f32,
+            view: f32,
+            visual: f32,
+        }
+
         // Players, whether alive or dead, can see other entities based on these parameters.
-        let (visual_range, radar_range, sonar_range, inner_circle, position, active, abs_vel) =
-            if let Some(entity) = player_entity {
-                let data = entity.data();
-                let sensors = &data.sensors;
+        let camera = if let Some(entity) = player_entity {
+            let data = entity.data();
+            let sensors = &data.sensors;
 
-                // Ranges from -1.0 to 1.0 where 0.0 is sea level.
-                let norm_altitude = entity.altitude.to_norm();
+            // Ranges from -1.0 to 1.0 where 0.0 is sea level.
+            let norm_altitude = entity.altitude.to_norm();
 
-                let visual_radar_efficacy = map_ranges(norm_altitude, -0.35..0.0, 0.0..1.0, true);
+            // Radar and visual don't work well under water.
+            let visual_radar_efficacy = map_ranges(norm_altitude, -0.35..0.0, 0.0..1.0, true);
 
-                let visual_range = sensors.visual.range * visual_radar_efficacy;
-                let radar_range = sensors.radar.range * visual_radar_efficacy;
+            let visual = sensors.visual.range * visual_radar_efficacy;
+            let radar = sensors.radar.range * visual_radar_efficacy;
 
-                // Sonar works at full effective range as long as it is not airborne.
-                let sonar_range = if entity.altitude.is_airborne() {
-                    0.0
-                } else {
-                    sensors.sonar.range
-                };
-
-                if player.status.is_alive() {
-                    (
-                        visual_range,
-                        radar_range,
-                        sonar_range,
-                        data.radii().start,
-                        entity.transform.position,
-                        entity.extension().is_active(),
-                        entity.transform.velocity.abs().to_mps(),
-                    )
-                } else {
-                    panic!("player not alive in outbound");
-                }
-            } else if let Status::Dead {
-                position,
-                time,
-                visual_range,
-                ..
-            } = player.status
-            {
-                let elapsed = time.elapsed().as_secs_f32();
-                // Fade out visibility over time to save bandwidth.
-                let range = map_ranges(elapsed, 10.0..2.0, 0.0..visual_range, true).max(500.0);
-                (range, range, range, 0.0, position, true, 0.0)
+            // Sonar works at full effective range as long as it is not airborne.
+            let sonar = if entity.altitude.is_airborne() {
+                0.0
             } else {
-                (500.0, 500.0, 500.0, 0.0, Vec2::ZERO, true, 0.0)
+                sensors.sonar.range
             };
 
-        let visual_range_inv = visual_range.powi(-2);
-        let radar_range_inv = radar_range.powi(-2);
-        let sonar_range_inv = sonar_range.powi(-2);
-        let max_range = visual_range.max(radar_range.max(sonar_range));
-        let inner_circle_squared = inner_circle.powi(2);
+            if player.status.is_alive() {
+                Camera {
+                    active: entity.extension().is_active(),
+                    inner: data.radii().start,
+                    position: entity.transform.position,
+                    radar,
+                    sonar,
+                    speed: entity.transform.velocity.abs().to_mps(),
+                    view: data.camera_range(),
+                    visual,
+                }
+            } else {
+                panic!("player not alive in outbound");
+            }
+        } else if let Status::Dead {
+            position,
+            time,
+            visual_range,
+            ..
+        } = player.status
+        {
+            let elapsed = time.elapsed().as_secs_f32();
+            // Fade out visibility over time to save bandwidth.
+            let range = map_ranges(elapsed, 10.0..2.0, 0.0..visual_range, true).max(500.0);
+            Camera {
+                active: true,
+                inner: 0.0,
+                position,
+                radar: range,
+                sonar: range,
+                speed: 0.0,
+                view: range,
+                visual: range,
+            }
+        } else {
+            let range = 500.0;
+            Camera {
+                active: true,
+                inner: 0.0,
+                position: Vec2::ZERO,
+                radar: range,
+                sonar: range,
+                speed: 0.0,
+                view: range,
+                visual: range,
+            }
+        };
+
+        let visual_range_inv = camera.visual.powi(-2);
+        let radar_range_inv = camera.radar.powi(-2);
+        let sonar_range_inv = camera.sonar.powi(-2);
+        let max_range = camera.visual.max(camera.radar.max(camera.sonar));
+        let inner_circle_squared = camera.inner.powi(2);
+        let camera_pos = camera.position;
+        let camera_view = camera.view;
 
         let contacts = player_entity
             .into_iter()
             .chain(
                 self.entities
-                    .iter_radius(position, max_range)
+                    .iter_radius(camera.position, max_range)
                     .map(|(_, e)| e)
                     .filter(move |e| Some(*e) != player_entity),
             )
@@ -96,7 +129,7 @@ impl World {
                 let data = entity.data();
 
                 // Variables related to the relationship between the player and the contact.
-                let distance_squared = position.distance_squared(entity.transform.position);
+                let distance_squared = camera.position.distance_squared(entity.transform.position);
                 let same_player =
                     entity.player.is_some() && tuple == &**entity.player.as_ref().unwrap();
                 let friendly = entity.is_friendly_to_player(Some(tuple));
@@ -116,7 +149,7 @@ impl World {
                     if radar_range_inv.is_finite() && !altitude.is_submerged() {
                         let radar_ratio = default_ratio * radar_range_inv;
 
-                        if active {
+                        if camera.active {
                             // Active radar can see moving targets easier.
                             uncertainty =
                                 uncertainty.min(radar_ratio * 15.0 / (15.0 + entity_abs_vel));
@@ -152,7 +185,7 @@ impl World {
 
                     if sonar_range_inv.is_finite() && !altitude.is_airborne() {
                         let mut sonar_ratio = default_ratio * sonar_range_inv;
-                        if active {
+                        if camera.active {
                             // Active sonar.
                             uncertainty = uncertainty.min(sonar_ratio);
                         }
@@ -182,7 +215,7 @@ impl World {
 
                         // Making noise of your own reduces the performance of
                         // passive sonar
-                        sonar_ratio *= 20.0 + abs_vel;
+                        sonar_ratio *= 20.0 + camera.speed;
                         uncertainty = uncertainty.min(sonar_ratio);
                     }
 
@@ -221,6 +254,7 @@ impl World {
                 }
 
                 let has_type = data.kind == EntityKind::Collectible
+                    || data.sub_kind == EntitySubKind::Tree
                     || friendly
                     || uncertainty < 0.5
                     || distance_squared < inner_circle_squared;
@@ -228,6 +262,17 @@ impl World {
                 Some(ContactRef::new(entity, visible, known, has_type))
             });
 
-        CompleteRef::new(contacts, player, self, position, visual_range)
+        // How much more terrain can be sent.
+        // 2.0 supports most computer monitors and phones.
+        const MAX_ASPECT: f32 = 2.0;
+
+        let aspect = player.hint.aspect;
+        let camera_width = camera_view * 2.0;
+        let camera_dims = vec2(
+            camera_width * aspect.clamp(1.0, MAX_ASPECT),
+            camera_width * (1.0 / aspect).clamp(1.0, MAX_ASPECT),
+        );
+
+        CompleteRef::new(contacts, player, self, camera_pos, camera_dims)
     }
 }

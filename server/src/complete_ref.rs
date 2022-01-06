@@ -10,10 +10,10 @@ use common::complete::CompleteTrait;
 use common::contact::ContactTrait;
 use common::death_reason::DeathReason;
 use common::protocol::Update;
+use common::terrain;
 use common::terrain::{ChunkSet, Terrain};
 use common::ticks::{Ticks, TicksRepr};
 use common::velocity::Velocity;
-use core_protocol::id::PlayerId;
 use glam::Vec2;
 use std::ops::RangeInclusive;
 
@@ -24,7 +24,7 @@ pub struct CompleteRef<'a, I: Iterator<Item = ContactRef<'a>>> {
     player: AtomicRef<'a, Player>,
     world: &'a World,
     camera_pos: Vec2,
-    camera_radius: f32,
+    camera_dims: Vec2,
 }
 
 impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
@@ -33,14 +33,14 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
         player: AtomicRef<'a, Player>,
         world: &'a World,
         camera_pos: Vec2,
-        camera_radius: f32,
+        camera_dims: Vec2,
     ) -> Self {
         Self {
             contacts: Some(contacts),
             player,
             world,
             camera_pos,
-            camera_radius,
+            camera_dims,
         }
     }
 
@@ -54,8 +54,13 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
         // Any updated chunks are now no longer loaded.
         let mut new_loaded_chunks = loaded_chunks.and(&self.world.terrain.updated.not());
 
-        // All chunks that are currently visible.
-        let visible = ChunkSet::new_radius(self.camera_pos, self.camera_radius);
+        // All chunks that are currently visible (on screen).
+        // Uses a rect instead of a circle because that is what the client renders,
+        // even though it is slightly less realistic.
+        let visible = ChunkSet::new_rect(
+            self.camera_pos,
+            self.camera_dims + Vec2::splat(terrain::SCALE * 2.0),
+        );
 
         // Actually load more chunks.
         let loading = visible.and(&new_loaded_chunks.not());
@@ -79,7 +84,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
 
         *loaded_chunks = new_loaded_chunks;
 
-        let ret = Update {
+        Update {
             contacts: self
                 .contacts
                 .unwrap()
@@ -104,12 +109,10 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
                 })
                 .collect(),
             death_reason,
-            player_id: self.player.player_id,
             score: self.player.score,
             world_radius: self.world.radius,
             terrain,
-        };
-        ret
+        }
     }
 }
 
@@ -147,10 +150,5 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteTrait<'a> for CompleteRef<'
     fn terrain(&self) -> &Terrain {
         // TODO limit visibility of terrain.
         &self.world.terrain
-    }
-
-    #[inline]
-    fn player_id(&self) -> PlayerId {
-        self.player.player_id
     }
 }

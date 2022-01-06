@@ -7,11 +7,12 @@ use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::util::level_to_score;
 use crate::velocity::Velocity;
+use core_protocol::serde_util::{StrVisitor, U8Visitor};
 use enum_iterator::IntoEnumIterator;
 use glam::Vec2;
 use macros::entity_type;
 use rand::seq::IteratorRandom;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::ops::{Mul, Range, RangeInclusive};
@@ -166,6 +167,12 @@ impl EntityData {
     /// returns area, in square meters, of vision.
     pub fn visual_area(&self) -> f32 {
         self.sensors.visual.range.powi(2) * std::f32::consts::PI
+    }
+
+    /// The expected radius of a square view.
+    pub fn camera_range(&self) -> f32 {
+        // Reduce camera range to to fill more of screen with visual field.
+        self.sensors.visual.range * 0.75
     }
 
     /// returns whether this entity type primarily/only exists on land, as opposed to water.
@@ -395,6 +402,42 @@ impl Turret {
 }
 
 entity_type!("../../js/src/data/entities.json");
+
+impl Serialize for EntityType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            serializer.serialize_str(self.as_str())
+        } else {
+            debug_assert_eq!(Self::from_u8(*self as u8).unwrap(), *self);
+            serializer.serialize_u8(*self as u8)
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for EntityType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            deserializer.deserialize_str(StrVisitor).and_then(|s| {
+                // TODO don't allocate String.
+                Self::from_str(s.as_str()).ok_or_else(|| {
+                    serde::de::Error::custom(format!("invalid entity type {}", s.as_str()))
+                })
+            })
+        } else {
+            deserializer.deserialize_u8(U8Visitor).and_then(|i| {
+                Self::from_u8(i).ok_or_else(|| {
+                    serde::de::Error::custom(format!("invalid entity type integer {}", i))
+                })
+            })
+        }
+    }
+}
 
 static mut ENTITY_DATA: Vec<EntityData> = Vec::new();
 

@@ -22,6 +22,9 @@
 	let newTeamName = '';
 
 	function createTeam() {
+		if (newTeamName.length == 0) {
+			return;
+		}
 		onCreateTeam(newTeamName);
 		newTeamName = '';
 	}
@@ -63,22 +66,24 @@
 			<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>{$t('panel.team.action.invite.label')}</button>
 		{/if}
 	{:else}
-		<table>
-			{#if state.teams}
-				{#each state.teams as {teamId, name, joining}}
-					<tr>
-						<td class='name'>{name}</td>
-						<td>
-							<button class:hidden={joining} on:click={() => onRequestJoinTeam(teamId)}>{$t('panel.team.action.request.label')}</button>
-						</td>
-					</tr>
-				{/each}
-			{/if}
-			<tr>
-				<td class='name'><input type='text' placeholder={$t('panel.team.action.name.label')} maxLength={maxNameLength} bind:value={newTeamName}/></td>
-				<td><button disabled={newTeamName.length < minNameLength || newTeamName.length > maxNameLength} on:click={createTeam}>{$t('panel.team.action.create.label')}</button></td>
-			</tr>
-		</table>
+		<form on:submit|preventDefault={createTeam}>
+			<table>
+				{#if state.teams}
+					{#each state.teams as {teamId, name, joining}}
+						<tr>
+							<td class='name'>{name}</td>
+							<td>
+								<button class:hidden={joining} on:click={() => onRequestJoinTeam(teamId)}>{$t('panel.team.action.request.label')}</button>
+							</td>
+						</tr>
+					{/each}
+				{/if}
+				<tr>
+					<td class='name'><input type='text' placeholder={$t('panel.team.action.name.label')} maxLength={maxNameLength} bind:value={newTeamName}/></td>
+					<td><button disabled={newTeamName.length < minNameLength || newTeamName.length > maxNameLength}>{$t('panel.team.action.create.label')}</button></td>
+				</tr>
+			</table>
+		</form>
 	{/if}
 </Section>
 

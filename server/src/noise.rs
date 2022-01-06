@@ -6,6 +6,8 @@ use noise::{NoiseFn, SuperSimplex};
 use std::mem::MaybeUninit;
 
 static mut NOISE: MaybeUninit<SuperSimplex> = MaybeUninit::uninit();
+
+/// Mutable so that many seeds can be tested (see tests).
 pub static mut SEED: f64 = 42700.0;
 
 pub fn init() {
@@ -16,7 +18,7 @@ fn get_noise() -> &'static SuperSimplex {
     unsafe { NOISE.assume_init_ref() }
 }
 
-/// noise generator returns noise for a given integer coordinate.
+/// noise generator returns noise (one of 256 possible Altitude's) for a given terrain coordinate.
 pub fn noise_generator(x: usize, y: usize) -> u8 {
     const S: f64 = SCALE as f64 * 0.0012;
     // Safety: Seed is only ever modified for testing purposes, when there are no other threads
@@ -30,9 +32,8 @@ pub fn noise_generator(x: usize, y: usize) -> u8 {
 fn fractal_noise(noise: &SuperSimplex, x: f64, y: f64) -> f64 {
     (0..4)
         .map(|i| {
-            let l = 1 << i;
-            let scale = l as f64;
-            noise.get([x * scale, y * scale]) * (1.0 / l as f64)
+            let freq = (1 << i) as f64;
+            noise.get([x * freq, y * freq]) / freq
         })
         .sum()
 }

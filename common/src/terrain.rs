@@ -27,7 +27,7 @@ pub struct Coord(pub usize, pub usize);
 pub const SCALE: f32 = 25.0;
 // Size of whole terrain.
 // Must be a power of 2.
-pub const SIZE: usize = 1 << 10;
+pub const SIZE: usize = (1 << 10) * crate::world::SIZE;
 // Offset to convert between signed coordinates to unsigned.
 const OFFSET: isize = (SIZE / 2) as isize;
 
@@ -288,6 +288,41 @@ impl Terrain {
     /// Gets the raw terrain data at a Coord.
     pub fn at(&self, coord: Coord) -> u8 {
         self.get_chunk(ChunkId::from_coord(coord)).at(coord)
+    }
+
+    /// returns an iterator that iterates exactly width * height terrain pixels.
+    /// If a given terrain pixel lies outside the terrain it will evaluate to default.
+    pub fn iter_rect_or(
+        &self,
+        center: Coord,
+        width: usize,
+        height: usize,
+        default: u8,
+    ) -> impl Iterator<Item = u8> + '_ {
+        let mut cached_chunk_id = None;
+        let mut cached_chunk = None;
+
+        (0..height)
+            .flat_map(move |j| (0..width).map(move |i| (i, j)))
+            .map(move |(i, j)| {
+                let x = center.0 as isize + (i as isize - (width / 2) as isize);
+                let y = center.1 as isize + (j as isize - (height / 2) as isize);
+
+                if x >= 0 && x < SIZE as isize && y >= 0 && y < SIZE as isize {
+                    let coord = Coord(x as usize, y as usize);
+                    let chunk_id = ChunkId::from_coord(coord);
+
+                    // Cache chunk for faster lookup.
+                    if Some(chunk_id) != cached_chunk_id {
+                        cached_chunk_id = Some(chunk_id);
+                        cached_chunk = Some(self.get_chunk(chunk_id));
+                    }
+
+                    cached_chunk.unwrap().at(coord)
+                } else {
+                    default
+                }
+            })
     }
 
     /// Sets the raw terrain data at a Coord.
@@ -567,6 +602,12 @@ impl Mod {
     }
 }
 
+impl Default for Terrain {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// ChunkUpdate stores the updates that happened to a chunk during a tick.
 enum ChunkUpdate {
     None,                       // No changes.
@@ -837,7 +878,7 @@ impl ChunkSet {
         }
     }
 
-    /// Returns the set of all chunks from within radius of a centor position.
+    /// Returns the set of all chunks that are within a radius around the center.
     pub fn new_radius(center: Vec2, radius: f32) -> Self {
         let min_chunk_id = ChunkId::saturating_from(center - radius);
         let max_chunk_id = ChunkId::saturating_from(center + radius);
@@ -850,6 +891,24 @@ impl ChunkSet {
                 if chunk_id.in_radius(center, radius) {
                     result.add(chunk_id);
                 }
+            }
+        }
+
+        result
+    }
+
+    /// Returns the set of all chunks that are within a rect around the center.
+    pub fn new_rect(center: Vec2, dimensions: Vec2) -> Self {
+        let half = dimensions * 0.5;
+        let min_chunk_id = ChunkId::saturating_from(center - half);
+        let max_chunk_id = ChunkId::saturating_from(center + half);
+
+        let mut result = Self::new();
+
+        for y in min_chunk_id.1..=max_chunk_id.1 {
+            for x in min_chunk_id.0..=max_chunk_id.0 {
+                // TODO could improve algorithm to write 1 usize.
+                result.add(ChunkId(x, y));
             }
         }
 

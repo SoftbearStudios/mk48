@@ -13,6 +13,7 @@ use common::terrain;
 use common::terrain::Terrain;
 use common::ticks::Ticks;
 use common::util::gen_radius;
+use core_protocol::id::PlayerId;
 use glam::Vec2;
 use rand::rngs::ThreadRng;
 use rand::seq::IteratorRandom;
@@ -60,12 +61,12 @@ impl Bot {
     pub fn update<'a, U: 'a + CompleteTrait<'a>>(
         &mut self,
         mut update: U,
+        player_id: PlayerId,
     ) -> (ArrayVec<Command, 2>, bool) {
         let mut ret = ArrayVec::new();
         let mut quit = false;
         let mut rng = thread_rng();
 
-        let player_id = update.player_id();
         let mut contacts = update.contacts();
         let terrain = update.terrain();
 
@@ -265,6 +266,10 @@ impl Bot {
                         angle_diff = Angle::ZERO;
                     }
 
+                    if angle_diff > Angle::from_degrees(60.0) {
+                        continue;
+                    }
+
                     let firing_solution = (i as u8, enemy.transform().position, angle_diff);
 
                     if firing_solution.2
@@ -301,25 +306,23 @@ impl Bot {
                 },
                 aim_target: best_firing_solution.map(|solution| solution.1 + self.aim_bias),
                 active: health_percent >= 0.5,
+                fire: best_firing_solution
+                    .filter(|_| rng.gen_bool(self.aggression as f64))
+                    .map(|sol| Fire {
+                        armament_index: sol.0,
+                        position_target: sol.1,
+                    }),
+                pay: None,
+                hint: None,
             }));
 
-            if rng.gen_bool(self.aggression as f64) {
-                if best_firing_solution.is_some() {
-                    let firing_solution = best_firing_solution.unwrap();
-                    if firing_solution.2 < Angle::from_degrees(60.0) {
-                        ret.push(Command::Fire(Fire {
-                            index: firing_solution.0,
-                            position_target: firing_solution.1,
-                        }));
-                    }
-                } else if data.level < self.level_ambition {
-                    // Upgrade, if possible.
-                    if let Some(entity_type) = boat_type
-                        .upgrade_options(update.score(), true)
-                        .choose(&mut rng)
-                    {
-                        ret.push(Command::Upgrade(Upgrade { entity_type }))
-                    }
+            if rng.gen_bool(self.aggression as f64) && data.level < self.level_ambition {
+                // Upgrade, if possible.
+                if let Some(entity_type) = boat_type
+                    .upgrade_options(update.score(), true)
+                    .choose(&mut rng)
+                {
+                    ret.push(Command::Upgrade(Upgrade { entity_type }))
                 }
             }
         } else if self.spawned_at_least_once && rng.gen_bool(1.0 / 3.0) {

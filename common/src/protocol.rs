@@ -8,7 +8,6 @@ use crate::death_reason::DeathReason;
 use crate::entity::*;
 use crate::guidance::Guidance;
 use crate::terrain::{ChunkId, SerializedChunk};
-use core_protocol::id::*;
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
 
@@ -21,8 +20,6 @@ pub struct Update {
     pub contacts: Vec<Contact>,
     /// Why the player died, if they died, otherwise None.
     pub death_reason: Option<DeathReason>,
-    /// Player's id.
-    pub player_id: PlayerId,
     /// Player's current score.
     pub score: u32,
     /// Current world border radius.
@@ -39,8 +36,6 @@ pub type TerrainUpdate = [(ChunkId, SerializedChunk)];
 #[cfg_attr(feature = "server", rtype(result = "()"))]
 pub enum Command {
     Control(Control),
-    Fire(Fire),
-    Pay(Pay),
     Spawn(Spawn),
     Upgrade(Upgrade),
 }
@@ -58,15 +53,35 @@ pub struct Control {
     pub aim_target: Option<Vec2>,
     /// Active sensors.
     pub active: bool,
+    /// Fire weapon a weapon.
+    pub fire: Option<Fire>,
+    /// Pay one coin.
+    pub pay: Option<Pay>,
+    /// Optional hints.
+    pub hint: Option<Hint>,
 }
 
 /// Fire/use a single weapon.
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Fire {
     /// The index of the weapon to fire/use, relative to `EntityData.armaments`.
-    pub index: u8,
+    pub armament_index: u8,
     /// The target of the weapon (useful for depositors).
     pub position_target: Vec2,
+}
+
+/// Provide hints to optimize experience.
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct Hint {
+    /// aspect ratio of screen (width / height).
+    /// Allows the server to send the correct amount of terrain.
+    pub aspect: f32,
+}
+
+impl Default for Hint {
+    fn default() -> Self {
+        Self { aspect: 1.0 }
+    }
 }
 
 /// Pay one coin.
@@ -86,4 +101,99 @@ pub struct Spawn {
 pub struct Upgrade {
     /// What to upgrade to. Must be affordable.
     pub entity_type: EntityType,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::altitude::Altitude;
+    use crate::entity::EntityId;
+    use crate::guidance::Guidance;
+    use crate::ticks::Ticks;
+    use crate::transform::Transform;
+    use crate::velocity::Velocity;
+    use bincode::{DefaultOptions, Options};
+    use core_protocol::id::PlayerId;
+    use glam::vec2;
+    use rand::prelude::*;
+    use std::num::NonZeroU32;
+    use std::sync::Arc;
+
+    #[test]
+    fn serialize() {
+        unsafe {
+            EntityType::init();
+        }
+
+        EntityType::from_str(EntityType::Barrel.as_str()).unwrap();
+
+        let mut rng = thread_rng();
+        for _ in 0..10000 {
+            let entity_type: Option<EntityType> = rng
+                .gen_bool(0.5)
+                .then(|| EntityType::iter().choose(&mut rng).unwrap());
+            let is_boat = entity_type.map_or(false, |t| t.data().kind == EntityKind::Boat);
+
+            let c = Contact::new(
+                Altitude::from_u8(rng.gen()),
+                Ticks::from_secs(rng.gen::<f32>() * 10.0),
+                entity_type,
+                Guidance {
+                    direction_target: rng.gen(),
+                    velocity_target: Velocity::from_mps(rng.gen::<f32>() * 3.0),
+                },
+                EntityId::new(rng.gen_range(1..u32::MAX)).unwrap(),
+                rng.gen_bool(0.5)
+                    .then(|| PlayerId(NonZeroU32::new(rng.gen_range(1..u32::MAX)).unwrap())),
+                (is_boat && rng.gen_bool(0.5)).then(|| {
+                    entity_type
+                        .unwrap()
+                        .data()
+                        .armaments
+                        .iter()
+                        .map(|_| Ticks::from_secs(rng.gen::<f32>() * 10.0))
+                        .collect::<Arc<[Ticks]>>()
+                }),
+                Transform {
+                    position: vec2(
+                        rng.gen::<f32>() * 1000.0 - 500.0,
+                        rng.gen::<f32>() * 1000.0 - 500.0,
+                    ),
+                    velocity: Velocity::from_mps(rng.gen::<f32>() * 3.0),
+                    direction: rng.gen(),
+                },
+                is_boat.then(|| {
+                    entity_type
+                        .unwrap()
+                        .data()
+                        .turrets
+                        .iter()
+                        .map(|_| rng.gen())
+                        .collect()
+                }),
+            );
+
+            let options = DefaultOptions::new()
+                .with_fixint_encoding()
+                .allow_trailing_bytes();
+
+            let bytes = options.serialize(&c).unwrap();
+
+            match options.deserialize::<Contact>(&bytes) {
+                Ok(contact) => {
+                    assert_eq!(c, contact)
+                }
+                Err(err) => {
+                    println!("len: {}, bytes: {:?}", bytes.len(), &bytes);
+                    println!("contact: {:?}", &c);
+
+                    let byte = bytes[0];
+                    for i in 0u32..8 {
+                        println!("byte {}: {}", i, byte & (1 << i) != 0)
+                    }
+                    panic!("{}", err);
+                }
+            }
+        }
+    }
 }

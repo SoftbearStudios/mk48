@@ -19,6 +19,7 @@
 
 	export let state;
 	export let onSendChat;
+	export let onReportPlayer;
 	export let onMutePlayer;
 
 	let input; // ref
@@ -46,7 +47,7 @@
 		if (event.keyCode !== 13) {
 			return;
 		}
-		const team = event.shiftKey;
+		const team = event.shiftKey && state.teamName != null;
 		input && input.blur && input.blur();
 		if ($message == '') {
 			return;
@@ -90,14 +91,14 @@
 					class='name'
 					class:official={playerId == undefined}
 					on:click={() => populateReply(name)}
-					on:contextmenu={typeof playerId === 'number' && playerId !== state.playerId ? (event => showContextMenu(event, {[`Mute ${name}`]: () => onMutePlayer(playerId, true)})) : null}
+					on:contextmenu={typeof playerId === 'number' && playerId !== state.playerId ? (event => showContextMenu(event, {[`Report ${name}`]: () => onReportPlayer(playerId), [`Mute ${name}`]: () => onMutePlayer(playerId, true)})) : null}
 				>{team ? `[${team}] ${name}` : name}</span>&nbsp;{message}
 			</p>
 		{/each}
 		{#if auto($message)}
 			<p><b>Automated help: {auto($message)}</b></p>
 		{/if}
-		<input type='text' name='message' title={$t(`panel.chat.action.send.hint${false ? 'Team' : ''}`)} placeholder={$t('panel.chat.action.send.label')} autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} on:keydown={onKeyDown} bind:this={input}/>
+		<input type='text' name='message' title={$t(`panel.chat.action.send.hint${state.teamName ? 'Team' : ''}`)} placeholder={$t('panel.chat.action.send.label')} autocomplete='off' minLength={1} maxLength={128} value={$message} on:input={onInput} on:keydown={onKeyDown} bind:this={input}/>
 	</Section>
 </div>
 

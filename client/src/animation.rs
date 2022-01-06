@@ -3,8 +3,10 @@
 
 use glam::Vec2;
 
+/// Tracks the state of an animation e.g. explosion.
 pub struct Animation {
-    pub name: &'static str, // one of animations defined by spritesheet.
+    /// One of animations defined by the sprite sheet.
+    pub name: &'static str,
     pub position: Vec2,
     pub altitude: f32,
     pub scale: f32,
@@ -22,7 +24,7 @@ impl Animation {
         }
     }
 
-    // Returns whether should kill.
+    /// Increments the animation frame if necessary.
     pub fn update(&mut self, delta_seconds: f32) {
         self.frame += (delta_seconds * (1.0 / 20.0)).max(1.0) as usize;
     }

@@ -15,6 +15,7 @@ use common::guidance::Guidance;
 use common::terrain::*;
 use common::ticks::{Ticks, TicksRepr};
 use common::transform::{DimensionTransform, Transform};
+use common::util::hash_u32_to_f32;
 use glam::Vec2;
 use std::ptr;
 use std::sync::Arc;
@@ -146,11 +147,7 @@ impl Entity {
         if let Some(ref player) = self.player {
             let mut player = player.borrow_mut();
             assert!(!player.status.is_alive());
-            player.status = Status::Alive {
-                entity_index: i,
-                aim_target: None,
-                time: Instant::now(),
-            };
+            player.status = Status::new_alive(i);
         } else {
             return;
         }
@@ -249,6 +246,22 @@ impl Entity {
         }
     }
 
+    /// Closest point on self's keel (a line segment from bow to stern) to position.
+    /// Tolerance is what fraction of the length of the keep to consider.
+    pub fn closest_point_on_keel_to(&self, position: Vec2, tolerance: f32) -> Vec2 {
+        debug_assert!((0.0..=1.0).contains(&tolerance));
+
+        let pos_diff = position - self.transform.position;
+        if pos_diff.length_squared() < 1.0 {
+            self.transform.position
+        } else {
+            self.transform.position
+                + pos_diff
+                    .project_onto(self.transform.direction.to_vec())
+                    .clamp_length_max(self.data().length * tolerance * 0.5)
+        }
+    }
+
     /// Determines whether an entity collides with the terrain (underwater terrain ignored to avoid
     /// damaging submarines when going from deep to shallow; submarines must be forced to rise elsewhere).
     pub fn collides_with_terrain(&self, t: &Terrain, delta_seconds: f32) -> bool {
@@ -279,8 +292,6 @@ impl Entity {
 
     /// Marks a particular armament as consumed.
     pub fn consume_armament(&mut self, index: usize) {
-        //entity.clear_spawn_protection();
-
         let a = &self.data().armaments[index];
 
         // Limited armaments start their timer when they die.
@@ -558,17 +569,15 @@ impl Entity {
             let transform =
                 boat.transform + boat.data().armament_transform(&boat_extension.turrets, i);
             if self.transform.position.distance_squared(transform.position) < data.radius.powi(2) {
-                if data.sub_kind == EntitySubKind::Heli {
-                    // Helicopters can land at any angle.
-                    return true;
-                } else if (self.transform.direction - boat.transform.direction).abs() < Angle::PI_2
+                // Helicopters can land at any angle, but planes must be withing angle parameters.
+                if data.sub_kind == EntitySubKind::Heli
+                    || (self.transform.direction - boat.transform.direction).abs() < Angle::PI_2
                 {
-                    // Planes must be within angle parameters.
                     return true;
                 }
             }
         }
-        return false;
+        false
     }
 
     /// Returns whether an entity is in close proximity to a boat. This is the same as whether a mine
@@ -592,8 +601,7 @@ impl Entity {
 
     // hash returns a float in range [0, 1) based on the entity's id.
     pub fn hash(&self) -> f32 {
-        let hash_size = 64;
-        (self.id.get() & (hash_size - 1)) as f32 * (1.0 / hash_size as f32)
+        hash_u32_to_f32(self.id.get())
     }
 }
 
@@ -613,6 +621,7 @@ impl Eq for Entity {}
 mod tests {
     use crate::entity::Entity;
     use common::entity::{EntityId, EntityType};
+    use glam::Vec2;
     use std::mem;
 
     #[test]
@@ -627,6 +636,18 @@ mod tests {
         }
         assert!(Entity::new(EntityType::Zubr, None)
             .collides_with(&Entity::new(EntityType::Crate, None), 0.0));
+    }
+
+    #[test]
+    fn closest_point_on_keep_to() {
+        unsafe {
+            EntityType::init();
+        }
+        assert_eq!(
+            Entity::new(EntityType::Zubr, None)
+                .closest_point_on_keel_to(Vec2::new(-100.0, 0.0), 0.5),
+            Vec2::new(-EntityType::Zubr.data().length * 0.25, 0.0)
+        );
     }
 
     #[test]

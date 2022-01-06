@@ -72,7 +72,12 @@ impl<'a> ContactTrait for ContactRef<'a> {
 
     #[inline]
     fn damage(&self) -> Ticks {
-        self.entity.ticks
+        // Don't send lifespan to client.
+        if self.is_boat() {
+            self.entity.ticks
+        } else {
+            Ticks::ZERO
+        }
     }
 
     #[inline]
@@ -106,7 +111,7 @@ impl<'a> ContactTrait for ContactRef<'a> {
 
     #[inline]
     fn reloads_known(&self) -> bool {
-        self.entity.is_boat() && (self.visible || self.known)
+        self.has_type && self.entity.is_boat() && (self.visible || self.known)
     }
 
     #[inline]
@@ -121,6 +126,6 @@ impl<'a> ContactTrait for ContactRef<'a> {
 
     #[inline]
     fn turrets_known(&self) -> bool {
-        self.entity.is_boat()
+        self.has_type && self.entity.is_boat()
     }
 }

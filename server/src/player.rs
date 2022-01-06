@@ -5,6 +5,7 @@ use crate::entities::*;
 use crate::entity_extension::EntityExtension;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use common::death_reason::DeathReason;
+use common::protocol::Hint;
 use core_protocol::id::{PlayerId, TeamId};
 use glam::Vec2;
 use std::cell::UnsafeCell;
@@ -19,13 +20,27 @@ pub struct Camera {
     pub radius: f32,
 }
 
+/// Set based on player inputs.
+/// Cleared each physics tick.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub struct Flags {
+    /// Player just upgraded and all limited entities should be removed.
+    pub upgraded: bool,
+    /// Player just left a team that has other players so all mines should be removed.
+    pub left_populated_team: bool,
+}
+
 /// Status is an enumeration of mutually exclusive player states.
 #[derive(Debug)]
 pub enum Status {
     /// Player has a boat.
     Alive {
+        /// Index of player's boat in world.entities.
         entity_index: EntityIndex,
+        /// Where the player is aiming. Used by turrets and aircraft.
         aim_target: Option<Vec2>,
+        /// Flags set each tick based on inputs.
+        flags: Flags,
         /// When they spawned.
         time: Instant,
     },
@@ -48,6 +63,15 @@ pub enum Status {
 }
 
 impl Status {
+    pub fn new_alive(entity_index: EntityIndex) -> Self {
+        Self::Alive {
+            entity_index,
+            aim_target: None,
+            time: Instant::now(),
+            flags: Flags::default(),
+        }
+    }
+
     /// is_alive returns whether the status matches Status::Alive.
     pub fn is_alive(&self) -> bool {
         matches!(self, Status::Alive { .. })
@@ -75,6 +99,8 @@ pub struct Player {
     pub team_id: Option<TeamId>,
     /// Current score.
     pub score: u32,
+    /// Hints from client.
+    pub hint: Hint,
     /// Current status e.g. Alive, Dead, or Spawning.
     pub status: Status,
 }
@@ -94,10 +120,22 @@ impl Player {
             score: level_to_score(EntityData::MAX_BOAT_LEVEL),
             #[cfg(not(debug_assertions))]
             score: 0,
+            hint: Hint::default(),
             status: Status::Spawning {
                 time: Instant::now(),
             },
         }
+    }
+
+    /// changes the player's team, setting the left_team flag if appropriate.
+    pub fn change_team(&mut self, team_id: Option<TeamId>) {
+        if self.team_id.is_some() {
+            if let Status::Alive { flags, .. } = &mut self.status {
+                // TODO know if team was populated.use std::intrinsics::unreachable;
+                flags.left_populated_team = true;
+            }
+        }
+        self.team_id = team_id;
     }
 }
 

@@ -23,7 +23,7 @@ pub fn radius_collision(
     d2 <= r2
 }
 
-/// sat_collision performs rectangle-based separating axis theorem collision.
+/// sat_collision performs continuous rectangle-based separating axis theorem collision.
 pub fn sat_collision(
     mut transform: Transform,
     mut dimensions: Vec2,
@@ -49,6 +49,7 @@ pub fn sat_collision(
 
     transform.position += axis_normal * (sweep * 0.5);
     other_transform.position += other_axis_normal * (other_sweep * 0.5);
+
     dimensions.x += sweep;
     other_dimensions.x += other_sweep;
 

@@ -142,12 +142,13 @@ lazy_static! {
         },
         Sound {
             name: "jet",
-            source: "freesound.org/105222__vax6131__hawk-jets.wav",
-            author: Some("Vax6131"),
-            url: Some("https://freesound.org/people/Vax6131/sounds/105222/"),
-            start: Some(53.0),
-            end: Some(54.0),
-            volume: -3.5,
+            source: "freesound.org/131315__rickbuzzin__small-jet-flyover.wav",
+            author: Some("rickbuzzin"),
+            url: Some("https://freesound.org/people/rickbuzzin/sounds/131315/"),
+            start: Some(11.5),
+            end: Some(12.5),
+            volume: -3.0,
+            pitch: -0.25,
             ..Sound::default()
         },
         Sound {

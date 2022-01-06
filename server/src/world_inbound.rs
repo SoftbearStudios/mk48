@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
-use crate::player::Status;
+use crate::player::{Player, Status};
 use crate::protocol::*;
 use crate::server::SharedData;
 use crate::world::World;
@@ -14,6 +14,7 @@ use common::util::level_to_score;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
 use rayon::iter::ParallelIterator;
+use std::ops::Range;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -102,9 +103,12 @@ impl CommandTrait for Control {
         &self,
         world: &mut World,
         shared_data: &mut SharedData,
-        _bot: bool,
+        bot: bool,
     ) -> Result<(), &'static str> {
         let mut player = shared_data.player.borrow_mut();
+
+        // Pre-borrow.
+        let world_radius = world.radius;
 
         return if let Status::Alive {
             entity_index,
@@ -113,15 +117,41 @@ impl CommandTrait for Control {
         } = &mut player.status
         {
             let entity = &mut world.entities[*entity_index];
+
+            // Movement
             if let Some(guidance) = self.guidance {
                 entity.guidance = guidance;
             }
-            *aim_target = self.aim_target;
+            *aim_target = if let Some(mut aim_target) = self.aim_target {
+                sanitize_floats(aim_target.as_mut(), -world_radius * 2.0..world_radius * 2.0)?;
+                Some(
+                    (aim_target - entity.transform.position)
+                        .clamp_length_max(entity.data().sensors.max_range())
+                        + entity.transform.position,
+                )
+            } else {
+                None
+            };
             let extension = entity.extension_mut();
             extension.set_active(self.active);
             if let Some(altitude_target) = self.altitude_target {
                 extension.altitude_target = altitude_target;
             }
+
+            drop(player);
+
+            if let Some(fire) = &self.fire {
+                fire.apply(world, shared_data, bot)?;
+            }
+
+            if let Some(pay) = &self.pay {
+                pay.apply(world, shared_data, bot)?;
+            }
+
+            if let Some(hint) = &self.hint {
+                hint.apply(world, shared_data, bot)?;
+            }
+
             Ok(())
         } else {
             Err("cannot control while not alive")
@@ -141,14 +171,20 @@ impl CommandTrait for Fire {
         return if let Status::Alive {
             entity_index,
             aim_target,
+            flags,
             ..
         } = player.status
         {
+            // Prevents limited armaments from being invalidated since all limited armaments are destroyed on upgrade.
+            if flags.upgraded {
+                return Err("cannot fire right after upgrading");
+            }
+
             let entity = &mut world.entities[entity_index];
 
             let data = entity.data();
 
-            let index = self.index as usize;
+            let index = self.armament_index as usize;
             if index >= data.armaments.len() {
                 return Err("armament index out of bounds");
             }
@@ -186,7 +222,6 @@ impl CommandTrait for Fire {
             let mut failed = false;
             if armament_entity_data.sub_kind == EntitySubKind::Depositor {
                 let depositor = armament_transform.position;
-                let target = self.position_target;
 
                 // Radius of depositor.
                 const MAX_RADIUS: f32 = 60.0;
@@ -195,7 +230,12 @@ impl CommandTrait for Fire {
                 const CUTOFF_RADIUS: f32 = MAX_RADIUS * 2.0;
 
                 // Snap to valid radius.
-                let delta = target - depositor;
+                let mut position_target = self.position_target;
+                sanitize_floats(
+                    position_target.as_mut(),
+                    -world.radius * 2.0..world.radius * 2.0,
+                )?;
+                let delta = position_target - depositor;
                 if delta.length_squared() > CUTOFF_RADIUS.powi(2) {
                     return Err("outside maximum range");
                 }
@@ -255,12 +295,15 @@ impl CommandTrait for Pay {
         shared_data: &mut SharedData,
         _bot: bool,
     ) -> Result<(), &'static str> {
+        let mut position = self.position;
+        sanitize_floats(position.as_mut(), -world.radius * 2.0..world.radius * 2.0)?;
+
         let mut player = shared_data.player.as_ref().borrow_mut();
 
         return if let Status::Alive { entity_index, .. } = player.status {
             let entity = &world.entities[entity_index];
 
-            if self.position.distance_squared(entity.transform.position)
+            if position.distance_squared(entity.transform.position)
                 > entity.data().radii().end.powi(2)
             {
                 return Err("position is too far away to pay");
@@ -278,7 +321,7 @@ impl CommandTrait for Pay {
                 Some(Arc::clone(entity.player.as_ref().unwrap())),
             );
 
-            payment.transform.position = self.position;
+            payment.transform.position = position;
 
             if world.spawn_here_or_nearby(payment, 1.0) {
                 // Payment successfully spawned, withdraw funds.
@@ -292,6 +335,20 @@ impl CommandTrait for Pay {
     }
 }
 
+impl CommandTrait for Hint {
+    fn apply(
+        &self,
+        _: &mut World,
+        shared_data: &mut SharedData,
+        _bot: bool,
+    ) -> Result<(), &'static str> {
+        shared_data.player.borrow_mut().hint = Hint {
+            aspect: sanitize_float(self.aspect, 0.5..2.0)?,
+        };
+        Ok(())
+    }
+}
+
 impl CommandTrait for Upgrade {
     fn apply(
         &self,
@@ -299,17 +356,24 @@ impl CommandTrait for Upgrade {
         shared_data: &mut SharedData,
         bot: bool,
     ) -> Result<(), &'static str> {
-        let player = shared_data.player.as_ref().borrow_mut();
+        let mut player = shared_data.player.as_ref().borrow_mut();
+        let Player { status, score, .. } = &mut *player;
 
-        if let Status::Alive { entity_index, .. } = player.status {
-            let entity = &mut world.entities[entity_index];
+        if let Status::Alive {
+            entity_index,
+            flags,
+            ..
+        } = status
+        {
+            let entity = &mut world.entities[*entity_index];
             if !entity
                 .entity_type
-                .can_upgrade_to(self.entity_type, player.score, bot)
+                .can_upgrade_to(self.entity_type, *score, bot)
             {
                 return Err("cannot upgrade to provided entity type");
             }
 
+            flags.upgraded = true;
             drop(player);
 
             entity.change_entity_type(self.entity_type, &mut world.arena);
@@ -319,4 +383,24 @@ impl CommandTrait for Upgrade {
             Err("cannot upgrade while not alive")
         }
     }
+}
+
+/// Returns an error if the float isn't finite. Otherwise, clamps it to the provided range.
+fn sanitize_float(float: f32, valid: Range<f32>) -> Result<f32, &'static str> {
+    if float.is_finite() {
+        Ok(float.clamp(valid.start, valid.end))
+    } else {
+        Err("float not finite")
+    }
+}
+
+/// Applies sanitize_float to each element.
+fn sanitize_floats<'a, F: IntoIterator<Item = &'a mut f32>>(
+    floats: F,
+    valid: Range<f32>,
+) -> Result<(), &'static str> {
+    for float in floats {
+        *float = sanitize_float(*float, valid.clone())?;
+    }
+    Ok(())
 }

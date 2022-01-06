@@ -5,7 +5,7 @@ import {clamp, mapRanges} from '../util/math.js';
 import storage from '../util/storage.js';
 import {writable} from 'svelte/store';
 
-const settingStore = function(name, defaultValue, minValue, maxValue) {
+const settingStore = function(rusty, name, defaultValue, minValue, maxValue) {
 	if (typeof defaultValue === 'number') {
 		if (minValue == undefined) {
 			minValue = 0;
@@ -42,21 +42,27 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 
 	const store = writable(initialValue);
 	store.subscribe(newValue => {
-		storage[name] = newValue;
+	    if (rusty) {
+	        window.rust && window.rust.setSetting(name, newValue);
+	    } else {
+	        storage[name] = newValue;
+	    }
 	});
 
-	window.addEventListener('storage', () => {
-		console.log('storage event');
-		if (typeof defaultValue === 'string') {
-			store.set(storage[name]);
-		} else {
-			try {
-				store.set(JSON.parse(storage[name]));
-			} catch (err) {
-				console.warn(err);
-			}
-		}
-	});
+    if (!rusty) {
+        window.addEventListener('storage', () => {
+            console.log('storage event');
+            if (typeof defaultValue === 'string') {
+                store.set(storage[name]);
+            } else {
+                try {
+                    store.set(JSON.parse(storage[name]));
+                } catch (err) {
+                    console.warn(err);
+                }
+            }
+        });
+    }
 
 	if (typeof defaultValue === 'number') {
 		// levels of 5 would mean the possible integers 0, 1, 2, 3, and 4
@@ -71,14 +77,13 @@ const settingStore = function(name, defaultValue, minValue, maxValue) {
 	return store;
 };
 
-export const chatOpen = settingStore('chat', true);
-export const renderWaves = settingStore('renderWaves', true);
-export const renderFoam = settingStore('renderFoam', true);
-export const renderTerrainTextures = settingStore('renderTerrainTextures', true);
-export const volume = settingStore('volume', 1.0);
-export const antialias = settingStore('antialias', true);
-export const resolution = settingStore('resolution', 1.0, 0.25, 1.0);
-export const fpsCounter = settingStore('fpsCounter', false);
+export const chatOpen = settingStore(false, 'chat', true);
+export const waveQuality = settingStore(true, 'waveQuality', 1, 0.0, 3.0);
+export const renderTerrainTextures = settingStore(true, 'renderTerrainTextures', true);
+export const volume = settingStore(true, 'volume', 1.0);
+export const antialias = settingStore(true, 'antialias', true);
+export const resolution = settingStore(false, 'resolution', 1.0, 0.25, 1.0);
+export const fpsCounter = settingStore(false, 'fpsCounter', false);
 
 // Not persisted, because that might trap users in cinematic mode.
 export const cinematic = writable(false);

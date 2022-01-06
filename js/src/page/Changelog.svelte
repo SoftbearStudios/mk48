@@ -14,6 +14,27 @@
 
 	<h2>2021</h2>
 
+	<h3>1/2/2022</h3>
+
+	<ul>
+		<li>Improve spawning system to reduce spawn-killing.</li>
+	</ul>
+
+	<h3>12/25/2021</h3>
+
+	<ul>
+		<li>Add "Buyan" corvette and associated weapons.</li>
+		<li>Change "Seawolf" armaments to include "Tomahawk" missiles in accordance with Discord vote.</li>
+		<li>Add Italian translation (thanks to Bug82).</li>
+		<li>Improve jet aircraft audio.</li>
+		<li>Improve cinematic mode.</li>
+		<li>All ships will insta-crush trees on contact.</li>
+		<li>Disable mouse controls reverse for level 1 boats, for which it is too error-prone.</li>
+		<li>When you leave a team, your mines disappear (so they don't pose a threat to former teammates).</li>
+		<li>When you upgrade, your aircraft disappear (so you can't amass too many at once).</li>
+		<li>Prevent nickname from looking too much like a team name.</li>
+	</ul>
+
 	<h3>12/19/2021</h3>
 
 	<ul>

@@ -17,8 +17,10 @@ macros = {path="../macros"}
 fast_hilbert = "1.0"
 lazy_static = "1.4"
 enum-iterator = "0.7"
-core_protocol = {path="../core/core_protocol"}
+core_protocol = {path="../engine/core_protocol"}
+common_util = {path="../engine/common_util"}
 serde_bytes = "0.11"
+bincode = "1.3.3"
 
 [features]
 server = ["actix"]

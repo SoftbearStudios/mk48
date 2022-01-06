@@ -1,0 +1,16 @@
+[package]
+name = "common_util"
+version = "0.1.0"
+edition = "2018"
+authors = ["Softbear, Inc."]
+license = "AGPL-3.0-or-later"
+
+[lib]
+name = "common_util"
+path = "src/lib.rs"
+
+[dependencies]
+core_protocol = { path="../core_protocol" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+glam = { version = "0.18", features = ["serde"] }
+rand = "0.8"

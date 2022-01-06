@@ -6,6 +6,7 @@ use glam::Vec2;
 use rand::prelude::ThreadRng;
 use rand::Rng;
 use std::ops::Range;
+use std::sync::Arc;
 
 /// map_ranges linearly maps a number from one range to another, optionally clamping to the new range.
 /// If clamp is true, the new range must obey end >= start.
@@ -56,4 +57,23 @@ pub fn lerp(start: f32, end: f32, amount: f32) -> f32 {
 /// Samples a point from a circle with the given radius.
 pub fn gen_radius(rng: &mut ThreadRng, radius: f32) -> Vec2 {
     rng.gen::<Angle>().to_vec() * (rng.gen::<f32>().sqrt() * radius)
+}
+
+/// returns a float in range [0, 1) based on n.
+pub fn hash_u32_to_f32(n: u32) -> f32 {
+    let hash_size = 64;
+    (n & (hash_size - 1)) as f32 * (1.0 / hash_size as f32)
+}
+
+/// make_mut_slice derives a mutable slice from an Arc, cloning the Arc if necessary.
+pub fn make_mut_slice<T: Clone>(arc: &mut Arc<[T]>) -> &mut [T] {
+    let mut_ref = unsafe { &mut *(arc as *mut Arc<[T]>) };
+
+    match Arc::get_mut(mut_ref) {
+        Some(x) => x,
+        None => {
+            *arc = arc.iter().cloned().collect();
+            Arc::get_mut(arc).unwrap()
+        }
+    }
 }

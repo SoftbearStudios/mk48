@@ -351,8 +351,8 @@ for (const entityType of Object.keys(entityDatas)) {
 				let factor = 0;
 				switch (sensorType) {
 					case 'visual':
-						base = 600;
-						factor = 2.0;
+						base = 400;
+						factor = 3.0;
 						break;
 					case 'radar':
 						base = 1000;

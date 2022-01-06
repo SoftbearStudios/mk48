@@ -43,7 +43,6 @@ impl Arena {
     }
 
     /// count_predicate returns the number of entities that satisfy a predicate.
-    #[allow(dead_code)]
     pub fn count_predicate<P>(&self, predicate: P) -> usize
     where
         P: Fn(EntityType) -> bool,
@@ -61,7 +60,8 @@ impl Arena {
     }
 
     /// count_sub_kind returns the number of entities with a certain sub kind.
-    pub fn _count_sub_kind(&self, sub_kind: EntitySubKind) -> usize {
+    #[allow(dead_code)]
+    pub fn count_sub_kind(&self, sub_kind: EntitySubKind) -> usize {
         self.count_predicate(|t| t.data().sub_kind == sub_kind)
     }
 

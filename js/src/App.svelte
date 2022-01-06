@@ -8,16 +8,21 @@
 	import {get, writable} from 'svelte/store';
 
 	let state = writable(null);
-	let leaderboard = writable(null);
-	let globalLeaderboard = writable(null);
 
-	export function setSessionId(arenaId, sessionId) {
-		storage.arenaId = arenaId;
-		storage.sessionId = sessionId;
+	export function setProps(value) {
+		state.set(value);
 	}
 
-	export function setState(value) {
-		state.set(value);
+	// Gets the "real" host (that is to say, if the window.location.host redirected to some other host).
+	async function getRealHost() {
+		try {
+			const response = await fetch("/status/");
+			const url = new URL(response.url);
+			return [url.host, url.protocol != 'http:'];
+		} catch (err) {
+			console.warn(err);
+			return [window.location.host, window.location.protocol != 'http:'];
+		}
 	}
 </script>
 
@@ -47,7 +52,7 @@
 	import {getMouseButton} from './util/compatibility.js';
 	import {mapRanges} from './util/math.js';
 	import {onMount} from 'svelte';
-	import {antialias, cinematic, renderFoam, renderTerrainTextures, volume, renderWaves, resolution} from './util/settings.js';
+	import {antialias, cinematic, renderTerrainTextures, volume, waveQuality, resolution} from './util/settings.js';
 	import {outboundEnabled} from './lib/Link.svelte';
 
 	let canvas, chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
@@ -56,30 +61,18 @@
 	let instructZoom = true;
 	const keyboard = {};
 
-	$: client && typeof active === 'boolean' && client.handleActive(active);
-	$: client && typeof altitudeTarget === 'number' && client.handleAltitudeTarget(altitudeTarget);
-	$: client && typeof armamentSelection === 'string' && client.handleArmamentSelection(armamentSelection);
-	$: client && client.handleVolume($volume);
-	$: client && client.handleCinematic($cinematic);
+	$: client && typeof active === 'boolean' && client.event({"Active": active});
+	$: client && typeof altitudeTarget === 'number' && client.event({"AltitudeTarget": altitudeTarget});
+	$: client && typeof armamentSelection === 'string' && client.event({"Armament": armamentSelection.split('/')});
+	//$: client && client.handleVolume($volume);
+	$: client && client.event({"Cinematic": $cinematic});
 
 	onMount(async () => {
+		const [host, encrypted] = await getRealHost();
+
 		client = await wasm();
 
-		const hash = window.location.hash;
-		let invitationId = null;
-
-		if (hash.includes("/invite")) {
-			invitationId = hash.split("/").pop();
-		}
-
-		const settings = {
-			antialias: get(antialias),
-			renderFoam: get(renderFoam),
-			renderTerrainTextures: get(renderTerrainTextures),
-			renderWaves: get(renderWaves),
-		};
-
-		client.run(settings, storage.arenaId, storage.sessionId, invitationId);
+		//client.run(host, encrypted, settings, storage.arenaId, storage.sessionId, invitationId);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 
 		// Make client accessible (for debugging only).
@@ -87,29 +80,6 @@
 	});
 
 	function onAnimationFrame(timestamp) {
-		// Joystick input.
-		let forwardBackward = 0;
-		let leftRight = 0;
-
-		if (keyboard.forward) {
-			forwardBackward += 1;
-		}
-		if (keyboard.backward) {
-			forwardBackward -= 1;
-		}
-		if (keyboard.left) {
-			leftRight += mapRanges(Date.now() - keyboard.left, 0, 1000, 0.25, 1, true);
-		}
-		if (keyboard.right) {
-			leftRight -= mapRanges(Date.now() - keyboard.right, 0, 1000, 0.25, 1, true);
-		}
-		if (!keyboard.stop && forwardBackward === 0 && leftRight === 0) {
-			client.handleJoystickRelease();
-		} else {
-			instructBasics = false;
-			client.handleJoystick(leftRight, forwardBackward, typeof keyboard.stop === 'number');
-		}
-
 		client && client.frame(timestamp / 1000.0);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 	};
@@ -118,8 +88,8 @@
 		return typeof num === 'number' && isFinite(num);
 	}
 
-	function onSpawn(name, type) {
-		client && client.handleSpawn(name, type);
+	function onSpawn(alias, entityType) {
+		client && client.event({"Spawn": {alias, entityType}});
 	}
 
 	function onMouseButton(event) {
@@ -128,13 +98,13 @@
 		chatRef && chatRef.blur && chatRef.blur();
 
 		const button = getMouseButton(event);
-
 		const down = {mousedown: true, mouseup: false}[event.type];
 
 		if (typeof down == 'boolean' && [0, 2].includes(button)) {
 			instructBasics = false;
-			client && client.handleMouseButton(button, down);
 		}
+
+		client && client.mouse(event);
 	}
 
 	// Equals distance between touches if a pinch operation is in progress.
@@ -142,64 +112,22 @@
 
 	// Also handles touch moves.
 	function onMouseMove(event) {
-		let pos = event;
-		if (event.touches && event.touches.length > 0) {
-			// Each touch has its own pageX and pageY, just like event.
-			pos = event.touches[0];
-
-			if (event.touches.length === 2) {
-				const currentDistance = Math.hypot(event.touches[0].pageX - event.touches[1].pageX, event.touches[0].pageY - event.touches[1].pageY);
-				if (pinch) {
-					// Pinch is interpreted as zoom.
-					instructZoom = false;
-
-					const wheel = 0.15 * (pinch - currentDistance);
-					if (client && safeNumber(wheel)) {
-						client.handleWheel(wheel);
-					}
-					pinch = currentDistance;
-				} else {
-					pinch = currentDistance;
-				}
-
-				// Don't issue a mouse move.
-				return;
-			} else {
-				pinch = null;
-			}
-		} else {
-			pinch = null;
-		}
-
-		if (typeof pos.pageX === 'number') {
-			const rect = canvas.getBoundingClientRect();
-			const aspect = rect.height / rect.width;
-			const x = mapRanges(pos.pageX, rect.x, rect.x + rect.width, -1, 1);
-			const y = mapRanges(pos.pageY, rect.y, rect.y + rect.height, aspect, -aspect);
-			if (safeNumber(x) && safeNumber(y)) {
-				client && client.handleMouseMove(x, y);
-			}
-		}
+		client && client.mouse(event);
 	}
 
 	let touch = false;
 
 	function onTouch(event) {
-		event.preventDefault();
-
-		const button = getMouseButton(event);
-
 		if (['touchstart', 'touchend'].includes(event.type)) {
 			touch = true;
-
-			// Simulate left button.
-			client && client.handleMouseButton(0, event.type === 'touchstart');
 		}
 
-		onMouseMove(event);
+		client && client.touch(event);
 	}
 
 	function onKey(event) {
+		client && client.keyboard(event);
+
 		const {ctrlKey, keyCode, preventDefault, shiftKey, target, type} = event;
 
 		const down = {keydown: true, keyup: false}[type];
@@ -213,31 +141,8 @@
 			const keys = {};
 
 			if (down && ctrlKey) {
-				Object.assign(keys, {
-					// Zoom in and out (see #57).
-					187: () => client.handleWheel(-4.0), // +
-					189: () => client.handleWheel(4.0)   // -
-				});
+				// No-op.
 			} else {
-				Object.assign(keys, {
-					32: 'shoot', // space
-					67: 'pay',   // c (coin)
-					69: 'shoot', // e
-					88: 'stop',  // x
-
-					// WASD
-					65: 'left',     // a
-					87: 'forward',  // w
-					68: 'right',    // d
-					83: 'backward', // s
-
-					// arrows
-					37: 'left',     // left arrow
-					38: 'forward',  // up arrow
-					39: 'right',    // right arrow
-					40: 'backward', // backward arrow
-				});
-
 				if (chatRef && chatRef.focus) {
 					// enter
 					keys[13] = chatRef.focus.bind(chatRef);
@@ -266,19 +171,9 @@
 					if (down) {
 						key();
 					}
-				} else if (key === 'pay') {
-					client && client.handlePay(down);
-				} else if (key === 'shoot') {
-					client && client.handleShoot(down);
 				} else if (!(down && keyboard[key])) {
 					// Don't reset date if already down.
 					keyboard[key] = down ? Date.now() : false;
-
-					// A common reason for stopping is that forward/backward is stuck.
-					if (key === 'stop' && down) {
-						keyboard.forward = false;
-						keyboard.backward = false;
-					}
 				}
 
 				event.preventDefault();
@@ -288,22 +183,23 @@
 	}
 
 	function onWheel(event) {
-		instructZoom = false;
+		client && client.wheel(event);
 
-		const delta = event.deltaY * 0.05;
-		if (client && safeNumber(delta)) {
-			client.handleWheel(delta);
-		}
+		instructZoom = false;
 	};
 
 	function onUpgrade(type) {
 		instructBasics = false;
 
-		client && client.handleUpgrade(type);
+		client && client.event({"Upgrade": type});
 	}
 
 	function onSendChat(message, team) {
 		client && client.handleSendChat(message, team);
+	}
+
+	function onReportPlayer(playerId) {
+		client && client.handleReportPlayer(playerId);
 	}
 
 	function onMutePlayer(playerId, mute) {
@@ -341,19 +237,16 @@
 		}
 	}
 
+	function onMouseFocus(event) {
+		client && client.mouseFocus(event);
+	}
+
 	function onMouseLeave(event) {
-		if (client) {
-			client.handleMouseButton(0, false);
-			client.handleMouseButton(2, false);
-		}
+		client && client.mouse(event);
 	}
 
 	function onChangeWindowFocused(focused) {
-		if (!focused) {
-			for (const key of ['stop', 'forward', 'backward', 'left', 'right']) {
-				keyboard[key] = false;
-			}
-		}
+		client && client.keyboardFocus(event);
 	}
 
 	// Originates from iframe parent.
@@ -379,7 +272,7 @@
 			return;
 		}
 		traces++;
-		const message = typeof event === 'string' ? event : (event.error ? `${event.error.message}: ${event.error.stack}` : (event.message || event.reason));
+		const message = typeof event === 'string' ? event : (event.error ? `${event.error.message}: ${event.error.stack}` : (event.message || JSON.stringify(event.reason)));
 		const response = await fetch(`/client/`, {
 			method: 'POST',
 			body: JSON.stringify({request: {Trace: {message}}, params: {arena_id: null, session_id: null, newbie: false}}),
@@ -404,8 +297,8 @@
 	on:mousemove|preventDefault={onMouseMove}
 	on:touchstart={onTouch}
 	on:touchend={onTouch}
-	on:touchmove={onMouseMove}
-	on:blur={onMouseLeave}
+	on:touchmove={onTouch}
+	on:blur={onMouseFocus}
 	on:mouseleave={onMouseLeave}
 	on:wheel|preventDefault={onWheel}
 	on:contextmenu|preventDefault
@@ -446,7 +339,7 @@
 			<div class='bottom bar'>
 				<Ship bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
 				<Status state={$state}/>
-				<Chat bind:this={chatRef} state={$state} {onSendChat} {onMutePlayer}/>
+				<Chat bind:this={chatRef} state={$state} {onSendChat} {onMutePlayer} {onReportPlayer}/>
 			</div>
 			{#if !$cinematic}
 				<Hint type={$state.status.alive.type}/>
@@ -455,7 +348,7 @@
 			<SplashScreen state={$state} {onSpawn}/>
 		{/if}
 	{/if}
-	<Sidebar onZoom={client.handleWheel} {onCopyInvitationLink}/>
+	<Sidebar onZoom={client.zoom} {onCopyInvitationLink}/>
 {/if}
 <ContextMenu/>
 <Router routes={{'/help': Help, '/about': About, '/settings': Settings, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/levels': Levels, '/changelog': Changelog}}></Router>

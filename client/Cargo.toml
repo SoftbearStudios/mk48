@@ -20,10 +20,11 @@ glam = {version="0.18", features=["scalar-math"]}
 common = {path="../common", features=["js"]}
 instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
 rand = "0.8"
-core_protocol = {path="../core/core_protocol"}
-client_util = {path="../core/client_util"}
+client_util = {path="../engine/client_util"}
+common_util = {path="../engine/common_util"}
+core_protocol = {path="../engine/core_protocol"}
 arrayvec = "0.7"
-sprite_sheet = {path="../sprite_sheet"}
+sprite_sheet = {path="../engine/sprite_sheet"}
 itertools = "0.10"
 
 [dependencies.web-sys]

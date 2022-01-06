@@ -50,7 +50,13 @@ impl World {
 
         let target_radius = Self::target_radius(total_visual_area);
         let s = delta.to_secs();
-        self.radius += (target_radius - self.radius).clamp(s * -0.5, s);
+
+        // Takes effect during testing with large bot counts.
+        if target_radius.powi(2) > self.radius.powi(2) + 1000f32.powi(2) {
+            self.radius = target_radius;
+        } else {
+            self.radius += (target_radius - self.radius).clamp(s * -0.5, s);
+        }
     }
 
     /// add adds an entity to the world (assigning it an id).

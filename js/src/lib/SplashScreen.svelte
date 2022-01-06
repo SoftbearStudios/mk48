@@ -69,7 +69,7 @@
 			storage.name = name;
 		}
 		storage.type = type;
-		onSpawn(name || 'Guest', type);
+		onSpawn(name, type);
 
 		if (storage.join == undefined) {
 			storage.join = Date.now();
@@ -119,7 +119,7 @@
 	{/if}
 	<!--<small>Server maintainance in progress</small>-->
 	<form on:submit|preventDefault|stopPropagation={handleSubmit}>
-		<input type='text' name='name' placeholder='Nickname' disabled={transitioning} autocomplete='off' minlength={minNameLength} maxlength={maxNameLength} bind:value={name}/>
+		<input type='text' name='name' placeholder={$t('panel.splash.action.alias.label')} disabled={transitioning} autocomplete='off' minlength={minNameLength} maxlength={maxNameLength} bind:value={name}/>
 		<select disabled={transitioning} bind:value={type}>
 			{#each getSpawnable() as type}
 				<option value={type}>{entityData[type].label}</option>

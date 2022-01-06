@@ -24,9 +24,9 @@
 <div class:cinematic={$cinematic}>
 	<IconButton tooltip={$t('panel.team.action.invite.label')} onChange={onCopyInvitationLink} icons={[Invite]}/>
 	<br/>
-	<IconButton tooltip={$t('panel.sidebar.action.zoomIn.hint')} onChange={() => onZoom(-8)} icons={[ZoomIn]}/>
+	<IconButton tooltip={$t('panel.sidebar.action.zoomIn.hint')} onChange={() => onZoom(-1)} icons={[ZoomIn]}/>
 	<br/>
-	<IconButton tooltip={$t('panel.sidebar.action.zoomOut.hint')} onChange={() => onZoom(8)} icons={[ZoomOut]}/>
+	<IconButton tooltip={$t('panel.sidebar.action.zoomOut.hint')} onChange={() => onZoom(1)} icons={[ZoomOut]}/>
 	<br/>
 	<IconButton tooltip={$t('setting.volume.label')} value={volume.mapToInteger($volume, 3)} onChange={value => volume.setFromInteger(value, 3)} icons={[VolumeEmpty, VolumeDownFill, VolumeUpFill]}/>
 	<br/>

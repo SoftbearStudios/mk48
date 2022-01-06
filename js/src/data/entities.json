@@ -59,8 +59,8 @@
 		"label": "Acacia",
 		"kind": "obstacle",
 		"subkind": "tree",
-		"length": 6,
-		"width": 6,
+		"length": 8,
+		"width": 8,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -108,7 +108,7 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 826.6
+				"range": 739.9
 			},
 			"sonar": {
 				"range": 641.625
@@ -215,7 +215,7 @@
 		"stealth": 0.25,
 		"sensors": {
 			"visual": {
-				"range": 908
+				"range": 862
 			},
 			"radar": {
 				"range": 1231
@@ -421,7 +421,7 @@
 		"speed": 15.438478,
 		"sensors": {
 			"visual": {
-				"range": 1083.2
+				"range": 1124.8
 			},
 			"radar": {
 				"range": 1362.4
@@ -568,6 +568,124 @@
 		"torpedoResistance": 0.4,
 		"damage": 8.053333333333333
 	},
+	"buyan": {
+		"label": "Buyan",
+		"link": "https://en.wikipedia.org/wiki/Buyan-class_corvette",
+		"kind": "boat",
+		"subkind": "corvette",
+		"level": 4,
+		"length": 75,
+		"width": 11.133,
+		"draft": 2.5,
+		"speed": 13.34,
+		"stealth": 0.5,
+		"sensors": {
+			"visual": {
+				"range": 625
+			},
+			"radar": {
+				"range": 1112.5
+			},
+			"sonar": {
+				"range": 387.5
+			}
+		},
+		"armaments": [
+			{
+				"type": "kalibr",
+				"positionForward": -3.4,
+				"positionSide": 0.32,
+				"vertical": true
+			},
+			{
+				"type": "kalibr",
+				"positionForward": -3.4,
+				"positionSide": -0.32,
+				"vertical": true
+			},
+			{
+				"type": "kalibr",
+				"positionForward": -3.4,
+				"positionSide": 0.32,
+				"vertical": true
+			},
+			{
+				"type": "kalibr",
+				"positionForward": -3.4,
+				"positionSide": -0.32,
+				"vertical": true
+			},
+			{
+				"type": "130x720mmR",
+				"angle": 0,
+				"turret": 0
+			},
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.75,
+				"external": false,
+				"turret": 1
+			},
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.75,
+				"external": false,
+				"turret": 1
+			},
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.75,
+				"external": false,
+				"turret": 2
+			},
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.75,
+				"external": false,
+				"turret": 2
+			}
+		],
+		"turrets": [
+			{
+				"type": "a190",
+				"positionForward": 20.4954,
+				"positionSide": 0,
+				"speed": 1.413716694115407,
+				"angle": 0,
+				"azimuthBL": 0.6981317007977318,
+				"azimuthBR": 0.6981317007977318
+			},
+			{
+				"type": "ratepKomar",
+				"positionForward": 15.6236,
+				"positionSide": 0,
+				"speed": 1.8849555921538759,
+				"angle": 0,
+				"azimuthBL": 1.0471975511965976,
+				"azimuthBR": 1.0471975511965976
+			},
+			{
+				"type": "ratepKomar",
+				"positionForward": -17.8952,
+				"positionSide": 0,
+				"angle": 3.141592653589793,
+				"speed": 1.8849555921538759,
+				"azimuthBL": 0.6981317007977318,
+				"azimuthBR": 0.6981317007977318
+			}
+		],
+		"antiAircraft": 0.058,
+		"damage": 2.5,
+		"exhausts": []
+	},
 	"dreadnought": {
 		"label": "Dreadnought",
 		"link": "https://en.wikipedia.org/wiki/HMS_Dreadnought_(1906)",
@@ -580,7 +698,7 @@
 		"speed": 10.8,
 		"sensors": {
 			"visual": {
-				"range": 921.8
+				"range": 882.7
 			}
 		},
 		"armaments": [
@@ -736,7 +854,7 @@
 		"speed": 16.46223,
 		"sensors": {
 			"visual": {
-				"range": 1130
+				"range": 1195
 			},
 			"radar": {
 				"range": 1397.5
@@ -933,7 +1051,7 @@
 		"speed": 8,
 		"sensors": {
 			"visual": {
-				"range": 798
+				"range": 697
 			}
 		},
 		"armaments": [
@@ -972,7 +1090,7 @@
 		"speed": 10.032,
 		"sensors": {
 			"visual": {
-				"range": 876.828
+				"range": 815.242
 			}
 		},
 		"armaments": [
@@ -1105,7 +1223,7 @@
 		"speed": 16.83333,
 		"sensors": {
 			"visual": {
-				"range": 1131.6
+				"range": 1197.4
 			},
 			"radar": {
 				"range": 1398.7
@@ -1280,7 +1398,7 @@
 		"speed": 15.9477,
 		"sensors": {
 			"visual": {
-				"range": 670
+				"range": 505
 			}
 		},
 		"armaments": [
@@ -1393,7 +1511,7 @@
 		"speed": 18.777,
 		"sensors": {
 			"visual": {
-				"range": 829.6
+				"range": 744.4
 			},
 			"radar": {
 				"range": 1172.2
@@ -1631,7 +1749,7 @@
 		"speed": 15.44,
 		"sensors": {
 			"visual": {
-				"range": 792.3
+				"range": 688.45
 			},
 			"radar": {
 				"range": 1144.225
@@ -1800,7 +1918,7 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 830
+				"range": 745
 			},
 			"radar": {
 				"range": 1172.5
@@ -1979,7 +2097,7 @@
 		"speed": 27.26557,
 		"sensors": {
 			"visual": {
-				"range": 637.7
+				"range": 456.55
 			}
 		},
 		"armaments": [
@@ -2018,7 +2136,7 @@
 		"speed": 8.7455,
 		"sensors": {
 			"visual": {
-				"range": 796.8
+				"range": 695.2
 			},
 			"sonar": {
 				"range": 623
@@ -2162,12 +2280,33 @@
 		],
 		"sensors": {
 			"visual": {
-				"range": 705.6286
+				"range": 558.4429
 			}
 		},
 		"antiAircraft": 0.039,
 		"npc": true,
 		"damage": 1.7604766666666667,
+		"turrets": [],
+		"exhausts": []
+	},
+	"kalibr": {
+		"label": "Kalibr",
+		"link": "https://en.wikipedia.org/wiki/3M-54_Kalibr",
+		"kind": "weapon",
+		"subkind": "missile",
+		"level": 4,
+		"length": 8.1,
+		"width": 4.11328,
+		"speed": 265.04,
+		"sensors": {
+			"radar": {
+				"range": 1012.15
+			}
+		},
+		"lifespan": 5.665362543672178,
+		"damage": 0.8216618332486386,
+		"reload": 12,
+		"armaments": [],
 		"turrets": [],
 		"exhausts": []
 	},
@@ -2183,7 +2322,7 @@
 		"speed": 16.46223,
 		"sensors": {
 			"visual": {
-				"range": 1104
+				"range": 1156
 			},
 			"radar": {
 				"range": 1378
@@ -2408,7 +2547,7 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 926
+				"range": 889
 			},
 			"radar": {
 				"range": 1244.5
@@ -2593,7 +2732,7 @@
 		"speed": 22.6,
 		"sensors": {
 			"visual": {
-				"range": 650.8
+				"range": 476.2
 			},
 			"radar": {
 				"range": 1038.1
@@ -2693,7 +2832,7 @@
 		"speed": 16.71945,
 		"sensors": {
 			"visual": {
-				"range": 938.2
+				"range": 907.3
 			},
 			"radar": {
 				"range": 1253.65
@@ -2918,7 +3057,7 @@
 		"speed": 8.5,
 		"sensors": {
 			"visual": {
-				"range": 791.6
+				"range": 687.4
 			},
 			"radar": {
 				"range": 1143.7
@@ -3003,7 +3142,7 @@
 		"speed": 18.52,
 		"sensors": {
 			"visual": {
-				"range": 770.6
+				"range": 655.9
 			},
 			"radar": {
 				"range": 1127.95
@@ -3173,7 +3312,7 @@
 		"speed": 14.404,
 		"sensors": {
 			"visual": {
-				"range": 1161.6
+				"range": 1242.4
 			},
 			"radar": {
 				"range": 1421.2
@@ -3359,7 +3498,7 @@
 		"speed": 14.66167,
 		"sensors": {
 			"visual": {
-				"range": 978
+				"range": 967
 			},
 			"radar": {
 				"range": 1283.5
@@ -3525,7 +3664,7 @@
 		"speed": 12.8611,
 		"sensors": {
 			"visual": {
-				"range": 940
+				"range": 910
 			},
 			"radar": {
 				"range": 1255
@@ -3673,7 +3812,7 @@
 		"speed": 8.9408,
 		"sensors": {
 			"visual": {
-				"range": 780
+				"range": 670
 			},
 			"sonar": {
 				"range": 612.5
@@ -3761,7 +3900,7 @@
 		"speed": 16,
 		"sensors": {
 			"visual": {
-				"range": 673.8
+				"range": 510.7
 			}
 		},
 		"antiAircraft": 0.026,
@@ -3782,7 +3921,7 @@
 		"speed": 21.6067,
 		"sensors": {
 			"visual": {
-				"range": 677.2
+				"range": 515.8
 			},
 			"radar": {
 				"range": 1057.9
@@ -3795,7 +3934,7 @@
 				"positionForward": -1.75,
 				"positionSide": 2.5,
 				"angle": 0.03490658503988659,
-				"external": true
+				"external": false
 			},
 			{
 				"type": "p15",
@@ -3803,7 +3942,7 @@
 				"positionForward": -1.75,
 				"positionSide": -2.5,
 				"angle": -0.03490658503988659,
-				"external": true
+				"external": false
 			},
 			{
 				"type": "p15",
@@ -3811,7 +3950,7 @@
 				"positionForward": -12,
 				"positionSide": 2.5,
 				"angle": 0.03490658503988659,
-				"external": true
+				"external": false
 			},
 			{
 				"type": "p15",
@@ -3819,7 +3958,7 @@
 				"positionForward": -12,
 				"positionSide": -2.5,
 				"angle": -0.03490658503988659,
-				"external": true
+				"external": false
 			},
 			{
 				"type": "25x129mmR",
@@ -3870,7 +4009,7 @@
 		"speed": 21.09,
 		"sensors": {
 			"visual": {
-				"range": 646
+				"range": 469
 			}
 		},
 		"armaments": [
@@ -3926,7 +4065,7 @@
 		"stealth": 0.5,
 		"sensors": {
 			"visual": {
-				"range": 816
+				"range": 724
 			},
 			"radar": {
 				"range": 1162
@@ -3985,20 +4124,22 @@
 				"external": false
 			},
 			{
-				"type": "mark48",
+				"type": "tomahawk",
 				"width": 0.533,
 				"positionForward": 37.7849,
 				"positionSide": 4.73435,
 				"angle": 0,
-				"external": false
+				"external": false,
+				"hidden": true
 			},
 			{
-				"type": "mark48",
+				"type": "tomahawk",
 				"width": 0.533,
 				"positionForward": 37.7849,
 				"positionSide": -4.73435,
 				"angle": 0,
-				"external": false
+				"external": false,
+				"hidden": true
 			},
 			{
 				"type": "mk70",
@@ -4034,7 +4175,7 @@
 		"speed": 16.976667,
 		"sensors": {
 			"visual": {
-				"range": 753.42
+				"range": 630.13
 			},
 			"radar": {
 				"range": 1115.065
@@ -4115,7 +4256,7 @@
 		"draft": 11.6,
 		"sensors": {
 			"visual": {
-				"range": 958
+				"range": 937
 			}
 		},
 		"armaments": [],
@@ -4139,7 +4280,7 @@
 		"speed": 16.59084,
 		"sensors": {
 			"visual": {
-				"range": 960.6
+				"range": 940.9000000000001
 			},
 			"radar": {
 				"range": 1270.45
@@ -4392,7 +4533,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 960
+				"range": 940
 			},
 			"radar": {
 				"range": 1270
@@ -4425,6 +4566,18 @@
 				"positionForward": -40.4359,
 				"positionSide": -8,
 				"angle": -1.5707963267948966
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": 1.5,
+				"vertical": true
+			},
+			{
+				"type": "yj18",
+				"positionForward": 44,
+				"positionSide": -1.5,
+				"vertical": true
 			},
 			{
 				"type": "yj18",
@@ -4569,7 +4722,7 @@
 		"speed": 9.06,
 		"sensors": {
 			"visual": {
-				"range": 734.2
+				"range": 601.3
 			},
 			"sonar": {
 				"range": 583.875
@@ -4652,7 +4805,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 745.4
+				"range": 618.1
 			},
 			"radar": {
 				"range": 1109.05
@@ -4828,7 +4981,7 @@
 		"torpedoResistance": 0.2,
 		"sensors": {
 			"visual": {
-				"range": 1126
+				"range": 1189
 			},
 			"radar": {
 				"range": 1394.5
@@ -4988,7 +5141,7 @@
 		"speed": 18.00556,
 		"sensors": {
 			"visual": {
-				"range": 860
+				"range": 790
 			},
 			"radar": {
 				"range": 1195
@@ -5179,7 +5332,7 @@
 		"speed": 28.29446,
 		"sensors": {
 			"visual": {
-				"range": 714
+				"range": 571
 			},
 			"radar": {
 				"range": 1085.5
@@ -5337,7 +5490,7 @@
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {
-				"range": 980
+				"range": 970
 			},
 			"radar": {
 				"range": 1285
@@ -5741,6 +5894,23 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"a190": {
+		"label": "AK-130",
+		"link": "https://en.wikipedia.org/wiki/AK-100_(naval_gun)",
+		"kind": "turret",
+		"subkind": "gun",
+		"length": 9.45,
+		"positionForward": 2.17111,
+		"width": 3.691,
+		"armaments": [
+			{
+				"type": "130x720mmR",
+				"angle": 0
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
 	"ak130": {
 		"label": "AK-130",
 		"link": "https://en.wikipedia.org/wiki/AK-130",
@@ -5796,7 +5966,7 @@
 		"speed": 96.1136,
 		"sensors": {
 			"visual": {
-				"range": 624.9
+				"range": 437.35
 			}
 		},
 		"armaments": [
@@ -6062,7 +6232,7 @@
 		"speed": 41.15,
 		"sensors": {
 			"visual": {
-				"range": 617.74
+				"range": 426.61
 			}
 		},
 		"armaments": [
@@ -6184,7 +6354,7 @@
 		"speed": 72.02226,
 		"sensors": {
 			"visual": {
-				"range": 628.4286
+				"range": 442.6429
 			}
 		},
 		"armaments": [
@@ -6256,7 +6426,7 @@
 		"speed": 53.50225,
 		"sensors": {
 			"visual": {
-				"range": 631.6
+				"range": 447.4
 			}
 		},
 		"armaments": [
@@ -6286,7 +6456,7 @@
 		"speed": 67.9067,
 		"sensors": {
 			"visual": {
-				"range": 620.1706
+				"range": 430.2559
 			}
 		},
 		"armaments": [
@@ -6637,7 +6807,7 @@
 		"speed": 75.1089,
 		"sensors": {
 			"visual": {
-				"range": 639.2
+				"range": 458.8
 			}
 		},
 		"armaments": [
@@ -6896,6 +7066,33 @@
 		"turrets": [],
 		"exhausts": []
 	},
+	"ratepKomar": {
+		"label": "Komar",
+		"link": "https://en.wikipedia.org/wiki/9K38_Igla#Variants",
+		"kind": "turret",
+		"subkind": "missile",
+		"length": 1.874,
+		"width": 2.05,
+		"positionForward": 0,
+		"armaments": [
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": 0.75,
+				"external": false
+			},
+			{
+				"type": "igla",
+				"angle": 0,
+				"positionForward": 0,
+				"positionSide": -0.75,
+				"external": false
+			}
+		],
+		"turrets": [],
+		"exhausts": []
+	},
 	"rbs15": {
 		"label": "RBS-15",
 		"link": "https://en.wikipedia.org/wiki/RBS-15",
@@ -7035,7 +7232,7 @@
 		"speed": 69,
 		"sensors": {
 			"visual": {
-				"range": 646.2
+				"range": 469.3
 			}
 		},
 		"armaments": [
@@ -7065,7 +7262,7 @@
 		"speed": 140,
 		"sensors": {
 			"visual": {
-				"range": 628.62
+				"range": 442.93
 			}
 		},
 		"armaments": [
