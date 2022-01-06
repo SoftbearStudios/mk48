@@ -23,7 +23,7 @@
 
 ### Server
 
-0. Install nightly Rust ([here](https://rustup.rs/), then `rustup default nightly`)
+0. Install nightly Rust ([here](https://rustup.rs/), then `rustup default nightly-2021-10-28`)
 1. Enter `/server`
 2. `make`
 3. Navigate to `localhost:8000`
