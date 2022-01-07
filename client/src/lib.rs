@@ -8,9 +8,12 @@
 #![feature(bool_to_option)]
 
 mod animation;
+mod background;
 mod game;
 mod interpolated_contact;
 mod settings;
+mod sprite;
+mod state;
 mod ui;
 mod zoom;
 

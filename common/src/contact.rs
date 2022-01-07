@@ -109,6 +109,31 @@ impl Contact {
         }
     }
 
+    /// Simulate delta_seconds passing, by updating guidance and kinematics. This is an approximation
+    /// of how the corresponding entity on the server.
+    pub fn simulate(&mut self, delta_seconds: f32) {
+        if let Some(entity_type) = self.entity_type() {
+            let guidance = *self.guidance();
+            let max_speed = match entity_type.data().sub_kind {
+                // Wait until risen to surface.
+                EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::Sam
+                    if self.altitude().is_submerged() =>
+                {
+                    EntityData::SURFACING_PROJECTILE_SPEED_LIMIT
+                }
+                _ => f32::INFINITY,
+            };
+
+            self.transform_mut().apply_guidance(
+                entity_type.data(),
+                guidance,
+                max_speed,
+                delta_seconds,
+            );
+        }
+        self.transform_mut().do_kinematics(delta_seconds);
+    }
+
     /// Interpolates or snaps one contact's fields to another, assuming they share the same id.
     /// Optionally affects guidance, because that is more of an input, and is not subject to physics.
     pub fn interpolate_towards(

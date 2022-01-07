@@ -1,14 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::animation::Animation;
+use crate::background::Mk48BackgroundContext;
 use crate::interpolated_contact::InterpolatedContact;
 use crate::settings::Mk48Settings;
-use crate::ui::{
-    ChatModel, DeathReasonModel, LeaderboardItemModel, TeamModel, TeamPlayerModel, UiEvent,
-    UiProps, UiState, UiStatus,
-};
-use client_util::apply::Apply;
+use crate::sprite::SortableSprite;
+use crate::state::Mk48State;
+use crate::ui::{DeathReasonModel, UiEvent, UiProps, UiState, UiStatus};
 use client_util::audio::AudioLayer;
 use client_util::context::Context;
 use client_util::fps_monitor::FpsMonitor;
@@ -17,36 +15,28 @@ use client_util::joystick::Joystick;
 use client_util::keyboard::Key;
 use client_util::mouse::{MouseButton, MouseEvent};
 use client_util::rate_limiter::RateLimiter;
-use client_util::renderer::background::{BackgroundContext, BackgroundLayer};
+use client_util::renderer::background::BackgroundLayer;
 use client_util::renderer::graphic::GraphicLayer;
 use client_util::renderer::particle::{Particle, ParticleLayer};
 use client_util::renderer::renderer::Layer;
 use client_util::renderer::renderer::Renderer;
-use client_util::renderer::shader::ShaderBinding;
 use client_util::renderer::sprite::SpriteLayer;
 use client_util::renderer::text::TextLayer;
-use client_util::renderer::texture::Texture;
 use client_util::rgb::{gray, rgb, rgba};
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
-use common::death_reason::DeathReason;
 use common::entity::{EntityData, EntityId, EntityKind, EntitySubKind, EntityType};
 use common::guidance::Guidance;
 use common::protocol::{Command, Control, Fire, Hint, Pay, Spawn, Update, Upgrade};
-use common::terrain;
-use common::terrain::{Coord, Terrain};
 use common::ticks::Ticks;
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common_util::range::{gen_radius, map_ranges};
-use core_protocol::id::{GameId, PeriodId, TeamId};
-use core_protocol::name::PlayerAlias;
+use core_protocol::id::{GameId, TeamId};
 use core_protocol::rpc::ClientRequest;
-use glam::{Mat2, Mat3, UVec2, Vec2, Vec4};
-use itertools::Itertools;
+use glam::{Mat2, UVec2, Vec2, Vec4};
 use rand::{thread_rng, Rng};
-use std::cmp::Ordering;
 use std::collections::HashMap;
 
 pub struct Mk48Game {
@@ -66,78 +56,14 @@ pub struct Mk48Game {
     pub fps_counter: FpsMonitor,
 }
 
-pub struct Mk48BackgroundContext {
-    terrain_texture: Option<Texture>,
-    sand_texture: Texture,
-    grass_texture: Texture,
-    matrix: Mat3,
-    time: f32,
-    visual_range: f32,
-    visual_restriction: f32,
-    world_radius: f32,
-}
-
-impl Mk48BackgroundContext {
-    const SAND_COLOR: [u8; 3] = [213, 176, 107];
-    const GRASS_COLOR: [u8; 3] = [71, 85, 45];
-}
-
-impl BackgroundContext for Mk48BackgroundContext {
-    fn prepare(&mut self, shader: &mut ShaderBinding) {
-        shader.uniform_texture("uSampler", self.terrain_texture.as_ref().unwrap(), 0);
-        // TODO don't bind textures if not enabled.
-        shader.uniform_texture("uSand", &self.sand_texture, 1);
-        shader.uniform_texture("uGrass", &self.grass_texture, 2);
-        shader.uniform_matrix3f("uTexture", &self.matrix);
-        shader.uniform4f(
-            "uTime_uVisual_uRestrict_uBorder",
-            Vec4::new(
-                self.time,
-                self.visual_range,
-                self.visual_restriction,
-                self.world_radius,
-            ),
-        );
-    }
-}
-
-/// State associated with game server connection. Reset when connection is reset.
-#[derive(Default)]
-pub struct Mk48State {
-    pub score: u32,
-    pub entity_id: Option<EntityId>,
-    pub contacts: HashMap<EntityId, InterpolatedContact>,
-    pub animations: Vec<Animation>,
-    pub terrain: Terrain,
-    pub world_radius: f32,
-    pub death_reason: Option<DeathReason>,
-}
-
-impl Mk48State {
-    /// Returns the "view" of the player's boat's contact, if the player has a boat.
-    pub(crate) fn player_contact(&self) -> Option<&Contact> {
-        self.entity_id
-            .map(|id| &self.contacts.get(&id).unwrap().view)
-    }
-}
-
-impl Apply<Update> for Mk48State {
-    fn apply(&mut self, update: Update) {
-        self.death_reason = update.death_reason;
-        self.terrain.apply_update(&update.terrain);
-        self.world_radius = update.world_radius;
-        self.score = update.score;
-    }
-}
-
 /// Order of fields is order of rendering.
 #[derive(Layer)]
 pub struct RendererLayer {
-    audio: AudioLayer,
+    pub audio: AudioLayer,
     background: BackgroundLayer<Mk48BackgroundContext>,
-    sea_level_particles: ParticleLayer,
+    pub sea_level_particles: ParticleLayer,
     sprites: SpriteLayer,
-    airborne_particles: ParticleLayer,
+    pub airborne_particles: ParticleLayer,
     graphics: GraphicLayer,
     text: TextLayer,
 }
@@ -174,7 +100,6 @@ impl Mk48Game {
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).
     /// Armaments are scored by a combination of distance and angle to target.
     fn find_best_armament(
-        &self,
         player_contact: &Contact,
         angle_limit: bool,
         mouse_position: Vec2,
@@ -332,33 +257,8 @@ impl GameClient for Mk48Game {
             renderer.load_texture("/sprites_webgl.png", UVec2::new(2048, 2048), None, false);
         let wind = Vec2::new(7.0, 1.5);
 
-        let (sand_path, grass_path) = if context.settings.render_terrain_textures {
-            ("/sand.png", "/grass.png")
-        } else {
-            // TODO: Kludge, don't load textures.
-            ("/dummy.png", "/dummy.png")
-        };
-
-        let background_context = Mk48BackgroundContext {
-            terrain_texture: None,
-            sand_texture: renderer.load_texture(
-                sand_path,
-                UVec2::new(256, 256),
-                Some(Mk48BackgroundContext::SAND_COLOR),
-                true,
-            ),
-            grass_texture: renderer.load_texture(
-                grass_path,
-                UVec2::new(256, 256),
-                Some(Mk48BackgroundContext::GRASS_COLOR),
-                true,
-            ),
-            matrix: Mat3::IDENTITY,
-            time: 0.0,
-            visual_range: 0.0,
-            visual_restriction: 0.0,
-            world_radius: 0.0,
-        };
+        let background_context =
+            Mk48BackgroundContext::new(context.settings.render_terrain_textures, &*renderer);
 
         RendererLayer {
             audio: AudioLayer::new("/sprites_audio.mp3", audio_sprite_sheet),
@@ -404,7 +304,7 @@ impl GameClient for Mk48Game {
 
                 // Compensate for the fact that the data is a little old (second parameter is rough
                 // estimate of latency)
-                Self::propagate_contact(&mut network_contact.model, 0.1);
+                network_contact.model.simulate(0.1);
             } else {
                 self.new_contact(contact, renderer.camera_center(), &*context, &layer.audio);
                 if contact.player_id() == context.core().player_id && contact.is_boat() {
@@ -461,6 +361,7 @@ impl GameClient for Mk48Game {
             .player_contact()
             .map(|c| c.altitude())
             .unwrap_or(Altitude::ZERO);
+
         let mut aircraft_volume: f32 = 0.0;
         let mut jet_volume: f32 = 0.0;
         let mut need_to_dodge: f32 = 0.0;
@@ -572,22 +473,21 @@ impl GameClient for Mk48Game {
         let game_state = context.game_socket.as_mut().unwrap().state_mut();
         let core_state = context.core_socket.state();
 
-        let debug_latency_player_entity_id = if false { game_state.entity_id } else { None };
+        let debug_latency_entity_id = if false { game_state.entity_id } else { None };
         // A subset of game logic.
-        for InterpolatedContact {
-            model, view, error, ..
-        } in &mut game_state.contacts.values_mut()
-        {
-            if model
+        for interp in &mut game_state.contacts.values_mut() {
+            if interp
+                .model
                 .entity_type()
                 .map(|e| e.data().kind == EntityKind::Boat)
                 .unwrap_or(false)
             {
                 // Update team_proximity.
-                if let Some(player_id) = model.player_id() {
+                if let Some(player_id) = interp.model.player_id() {
                     if let Some(player) = core_state.players.get(&player_id) {
                         if let Some(team_id) = player.team_id {
-                            let distance = camera.distance_squared(model.transform().position);
+                            let distance =
+                                camera.distance_squared(interp.model.transform().position);
                             team_proximity
                                 .entry(team_id)
                                 .and_modify(|dist| *dist = dist.min(distance))
@@ -597,123 +497,9 @@ impl GameClient for Mk48Game {
                 }
             }
 
-            let positional_inaccuracy = model
-                .transform()
-                .position
-                .distance_squared(view.transform().position);
-            let directional_inaccuracy = (model.transform().direction - view.transform().direction)
-                .abs()
-                .to_radians();
-            let velocity_inaccuracy = model
-                .transform()
-                .velocity
-                .difference(view.transform().velocity)
-                .to_mps();
-
-            if Some(view.id()) == debug_latency_player_entity_id {
-                client_util::console_log!(
-                    "err: {:.2}, pos: {:.2}, dir: {:.2}, vel: {:.2}",
-                    *error,
-                    positional_inaccuracy.sqrt(),
-                    directional_inaccuracy,
-                    velocity_inaccuracy
-                );
-            }
-            *error = (*error * 0.5f32.powf(elapsed_seconds)
-                + elapsed_seconds
-                    * (positional_inaccuracy * 0.4
-                        + directional_inaccuracy * 2.0
-                        + velocity_inaccuracy * 0.08))
-                .clamp(0.0, 10.0);
-
-            // If reloads are known before and after, and one goes from zero to non-zero, it was fired.
-            if let Some(entity_type) = model.entity_type() {
-                let data: &EntityData = entity_type.data();
-                if view.entity_type() == model.entity_type()
-                    && view.reloads_known()
-                    && model.reloads_known()
-                    && view.turrets_known()
-                {
-                    let model_reloads = model.reloads();
-                    for (i, &old) in view.reloads().iter().enumerate() {
-                        let new = model_reloads[i];
-
-                        if new == Ticks::ZERO || old != Ticks::ZERO {
-                            // Wasn't just fired
-                            continue;
-                        }
-
-                        let armament = &data.armaments[i];
-                        let armament_entity_data = armament.entity_type.data();
-
-                        if !matches!(
-                            armament_entity_data.sub_kind,
-                            EntitySubKind::Shell | EntitySubKind::Rocket | EntitySubKind::Missile
-                        ) {
-                            // Don't generate particles.
-                            continue;
-                        }
-
-                        let boat_velocity = view.transform().direction.to_vec()
-                            * view.transform().velocity.to_mps();
-
-                        let armament_transform =
-                            *view.transform() + data.armament_transform(view.turrets(), i);
-
-                        let direction_vector: Vec2 = if armament.vertical {
-                            // Straight up.
-                            Vec2::ZERO
-                        } else {
-                            armament_transform.direction.into()
-                        };
-
-                        let mut rng = thread_rng();
-
-                        let forward_offset = armament
-                            .turret
-                            .and_then(|t| data.turrets[t].entity_type)
-                            .map(|t| t.data().length * 0.4)
-                            .unwrap_or(2.0);
-                        let forward_velocity = 0.5 * armament_entity_data.speed.to_mps().min(100.0);
-
-                        let layer = if view.altitude().is_submerged() {
-                            &mut layer.sea_level_particles
-                        } else {
-                            &mut layer.airborne_particles
-                        };
-
-                        // Add muzzle flash particles.
-                        let amount = 10;
-                        for i in 0..amount {
-                            layer.add(Particle {
-                                position: armament_transform.position
-                                    + direction_vector * forward_offset,
-                                velocity: boat_velocity
-                                    + direction_vector
-                                        * forward_velocity
-                                        * (i as f32 * (1.0 / amount as f32))
-                                    + direction_vector.perp()
-                                        * forward_velocity
-                                        * 0.15
-                                        * (rng.gen::<f32>() - 0.5),
-                                radius: (armament_entity_data.width * 5.0).clamp(1.0, 3.0),
-                                color: -1.0,
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Don't interpolate view's guidance if this is the player's boat, so that it doesn't jerk around.
-            view.interpolate_towards(
-                model,
-                Some(model.id()) != game_state.entity_id,
-                elapsed_seconds * (*error),
-                elapsed_seconds,
-            );
-            for contact in [model, view] {
-                Self::propagate_contact(contact, elapsed_seconds);
-            }
+            interp.update_error_bound(elapsed_seconds, debug_latency_entity_id);
+            interp.generate_particles(layer);
+            interp.interpolate(elapsed_seconds, game_state.entity_id);
         }
 
         // May have changed due to the above.
@@ -742,118 +528,15 @@ impl GameClient for Mk48Game {
                 (500.0, 0.0)
             };
 
-        // Both width and height must be odd numbers so there is an equal distance from the center
-        // on both sides.
-        let terrain_width: usize = 2 * ((zoom / terrain::SCALE).max(2.0) as usize + 1) + 3;
-        let terrain_height =
-            2 * ((zoom / (renderer.aspect_ratio() * terrain::SCALE)).max(2.0) as usize + 1) + 3;
-
-        let mut terrain_bytes = Vec::with_capacity(terrain_width * terrain_height);
-        let terrain_center = Coord::from_position(camera).unwrap();
-
-        terrain_bytes.extend(game_state.terrain.iter_rect_or(
-            terrain_center,
-            terrain_width,
-            terrain_height,
-            0,
-        ));
-
-        let terrain_offset = Mat3::from_translation(-terrain_center.corner());
-        let terrain_scale = &Mat3::from_scale(Vec2::new(
-            1.0 / (terrain_width as f32 * terrain::SCALE),
-            1.0 / (terrain_height as f32 * terrain::SCALE),
-        ));
-
-        // This matrix converts from world space to terrain texture UV coordinates.
-        layer.background.context.matrix = Mat3::from_translation(Vec2::new(0.5, 0.5))
-            .mul_mat3(&terrain_scale.mul_mat3(&terrain_offset));
-
-        renderer.realloc_texture_from_bytes(
-            &mut layer.background.context.terrain_texture,
-            terrain_width as u32,
-            terrain_height as u32,
-            &terrain_bytes,
+        layer.background.context.update(
+            camera,
+            zoom,
+            context.client.update_seconds,
+            visual_range,
+            visual_restriction,
+            &*game_state,
+            &*renderer,
         );
-
-        layer.background.context.time = context.client.update_seconds;
-        layer.background.context.visual_range = visual_range;
-        layer.background.context.visual_restriction = visual_restriction;
-        layer.background.context.world_radius = game_state.world_radius;
-
-        struct SortableSprite<'a> {
-            alpha: f32,
-            altitude: f32,
-            dimensions: Vec2,
-            entity_id: Option<EntityId>,
-            frame: Option<usize>,
-            sprite: &'a str,
-            transform: Transform,
-        }
-
-        impl<'a> SortableSprite<'a> {
-            fn new_entity(
-                entity_id: EntityId,
-                entity_type: EntityType,
-                transform: Transform,
-                mut altitude: f32,
-                alpha: f32,
-            ) -> Self {
-                altitude += Self::entity_height(entity_type);
-                Self {
-                    sprite: entity_type.as_str(),
-                    frame: None,
-                    dimensions: entity_type.data().dimensions(),
-                    transform,
-                    altitude,
-                    alpha,
-                    entity_id: Some(entity_id),
-                }
-            }
-
-            fn new_child_entity(
-                entity_id: EntityId,
-                parent_type: EntityType,
-                entity_type: EntityType,
-                transform: Transform,
-                mut altitude: f32,
-                alpha: f32,
-            ) -> Self {
-                altitude += Self::entity_height(parent_type);
-                Self::new_entity(entity_id, entity_type, transform, altitude, alpha)
-            }
-
-            fn new_animation(animation: &Animation) -> Self {
-                Self {
-                    alpha: 1.0,
-                    altitude: animation.altitude,
-                    dimensions: Vec2::splat(animation.scale),
-                    entity_id: None,
-                    frame: Some(animation.frame),
-                    sprite: animation.name,
-                    transform: Transform::from_position(animation.position),
-                }
-            }
-
-            fn entity_height(entity_type: EntityType) -> f32 {
-                entity_type.data().length * 0.0001
-            }
-        }
-
-        impl<'a> PartialEq for SortableSprite<'a> {
-            fn eq(&self, other: &Self) -> bool {
-                self.altitude == other.altitude && self.entity_id == other.entity_id
-            }
-        }
-
-        impl<'a> PartialOrd for SortableSprite<'a> {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                Some(
-                    self.altitude
-                        .partial_cmp(&other.altitude)?
-                        .then_with(|| self.entity_id.cmp(&other.entity_id)),
-                )
-            }
-        }
 
         // Prepare to sort sprites.
         let mut sortable_sprites = Vec::with_capacity(game_state.contacts.len() * 5);
@@ -1040,7 +723,7 @@ impl GameClient for Mk48Game {
                             }
 
                             // Turret azimuths.
-                            if let Some(i) = self.find_best_armament(
+                            if let Some(i) = Self::find_best_armament(
                                 contact,
                                 false,
                                 renderer.to_world_position(context.mouse.position),
@@ -1428,7 +1111,7 @@ impl GameClient for Mk48Game {
                             .combined(context.keyboard.state(Key::E))
                             .is_down()
                     {
-                        self.find_best_armament(
+                        Self::find_best_armament(
                             player_contact,
                             true,
                             mouse_position,
@@ -1448,56 +1131,8 @@ impl GameClient for Mk48Game {
             status
         } else {
             UiStatus::Spawning {
-                death_reason: game_state.death_reason.as_ref().map(|reason| match reason {
-                    DeathReason::Border => DeathReasonModel {
-                        death_type: "border",
-                        player: None,
-                        entity: None,
-                    },
-                    DeathReason::Terrain => DeathReasonModel {
-                        death_type: "terrain",
-                        player: None,
-                        entity: None,
-                    },
-                    DeathReason::Boat(player_id) => DeathReasonModel {
-                        death_type: "collision",
-                        player: Some(
-                            core_state
-                                .players
-                                .get(player_id)
-                                .map(|p| p.alias)
-                                .unwrap_or_else(|| PlayerAlias::new("???")),
-                        ),
-                        entity: None,
-                    },
-                    DeathReason::Entity(entity_type) => DeathReasonModel {
-                        death_type: "collision",
-                        player: None,
-                        entity: Some(*entity_type),
-                    },
-                    DeathReason::Ram(player_id) => DeathReasonModel {
-                        death_type: "ramming",
-                        player: Some(
-                            core_state
-                                .players
-                                .get(player_id)
-                                .map(|p| p.alias)
-                                .unwrap_or_else(|| PlayerAlias::new("???")),
-                        ),
-                        entity: None,
-                    },
-                    DeathReason::Weapon(player_id, entity_type) => DeathReasonModel {
-                        death_type: "sinking",
-                        player: Some(
-                            core_state
-                                .players
-                                .get(player_id)
-                                .map(|p| p.alias)
-                                .unwrap_or_else(|| PlayerAlias::new("???")),
-                        ),
-                        entity: Some(*entity_type),
-                    },
-                    _ => panic!("invalid death reason for boat: {:?}", reason),
+                death_reason: game_state.death_reason.as_ref().and_then(|reason| {
+                    DeathReasonModel::from_death_reason(reason, &*core_state).ok()
                 }),
                 connection_lost,
             }
@@ -1506,120 +1141,7 @@ impl GameClient for Mk48Game {
         self.fps_counter.update(elapsed_seconds);
 
         if self.state_rate_limiter.update_ready(elapsed_seconds) {
-            let props = UiProps {
-                player_id: core_state.player_id,
-                team_name: core_state.team().map(|t| t.team_name),
-                invitation_id: core_state.created_invitation_id,
-                score: game_state.score,
-                player_count: core_state.player_count,
-                fps: self.fps_counter.last_sample().unwrap_or(0.0),
-                status,
-                chats: core_state
-                    .messages
-                    .iter()
-                    .map(|message| ChatModel {
-                        name: message.alias,
-                        player_id: message.player_id,
-                        team: message.team_name,
-                        message: message.text.clone(),
-                        whisper: message.whisper,
-                    })
-                    .collect(),
-                liveboard: context
-                    .core()
-                    .liveboard
-                    .iter()
-                    .filter_map(|item| {
-                        let player = core_state.players.get(&item.player_id);
-                        if let Some(player) = player {
-                            let team_name = player
-                                .team_id
-                                .and_then(|team_id| core_state.teams.get(&team_id))
-                                .map(|team| team.team_name);
-                            Some(LeaderboardItemModel {
-                                name: player.alias,
-                                team: team_name,
-                                score: item.score,
-                            })
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-                leaderboards: context
-                    .core()
-                    .leaderboards
-                    .iter()
-                    .enumerate()
-                    .map(|(i, leaderboard)| {
-                        let period: PeriodId = i.into();
-                        (
-                            period,
-                            leaderboard
-                                .iter()
-                                .map(|item| LeaderboardItemModel {
-                                    name: item.alias,
-                                    team: None,
-                                    score: item.score,
-                                })
-                                .collect(),
-                        )
-                    })
-                    .collect(),
-                team_members: if let Some(team_id) = core_state.team_id() {
-                    core_state
-                        .players
-                        .values()
-                        .filter(|p| p.team_id == Some(team_id))
-                        .map(|p| TeamPlayerModel {
-                            player_id: p.player_id,
-                            name: p.alias,
-                            captain: p.team_captain,
-                        })
-                        .sorted_by(|a, b| b.captain.cmp(&a.captain).then(a.name.cmp(&b.name)))
-                        .collect()
-                } else {
-                    vec![]
-                },
-                team_captain: core_state.team_id().is_some()
-                    && core_state.player().map(|p| p.team_captain).unwrap_or(false),
-                team_join_requests: context
-                    .core()
-                    .joiners
-                    .iter()
-                    .filter_map(|id| {
-                        context
-                            .core()
-                            .players
-                            .get(id)
-                            .map(|player| TeamPlayerModel {
-                                player_id: player.player_id,
-                                name: player.alias,
-                                captain: false,
-                            })
-                    })
-                    .collect(),
-                teams: context
-                    .core()
-                    .teams
-                    .iter()
-                    .sorted_by(|&(a, _), &(b, _)| {
-                        team_proximity
-                            .get(a)
-                            .unwrap_or(&f32::INFINITY)
-                            .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
-                            .unwrap()
-                    })
-                    .map(|(team_id, team)| TeamModel {
-                        team_id: *team_id,
-                        name: team.team_name,
-                        joining: core_state.joins.contains(team_id),
-                    })
-                    .take(5)
-                    .collect(),
-            };
-
-            context.set_ui_props(props);
+            self.update_ui_props(context, status, &team_proximity);
         }
 
         if let Some(control) = control {

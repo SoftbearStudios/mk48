@@ -171,12 +171,11 @@ impl CommandTrait for Fire {
         return if let Status::Alive {
             entity_index,
             aim_target,
-            flags,
             ..
         } = player.status
         {
             // Prevents limited armaments from being invalidated since all limited armaments are destroyed on upgrade.
-            if flags.upgraded {
+            if player.flags.upgraded {
                 return Err("cannot fire right after upgrading");
             }
 
@@ -359,12 +358,7 @@ impl CommandTrait for Upgrade {
         let mut player = shared_data.player.as_ref().borrow_mut();
         let Player { status, score, .. } = &mut *player;
 
-        if let Status::Alive {
-            entity_index,
-            flags,
-            ..
-        } = status
-        {
+        if let Status::Alive { entity_index, .. } = status {
             let entity = &mut world.entities[*entity_index];
             if !entity
                 .entity_type
@@ -373,7 +367,7 @@ impl CommandTrait for Upgrade {
                 return Err("cannot upgrade to provided entity type");
             }
 
-            flags.upgraded = true;
+            player.flags.upgraded = true;
             drop(player);
 
             entity.change_entity_type(self.entity_type, &mut world.arena);

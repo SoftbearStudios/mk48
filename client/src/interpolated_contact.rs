@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::animation::Animation;
-use crate::game::Mk48Game;
+use crate::game::{Mk48Game, RendererLayer};
 use client_util::audio::AudioLayer;
 use client_util::context::Context;
+use client_util::renderer::particle::Particle;
 use common::contact::{Contact, ContactTrait};
 use common::entity::EntityId;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
@@ -12,6 +13,7 @@ use common::ticks::Ticks;
 use common_util::angle::Angle;
 use common_util::range::map_ranges;
 use glam::Vec2;
+use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
 /// A contact that may be locally controlled by simulated elsewhere (by the server).
@@ -37,6 +39,140 @@ impl InterpolatedContact {
             error: 0.0,
             idle: Ticks::ZERO,
         }
+    }
+
+    /// Updates measure of discrepancy between model and view, known as "error."
+    pub fn update_error_bound(
+        &mut self,
+        elapsed_seconds: f32,
+        debug_latency_entity_id: Option<EntityId>,
+    ) {
+        let positional_inaccuracy = self
+            .model
+            .transform()
+            .position
+            .distance_squared(self.view.transform().position);
+        let directional_inaccuracy = (self.model.transform().direction
+            - self.view.transform().direction)
+            .abs()
+            .to_radians();
+        let velocity_inaccuracy = self
+            .model
+            .transform()
+            .velocity
+            .difference(self.view.transform().velocity)
+            .to_mps();
+
+        if Some(self.view.id()) == debug_latency_entity_id {
+            client_util::console_log!(
+                "err: {:.2}, pos: {:.2}, dir: {:.2}, vel: {:.2}",
+                self.error,
+                positional_inaccuracy.sqrt(),
+                directional_inaccuracy,
+                velocity_inaccuracy
+            );
+        }
+        self.error = (self.error * 0.5f32.powf(elapsed_seconds)
+            + elapsed_seconds
+                * (positional_inaccuracy * 0.4
+                    + directional_inaccuracy * 2.0
+                    + velocity_inaccuracy * 0.08))
+            .clamp(0.0, 10.0);
+    }
+
+    /// Generates particles from changes between model and view, such as muzzle flash particles when
+    /// an armament goes from available to consumed.
+    pub fn generate_particles(&mut self, layer: &mut RendererLayer) {
+        // If reloads are known before and after, and one goes from zero to non-zero, it was fired.
+        if let Some(entity_type) = self.model.entity_type() {
+            let data: &EntityData = entity_type.data();
+            if self.view.entity_type() == self.model.entity_type()
+                && self.view.reloads_known()
+                && self.model.reloads_known()
+                && self.view.turrets_known()
+            {
+                let model_reloads = self.model.reloads();
+                for (i, &old) in self.view.reloads().iter().enumerate() {
+                    let new = model_reloads[i];
+
+                    if new == Ticks::ZERO || old != Ticks::ZERO {
+                        // Wasn't just fired
+                        continue;
+                    }
+
+                    let armament = &data.armaments[i];
+                    let armament_entity_data = armament.entity_type.data();
+
+                    if !matches!(
+                        armament_entity_data.sub_kind,
+                        EntitySubKind::Shell | EntitySubKind::Rocket | EntitySubKind::Missile
+                    ) {
+                        // Don't generate particles.
+                        continue;
+                    }
+
+                    let boat_velocity = self.view.transform().direction.to_vec()
+                        * self.view.transform().velocity.to_mps();
+
+                    let armament_transform =
+                        *self.view.transform() + data.armament_transform(self.view.turrets(), i);
+
+                    let direction_vector: Vec2 = if armament.vertical {
+                        // Straight up.
+                        Vec2::ZERO
+                    } else {
+                        armament_transform.direction.into()
+                    };
+
+                    let mut rng = thread_rng();
+
+                    let forward_offset = armament
+                        .turret
+                        .and_then(|t| data.turrets[t].entity_type)
+                        .map(|t| t.data().length * 0.4)
+                        .unwrap_or(2.0);
+                    let forward_velocity = 0.5 * armament_entity_data.speed.to_mps().min(100.0);
+
+                    let layer = if self.view.altitude().is_submerged() {
+                        &mut layer.sea_level_particles
+                    } else {
+                        &mut layer.airborne_particles
+                    };
+
+                    // Add muzzle flash particles.
+                    let amount = 10;
+                    for i in 0..amount {
+                        layer.add(Particle {
+                            position: armament_transform.position
+                                + direction_vector * forward_offset,
+                            velocity: boat_velocity
+                                + direction_vector
+                                    * forward_velocity
+                                    * (i as f32 * (1.0 / amount as f32))
+                                + direction_vector.perp()
+                                    * forward_velocity
+                                    * 0.15
+                                    * (rng.gen::<f32>() - 0.5),
+                            radius: (armament_entity_data.width * 5.0).clamp(1.0, 3.0),
+                            color: -1.0,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    /// Performs interpolation. Takes the entity id of the player's boat.
+    pub fn interpolate(&mut self, elapsed_seconds: f32, player_entity_id: Option<EntityId>) {
+        // Don't interpolate view's guidance if this is the player's boat, so that it doesn't jerk around.
+        self.view.interpolate_towards(
+            &self.model,
+            Some(self.model.id()) != player_entity_id,
+            elapsed_seconds * self.error,
+            elapsed_seconds,
+        );
+        self.model.simulate(elapsed_seconds);
+        self.view.simulate(elapsed_seconds);
     }
 }
 
@@ -168,29 +304,5 @@ impl Mk48Game {
                 _ => {}
             }
         }
-    }
-
-    /// Simulate delta_seconds passing, by updating guidance and kinematics.
-    pub(crate) fn propagate_contact(contact: &mut Contact, delta_seconds: f32) {
-        if let Some(entity_type) = contact.entity_type() {
-            let guidance = *contact.guidance();
-            let max_speed = match entity_type.data().sub_kind {
-                // Wait until risen to surface.
-                EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::Sam
-                    if contact.altitude().is_submerged() =>
-                {
-                    EntityData::SURFACING_PROJECTILE_SPEED_LIMIT
-                }
-                _ => f32::INFINITY,
-            };
-
-            contact.transform_mut().apply_guidance(
-                entity_type.data(),
-                guidance,
-                max_speed,
-                delta_seconds,
-            );
-        }
-        contact.transform_mut().do_kinematics(delta_seconds);
     }
 }

@@ -142,33 +142,33 @@ impl Server {
             let mut bot_actions = Vec::new();
             self.bots
                 .par_iter_mut()
-                .enumerate()
                 .with_min_len(16)
-                .map(|(i, (bot, shared_data))| {
+                .map(|(bot, shared_data)| {
                     let update = world.get_player_complete(&shared_data.player);
                     let bot_action = bot.update(update, shared_data.player.borrow().player_id);
-                    Self::update_core_status(&core, &addr, world, shared_data);
-                    (i, bot_action)
+                    bot_action
                 })
                 .collect_into_vec(&mut bot_actions);
 
-            for (i, (commands, quit)) in bot_actions.into_iter().rev() {
+            // Iterate in reverse so swap remove works properly.
+            // Every bot sends a command every tick so index isn't stored.
+            for (i, (commands, quit)) in bot_actions.into_iter().enumerate().rev() {
+                let shared_data = &mut self.bots[i].1;
+
+                // If bot quite delete all it's entities.
                 if quit {
-                    let shared_data = &self.bots[i].1;
-
-                    self.world.remove_if(|e| {
-                        e.player
-                            .as_ref()
-                            .map_or(false, |p| *p == shared_data.player)
-                    });
-
-                    self.bots.swap_remove(i);
+                    shared_data.player.borrow_mut().flags.left_game = true;
                 } else {
                     for c in commands {
-                        let _ = c
-                            .as_command()
-                            .apply(&mut self.world, &mut self.bots[i].1, true);
+                        let _ = c.as_command().apply(&mut self.world, shared_data, true);
                     }
+                }
+
+                Self::update_core_status(&core, &addr, &self.world, shared_data);
+
+                // Can't remove before status is updated.
+                if quit {
+                    self.bots.swap_remove(i);
                 }
             }
         }
@@ -210,11 +210,8 @@ impl Server {
                 drop(borrow);
             }
 
-            self.world.remove_if(|e| {
-                e.player
-                    .as_ref()
-                    .map_or(false, |p| *p == client_data.data.player)
-            });
+            // Delete all player's entities.
+            client_data.data.player.borrow_mut().flags.left_game = true;
 
             Self::update_core_status(
                 &self.core,
@@ -250,13 +247,18 @@ impl Server {
         data: &mut SharedData,
     ) {
         let player = data.player.borrow();
-        let player_entity = match &player.status {
-            Status::Alive { entity_index, .. } => {
-                let entity = &world.entities[*entity_index];
-                Some(entity)
-            }
-            _ => None,
-        };
+
+        // Don't get player if it just left the game.
+        let player_entity =
+            (!player.flags.left_game)
+                .then(|| ())
+                .and_then(|_| match &player.status {
+                    Status::Alive { entity_index, .. } => {
+                        let entity = &world.entities[*entity_index];
+                        Some(entity)
+                    }
+                    _ => None,
+                });
 
         let new_status = player_entity.map(|e| CoreStatus {
             location: e.transform.position.extend(0.0),

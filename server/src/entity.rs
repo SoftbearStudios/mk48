@@ -146,8 +146,13 @@ impl Entity {
     pub fn create_index(&mut self, i: EntityIndex) {
         if let Some(ref player) = self.player {
             let mut player = player.borrow_mut();
+
+            // Set status to alive.
             assert!(!player.status.is_alive());
             player.status = Status::new_alive(i);
+
+            // Clear flags when player's boat is spawned.
+            player.flags = Flags::default();
         } else {
             return;
         }

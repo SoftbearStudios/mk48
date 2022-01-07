@@ -11,7 +11,7 @@ use core_protocol::id::{ArenaId, GameId, PlayerId, SessionId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use log::{debug, error, warn};
 use ringbuffer::RingBufferWrite;
-use rustrict::trim_whitespace;
+use rustrict::{ContextProcessingOptions, ContextRateLimitOptions, trim_whitespace};
 use std::fs::OpenOptions;
 use std::rc::Rc;
 
@@ -124,7 +124,16 @@ impl Repo {
                     }
                     let trimmed = trim_whitespace(&message);
                     if play.date_stop.is_none() && !trimmed.is_empty() && trimmed.len() < 150 {
-                        match session.chat_context.process(message.to_owned()) {
+                        let options = ContextProcessingOptions {
+                            rate_limit: if whisper {
+                                None
+                            } else {
+                                Some(ContextRateLimitOptions::default())
+                            },
+                            ..Default::default()
+                        };
+
+                        match session.chat_context.process_with_options(message.to_owned(), &options) {
                             Ok(text) => {
                                 let message = MessageDto {
                                     alias: session.alias,

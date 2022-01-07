@@ -226,10 +226,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                     fn set(&mut self, key: &str, value: wasm_bindgen::JsValue, local_storage: &mut LocalStorage) {
                         match key {
                             #(#arbitrary_setters),*
-                            _ => {
-                                #[cfg(debug_assertions)]
-                                panic!("unrecognized setting {}", key);
-                            }
+                            _ => ()
                         }
                     }
                 }

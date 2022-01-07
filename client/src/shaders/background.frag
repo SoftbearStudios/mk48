@@ -62,13 +62,13 @@ float noise(vec3 x) {
 #ifdef WAVES
     float waveNoise(vec3 x) {
         float v = 0.0;
-        float a = 0.42;
+        float a = 0.5;
         vec3 shift = vec3(100);
         mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
         for (int i = 0; i < WAVES; ++i) {
             v += a * noise(x);
-            x = vec3(rot * x.xy, x.z) * vec3(vec2(2.0), 2.43) + shift;
-            a *= 0.56;
+            x = vec3(rot * x.xy, x.z) * vec3(vec2(2.0), 2.11) + shift;
+            a *= 0.5;
         }
         return v;
     }
@@ -102,7 +102,7 @@ void main() {
         #else
             vec3 grass = texture2D(uGrass, vUv2).rgb;
         #endif
-        grass = mix(grass * vec3(0.9, 1.25, 0.9), sand, 0.3);
+        grass = mix(grass * vec3(0.9, 1.25, 0.9), sand, 0.25);
 
         gl_FragColor = vec4(mix(sand, grass, min((height - GRASS) * (1.0 / (1.0 - GRASS)), 1.0)), 1.0); // Grass
     } else {
@@ -111,7 +111,7 @@ void main() {
 
         #ifdef WAVES
             float uTime = uTime_uVisual_uRestrict_uBorder.x;
-            vec2 waterNoise = vec2(waveNoise(vec3(vPosition * 0.07 + WIND * uTime, uTime * 0.07))) * vec2(0.035, 2.5);
+            vec2 waterNoise = vec2(waveNoise(vec3(vPosition * 0.07 + WIND * uTime, uTime * 0.07))) * vec2(0.035, 2.2);
         #else
             vec2 waterNoise = vec2(0.0);
         #endif
@@ -135,7 +135,7 @@ void main() {
             w += reflectYPow10 * smoothstep(sandHeight - 0.05, sandHeight - 0.3, h) * 0.3;
         #endif
 
-        float foam = smoothstep(0.03, 0.01, sandHeight - height);
+        float foam = smoothstep(0.028, 0.003, sandHeight - height);
         w = mix(w, vec3(0.8), foam * 0.65);
 
         float delta = uMiddle_uDerivative.z * 0.0075;

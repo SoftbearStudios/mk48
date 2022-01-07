@@ -203,41 +203,6 @@ impl Entities {
         entity
     }
 
-    /// Don't use directly. Wrapped by world's remove if.
-    pub fn remove_if_internal<P, R>(&mut self, predicate: P, remove: R)
-    where
-        P: Fn(&Entity) -> bool + Sync,
-        R: Fn(Entity) + Sync,
-    {
-        self.sectors
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(sector_index, sector)| {
-                let sector: &mut Sector = sector;
-                let sector_id = SectorId::from_sector_index(sector_index);
-
-                for e in sector.entities.drain_filter(|entity| {
-                    let removed = predicate(entity);
-                    if removed && entity.is_boat() {
-                        entity.delete_index(DeathReason::Unknown);
-                    }
-                    removed
-                }) {
-                    remove(e)
-                }
-                sector.shrink();
-
-                for (i, entity) in sector
-                    .entities
-                    .iter_mut()
-                    .enumerate()
-                    .filter(|(_, e)| e.is_boat())
-                {
-                    entity.set_index(EntityIndex(sector_id, i as u16));
-                }
-            });
-    }
-
     /// Iterates all entities in parallel.
     pub fn par_iter(&self) -> impl ParallelIterator<Item = (EntityIndex, &Entity)> {
         self.sectors

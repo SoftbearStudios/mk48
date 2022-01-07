@@ -9,7 +9,6 @@ use common::death_reason::DeathReason;
 use common::entity::{EntityKind, EntityType};
 use common::terrain::Terrain;
 use common::ticks::Ticks;
-use std::sync::Mutex;
 
 /// A game world of variable radius, consisting of entities and a terrain.
 pub struct World {
@@ -69,17 +68,6 @@ impl World {
     pub fn remove(&mut self, index: EntityIndex, reason: DeathReason) {
         let entity = self.entities.remove_internal(index, reason);
         self.arena.drop_entity(entity);
-    }
-
-    /// remove_if removes entities that satisfy a given predicate.
-    pub fn remove_if<P>(&mut self, predicate: P)
-    where
-        P: Fn(&Entity) -> bool + Sync,
-    {
-        let arena = Mutex::new(&mut self.arena);
-        self.entities.remove_if_internal(predicate, |entity| {
-            arena.lock().unwrap().drop_entity(entity)
-        })
     }
 
     /// area returns the area of the world, based on it's radius.
