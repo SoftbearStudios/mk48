@@ -27,10 +27,14 @@ pub fn derive_layer(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
     if let Data::Struct(DataStruct { fields, .. }) = data {
         if let Fields::Named(FieldsNamed { named, .. }) = fields {
+            let mut pre_prepares = Vec::with_capacity(named.len());
             let mut pre_renders = Vec::with_capacity(named.len());
             let mut renders = Vec::with_capacity(named.len());
 
             for Field { ident, .. } in named {
+                pre_prepares.push(quote! {
+                    self.#ident.pre_prepare(renderer);
+                });
                 pre_renders.push(quote! {
                     self.#ident.pre_render(renderer);
                 });
@@ -41,6 +45,10 @@ pub fn derive_layer(input: TokenStream) -> TokenStream {
 
             let output = quote! {
                 impl Layer for #ident {
+                    fn pre_prepare(&mut self, renderer: &Renderer) {
+                        #(#pre_prepares)*
+                    }
+
                     fn pre_render(&mut self, renderer: &Renderer) {
                         #(#pre_renders)*
                     }

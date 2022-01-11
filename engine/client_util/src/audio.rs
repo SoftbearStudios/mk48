@@ -128,18 +128,16 @@ impl AudioLayer {
     }
 
     pub fn stop_playing(&self, name: &'static str) {
-        self.inner
-            .borrow_mut()
-            .as_mut()
-            .map(|inner| inner.stop_playing(name));
+        if let Some(inner) = self.inner.borrow_mut().as_mut() {
+            inner.stop_playing(name)
+        }
     }
 
     // Sets a multiplier for the volume of all sounds.
     pub fn set_volume(&self, volume: f32) {
-        self.inner
-            .borrow()
-            .as_ref()
-            .map(|inner| inner.sfx_gain.gain().set_value(volume));
+        if let Some(inner) = self.inner.borrow().as_ref() {
+            inner.sfx_gain.gain().set_value(volume)
+        }
     }
 }
 
@@ -203,14 +201,13 @@ impl Inner {
                     inner
                         .playing
                         .entry(String::from(name))
-                        .or_insert_with(|| Vec::new())
+                        .or_insert_with(Vec::new)
                         .push(source);
                 } else {
                     console_log!("warning: missing audio sprite {}", name);
                 }
 
                 // Don't re-add to queue.
-                return;
             }
         }
     }

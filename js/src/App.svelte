@@ -13,15 +13,32 @@
 		state.set(value);
 	}
 
-	// Gets the "real" host (that is to say, if the window.location.host redirected to some other host).
-	async function getRealHost() {
+	// "real" host (that is to say, if the window.location.host redirected to some other host).
+	let realHost = null;
+	let realEncryption = null;
+
+	export function getRealHost() {
+		return realHost;
+	}
+
+	export function getRealEncryption() {
+		return realEncryption;
+	}
+
+	// Find and cache the above.
+	async function findRealHost() {
 		try {
-			const response = await fetch("/status/");
+			// This url:
+			// 1) was preloaded in HTML
+			// 2) is needed later, so this has no additional network overhead
+			// 3) is small enough to not matter if 1-2 are false
+			// 4) Is simply used to trace any redirects that occur
+			const response = await fetch("/favicon.png");
 			const url = new URL(response.url);
-			return [url.host, url.protocol != 'http:'];
+			realHost = url.host;
+			realEncryption = url.protocol != 'http:';
 		} catch (err) {
 			console.warn(err);
-			return [window.location.host, window.location.protocol != 'http:'];
 		}
 	}
 </script>
@@ -68,7 +85,7 @@
 	$: client && client.event({"Cinematic": $cinematic});
 
 	onMount(async () => {
-		const [host, encrypted] = await getRealHost();
+		await findRealHost();
 
 		client = await wasm();
 

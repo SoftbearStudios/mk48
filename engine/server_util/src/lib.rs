@@ -7,11 +7,11 @@
 pub mod app;
 pub mod benchmark;
 pub mod cloud;
-mod unused_game_server2d;
 pub mod linode;
 pub mod observer;
 pub mod ssl;
 pub mod tcp;
+//mod unused_game_server2d;
 pub mod user_agent;
 pub mod watchdog;
 pub mod web_socket;

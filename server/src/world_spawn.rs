@@ -24,8 +24,6 @@ impl World {
     const CRATE_DENSITY: f32 = 1.0 / 30000.0;
     /// Target density of obstacles (per square meter).
     const OBSTACLE_DENSITY: f32 = 1.0 / 1000000.0;
-    /// Target density of vegetation (per square meter).
-    const VEGETATION_DENSITY: f32 = 1.0 / 100000.0;
 
     /// spawn_here_or_nearby spawns an entity, adjusting it's position and/or rotation until
     /// it can spawn without colliding with world objects.
@@ -33,10 +31,17 @@ impl World {
     /// If initial_radius is zero, no attempts are made to adjust the entity, so spawning will
     /// fail if the initial conditions are insufficient.
     ///
+    /// An optional filter can return false to block spawning.
+    ///
     /// Returns true if spawning successful, false if failed.
     ///
     /// INVARIANT: Will not affect any entity indices except adding a new one at the end.
-    pub fn spawn_here_or_nearby(&mut self, mut entity: Entity, initial_radius: f32) -> bool {
+    pub fn spawn_here_or_nearby(
+        &mut self,
+        mut entity: Entity,
+        initial_radius: f32,
+        exclusion_zone: Option<Vec2>,
+    ) -> bool {
         let retry = initial_radius > 0.0;
         if retry {
             let mut rng = rand::thread_rng();
@@ -47,7 +52,14 @@ impl World {
             let mut governor: u32 = if entity.is_boat() { 128 } else { 8 };
 
             // Always randomize on first iteration
-            while entity.transform.position == center || !self.can_spawn(&entity, threshold) {
+            while entity.transform.position == center
+                || exclusion_zone
+                    .map(|ez| {
+                        entity.transform.position.distance_squared(ez) < (threshold * 100.0).powi(2)
+                    })
+                    .unwrap_or(false)
+                || !self.can_spawn(&entity, threshold)
+            {
                 // Pick a new position
                 let position = gen_radius(&mut rng, radius);
                 entity.transform.position = center + position;
@@ -100,9 +112,7 @@ impl World {
     /// e.g. threshold=2 means that twice the normal radius must be clear of obstacles.
     /// below threshold=2, obstacles only matter if they actually intersect.
     pub fn can_spawn(&self, entity: &Entity, threshold: f32) -> bool {
-        if threshold < 1.0 {
-            panic!("invalid threshold {}", threshold);
-        }
+        assert!(threshold >= 1.0, "threshold {} is invalid", threshold);
 
         if entity.transform.position.length_squared() > self.radius.powi(2) {
             // Outside world.
@@ -197,13 +207,6 @@ impl World {
             self.target_count(Self::OBSTACLE_DENSITY),
             ticks.0 as usize * 2,
         );
-
-        self.spawn_static_amount(
-            EntityType::Acacia,
-            self.arena.count(EntityType::Acacia),
-            self.target_count(Self::VEGETATION_DENSITY).max(0),
-            ticks.0 as usize,
-        )
     }
 
     /// Spawns a certain amount of basic entities, all throughout the world.

@@ -4,7 +4,7 @@
 use crate::apply::Apply;
 use crate::context::Context;
 use crate::game_client::GameClient;
-use crate::js_hooks::{canvas, domain_name, host, ws_protocol};
+use crate::js_hooks::{canvas, domain_name_of};
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
 use crate::mouse::{MouseButton, MouseButtonState, MouseEvent as GameClientMouseEvent};
 use crate::reconn_web_socket::ReconnWebSocket;
@@ -55,7 +55,12 @@ impl<G: GameClient> Infrastructure<G> {
                 ..
             } = &inbound
             {
-                if self.context.game_socket.is_none()
+                if self
+                    .context
+                    .game_socket
+                    .as_ref()
+                    .map(|s| s.is_closed())
+                    .unwrap_or(true)
                     || Some((arena_id, session_id)) != self.context.common_settings.session_tuple()
                 {
                     // Create an invitation so that the user doesn't have to wait for one later.
@@ -68,14 +73,29 @@ impl<G: GameClient> Infrastructure<G> {
                         .common_settings
                         .set_session_id(Some(session_id), &mut self.context.local_storage);
 
+                    // If the websocket gets dropped, the reconnection attempt should use the
+                    // updated value of saved_session_tuple.
+                    self.context
+                        .core_socket
+                        .reset_preamble(ClientRequest::CreateSession {
+                            game_id: G::GAME_ID,
+                            invitation_id: None,
+                            referrer: None,
+                            saved_session_tuple: self.context.common_settings.session_tuple(),
+                        });
+
                     self.context.game_socket = Some(ReconnWebSocket::new(
                         &format!(
                             "{}://{}/ws/{}/",
-                            ws_protocol(),
+                            self.context.web_socket_info.1,
                             if let Some(server_id) = server_id {
-                                format!("{}.{}", server_id.0, domain_name())
+                                format!(
+                                    "{}.{}",
+                                    server_id.0,
+                                    domain_name_of(&self.context.web_socket_info.0)
+                                )
                             } else {
-                                host()
+                                self.context.web_socket_info.0.to_owned()
                             },
                             session_id.0
                         ),
@@ -105,6 +125,7 @@ impl<G: GameClient> Infrastructure<G> {
                     .apply(inbound);
             }
 
+            self.renderer.pre_prepare(&mut self.renderer_layer);
             self.game.tick(
                 elapsed_seconds,
                 &mut self.context,
@@ -396,5 +417,17 @@ impl<G: GameClient> Infrastructure<G> {
         self.context
             .common_settings
             .set(key, value, &mut self.context.local_storage);
+    }
+
+    /// Simulates dropping of one or both websockets.
+    pub fn simulate_drop_web_sockets(&mut self, core: bool, game: bool) {
+        if core {
+            self.context.core_socket.simulate_drop();
+        }
+        if game {
+            if let Some(game_socket) = self.context.game_socket.as_mut() {
+                game_socket.simulate_drop();
+            }
+        }
     }
 }

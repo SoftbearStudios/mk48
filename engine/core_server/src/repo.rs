@@ -48,7 +48,7 @@ impl Repo {
             armageddon: false,
             invitations: HashMap::new(),
             players: HashMap::new(),
-            prior_liveboard: vec![].into(),
+            prior_liveboard: Vec::new(),
             stopping: None,
             system_status: System::new_with_specifics(RefreshKind::new().with_cpu().with_memory()),
         }
@@ -415,10 +415,9 @@ impl Repo {
 
             // Add new items.
             for new_item in current_liveboard.iter() {
-                if prior_liveboard
+                if !prior_liveboard
                     .iter()
-                    .find(|i| i.player_id == new_item.player_id)
-                    .is_none()
+                    .any(|i| i.player_id == new_item.player_id)
                 {
                     added.push(new_item.clone());
                 }

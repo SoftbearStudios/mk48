@@ -141,7 +141,7 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
                                     Reader::open(&format!("../assets/sprites/{}/{}", dir, name))
                                         .unwrap()
                                         .decode()
-                                        .unwrap();
+                                        .expect(name);
 
                                 let short_name = shorten_name(name);
 

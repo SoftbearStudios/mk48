@@ -232,7 +232,6 @@ dependencies = [
  "ahash",
  "bytes",
  "cfg-if",
- "cookie",
  "derive_more",
  "encoding_rs",
  "futures-core",
@@ -506,6 +505,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "common_util"
+version = "0.1.0"
+dependencies = [
+ "core_protocol",
+ "glam",
+ "rand",
+ "serde",
+]
+
+[[package]]
 name = "const_fn"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -538,6 +547,7 @@ dependencies = [
  "enum-iterator",
  "glam",
  "rand",
+ "rustrict",
  "serde",
  "unicode_categories",
  "variant_count",
@@ -638,6 +648,18 @@ name = "discard"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
+
+[[package]]
+name = "doc-comment"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
+
+[[package]]
+name = "either"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
 name = "encoding_rs"
@@ -947,6 +969,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bee0328b1209d157ef001c94dd85b4f8f64139adb0eac2659f4b08382b2f474d"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9a9d19fa1e79b6215ff29b9d6880b706147f16e9b1dbb1e4e5947b5b02bc5e3"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -1375,6 +1406,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1420,6 +1457,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5eebeaeb360c87bfb72e84abdb3447159c0eaececf1bef2aecd65a8be949d1c9"
 dependencies = [
  "base64",
+]
+
+[[package]]
+name = "rustrict"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94b9dcc0c258fea2987cdf84f9e6e714dc780e27012111173a031fe100e0e8d5"
+dependencies = [
+ "bitflags",
+ "doc-comment",
+ "itertools",
+ "lazy_static",
+ "rustc-hash",
+ "unicode-normalization",
+ "unicode_categories",
 ]
 
 [[package]]
@@ -1536,6 +1588,7 @@ dependencies = [
  "atomic_refcell",
  "awc",
  "bincode",
+ "common_util",
  "core_protocol",
  "futures",
  "include_dir",

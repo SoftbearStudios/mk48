@@ -35,10 +35,10 @@ impl LocalStorage {
     pub fn try_get<V: DeserializeOwned>(&self, key: &str) -> Result<Option<V>, Error> {
         let inner = self.inner.as_ref().ok_or(Error::Nonexistent)?;
 
-        let s: Option<String> = inner.get(key).map_err(|e| Error::Js(e))?;
+        let s: Option<String> = inner.get(key).map_err(Error::Js)?;
 
         match s {
-            Some(s) => serde_json::from_str(&s).map_err(|e| Error::Serde(e)),
+            Some(s) => serde_json::from_str(&s).map_err(Error::Serde),
             None => Ok(None),
         }
     }
@@ -49,9 +49,9 @@ impl LocalStorage {
 
         match value {
             Some(ref v) => inner
-                .set(key, &serde_json::to_string(v).map_err(|e| Error::Serde(e))?)
-                .map_err(|e| Error::Js(e)),
-            None => inner.delete(key).map_err(|e| Error::Js(e)),
+                .set(key, &serde_json::to_string(v).map_err(Error::Serde)?)
+                .map_err(Error::Js),
+            None => inner.delete(key).map_err(Error::Js),
         }
     }
 }

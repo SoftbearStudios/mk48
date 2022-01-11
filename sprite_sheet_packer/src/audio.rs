@@ -51,6 +51,17 @@ impl Default for Sound {
 lazy_static! {
     static ref SOUNDS: Vec<Sound> = vec![
         Sound {
+            name: "aa",
+            source: "freesound.org/260939__picassoct__antiair.ogg",
+            author: Some("PicassoCT"),
+            url: Some("https://freesound.org/people/PicassoCT/sounds/260939/"),
+            volume: -1.5,
+            pitch: -0.5,
+            start: Some(0.05),
+            end: Some(0.63),
+            ..Sound::default()
+        },
+        Sound {
             name: "achievement",
             source: "timbeek.com/Mk48.io OST - Epic Moments1_Short2.mp3",
             author: Some("Tim Beek"),

@@ -221,7 +221,7 @@ impl Database {
         }
 
         for (score_type, scores) in leaderboard.iter_mut() {
-            scores.sort_by(|a, b| b.score.cmp(&a.score));
+            scores.sort_unstable_by(|a, b| b.score.cmp(&a.score));
             // Leave a grace margin of 5, to guard against possibility of scores in the top 10 aging out.
             scores.truncate(15);
             if let Some(lowest) = scores.get(14) {
@@ -236,10 +236,19 @@ impl Database {
                 ScoreType::PlayerAllTime,
             ] {
                 if score.score >= minimum_thresholds[score_type as usize] {
-                    leaderboard
+                    let scores = leaderboard
                         .entry(score_type)
-                        .or_insert_with(|| Vec::with_capacity(15))
-                        .push(score.clone());
+                        .or_insert_with(|| Vec::with_capacity(10));
+
+                    // TODO: O(n) lookup, although n is probably small.
+                    if let Some(existing) = scores
+                        .iter_mut()
+                        .find(|existing| existing.alias == score.alias)
+                    {
+                        existing.score = existing.score.max(score.score);
+                    } else {
+                        scores.push(score.clone());
+                    }
 
                     self.update_score(ScoreItem {
                         game_id_score_type: GameIdScoreType {
@@ -258,7 +267,7 @@ impl Database {
         // Produce the final leaderboard, taking into account recently updated scores (without
         // rereading them).
         for (_, scores) in leaderboard.iter_mut() {
-            scores.sort_by(|a, b| b.score.cmp(&a.score));
+            scores.sort_unstable_by(|a, b| b.score.cmp(&a.score));
             scores.truncate(10);
         }
 

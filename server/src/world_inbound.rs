@@ -91,7 +91,7 @@ impl CommandTrait for Spawn {
 
         let mut boat = Entity::new(self.entity_type, Some(Arc::clone(&shared_data.player)));
         boat.transform.position = spawn_position;
-        if world.spawn_here_or_nearby(boat, spawn_radius) && !bot {
+        if world.spawn_here_or_nearby(boat, spawn_radius, exclusion_zone) {
             return Ok(());
         }
         Err("failed to find enough space to spawn")
@@ -270,7 +270,7 @@ impl CommandTrait for Fire {
                 };
                 armament_entity.transform.direction += thread_rng().gen::<Angle>() * deviation;
 
-                failed |= !world.spawn_here_or_nearby(armament_entity, 0.0);
+                failed |= !world.spawn_here_or_nearby(armament_entity, 0.0, None);
             }
 
             if failed {
@@ -322,7 +322,7 @@ impl CommandTrait for Pay {
 
             payment.transform.position = position;
 
-            if world.spawn_here_or_nearby(payment, 1.0) {
+            if world.spawn_here_or_nearby(payment, 1.0, None) {
                 // Payment successfully spawned, withdraw funds.
                 player.score -= withdraw;
             }

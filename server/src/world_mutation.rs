@@ -96,7 +96,14 @@ impl Mutation {
     }
 
     /// apply applies the Mutation and returns if the entity was removed.
-    pub fn apply(self, world: &mut World, index: EntityIndex, delta: Ticks) -> bool {
+    /// is_last_of_type is true iff this mutation is the last of its type for this entity index.
+    pub fn apply(
+        self,
+        world: &mut World,
+        index: EntityIndex,
+        delta: Ticks,
+        is_last_of_type: bool,
+    ) -> bool {
         let entities = &mut world.entities;
         match self {
             Self::Remove(reason) => {
@@ -205,9 +212,13 @@ impl Mutation {
                 altitude_target,
                 ..
             } => {
-                let entity = &mut entities[index];
-                entity.guidance.direction_target = direction_target;
-                entity.apply_altitude_target(&world.terrain, Some(altitude_target), 5.0, delta);
+                // apply_altitude_target is not reversed by another Guidance mutation, so must
+                // be sure to only apply one Guidance mutation.
+                if is_last_of_type {
+                    let entity = &mut entities[index];
+                    entity.guidance.direction_target = direction_target;
+                    entity.apply_altitude_target(&world.terrain, Some(altitude_target), 5.0, delta);
+                }
             }
             Self::Attraction(delta, velocity) => {
                 let transform = &mut entities[index].transform;
@@ -260,7 +271,7 @@ impl Mutation {
 
                 // Cannot spawn in loop that borrows entity's guidance.
                 for armament_entity in armament_entities {
-                    world.spawn_here_or_nearby(armament_entity, 0.0);
+                    world.spawn_here_or_nearby(armament_entity, 0.0, None);
                 }
             }
         };
@@ -326,7 +337,7 @@ impl Mutation {
                 loot_entity.ticks += lifespan * (rng.gen::<f32>() * 0.25)
             }
 
-            world.spawn_here_or_nearby(loot_entity, data.radius * 0.15);
+            world.spawn_here_or_nearby(loot_entity, data.radius * 0.15, None);
         }
     }
 

@@ -1,6 +1,6 @@
 use crate::apply::Apply;
 use crate::game_client::GameClient;
-use crate::js_hooks::{host, invitation_id, referrer, ws_protocol};
+use crate::js_hooks::{host, invitation_id, is_https, referrer, ws_protocol};
 use crate::keyboard::KeyboardState;
 use crate::local_storage::LocalStorage;
 use crate::mouse::MouseState;
@@ -35,6 +35,8 @@ pub struct Context<G: GameClient + ?Sized> {
     pub(crate) common_settings: CommonSettings,
     /// Local storage.
     pub(crate) local_storage: LocalStorage,
+    /// Websocket info (host, protocol)
+    pub(crate) web_socket_info: (String, &'static str),
 }
 
 /// State common to all clients.
@@ -60,10 +62,20 @@ pub struct CoreState {
 }
 
 impl CoreState {
-    /// Gets whether player is friendly to other player, taking into account team membership.
+    /// Gets whether a player is friendly to an other player, taking into account team membership.
     /// Returns false if either `PlayerId` is None.
     pub fn is_friendly(&self, other_player_id: Option<PlayerId>) -> bool {
-        self.player_id
+        self.are_friendly(self.player_id, other_player_id)
+    }
+
+    /// Gets whether player is friendly to other player, taking into account team membership.
+    /// Returns false if either `PlayerId` is None.
+    pub fn are_friendly(
+        &self,
+        player_id: Option<PlayerId>,
+        other_player_id: Option<PlayerId>,
+    ) -> bool {
+        player_id
             .zip(other_player_id)
             .map(|(id1, id2)| {
                 id1 == id2
@@ -191,8 +203,22 @@ impl<G: GameClient> Context<G> {
 
         let common_settings = CommonSettings::load(&local_storage);
 
+        #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
+        extern "C" {
+            #[wasm_bindgen(js_name = "getRealHost", catch)]
+            pub fn get_real_host() -> Result<String, JsValue>;
+
+            #[wasm_bindgen(js_name = "getRealEncryption", catch)]
+            pub fn get_real_encryption() -> Result<bool, JsValue>;
+        }
+
+        let web_socket_info = (
+            get_real_host().unwrap_or(host()),
+            ws_protocol(get_real_encryption().unwrap_or(is_https())),
+        );
+
         let core = ReconnWebSocket::new(
-            &format!("{}://{}/client/ws/", ws_protocol(), host()),
+            &format!("{}://{}/client/ws/", web_socket_info.1, web_socket_info.0),
             WebSocketFormat::Json,
             Some(ClientRequest::CreateSession {
                 game_id: G::GAME_ID,
@@ -212,6 +238,7 @@ impl<G: GameClient> Context<G> {
             settings: G::Settings::load(&local_storage),
             common_settings,
             local_storage,
+            web_socket_info,
         }
     }
 

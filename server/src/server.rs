@@ -155,7 +155,7 @@ impl Server {
             for (i, (commands, quit)) in bot_actions.into_iter().enumerate().rev() {
                 let shared_data = &mut self.bots[i].1;
 
-                // If bot quite delete all it's entities.
+                // If bot quits, delete all its entities.
                 if quit {
                     shared_data.player.borrow_mut().flags.left_game = true;
                 } else {
@@ -200,7 +200,13 @@ impl Server {
     fn flush_limbo(&mut self, ctx: &mut <Self as Actor>::Context) {
         let now = Instant::now();
         for (_, mut client_data) in self.clients.drain_filter(|client, client_data| {
-            !client.connected() && Some(now) > client_data.limbo_expiry
+            // Note: Do not compare Some(now) > client_data.limbo_expiry, as this will return true
+            // if limbo_expiry is None.
+            !client.connected()
+                && client_data
+                    .limbo_expiry
+                    .map(|exp| now >= exp)
+                    .unwrap_or(false)
         }) {
             let borrow = client_data.data.player.borrow();
             if let Status::Alive { entity_index, .. } = borrow.status {
@@ -210,7 +216,7 @@ impl Server {
                 drop(borrow);
             }
 
-            // Delete all player's entities.
+            // Delete all player's entities (efficiently, in the next update cycle).
             client_data.data.player.borrow_mut().flags.left_game = true;
 
             Self::update_core_status(

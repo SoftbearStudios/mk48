@@ -23,8 +23,11 @@ impl KhrParallelShaderCompile {
 /// Anything in the rendering pipeline. Can be derived on a struct which has fields that also
 /// implement it.
 pub trait Layer {
-    // Called before rendering.
-    // Useful for buffering textures etc.
+    /// Called before game gets to queue rendering.
+    fn pre_prepare(&mut self, _: &Renderer) {}
+
+    /// Called before rendering.
+    /// Useful for buffering textures etc.
     fn pre_render(&mut self, _: &Renderer) {}
 
     /// Renders the layer.
@@ -166,8 +169,12 @@ impl Renderer {
         self.gl.clear_color(color.x, color.y, color.z, color.w);
     }
 
+    pub(crate) fn pre_prepare(&mut self, layer: &mut impl Layer) {
+        layer.pre_prepare(self);
+    }
+
     /// start starts the renderer changing the aspect ratio if necessary, clearing the screen.
-    pub(crate) fn render<L: Layer>(&mut self, layer: &mut L, time_seconds: f32) {
+    pub(crate) fn render(&mut self, layer: &mut impl Layer, time_seconds: f32) {
         // Reset caches.
         self.cached_canvas_size.set(None);
         self.time_delta = time_seconds - self.time;

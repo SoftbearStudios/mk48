@@ -160,6 +160,11 @@ macro_rules! entry_point {
             with_infrastructure(move |mut i| i.set_setting(&key, value));
         }
 
+        #[wasm_bindgen(js_name = "simulateDropWebSockets")]
+        pub fn simulate_drop_web_sockets(core: bool, game: bool) {
+            with_infrastructure(move |mut i| i.simulate_drop_web_sockets(core, game));
+        }
+
         /// parse_enum deserializes a string into an enum, panicking if it doesn't match any variant.
         fn parse_enum<E: DeserializeOwned>(string: &str) -> E {
             let fmt = format!("\"{}\"", string);

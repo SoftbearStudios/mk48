@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::background::Mk48BackgroundContext;
+use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
 use crate::interpolated_contact::InterpolatedContact;
 use crate::settings::Mk48Settings;
 use crate::sprite::SortableSprite;
@@ -40,7 +40,9 @@ use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
 pub struct Mk48Game {
+    /// Holding mouse down, for the purpose of deciding whether to start reversing.
     pub holding: bool,
+    /// Currently in mouse control reverse mode.
     pub reversing: bool,
     /// Camera on death.
     pub saved_camera: Option<(Vec2, f32)>,
@@ -48,8 +50,10 @@ pub struct Mk48Game {
     pub interpolated_zoom: f32,
     /// 1 = normal.
     pub zoom_input: f32,
+    /// Rate limit control websocket messages.
     pub control_rate_limiter: RateLimiter,
-    pub state_rate_limiter: RateLimiter,
+    /// Rate limit ui props messages.
+    pub ui_props_rate_limiter: RateLimiter,
     /// Playing the alarm fast sound too often is annoying.
     pub alarm_fast_rate_limiter: RateLimiter,
     /// FPS counter
@@ -64,118 +68,9 @@ pub struct RendererLayer {
     pub sea_level_particles: ParticleLayer,
     sprites: SpriteLayer,
     pub airborne_particles: ParticleLayer,
+    overlay: BackgroundLayer<Mk48OverlayContext>,
     graphics: GraphicLayer,
     text: TextLayer,
-}
-
-impl Mk48Game {
-    pub(crate) fn volume_at(distance: f32) -> f32 {
-        1.0 / (1.0 + 0.05 * distance)
-    }
-
-    fn play_music(name: &'static str, audio_player: &AudioLayer) {
-        // Highest to lowest.
-        let music_priorities = ["achievement", "dodge", "intense"];
-
-        let index = music_priorities
-            .iter()
-            .position(|&m| m == name)
-            .expect("name must be one of available music");
-
-        for (i, music) in music_priorities.iter().enumerate() {
-            if audio_player.is_playing(music) {
-                if i <= index {
-                    // Preempted by higher priority music, or already playing.
-                    return;
-                } else {
-                    // Preempt lower priority music.
-                    audio_player.stop_playing(music);
-                }
-            }
-        }
-
-        audio_player.play(name);
-    }
-
-    /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).
-    /// Armaments are scored by a combination of distance and angle to target.
-    fn find_best_armament(
-        player_contact: &Contact,
-        angle_limit: bool,
-        mouse_position: Vec2,
-        armament_selection: Option<(EntityKind, EntitySubKind)>,
-    ) -> Option<usize> {
-        // The f32 represents how good the shot is, lower is better.
-        let mut best_armament: Option<(usize, f32)> = None;
-
-        if let Some(armament_selection) = armament_selection {
-            for i in 0..player_contact.data().armaments.len() {
-                let armament = &player_contact.data().armaments[i];
-
-                let armament_entity_data: &EntityData = armament.entity_type.data();
-
-                if !(armament_entity_data.kind == armament_selection.0
-                    && armament_entity_data.sub_kind == armament_selection.1)
-                {
-                    // Wrong type; cannot fire.
-                    continue;
-                }
-
-                if player_contact.reloads()[i] != Ticks::ZERO {
-                    // Reloading; cannot fire.
-                    continue;
-                }
-
-                if let Some(turret_index) = armament.turret {
-                    if !player_contact.data().turrets[turret_index]
-                        .within_azimuth(player_contact.turrets()[turret_index])
-                    {
-                        // Out of azimuth range; cannot fire.
-                        continue;
-                    }
-                }
-
-                let transform = *player_contact.transform()
-                    + player_contact
-                        .data()
-                        .armament_transform(player_contact.turrets(), i);
-
-                let armament_direction_target = Angle::from(mouse_position - transform.position);
-
-                let mut angle_diff = (armament_direction_target - transform.direction).abs();
-                let distance_squared = mouse_position.distance_squared(transform.position);
-                if armament.vertical
-                    || armament_entity_data.kind == EntityKind::Aircraft
-                    || armament_entity_data.sub_kind == EntitySubKind::Depositor
-                    || armament_entity_data.sub_kind == EntitySubKind::DepthCharge
-                    || armament_entity_data.sub_kind == EntitySubKind::Mine
-                {
-                    // Vertically-launched armaments can fire in any horizontal direction.
-                    // Aircraft can quickly assume any direction.
-                    // Depositors, depth charges, and mines are not constrained by direction.
-                    angle_diff = Angle::ZERO;
-                }
-
-                let max_angle_diff = match armament_entity_data.sub_kind {
-                    EntitySubKind::Shell => Angle::from_degrees(30.0),
-                    EntitySubKind::Rocket => Angle::from_degrees(45.0),
-                    EntitySubKind::Torpedo if armament_entity_data.sensors.sonar.range > 0.0 => {
-                        Angle::from_degrees(150.0)
-                    }
-                    _ => Angle::from_degrees(90.0),
-                };
-
-                if !angle_limit || angle_diff < max_angle_diff {
-                    let score = angle_diff.to_degrees().powi(2) + distance_squared;
-                    if best_armament.map(|(_, s)| score < s).unwrap_or(true) {
-                        best_armament = Some((i, score));
-                    }
-                }
-            }
-        }
-
-        best_armament.map(|(idx, _)| idx)
-    }
 }
 
 impl GameClient for Mk48Game {
@@ -199,11 +94,11 @@ impl GameClient for Mk48Game {
         Self {
             holding: false,
             reversing: false,
-            interpolated_zoom: 10.0,
-            zoom_input: 0.5,
+            interpolated_zoom: Self::DEFAULT_ZOOM_INPUT * Self::MENU_VISUAL_RANGE,
+            zoom_input: Self::DEFAULT_ZOOM_INPUT,
             saved_camera: None,
             control_rate_limiter: RateLimiter::new(0.1),
-            state_rate_limiter: RateLimiter::new(0.1),
+            ui_props_rate_limiter: RateLimiter::new(0.1),
             alarm_fast_rate_limiter: RateLimiter::new(10.0), // TODO: is this an aspect of rendering or of the game?
             fps_counter: FpsMonitor::new(5.0),
         }
@@ -250,6 +145,11 @@ impl GameClient for Mk48Game {
             &background_frag_source,
         );
 
+        let overlay_shader = renderer.create_shader(
+            include_str!("./shaders/overlay.vert"),
+            include_str!("./shaders/overlay.frag"),
+        );
+
         let audio_sprite_sheet =
             serde_json::from_str(include_str!("./sprites_audio.json")).unwrap();
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
@@ -260,12 +160,15 @@ impl GameClient for Mk48Game {
         let background_context =
             Mk48BackgroundContext::new(context.settings.render_terrain_textures, &*renderer);
 
+        let overlay_context = Mk48OverlayContext::default();
+
         RendererLayer {
             audio: AudioLayer::new("/sprites_audio.mp3", audio_sprite_sheet),
             background: BackgroundLayer::new(renderer, background_shader, background_context),
             sea_level_particles: ParticleLayer::new(renderer, Vec2::ZERO),
             sprites: SpriteLayer::new(renderer, sprite_texture, sprite_sheet),
             airborne_particles: ParticleLayer::new(renderer, wind),
+            overlay: BackgroundLayer::new(renderer, overlay_shader, overlay_context),
             graphics: GraphicLayer::new(renderer),
             text: TextLayer::new(renderer),
         }
@@ -277,7 +180,7 @@ impl GameClient for Mk48Game {
         update: &Update,
         context: &mut Context<Self>,
         renderer: &Renderer,
-        layer: &Self::RendererLayer,
+        layer: &mut Self::RendererLayer,
     ) {
         let updated: HashMap<EntityId, &Contact> =
             update.contacts.iter().map(|c| (c.id(), c)).collect();
@@ -347,11 +250,13 @@ impl GameClient for Mk48Game {
             .map(|(_, InterpolatedContact { view, .. })| view)
             .collect::<Vec<_>>()
         {
+            let time_seconds = context.client.update_seconds;
             self.lost_contact(
                 renderer.camera_center(),
                 &contact,
                 &layer.audio,
                 &mut context.game_mut().animations,
+                time_seconds,
             );
         }
 
@@ -375,7 +280,7 @@ impl GameClient for Mk48Game {
                 let inbound =
                     (contact.transform().direction - direction + Angle::PI).abs() < Angle::PI_2;
 
-                let friendly = &context.core().is_friendly(contact.player_id());
+                let friendly = context.core().is_friendly(contact.player_id());
                 let volume = Self::volume_at(distance);
 
                 if data.kind == EntityKind::Aircraft {
@@ -528,31 +433,39 @@ impl GameClient for Mk48Game {
                 (500.0, 0.0)
             };
 
-        layer.background.context.update(
+        // Prepare to sort sprites.
+        let mut sortable_sprites = Vec::with_capacity(game_state.contacts.len() * 5);
+
+        // Update background and add vegetation sprites.
+        sortable_sprites.extend(layer.background.context.update(
             camera,
             zoom,
             context.client.update_seconds,
-            visual_range,
-            visual_restriction,
-            &*game_state,
+            &game_state.terrain,
             &*renderer,
-        );
+        ));
 
-        // Prepare to sort sprites.
-        let mut sortable_sprites = Vec::with_capacity(game_state.contacts.len() * 5);
+        layer
+            .overlay
+            .context
+            .update(visual_range, visual_restriction, game_state.world_radius);
+
+        let mut anti_aircraft_volume = 0.0;
 
         // Update animations.
         let mut i = 0;
         while i < game_state.animations.len() {
             let animation = &mut game_state.animations[i];
-            animation.update(elapsed_seconds);
 
             let len = layer.sprites.animation_length(animation.name);
 
-            if animation.frame >= len {
+            if animation.frame(context.client.update_seconds) >= len {
                 game_state.animations.swap_remove(i);
             } else {
-                sortable_sprites.push(SortableSprite::new_animation(animation));
+                sortable_sprites.push(SortableSprite::new_animation(
+                    animation,
+                    context.client.update_seconds,
+                ));
                 i += 1;
             }
         }
@@ -583,6 +496,19 @@ impl GameClient for Mk48Game {
 
                 let data: &'static EntityData = entity_type.data();
                 let parent_type = entity_type;
+
+                if contact.is_boat()
+                    && !contact.altitude().is_submerged()
+                    && data.anti_aircraft > 0.0
+                {
+                    anti_aircraft_volume += Self::simulate_anti_aircraft(
+                        contact,
+                        &game_state.contacts,
+                        core_state,
+                        renderer.camera_center(),
+                        &mut layer.airborne_particles,
+                    );
+                }
 
                 if contact.is_boat() && !contact.reloads().is_empty() {
                     for i in 0..data.armaments.len() {
@@ -921,6 +847,7 @@ impl GameClient for Mk48Game {
                                 + tangent_vector * (speed * r * spread),
                             radius: 1.0,
                             color: 1.0,
+                            smoothness: 1.0,
                         });
                     }
                 }
@@ -941,6 +868,7 @@ impl GameClient for Mk48Game {
                                 } else {
                                     0.4
                                 },
+                                smoothness: 1.0,
                             });
                         }
                     }
@@ -955,6 +883,13 @@ impl GameClient for Mk48Game {
                     1.0,
                 );
             }
+        }
+
+        // Play anti-aircraft sfx.
+        if anti_aircraft_volume > 0.0 && !layer.audio.is_playing("aa") {
+            layer
+                .audio
+                .play_with_volume("aa", anti_aircraft_volume.min(0.5));
         }
 
         // Sort sprites by altitude.
@@ -1140,7 +1075,7 @@ impl GameClient for Mk48Game {
 
         self.fps_counter.update(elapsed_seconds);
 
-        if self.state_rate_limiter.update_ready(elapsed_seconds) {
+        if self.ui_props_rate_limiter.update_ready(elapsed_seconds) {
             self.update_ui_props(context, status, &team_proximity);
         }
 

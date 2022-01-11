@@ -6,6 +6,9 @@ use common::contact::{Contact, ContactTrait};
 use glam::Vec2;
 
 impl Mk48Game {
+    pub const DEFAULT_ZOOM_INPUT: f32 = 0.6;
+    pub const MENU_VISUAL_RANGE: f32 = 300.0;
+
     /// Gets the proper camera to display the game.
     pub(crate) fn camera(
         &self,
@@ -32,7 +35,7 @@ impl Mk48Game {
     /// Interpolates the zoom level closer as if delta_seconds elapsed.
     /// If the player's ship exists, it's camera info is cached, such that it may be returned
     /// even after that ship sinks.
-    pub(crate) fn update_camera(&mut self, player_contact: Option<&Contact>, delta_seconds: f32) {
+    pub fn update_camera(&mut self, player_contact: Option<&Contact>, delta_seconds: f32) {
         let zoom = if let Some(player_contact) = player_contact {
             let camera = player_contact.transform().position;
             let zoom = player_contact.entity_type().unwrap().data().camera_range();
@@ -41,7 +44,7 @@ impl Mk48Game {
         } else if let Some(saved_camera) = self.saved_camera {
             saved_camera.1
         } else {
-            300.0
+            Self::MENU_VISUAL_RANGE
         } * self.zoom_input;
 
         self.interpolated_zoom += (zoom - self.interpolated_zoom) * (6.0 * delta_seconds).min(1.0);

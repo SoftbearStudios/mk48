@@ -48,7 +48,7 @@ pub trait GameClient {
         _inbound: &Self::Update,
         _context: &mut Context<Self>,
         _renderer: &Renderer,
-        _layer: &Self::RendererLayer,
+        _layer: &mut Self::RendererLayer,
     ) {
     }
 

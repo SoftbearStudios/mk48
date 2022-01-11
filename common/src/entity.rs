@@ -175,6 +175,11 @@ impl EntityData {
         self.sensors.visual.range * 0.75
     }
 
+    /// Range of anti aircraft guns (whereas `self.anti_aircraft` is their power).
+    pub fn anti_aircraft_range(&self) -> f32 {
+        self.radii().end
+    }
+
     /// returns whether this entity type primarily/only exists on land, as opposed to water.
     pub fn is_land_based(&self) -> bool {
         self.sub_kind == EntitySubKind::Tree

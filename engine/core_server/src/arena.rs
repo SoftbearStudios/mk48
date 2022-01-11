@@ -129,16 +129,12 @@ impl Arena {
                 } else if !include_bots {
                     return None;
                 }
-                if let Some(score) = play.score {
-                    Some(LiveboardDto {
-                        team_captain: play.team_captain,
-                        team_id: play.team_id,
-                        player_id: session.player_id,
-                        score,
-                    })
-                } else {
-                    None
-                }
+                play.score.map(|score| LiveboardDto {
+                    team_captain: play.team_captain,
+                    team_id: play.team_id,
+                    player_id: session.player_id,
+                    score,
+                })
             } else {
                 None
             }

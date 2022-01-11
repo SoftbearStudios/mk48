@@ -62,7 +62,7 @@ impl Texture {
 
         gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
 
-        unbind_texture_cfg_debug(&gl);
+        unbind_texture_cfg_debug(gl);
 
         Self::from_inner(texture, width, height)
     }
@@ -101,7 +101,7 @@ impl Texture {
 
                 gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
 
-                unbind_texture_cfg_debug(&gl);
+                unbind_texture_cfg_debug(gl);
 
                 return;
             }
@@ -171,7 +171,7 @@ impl Texture {
 
         gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
 
-        unbind_texture_cfg_debug(&gl);
+        unbind_texture_cfg_debug(gl);
 
         Self::from_inner(texture, canvas_width, HEIGHT)
     }
@@ -219,7 +219,7 @@ impl Texture {
         );
         gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
 
-        unbind_texture_cfg_debug(&gl);
+        unbind_texture_cfg_debug(gl);
 
         let img = Rc::new(web_sys::HtmlImageElement::new().unwrap());
 

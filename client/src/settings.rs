@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use client_util::local_storage::LocalStorage;
 use client_util::setting::Settings;
 

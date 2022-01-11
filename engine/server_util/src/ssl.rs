@@ -20,12 +20,8 @@ pub struct Ssl<'a> {
 
 impl<'a> Ssl<'a> {
     pub fn new(certificate_file: &'a str, private_key_file: &'a str) -> Result<Self, &'static str> {
-        if !fs::metadata(certificate_file).is_ok() {
-            return Err("certificate file missing");
-        }
-        if !fs::metadata(private_key_file).is_ok() {
-            return Err("private key file missing");
-        }
+        fs::metadata(certificate_file).map_err(|_| "certificate file missing")?;
+        fs::metadata(private_key_file).map_err(|_| "private key file missing")?;
         let ret = Self {
             certificate_file,
             private_key_file,
@@ -89,7 +85,7 @@ impl<'a> Ssl<'a> {
                 rustls_pemfile::certs(&mut cert_reader)
                     .unwrap()
                     .into_iter()
-                    .map(|v| rustls::Certificate(v))
+                    .map(rustls::Certificate)
                     .collect(),
                 rustls::PrivateKey(
                     rustls_pemfile::pkcs8_private_keys(&mut priv_reader)
@@ -128,7 +124,7 @@ impl<'a> Ssl<'a> {
 }
 
 /// Returns when either the server has stopped (Err) or the SSL needs renewal (Ok).
-pub async fn run_until_ssl_renewal<'a>(server: Server, ssl: &Option<Ssl<'a>>) -> Result<(), ()> {
+pub async fn run_until_ssl_renewal(server: Server, ssl: &Option<Ssl<'_>>) -> Result<(), ()> {
     if let Some(ssl) = ssl {
         // This handle can be sent the stop command, and it will stop the original server
         // which has been moved by then.

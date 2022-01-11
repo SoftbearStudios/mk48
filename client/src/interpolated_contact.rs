@@ -155,6 +155,7 @@ impl InterpolatedContact {
                                     * (rng.gen::<f32>() - 0.5),
                             radius: (armament_entity_data.width * 5.0).clamp(1.0, 3.0),
                             color: -1.0,
+                            smoothness: 1.0,
                         });
                     }
                 }
@@ -183,6 +184,7 @@ impl Mk48Game {
         contact: &Contact,
         audio_layer: &AudioLayer,
         animations: &mut Vec<Animation>,
+        time_seconds: f32,
     ) {
         if let Some(entity_type) = contact.entity_type() {
             // Contact lost (of a previously known entity type), spawn a splash and make a sound.
@@ -216,6 +218,7 @@ impl Mk48Game {
                 contact.transform().position,
                 contact.altitude().to_norm(),
                 10.0,
+                time_seconds,
             ));
         }
     }

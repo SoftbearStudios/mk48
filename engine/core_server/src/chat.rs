@@ -11,7 +11,7 @@ use core_protocol::id::{ArenaId, GameId, PlayerId, SessionId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use log::{debug, error, warn};
 use ringbuffer::RingBufferWrite;
-use rustrict::{ContextProcessingOptions, ContextRateLimitOptions, trim_whitespace};
+use rustrict::{trim_whitespace, ContextProcessingOptions, ContextRateLimitOptions};
 use std::fs::OpenOptions;
 use std::rc::Rc;
 
@@ -66,12 +66,13 @@ impl Repo {
                 if let Some(&sess) = self.players.get(&player_id) {
                     if let Some(play) = session.plays.last() {
                         // Throttle abuse of the feature.
-                        if play.date_stop.is_none() && play.date_created > get_unix_time_now() + 30
+                        if play.date_stop.is_none()
+                            && get_unix_time_now() > play.date_created + 20
+                            && play.score.map(|s| s > 100).unwrap_or(false)
+                            && session.reported.insert(player_id)
                         {
-                            if session.reported.insert(player_id) {
-                                report_session_id = Some(sess);
-                                reported = true;
-                            }
+                            report_session_id = Some(sess);
+                            reported = true;
                         }
                     }
                 }
@@ -133,7 +134,10 @@ impl Repo {
                             ..Default::default()
                         };
 
-                        match session.chat_context.process_with_options(message.to_owned(), &options) {
+                        match session
+                            .chat_context
+                            .process_with_options(message.to_owned(), &options)
+                        {
                             Ok(text) => {
                                 let message = MessageDto {
                                     alias: session.alias,
@@ -267,7 +271,7 @@ pub fn log_chat(
                 &format!("{}", get_unix_time_now()),
                 &game_id
                     .map(|id| format!("{:?}", id))
-                    .unwrap_or(String::from("-")),
+                    .unwrap_or_else(|| String::from("-")),
                 &format!("{:?}", whisper),
                 &format!("{}", ok),
                 alias.as_str(),

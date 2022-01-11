@@ -131,7 +131,7 @@ impl Rem for Ticks {
 
 impl fmt::Debug for Ticks {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} seconds", self.to_secs())
+        write!(f, "{:.1} seconds", self.to_secs())
     }
 }
 

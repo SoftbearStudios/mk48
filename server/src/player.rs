@@ -76,6 +76,16 @@ impl Status {
         matches!(self, Status::Alive { .. })
     }
 
+    /// Returns entity index if alive, otherwise none.
+    /// Doesn't consider `Flags::left_game`.
+    #[cfg(test)]
+    pub fn get_entity_index(&self) -> Option<EntityIndex> {
+        match self {
+            Self::Alive { entity_index, .. } => Some(*entity_index),
+            _ => None,
+        }
+    }
+
     /// set_entity_index sets the entity index of an Alive status or panics if the status is not alive.
     pub fn set_entity_index(&mut self, new_index: EntityIndex) {
         if let Self::Alive { entity_index, .. } = self {

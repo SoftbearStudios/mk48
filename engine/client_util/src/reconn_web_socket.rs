@@ -33,7 +33,9 @@ where
     pub fn new(host: &str, format: WebSocketFormat, preamble: Option<O>) -> Self {
         let mut inner = ProtoWebSocket::new(host, format);
 
-        preamble.as_ref().map(|p| inner.send(p.clone()));
+        if let Some(p) = preamble.as_ref() {
+            inner.send(p.clone());
+        }
 
         Self {
             inner,
@@ -46,7 +48,7 @@ where
         }
     }
 
-    /// Returns whether the underlying connection is closed.
+    /// Returns whether the underlying connection is closed (for any reason).
     pub fn is_closed(&self) -> bool {
         self.inner.is_closed()
     }
@@ -56,6 +58,12 @@ where
         self.inner.is_open()
     }
 
+    /// Returns whether the underlying connection is closed and reconnection attempts have been
+    /// exhausted.
+    pub fn is_terminated(&self) -> bool {
+        self.inner.is_error() && self.tries >= Self::MAX_TRIES
+    }
+
     /// Takes the current time, and returns a collection of updates to apply to the current
     /// state. Will automatically reconnect and clear state if/when the underlying connection is new.
     ///
@@ -63,14 +71,19 @@ where
     pub fn update(&mut self, time_seconds: f32) -> Vec<I> {
         if self.is_closed() {
             self.was_closed = true;
-        } else if self.was_closed && self.is_open() {
+        } else if self.was_closed && self.is_open() && self.inner.has_updates() {
             self.was_closed = false;
-            // Need to clear state, since websocket is *no longer* closed.
+            // Need to clear state, since websocket is *no longer* closed and has new updates.
             self.state = S::default();
         }
 
         self.reconnect_if_necessary(time_seconds);
         self.inner.receive_updates()
+    }
+
+    /// Reset the preamble to a different value.
+    pub fn reset_preamble(&mut self, preamble: O) {
+        self.preamble = Some(preamble);
     }
 
     /// Sets the format that will be used to send subsequent messages.
@@ -108,14 +121,19 @@ where
         {
             // Try again.
             self.inner = ProtoWebSocket::new(&self.host, self.inner.format());
-            self.preamble.clone().map(|p| self.inner.send(p));
+            if let Some(p) = self.preamble.as_ref() {
+                self.inner.send(p.clone());
+            }
             self.tries += 1;
             self.next_try = time_seconds + Self::SECONDS_PER_TRY;
+        } else if self.tries >= Self::MAX_TRIES {
+            // Stop trying, stop giving the impression of working.
+            self.state = S::default();
         }
     }
 
     /// Drop, but leave open the possibility of auto-reconnecting (useful for testing Self).
-    pub fn drop(&mut self) {
+    pub fn simulate_drop(&mut self) {
         self.inner.close();
     }
 }

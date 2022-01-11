@@ -18,7 +18,7 @@ uniform sampler2D uGrass;
 #endif
 
 uniform vec4 uMiddle_uDerivative;
-uniform vec4 uTime_uVisual_uRestrict_uBorder;
+uniform float uTime;
 
 /* Modified source from https://www.shadertoy.com/view/4dS3Wd ----> */
 
@@ -110,7 +110,6 @@ void main() {
         vec3 s = mix(shoal, sand, min((height - SAND) * (1.5 / (GRASS - SAND)), 1.0)); // Sand
 
         #ifdef WAVES
-            float uTime = uTime_uVisual_uRestrict_uBorder.x;
             vec2 waterNoise = vec2(waveNoise(vec3(vPosition * 0.07 + WIND * uTime, uTime * 0.07))) * vec2(0.035, 2.2);
         #else
             vec2 waterNoise = vec2(0.0);
@@ -141,7 +140,4 @@ void main() {
         float delta = uMiddle_uDerivative.z * 0.0075;
         gl_FragColor = vec4(mix(s, w, smoothstep(sandHeight + delta, sandHeight - delta, height)), 1.0);
     }
-
-    gl_FragColor = mix(gl_FragColor, vec4(0.4, 0.15, 0.15, 1.0), clamp((length(vPosition) - uTime_uVisual_uRestrict_uBorder.w) * 0.1, 0.0, 0.5));
-    gl_FragColor = mix(gl_FragColor, vec4(0.0, 0.14, 0.32, 1.0), clamp((length(vPosition - uMiddle_uDerivative.xy) - uTime_uVisual_uRestrict_uBorder.y) * 0.1, 0.0, uTime_uVisual_uRestrict_uBorder.z));
 }

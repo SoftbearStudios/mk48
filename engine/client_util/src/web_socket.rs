@@ -40,6 +40,7 @@ where
     I: 'static + DeserializeOwned,
     O: 'static + Serialize,
 {
+    /// Opens a new websocket.
     pub fn new(host: &str, format: WebSocketFormat) -> Self {
         let ret = Self {
             inner: Rc::new(RefCell::new(ProtoWebSocketInner {
@@ -131,6 +132,7 @@ where
         ret
     }
 
+    /// Gets current (cached) websocket state.
     pub fn state(&self) -> State {
         self.inner.borrow().state
     }
@@ -150,6 +152,12 @@ where
         matches!(self.state(), State::Open)
     }
 
+    /// Returns whether `receive_updates` would return a non-empty `Vec`.
+    pub fn has_updates(&self) -> bool {
+        !self.inner.borrow().inbound_buffer.is_empty()
+    }
+
+    /// Gets buffered updates.
     pub fn receive_updates(&mut self) -> Vec<I> {
         let mut inner = self.inner.deref().borrow_mut();
         let mut inbounds = Vec::new();
@@ -157,6 +165,7 @@ where
         inbounds
     }
 
+    /// Send a message or buffer it if the websocket is still opening.
     pub fn send(&mut self, msg: O) {
         let mut inner = self.inner.deref().borrow_mut();
         match inner.state {
@@ -166,6 +175,7 @@ where
         }
     }
 
+    /// Sends a message or drop it on error.
     fn do_send(socket: &WebSocket, msg: O, format: WebSocketFormat) {
         match format {
             WebSocketFormat::Binary => {

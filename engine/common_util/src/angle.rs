@@ -10,10 +10,10 @@ use std::f32::consts::PI;
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
-type AngleRepr = i16;
+pub type AngleRepr = i16;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Angle(AngleRepr);
+pub struct Angle(pub AngleRepr);
 
 #[allow(dead_code)]
 impl Angle {

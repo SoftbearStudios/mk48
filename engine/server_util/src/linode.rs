@@ -175,7 +175,7 @@ impl Cloud for Linode {
                 }
             }
             DnsUpdate::Add(ip) => {
-                if old.find(|r| r.record.target == ip).is_none() {
+                if !old.any(|r| r.record.target == ip) {
                     let new = LinodeDomainRecord {
                         name: sub_domain.to_owned(),
                         target: ip,

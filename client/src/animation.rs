@@ -10,22 +10,31 @@ pub struct Animation {
     pub position: Vec2,
     pub altitude: f32,
     pub scale: f32,
-    pub frame: usize,
+    pub start_time: f32,
 }
 
 impl Animation {
-    pub fn new(name: &'static str, position: Vec2, altitude: f32, scale: f32) -> Self {
+    /// How many frames are played per second.
+    const FRAMES_PER_SECOND: f32 = 35.0;
+
+    pub fn new(
+        name: &'static str,
+        position: Vec2,
+        altitude: f32,
+        scale: f32,
+        start_time: f32,
+    ) -> Self {
         Self {
             name,
             position,
             altitude,
             scale,
-            frame: 0,
+            start_time,
         }
     }
 
-    /// Increments the animation frame if necessary.
-    pub fn update(&mut self, delta_seconds: f32) {
-        self.frame += (delta_seconds * (1.0 / 20.0)).max(1.0) as usize;
+    /// Gets the frame (caller is responsible for knowing whether the animation is over).
+    pub fn frame(&self, time_seconds: f32) -> usize {
+        ((time_seconds - self.start_time) * Self::FRAMES_PER_SECOND) as usize
     }
 }

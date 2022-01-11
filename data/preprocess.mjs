@@ -104,7 +104,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'tanker':
 					break;
 				default:
-					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.02, 0.25).toFixed(3));
+					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.01, 0.15).toFixed(3));
 			}
 
 			// Torpedo resistance.

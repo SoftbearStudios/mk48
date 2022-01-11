@@ -410,3 +410,96 @@ impl World {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::Entity;
+    use crate::player::PlayerTuple;
+    use crate::world::World;
+    use common::entity::{EntityKind, EntityType};
+    use common::terrain::Terrain;
+    use common::ticks::Ticks;
+    use core_protocol::id::PlayerId;
+    use std::num::NonZeroU32;
+    use std::sync::Arc;
+
+    /// Tests how long each boat takes to recover from (one tick less than) full damage.
+    #[test]
+    fn repair_rate() {
+        unsafe {
+            EntityType::init();
+        }
+
+        let mut world = World::new(10000.0);
+        world.terrain = Terrain::new();
+
+        let cases: Vec<_> = EntityType::iter()
+            .filter(|t| t.data().kind == EntityKind::Boat)
+            .collect();
+
+        let players: Vec<Arc<PlayerTuple>> = cases
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                Arc::new(PlayerTuple::new(PlayerId(
+                    NonZeroU32::new(i as u32 + 1).unwrap(),
+                )))
+            })
+            .collect();
+
+        for (typ, player) in cases.iter().zip(players.iter()) {
+            let mut entity = Entity::new(*typ, Some(Arc::clone(&player)));
+            entity.damage(entity.data().max_health() - Ticks::ONE);
+            //entity.damage(Ticks::from_damage(1.0));
+            assert!(
+                world.spawn_here_or_nearby(entity, 10000.0, None),
+                "could not spawn {:?}",
+                typ
+            );
+        }
+
+        let mut timings: Vec<_> = cases.iter().map(|case| (*case, None)).collect();
+        let mut done = 0;
+
+        let mut counter = Ticks::ZERO;
+        'outer: loop {
+            for (i, (typ, player)) in cases.iter().zip(players.iter()).enumerate() {
+                if let Some(entity) = player
+                    .borrow()
+                    .status
+                    .get_entity_index()
+                    .map(|idx| &world.entities[idx])
+                {
+                    assert_eq!(
+                        entity.entity_type, *typ,
+                        "expected {:?} not to change type",
+                        *typ
+                    );
+
+                    if entity.ticks == Ticks::ZERO {
+                        if timings[i].1.is_none() {
+                            timings[i].1 = Some(counter);
+                            done += 1;
+                            if done == cases.len() {
+                                break 'outer;
+                            }
+                        }
+                    }
+                } else {
+                    panic!("Expected {:?} to survive", typ);
+                }
+            }
+
+            world.physics(Ticks::ONE);
+            world.physics_radius(Ticks::ONE);
+            world.spawn_statics(Ticks::ONE);
+            counter += Ticks::ONE;
+        }
+
+        timings.sort_by(|(_, a), (_, b)| a.unwrap().cmp(&b.unwrap()));
+
+        for (case, timing) in timings.iter() {
+            println!("{:?} {:?}", case, timing.unwrap());
+        }
+    }
+}

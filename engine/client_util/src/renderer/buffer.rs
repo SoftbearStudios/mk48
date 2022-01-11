@@ -22,6 +22,7 @@ pub struct MeshBuffer<V: Vertex> {
 }
 
 impl<V: Vertex> MeshBuffer<V> {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             vertices: Vec::new(),

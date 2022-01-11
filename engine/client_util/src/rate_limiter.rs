@@ -38,7 +38,7 @@ impl RateLimiter {
     pub fn update_ready(&mut self, elapsed: f32) -> bool {
         self.update(elapsed);
         let ret = self.elapsed >= self.period;
-        self.elapsed = self.elapsed % self.period;
+        self.elapsed %= self.period;
         ret
     }
 }

@@ -42,7 +42,7 @@ impl Shader {
     /// Parse attribute names from shader source.
     fn parse_attributes(vertex_source: &str) -> impl Iterator<Item = &str> {
         vertex_source
-            .split("\n")
+            .lines()
             .filter(|l| l.starts_with("attribute"))
             .map(|l| {
                 l.split(' ')
@@ -120,14 +120,13 @@ impl Shader {
     /// Returns either Ok with a bool of if its done compiling or and Err with a compile error.
     fn query_link_status(&self, gl: &Gl, khr: Option<&Khr>) -> Result<bool, String> {
         // return Ok(false) if async compile not complete.
-        if let Some(_) = khr {
-            if !gl
+        if khr.is_some()
+            && !gl
                 .get_program_parameter(&self.program, Khr::COMPLETION_STATUS_KHR)
                 .as_bool()
                 .unwrap()
-            {
-                return Ok(false);
-            }
+        {
+            return Ok(false);
         }
 
         if gl
@@ -139,15 +138,15 @@ impl Shader {
         } else {
             let program_err = gl
                 .get_program_info_log(&self.program)
-                .unwrap_or_else(|| String::new());
+                .unwrap_or_else(String::new);
 
             let vert_err = gl
                 .get_shader_info_log(&self.vert_shader)
-                .unwrap_or_else(|| String::new());
+                .unwrap_or_else(String::new);
 
             let frag_err = gl
                 .get_shader_info_log(&self.frag_shader)
-                .unwrap_or_else(|| String::new());
+                .unwrap_or_else(String::new);
 
             Err(format!(
                 "link failed: {}, vs: {}, fs: {}",

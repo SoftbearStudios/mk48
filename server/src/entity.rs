@@ -255,16 +255,8 @@ impl Entity {
     /// Tolerance is what fraction of the length of the keep to consider.
     pub fn closest_point_on_keel_to(&self, position: Vec2, tolerance: f32) -> Vec2 {
         debug_assert!((0.0..=1.0).contains(&tolerance));
-
-        let pos_diff = position - self.transform.position;
-        if pos_diff.length_squared() < 1.0 {
-            self.transform.position
-        } else {
-            self.transform.position
-                + pos_diff
-                    .project_onto(self.transform.direction.to_vec())
-                    .clamp_length_max(self.data().length * tolerance * 0.5)
-        }
+        self.transform
+            .closest_point_on_keel_to(self.data().length * tolerance, position)
     }
 
     /// Determines whether an entity collides with the terrain (underwater terrain ignored to avoid
@@ -378,11 +370,8 @@ impl Entity {
     pub fn damage(&mut self, amount: Ticks) -> bool {
         let data = self.data();
 
-        // Ticks is lifespan for non-boats.
-        if data.kind != EntityKind::Boat {
-            panic!("probably shouldn't be calling damage on non-boats");
-            //return amount != 0
-        }
+        // Ticks is lifespan, not damage, for non-boats.
+        assert_eq!(data.kind, EntityKind::Boat);
 
         self.ticks = self.ticks.saturating_add(amount).min(data.max_health());
         self.ticks == data.max_health()

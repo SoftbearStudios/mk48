@@ -8,8 +8,6 @@ use crate::renderer::shader::Shader;
 use crate::renderer::vertex::Vertex;
 use glam::{vec3, vec4, Vec2};
 
-const LIFESPAN: f32 = 1.25;
-
 /// Particle represents a single particle and contains information about how to update it.
 pub struct Particle {
     pub position: Vec2,
@@ -18,7 +16,14 @@ pub struct Particle {
     /// -1 to 1: Fire to black
     ///  0 to 1: Black to white
     pub color: f32,
+    /// Radius in meters (TODO: make sure actually is in meters).
     pub radius: f32,
+    /// 0 = sharp and stays same size, 1 = smooth and gradually dilutes/expands.
+    pub smoothness: f32,
+}
+
+impl Particle {
+    pub const LIFESPAN: f32 = 1.25;
 }
 
 /// Renders particles.
@@ -42,7 +47,7 @@ impl ParticleLayer {
 
         Self {
             buffer: PointRenderDeque::new(&renderer.gl, &renderer.oes_vao),
-            to_add: vec![],
+            to_add: Vec::new(),
             wind,
         }
     }
@@ -63,6 +68,7 @@ struct ParticleVertex {
     pub velocity: Vec2,
     pub color: f32,
     pub radius: f32,
+    pub smoothness: f32,
     pub created: f32,
 }
 
@@ -74,25 +80,23 @@ impl Layer for ParticleLayer {
                 velocity,
                 color,
                 radius,
+                smoothness,
             } = particle;
             self.buffer.push_back(ParticleVertex {
                 position,
                 velocity,
                 color,
                 radius,
+                smoothness,
                 created: renderer.time,
             });
         }
 
-        let expired = renderer.time - LIFESPAN;
-        loop {
-            if let Some(particle) = self.buffer.front() {
-                // Not expired yet (all particles after are must be >= as well).
-                if particle.created >= expired {
-                    break;
-                }
-            } else {
-                // Queue empty.
+        let expired = renderer.time - Particle::LIFESPAN;
+
+        while let Some(particle) = self.buffer.front() {
+            // Not expired yet (all particles after are must be >= as well).
+            if particle.created >= expired {
                 break;
             }
             self.buffer.pop_front();

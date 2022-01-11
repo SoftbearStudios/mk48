@@ -5,7 +5,6 @@ varying vec2 vPosition; // world position.
 varying vec2 vUv; // terrain texture uv.
 varying vec2 vUv2; // sand/grass texture uv.
 
-
 void main() {
     gl_Position = position;
     vPosition = (uCamera * vec3(position.xy, 1.0)).xy;

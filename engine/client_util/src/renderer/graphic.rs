@@ -15,8 +15,8 @@ use web_sys::WebGlRenderingContext as Gl;
 pub struct GraphicLayer {
     mesh: MeshBuffer<PosColor>,
     buffer: RenderBuffer<PosColor>,
-    /// Zoom value from last frame, useful for generating curves with appropriate segments.
-    last_zoom: f32,
+    /// Cached in pre_prepare.
+    zoom: f32,
 }
 
 impl GraphicLayer {
@@ -33,7 +33,7 @@ impl GraphicLayer {
         Self {
             mesh: MeshBuffer::new(),
             buffer: RenderBuffer::new(&renderer.gl, &renderer.oes_vao),
-            last_zoom: 1.0,
+            zoom: 0.0,
         }
     }
 
@@ -117,7 +117,7 @@ impl GraphicLayer {
 
         // Number of segments to approximate an arc.
         // The radius.sqrt() helps even out the quality surprisingly well.
-        let segments = ((radius / self.last_zoom).sqrt()
+        let segments = ((radius / self.zoom).sqrt()
             * angle_span
             * (200.0 / (std::f32::consts::PI * 2.0))) as i32;
 
@@ -199,9 +199,11 @@ impl GraphicLayer {
 }
 
 impl Layer for GraphicLayer {
-    fn render(&mut self, renderer: &Renderer) {
-        self.last_zoom = renderer.zoom;
+    fn pre_prepare(&mut self, renderer: &Renderer) {
+        self.zoom = renderer.zoom;
+    }
 
+    fn render(&mut self, renderer: &Renderer) {
         if let Some(shader) = renderer.bind_shader(renderer.graphic_shader.as_ref().unwrap()) {
             shader.uniform_matrix3f("uView", &renderer.view_matrix);
 

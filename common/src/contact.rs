@@ -85,6 +85,7 @@ impl Default for Contact {
 }
 
 impl Contact {
+    /// Initializes all (private) fields.
     pub fn new(
         altitude: Altitude,
         damage: Ticks,
@@ -110,7 +111,7 @@ impl Contact {
     }
 
     /// Simulate delta_seconds passing, by updating guidance and kinematics. This is an approximation
-    /// of how the corresponding entity on the server.
+    /// of how the corresponding entity behaves on the server.
     pub fn simulate(&mut self, delta_seconds: f32) {
         if let Some(entity_type) = self.entity_type() {
             let guidance = *self.guidance();
@@ -272,6 +273,7 @@ impl ContactTrait for Contact {
     }
 }
 
+/// Useful for efficiently serializing contact.
 struct ContactHeader {
     has_vel: bool,
     has_alt: bool,

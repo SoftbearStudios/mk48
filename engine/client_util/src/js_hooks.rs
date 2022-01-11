@@ -10,30 +10,30 @@ use web_sys::{HtmlCanvasElement, Window};
 //use wasm_bindgen::prelude::{Closure};
 
 /// Gets the canvas to use for WebGL.
-pub fn canvas() -> Result<HtmlCanvasElement, String> {
-    let document = window()?.document().ok_or("no document".to_string())?;
+pub fn canvas() -> Result<HtmlCanvasElement, &'static str> {
+    let document = window()?.document().ok_or("no document")?;
     document
         .get_element_by_id("canvas")
-        .ok_or("no canvas".to_string())?
+        .ok_or("no canvas")?
         .dyn_into::<HtmlCanvasElement>()
         .ok()
-        .ok_or("invalid canvas".to_string())
+        .ok_or("invalid canvas")
 }
 
 /// Gets the current domain name e.g. mk48.io
 pub fn domain_name() -> String {
-    domain_name_of(host())
+    domain_name_of(&host())
 }
 
 /// Gets the domain name component of a host string e.g. mk48.io
-pub fn domain_name_of(host: String) -> String {
+pub fn domain_name_of(host: &str) -> String {
     let mut split: Vec<_> = host.split('.').collect();
     if split.len() > 2 {
         let tld = split.pop().unwrap();
         let domain = split.pop().unwrap();
         domain.to_owned() + "." + tld
     } else {
-        host
+        host.to_owned()
     }
 }
 
@@ -73,16 +73,25 @@ pub fn referrer() -> Option<Referrer> {
 }
 
 /// Gets the window.
-fn window() -> Result<Window, String> {
-    web_sys::window().ok_or("no window".to_string())
+fn window() -> Result<Window, &'static str> {
+    web_sys::window().ok_or("no window")
 }
 
 /// Gets the string, ws or wss, for the websocket protocol to use.
 /// This is a problematic API because it does not respect redirect schemes.
-pub fn ws_protocol() -> &'static str {
-    if web_sys::window().unwrap().location().protocol().unwrap() == "http:" {
-        "ws"
-    } else {
+pub fn is_https() -> bool {
+    web_sys::window()
+        .unwrap()
+        .location()
+        .protocol()
+        .map(|p| p != "http:")
+        .unwrap_or(true)
+}
+
+pub fn ws_protocol(encrypted: bool) -> &'static str {
+    if encrypted {
         "wss"
+    } else {
+        "ws"
     }
 }

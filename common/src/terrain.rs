@@ -104,23 +104,17 @@ impl Coord {
     }
 
     pub fn corner(&self) -> Vec2 {
+        // TODO investigate if this is actually the corner.
         Vec2::new(
             (self.0 as isize - OFFSET) as f32,
             (self.1 as isize - OFFSET) as f32,
         )
         .mul(SCALE)
     }
+}
 
-    /*
-    pub fn center(&self) -> Vec2 {
-        Vec2::new(
-            (self.0 as isize - OFFSET) as f32,
-            (self.1 as isize - OFFSET) as f32,
-        )
-        .add(0.5)
-        .mul(SCALE)
-    }
-     */
+pub fn signed_coord_corner(x: isize, y: isize) -> Vec2 {
+    Vec2::new((x - OFFSET) as f32, (y - OFFSET) as f32).mul(SCALE)
 }
 
 impl<U> From<(U, U)> for Coord
@@ -490,15 +484,9 @@ impl Terrain {
 
     /// pre_update is called once before all clients recieve updates after physics each tick.
     pub fn pre_update(&mut self) {
-        for chunks in self.chunks.iter_mut() {
-            for chunk in chunks.iter_mut() {
-                if let Some(chunk) = chunk {
-                    let chunk: &mut Chunk = chunk;
-
-                    // Converts and dedupes updated coords into mods.
-                    chunk.calculate_mods()
-                }
-            }
+        for chunk in self.chunks.iter_mut().flatten().flatten() {
+            // Converts and dedupes updated coords into mods.
+            chunk.calculate_mods();
         }
     }
 

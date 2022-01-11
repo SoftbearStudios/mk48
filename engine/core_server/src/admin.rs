@@ -72,7 +72,7 @@ impl Handler<ParameterizedAdminRequest> for Core {
                                 (
                                     items[0].timestamp,
                                     items
-                                        .into_iter()
+                                        .iter()
                                         .map(|i| i.metrics.clone())
                                         .sum::<Metrics>()
                                         .data_point(),

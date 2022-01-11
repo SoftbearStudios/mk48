@@ -143,7 +143,7 @@ impl<V: Vertex + Copy> PointRenderDeque<V> {
 
                 unsafe {
                     // Points to raw rust memory so can't allocate while in use.
-                    let vert_array = js_sys::Float32Array::view(floats_from_vertices(&vertices));
+                    let vert_array = js_sys::Float32Array::view(floats_from_vertices(vertices));
                     gl.buffer_sub_data_with_i32_and_array_buffer_view(
                         Gl::ARRAY_BUFFER,
                         offset,
@@ -176,7 +176,7 @@ impl<V: Vertex + Copy> PointRenderDeque<V> {
             let vertices = if slice_b.len() >= self.pushed {
                 // Slice b aka last items has all pushed items.
                 Cow::Borrowed(&slice_b[slice_b.len() - self.pushed..])
-            } else if slice_b.len() == 0 {
+            } else if slice_b.is_empty() {
                 // Slice b is empty aka contiguous so slice a has all items.
                 Cow::Borrowed(&slice_a[range])
             } else {

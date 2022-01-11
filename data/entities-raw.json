@@ -2369,7 +2369,7 @@
 		"length": 180,
 		"width": 20,
 		"draft": 6.6,
-		"speed": 15.43334,
+		"speed": 15.434,
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {},
@@ -2715,7 +2715,7 @@
 				"type": "brahmos",
 				"positionForward": -6,
 				"positionSide": 2,
-				"count": 3,
+				"count": 2,
 				"symmetrical": true,
 				"vertical": true,
 				"external": false
@@ -2796,7 +2796,7 @@
 		"length": 190,
 		"width": 24.6,
 		"draft": 8.4,
-		"speed": 15.43333,
+		"speed": 15.434,
 		"stealth": 0.75,
 		"sensors": {
 			"visual": {},

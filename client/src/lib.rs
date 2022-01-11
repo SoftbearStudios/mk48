@@ -6,8 +6,11 @@
 #![feature(drain_filter)]
 #![feature(must_not_suspend)]
 #![feature(bool_to_option)]
+#![feature(binary_heap_into_iter_sorted)]
 
 mod animation;
+mod armament;
+mod audio;
 mod background;
 mod game;
 mod interpolated_contact;

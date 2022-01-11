@@ -35,7 +35,9 @@ impl Watchdog {
     /// How long to wait between tries
     const RETRY: Duration = Duration::from_secs(5);
 
-    /// Safety: Only every call once.
+    /// # Safety
+    ///
+    /// Only every call once.
     pub unsafe fn new(cloud: Box<dyn Cloud>, domain: String) -> Self {
         CLOUD
             .set(cloud)
@@ -75,7 +77,7 @@ impl Actor for Watchdog {
                             if sub_domain == Self::HOME {
                                 home.append(&mut ip_addresses);
                             } else if let Some(server_id) =
-                                sub_domain.parse::<u8>().ok().and_then(|u| ServerId::new(u))
+                                sub_domain.parse::<u8>().ok().and_then(ServerId::new)
                             {
                                 if ip_addresses.len() == 1 {
                                     for i in 0..Self::TRIES {

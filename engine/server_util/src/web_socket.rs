@@ -40,7 +40,7 @@ where
             r.headers()
                 .get(header::USER_AGENT)
                 .and_then(|hv| hv.to_str().ok())
-                .map(|s| UserAgent::new(s)),
+                .map(UserAgent::new),
         ),
         &r,
         stream,

@@ -106,6 +106,20 @@ impl Transform {
     pub fn do_kinematics(&mut self, delta_seconds: f32) {
         self.position += self.direction.to_vec() * self.velocity.to_mps() * delta_seconds;
     }
+
+    /// Closest point on self's keel (a line segment from bow to stern) to position.
+    /// Tolerance is what fraction of the length of the keep to consider.
+    pub fn closest_point_on_keel_to(&self, keel_length: f32, position: Vec2) -> Vec2 {
+        let pos_diff = position - self.position;
+        if pos_diff.length_squared() < 1.0 {
+            self.position
+        } else {
+            self.position
+                + pos_diff
+                    .project_onto(self.direction.to_vec())
+                    .clamp_length_max(keel_length * 0.5)
+        }
+    }
 }
 
 impl Add for Transform {

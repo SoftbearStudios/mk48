@@ -235,8 +235,15 @@ impl World {
                                                     size += 75.0;
                                                 }
 
-                                                let randomness = 0.25 * hash_u32_to_f32(target.id.get() ^ weapon.id.get());
-                                                let strength = size / EntityData::MAX_RADIUS - diff.length_squared() / radius.powi(2) - angle_diff.to_radians() / Angle::MAX.to_radians() + randomness;
+                                                // Altitude diff.
+                                                let altitude_diff = weapon.altitude.difference(target.altitude).to_norm();
+
+                                                let randomness = (1.0 / 3.0) * hash_u32_to_f32(target.id.get() ^ weapon.id.get());
+                                                let strength = size / EntityData::MAX_RADIUS
+                                                    - diff.length_squared() / radius.powi(2)
+                                                    - angle_diff.to_radians() / Angle::MAX.to_radians()
+                                                    - altitude_diff
+                                                    + randomness;
                                                 mutate(weapon, Mutation::Guidance {direction_target: angle, altitude_target: target.altitude, signal_strength: strength});
                                             }
                                         }
@@ -289,12 +296,12 @@ impl World {
                                 // Automatic anti-aircraft has a chance of killing aircraft.
                                 if target_data.anti_aircraft > 0.0 && weapon_data.kind == EntityKind::Aircraft && target_data.kind == EntityKind::Boat {
                                     let d2 = weapon.transform.position.distance_squared(target.transform.position);
-                                    let r2 = (target_data.radius * 1.5).powi(2);
+                                    let r2 = target_data.anti_aircraft_range().powi(2);
 
                                     // In range of aa.
                                     if d2 <= r2 {
                                         let chance = (1.0 - d2/r2) * target_data.anti_aircraft;
-                                        if thread_rng().gen_bool(chance.clamp(0.0, 1.0) as f64) {
+                                        if thread_rng().gen_bool((chance as f64).clamp(0.0, 1.0)) {
                                             potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "shot down");
                                         }
@@ -526,8 +533,17 @@ impl World {
 
         // Apply mutations (already reversed).
         let mut skip = None;
-        for (index, mutation) in mutations {
-            if skip != Some(index) && mutation.apply(self, index, delta) {
+        let mut iter = mutations.into_iter().peekable();
+        while let Some((index, mutation)) = iter.next() {
+            let last_of_mutation_type = iter
+                .peek()
+                .map(|(next_index, next_mutation)| {
+                    *next_index != index
+                        || std::mem::discriminant(&mutation)
+                            != std::mem::discriminant(next_mutation)
+                })
+                .unwrap_or(true);
+            if skip != Some(index) && mutation.apply(self, index, delta, last_of_mutation_type) {
                 skip = Some(index);
             }
         }

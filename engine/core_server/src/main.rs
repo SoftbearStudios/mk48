@@ -24,7 +24,7 @@ fn main() {
 }
 
 pub async fn server() -> (Server, Addr<Core>) {
-    let core = Core::start(Core::new(None, false).await);
+    let core = Core::start(Core::new(None, false, None).await);
     let core_clone = core.to_owned();
 
     (

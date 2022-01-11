@@ -7,17 +7,17 @@ use common::transform::Transform;
 use glam::Vec2;
 use std::cmp::Ordering;
 
-pub struct SortableSprite<'a> {
+pub struct SortableSprite {
     pub alpha: f32,
     pub altitude: f32,
     pub dimensions: Vec2,
     pub entity_id: Option<EntityId>,
     pub frame: Option<usize>,
-    pub sprite: &'a str,
+    pub sprite: &'static str,
     pub transform: Transform,
 }
 
-impl<'a> SortableSprite<'a> {
+impl SortableSprite {
     pub fn new_entity(
         entity_id: EntityId,
         entity_type: EntityType,
@@ -49,13 +49,13 @@ impl<'a> SortableSprite<'a> {
         Self::new_entity(entity_id, entity_type, transform, altitude, alpha)
     }
 
-    pub fn new_animation(animation: &Animation) -> Self {
+    pub fn new_animation(animation: &Animation, time_seconds: f32) -> Self {
         Self {
             alpha: 1.0,
             altitude: animation.altitude,
             dimensions: Vec2::splat(animation.scale),
             entity_id: None,
-            frame: Some(animation.frame),
+            frame: Some(animation.frame(time_seconds)),
             sprite: animation.name,
             transform: Transform::from_position(animation.position),
         }
@@ -66,13 +66,13 @@ impl<'a> SortableSprite<'a> {
     }
 }
 
-impl<'a> PartialEq for SortableSprite<'a> {
+impl PartialEq for SortableSprite {
     fn eq(&self, other: &Self) -> bool {
         self.altitude == other.altitude && self.entity_id == other.entity_id
     }
 }
 
-impl<'a> PartialOrd for SortableSprite<'a> {
+impl PartialOrd for SortableSprite {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(
             self.altitude

@@ -2,10 +2,12 @@ attribute vec2 position;
 attribute vec2 velocity;
 attribute float color;
 attribute float radius;
+attribute float smoothness;
 attribute float created;
 uniform mat3 uView;
 uniform vec4 uWind_uTime_uScale;
 varying vec4 vColor;
+varying float vSmoothness;
 
 void main() {
     float time = uWind_uTime_uScale.z - created;
@@ -26,11 +28,12 @@ void main() {
         solidColor = mix(vec3(0.98, 0.75, 0.0), vec3(0.1), integratedColor + 1.0);
     }
 
-    float size = uWind_uTime_uScale.w * (1.0 + life * 2.0) * radius;
+    float size = uWind_uTime_uScale.w * (1.0 + life * smoothness * 2.0) * radius;
 
     // Instead of making particles less than 1px, reduce their alpha.
     gl_PointSize = max(size, 1.0);
-    float alpha = min(size * size, 1.0) * ((1.0 - life) * 0.15);
+    float alpha = min(size * size, 1.0) * ((1.0 - life) * (1.15 - smoothness));
 
     vColor = vec4(solidColor, alpha);
+    vSmoothness = smoothness;
 }
