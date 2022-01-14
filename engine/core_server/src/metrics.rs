@@ -47,7 +47,7 @@ pub struct Metrics {
     /// Ratio of new players who were invited to new players who were not.
     #[serde(default)]
     pub invited: RatioMetric,
-    /// Ration of players with FPS below 22 to all players.
+    /// Ratio of players with FPS below 22 to all players.
     #[serde(default)]
     pub low_fps: RatioMetric,
     /// Minutes per completed play (a measure of engagement).

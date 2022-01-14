@@ -14,17 +14,18 @@
 
 	<h2>2021</h2>
 
-	<h3>1/9/2022</h3>
+	<h3>1/13/2022</h3>
 
 	<ul>
 		<li>Improve spawning system to reduce spawn-killing.</li>
 		<li>Add visual and auditory representation for automatic anti-aircraft gunfire.</li>
-		<li>Improve appearance of water and airborne explosions.</li>
+		<li>Improve appearance of water, shell trails, and airborne explosions.</li>
 		<li>Harden network connection logic against temporary connection loss.</li>
 		<li>Guided weapons prioritize hitting targets at similar depths/altitudes.</li>
 		<li>Guided missiles will no seek towards submerged submarines.</li>
-		<li>Trees render more efficiently.</li>
+		<li>Trees are now decorative (unaffected by boats).</li>
 		<li>World border and sub vision overlays affect ships, particles, etc.</li>
+		<li>Fix team name length limit to allow more emojis.</li>
 	</ul>
 
 	<h3>12/25/2021</h3>

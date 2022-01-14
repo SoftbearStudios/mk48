@@ -55,6 +55,28 @@ impl Ord for LiveboardDto {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use crate::dto::LiveboardDto;
+    use crate::id::{PlayerId, TeamId};
+    use std::num::NonZeroU32;
+
+    #[test]
+    fn sort_order() {
+        assert!(LiveboardDto{
+            player_id: PlayerId(NonZeroU32::new(2).unwrap()),
+            score: 5,
+            team_captain: true,
+            team_id: Some(TeamId(NonZeroU32::new(1).unwrap())),
+        } < LiveboardDto{
+            player_id: PlayerId(NonZeroU32::new(1).unwrap()),
+            score: 3,
+            team_captain: false,
+            team_id: None,
+        })
+    }
+}
+
 /// The Member Data Transfer Object (DTO) binds a player to a team.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MemberDto {

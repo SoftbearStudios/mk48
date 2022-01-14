@@ -14,6 +14,7 @@ use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::Instant;
 
+/// The message recipient of an actix actor corresponding to a client.
 pub type ClientAddr<G> = Recipient<ObserverUpdate<<G as GameArenaService>::ClientUpdate>>;
 
 pub struct BotData<G: GameArenaService> {
@@ -77,7 +78,7 @@ pub struct Context<G: GameArenaService> {
     pub(crate) bots: HashMap<SessionId, BotData<G>>,
 }
 
-/// The status of an player from the perspective of the core.
+/// The status of a player from the perspective of the core.
 #[derive(Copy, Clone, Debug)]
 pub struct CoreStatus {
     pub location: Location,

@@ -19,12 +19,14 @@ use glam::{IVec2, Vec2};
 use std::panic;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent};
+use crate::fps_monitor::FpsMonitor;
 
 pub struct Infrastructure<G: GameClient> {
     game: G,
     context: Context<G>,
     renderer: Renderer,
     renderer_layer: G::RendererLayer,
+    statistic_fps_monitor: FpsMonitor,
 }
 
 impl<G: GameClient> Infrastructure<G> {
@@ -40,6 +42,7 @@ impl<G: GameClient> Infrastructure<G> {
             context,
             renderer,
             renderer_layer,
+            statistic_fps_monitor: FpsMonitor::new(60.0),
         }
     }
 
@@ -133,6 +136,12 @@ impl<G: GameClient> Infrastructure<G> {
                 &mut self.renderer_layer,
             );
             self.renderer.render(&mut self.renderer_layer, time_seconds);
+        }
+
+        if let Some(fps) = self.statistic_fps_monitor.update(elapsed_seconds) {
+            self.context.send_to_core(ClientRequest::TallyFps {
+                fps
+            });
         }
     }
 

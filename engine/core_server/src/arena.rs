@@ -17,6 +17,7 @@ use std::collections::BinaryHeap;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::cmp::Reverse;
 
 // Eventually, each arena will be able to contain one or more scenes.
 #[allow(dead_code)]
@@ -141,18 +142,19 @@ impl Arena {
                 } else if !include_bots {
                     return None;
                 }
-                play.score.map(|score| LiveboardDto {
+                // We actually wanted a min-heap.
+                play.score.map(|score| Reverse(LiveboardDto {
                     team_captain: play.team_captain,
                     team_id: play.team_id,
                     player_id: session.player_id,
                     score,
-                })
+                }))
             } else {
                 None
             }
         }));
 
-        let liveboard: Vec<_> = liveboard.into_iter_sorted().take(10).collect();
+        let liveboard: Vec<_> = liveboard.into_iter_sorted().take(10).map(|rev| rev.0).collect();
 
         // If there isn't a 10th item anyone is qualified no matter their score.
         let min_score = liveboard.get(10).map(|i| i.score).unwrap_or(0);
