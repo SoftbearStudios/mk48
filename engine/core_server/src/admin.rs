@@ -218,7 +218,14 @@ impl Repo {
                 }
 
                 if let Some(chat_log) = chat_log {
-                    log_chat(chat_log, None, false, sent, alias, &message);
+                    log_chat(
+                        chat_log,
+                        None,
+                        false,
+                        if sent { "ok" } else { "error" },
+                        alias,
+                        &message,
+                    );
                 }
 
                 result = Ok(AdminUpdate::ChatSent { sent })

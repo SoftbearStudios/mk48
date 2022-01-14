@@ -3,6 +3,7 @@
 
 use crate::altitude::Altitude;
 use crate::angle::Angle;
+use crate::ticks;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::util::level_to_score;
@@ -189,7 +190,7 @@ impl EntityData {
     /// entity does not have health.
     pub fn max_health(&self) -> Ticks {
         if self.kind == EntityKind::Boat {
-            return Ticks::from_damage(self.damage);
+            return ticks::from_damage(self.damage);
         }
         unreachable!("only boats have health");
     }

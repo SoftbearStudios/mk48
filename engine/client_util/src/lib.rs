@@ -6,6 +6,7 @@
 #![feature(must_not_suspend)]
 #![feature(hash_raw_entry)]
 #![feature(hash_drain_filter)]
+#![feature(array_zip)]
 
 pub mod apply;
 pub mod audio;

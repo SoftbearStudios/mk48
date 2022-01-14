@@ -9,6 +9,6 @@ pub mod range;
 mod unused_altitude;
 mod unused_collision2d;
 mod unused_coord2d;
-pub mod unused_ticks;
+pub mod ticks;
 mod unused_transform2d;
 mod unused_velocity2d;

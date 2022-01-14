@@ -101,7 +101,10 @@ impl<'a> ContactTrait for ContactRef<'a> {
 
     #[inline]
     fn player_id(&self) -> Option<PlayerId> {
-        self.entity.player.as_ref().map(|p| p.borrow().player_id)
+        self.entity
+            .player
+            .as_ref()
+            .map(|p| p.borrow_player().player_id)
     }
 
     #[inline]

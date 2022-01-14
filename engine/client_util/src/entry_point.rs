@@ -138,8 +138,15 @@ macro_rules! entry_point {
             with_infrastructure(move |mut i| i.leave_team());
         }
 
+        #[wasm_bindgen(js_name = "handleReportPlayer")]
+        pub fn handle_report_player(player_id: u32) {
+            if let Some(player_id) = NonZeroU32::new(player_id).map(PlayerId) {
+                with_infrastructure(move |mut i| i.report_player(player_id));
+            }
+        }
+
         #[wasm_bindgen(js_name = "handleMutePlayer")]
-        pub fn handle_mut_player(player_id: u32, mute: bool) {
+        pub fn handle_mute_player(player_id: u32, mute: bool) {
             if let Some(player_id) = NonZeroU32::new(player_id).map(PlayerId) {
                 with_infrastructure(move |mut i| i.mute_player(player_id, mute));
             }

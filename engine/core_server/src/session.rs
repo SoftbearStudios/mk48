@@ -7,10 +7,10 @@ use crate::invitation::Invitation;
 use crate::notify_set::NotifySet;
 use crate::repo::Repo;
 use core_protocol::dto::{InvitationDto, MessageDto};
+use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::name::{Location, PlayerAlias, Referrer};
 use core_protocol::UnixTime;
-use core_protocol::*;
 use log::{debug, info, trace, warn};
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::HashSet;
@@ -55,6 +55,7 @@ pub struct Session {
     pub live: bool,
     pub player_id: PlayerId,
     pub plays: Vec<Play>,
+    // TODO: combine all previous into tuple, e.g. previous_session: Option<(ArenaId, SessionId, u32, UnixTime)>,
     pub previous_id: Option<SessionId>,
     pub previous_plays: u32,
     pub referrer: Option<Referrer>,
@@ -230,7 +231,7 @@ impl Repo {
 
     /// Finds the most recent `SessionId` (if one exists) for the specified `PlayerId`.
     pub fn player_id_to_name(&self, arena_id: ArenaId, player_id: PlayerId) -> Option<PlayerAlias> {
-        if let Some(arena) = self.arenas.get(&arena_id) {
+        if let Some(arena) = Arena::get(&self.arenas, arena_id) {
             if let Some(session_id) = self.players.get(&player_id) {
                 if let Some(session) = arena.sessions.get(session_id) {
                     return Some(session.alias);
@@ -270,25 +271,39 @@ impl Repo {
             game_id, invitation_id, user_agent_id
         );
 
-        if let Some(user_agent_id) = user_agent_id {
-            if user_agent_id == UserAgentId::Spider {
-                return None;
-            }
+        if user_agent_id == Some(UserAgentId::Spider) {
+            return None;
         }
 
-        let maybe_invitation = if let Some(invitation_id) = invitation_id {
-            self.invitations.get(&invitation_id)
-        } else {
-            None
-        };
+        let invitations = &self.invitations;
+        let maybe_invitation = invitation_id.and_then(|id| invitations.get(&id));
 
         if invitation_id.is_some() {
             debug!("found invitation: {:?}", maybe_invitation);
         }
 
+        let previous_tuple = {
+            let mut result = None;
+            if let Some((arena_id, session_id)) = saved_session_tuple {
+                if let Some(arena) = self.arenas.get(&arena_id) {
+                    let date_previous = arena
+                        .sessions
+                        .get(&session_id)
+                        .map(|s| s.date_previous.unwrap_or(s.date_created));
+                    result = Some((date_previous, session_id));
+                }
+            };
+            result
+        };
+
+        debug!(
+            "saved: {:?}, prev: {:?}",
+            saved_session_tuple, previous_tuple
+        );
+
         let mut saved_player_id = None;
         if let Some((arena_id, session_id)) = saved_session_tuple {
-            if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+            if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
                 if let Some(session) = arena.sessions.get_mut(&session_id) {
                     saved_player_id = Some(session.player_id);
                     let mut terminate = false;
@@ -349,11 +364,11 @@ impl Repo {
                 continue;
             }
             if let Some(invitation) = maybe_invitation {
-                if invitation.arena_id != *arena_id {
+                if invitation.arena_id != arena_id {
                     continue;
                 }
             }
-            found = Some((*arena_id, arena));
+            found = Some((arena_id, arena));
             break;
         }
 
@@ -362,16 +377,11 @@ impl Repo {
 
             let guest_alias = PlayerAlias::default();
             loop {
-                let (date_previous, previous_id) =
-                    if let Some((_, session_id)) = saved_session_tuple {
-                        let date_previous = arena
-                            .sessions
-                            .get(&session_id)
-                            .map(|s| s.date_previous.unwrap_or(s.date_created));
-                        (date_previous, Some(session_id))
-                    } else {
-                        (None, None)
-                    };
+                let (date_previous, previous_id) = if let Some(previous_tuple) = previous_tuple {
+                    (previous_tuple.0, Some(previous_tuple.1))
+                } else {
+                    (None, None)
+                };
                 // Use the date so that a session_id from a prior day is guaranteed to be different.
                 let session_id = SessionId(generate_id_64());
                 if let Entry::Vacant(e) = arena.sessions.entry(session_id) {
@@ -416,13 +426,13 @@ impl Repo {
         None
     }
 
-    // Server reports that client dropped web socket.
+    /// Server reports that client dropped web socket.
     pub fn drop_session(&mut self, arena_id: ArenaId, session_id: SessionId) {
         debug!(
             "drop_session(arena={:?}, session={:?})",
             arena_id, session_id
         );
-        if let Some(arena) = self.arenas.get_mut(&arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if session.date_drop.is_none() {
                     session.date_drop = Some(get_unix_time_now());
@@ -437,6 +447,7 @@ impl Repo {
         }
     }
 
+    /// Client assigns alias to their session.
     pub fn identify_session(
         &mut self,
         arena_id: ArenaId,
@@ -449,7 +460,7 @@ impl Repo {
         );
 
         let mut identified = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 let now = get_unix_time_now();
                 let mut prohibited = false;
@@ -507,7 +518,7 @@ impl Repo {
         period: UnixTime,
     ) -> impl Iterator<Item = (ArenaId, SessionId, &Session)> {
         let threshold = get_unix_time_now() - period;
-        self.arenas.iter().flat_map(move |(arena_id, arena)| {
+        Arena::iter(&self.arenas).flat_map(move |(arena_id, arena)| {
             arena
                 .sessions
                 .iter()
@@ -517,7 +528,7 @@ impl Repo {
                             || (session.date_terminated.is_some()
                                 && session.date_terminated.unwrap() >= threshold))
                     {
-                        Some((*arena_id, *session_id, session))
+                        Some((arena_id, *session_id, session))
                     } else {
                         None
                     }
@@ -525,7 +536,7 @@ impl Repo {
         })
     }
 
-    // Assume this is called every minute to prune live sessions.
+    /// Assume this is called every minute to prune live sessions.
     pub fn prune_sessions(&mut self) {
         let now = get_unix_time_now();
         let date_dead = now - Self::DYING_DURATION_MILLIS;
@@ -599,18 +610,13 @@ impl Repo {
     }
 
     /// Assume caller uses this method to populate cache with result of database query.
-    pub fn put_session(
-        &mut self,
-        arena_id: ArenaId,
-        session_id: SessionId,
-        session: Session,
-    ) -> bool {
-        if let Some(arena) = self.arenas.get_mut(&arena_id) {
-            arena.sessions.insert(session_id, session);
-            true
-        } else {
-            false
-        }
+    pub fn put_session(&mut self, arena_id: ArenaId, session_id: SessionId, session: Session) {
+        let arena = self
+            .arenas
+            .entry(arena_id)
+            .or_insert_with(|| Arena::create_other_server(session.game_id));
+        arena.sessions.insert(session_id, session);
+        arena.date_put = get_unix_time_now();
     }
 
     // Server sets player's status (location and/or score).
@@ -624,7 +630,7 @@ impl Repo {
     ) {
         trace!("set_status(arena={:?}, session={:?})", arena_id, session_id);
         let mut liveboard_changed = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 let liveboard_can_change = !session.bot || arena.rules.show_bots_on_liveboard;
 
@@ -643,13 +649,13 @@ impl Repo {
             }
         }
         if liveboard_changed {
-            if let Some(arena) = self.arenas.get_mut(&arena_id) {
+            if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
                 arena.liveboard_changed = true;
             }
         }
     }
 
-    // Server reports that player joined game.  Useful for reports.
+    /// Server reports that player joined game.  Useful for reports.
     pub fn start_play(&mut self, arena_id: ArenaId, session_id: SessionId) -> Option<PlayerId> {
         // Get this session's invitation if any.
         let invitation = self
@@ -680,7 +686,7 @@ impl Repo {
             });
 
         let mut result = None;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if !session.bot {
                     debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
@@ -727,9 +733,9 @@ impl Repo {
         result
     }
 
-    // Server reports that player left game.  Nevertheless session remains live for a while.
+    /// Server reports that player left game.  Nevertheless session remains live for a while.
     pub fn stop_play(&mut self, arena_id: ArenaId, session_id: SessionId) {
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if !session.bot {
                     debug!("stop_play(arena={:?}, session={:?})", arena_id, session_id);
@@ -750,13 +756,13 @@ impl Repo {
         }
     }
 
-    // Client terminates old session due upon creating a new session.
+    /// Client terminates old session due upon creating a new session.
     pub fn terminate_session(&mut self, arena_id: ArenaId, session_id: SessionId) {
         debug!(
             "terminate_session(arena={:?}, session={:?})",
             arena_id, session_id
         );
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 let was_live = session.live;
                 if session.terminate_session() && was_live {
@@ -778,7 +784,7 @@ impl Repo {
             arena_id, session_id
         );
         let mut result = None;
-        if let Some(arena) = self.arenas.get(&arena_id) {
+        if let Some(arena) = Arena::get(&self.arenas, arena_id) {
             if let Some(session) = arena.sessions.get(&session_id) {
                 let invitation =
                     session

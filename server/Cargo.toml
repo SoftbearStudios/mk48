@@ -16,13 +16,6 @@ debug = false
 opt-level = 3
 
 [dependencies]
-actix = "0.12"
-actix-codec = "0.4"
-actix-web = {version="4.0.0-beta.15", features=["rustls"], default-features=false}
-actix-web-actors = "4.0.0-beta.8"
-actix-http = "3.0.0-beta.16"
-actix-cors = "0.6.0-beta.7"
-actix-web-middleware-redirect-https = {git="https://github.com/finnbear/actix-web-middleware-redirect-https"}
 futures = "0.3"
 tokio = { version = "1.2" }
 glam = { version = "0.18", features = ["serde"] }
@@ -35,6 +28,7 @@ rand = "0.8"
 idalloc = "0.1"
 noise = { version = "0.7", default-features = false }
 common = {path="../common", version="0.1", features=["server"]}
+game_server = {path="../engine/game_server"}
 core_protocol = {path="../engine/core_protocol"}
 core_server = {path="../engine/core_server"}
 server_util = {path="../engine/server_util"}
@@ -45,7 +39,6 @@ log = {version = "0.4", features = [ "release_max_level_info" ] }
 env_logger = "0.9"
 actix-tls = "3.0.0-beta.9"
 lazy_static = "1"
-lockfree = "0.5"
 rustrict = {version = "0.1", features=["customize"], default-features=false}
 
 [dev-dependencies]

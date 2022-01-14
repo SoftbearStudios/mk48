@@ -26,6 +26,7 @@ pub struct Arena {
     pub broadcast_teams: NotifySet<TeamId>,
     pub confide_membership: HashMap<PlayerId, Option<TeamId>>, // For game server.
     pub date_created: UnixTime,
+    pub date_put: UnixTime,
     pub date_start: UnixTime,
     pub date_stop: Option<UnixTime>,
     pub game_id: GameId,
@@ -35,6 +36,7 @@ pub struct Arena {
     // Minimum score to appear on liveboard.
     pub liveboard_min_score: u32,
     pub newbie_messages: ConstGenericRingBuffer<Rc<MessageDto>, 16>,
+    pub other_server: bool,
     pub region_id: RegionId,
     pub rules: RulesDto,
     pub sessions: HashMap<SessionId, Session>,
@@ -58,6 +60,7 @@ impl Arena {
             broadcast_teams: NotifySet::new(),
             confide_membership: HashMap::new(),
             date_created,
+            date_put: date_created,
             date_start: date_created,
             date_stop: None,
             game_id,
@@ -66,6 +69,7 @@ impl Arena {
             liveboard_changed: false,
             liveboard_min_score: 0,
             newbie_messages: ConstGenericRingBuffer::new(),
+            other_server: false,
             region_id,
             rules,
             sessions: HashMap::new(),
@@ -73,6 +77,14 @@ impl Arena {
             teams: HashMap::new(),
             ups: None,
         }
+    }
+
+    /// Tracks sessions that are on another server.
+    pub fn create_other_server(game_id: GameId) -> Self {
+        // The region, rules and most other fields are ignored.
+        let mut arena = Self::new(game_id, RegionId::default(), RulesDto::default(), None);
+        arena.other_server = true;
+        arena
     }
 
     /// If there exists a session in `sessions` that is captain of the specified
@@ -149,29 +161,31 @@ impl Arena {
         (liveboard, min_score, leaderboard_worthy)
     }
 
-    pub fn get_mut<'a>(
-        arenas: &'a mut HashMap<ArenaId, Arena>,
-        arena_id: &'a ArenaId,
-    ) -> Option<&'a mut Arena> {
-        let mut result = None;
-        if let Some(arena) = arenas.get_mut(arena_id) {
-            if arena.date_stop.is_none() {
-                result = Some(arena);
-            }
-        }
-        result
+    /// Checks if arena is valid in trivial cases (where stopped/other_server arenas don't matter).
+    fn valid(&self) -> bool {
+        self.date_stop.is_none() && !self.other_server
+    }
+
+    pub fn get(arenas: &HashMap<ArenaId, Arena>, arena_id: ArenaId) -> Option<&Arena> {
+        arenas.get(&arena_id).filter(|arena| arena.valid())
+    }
+
+    pub fn get_mut(arenas: &mut HashMap<ArenaId, Arena>, arena_id: ArenaId) -> Option<&mut Arena> {
+        arenas.get_mut(&arena_id).filter(|arena| arena.valid())
+    }
+
+    pub fn iter(arenas: &HashMap<ArenaId, Arena>) -> impl Iterator<Item = (ArenaId, &Arena)> {
+        arenas
+            .iter()
+            .filter_map(move |(&arena_id, arena)| arena.valid().then_some((arena_id, arena)))
     }
 
     pub fn iter_mut(
         arenas: &mut HashMap<ArenaId, Arena>,
-    ) -> impl Iterator<Item = (&ArenaId, &mut Arena)> {
-        arenas.iter_mut().filter_map(move |(arena_id, arena)| {
-            if arena.date_stop.is_none() {
-                Some((arena_id, arena))
-            } else {
-                None
-            }
-        })
+    ) -> impl Iterator<Item = (ArenaId, &mut Arena)> {
+        arenas
+            .iter_mut()
+            .filter_map(move |(&arena_id, arena)| arena.valid().then_some((arena_id, arena)))
     }
 
     /// If the specified `session_id` is a captain then return its `team_id`, otherwise return `None`.
@@ -194,7 +208,14 @@ impl Arena {
 }
 
 impl Repo {
-    // Server (re)starts arena when the executable is run.
+    /// Assume this is called frequently to prune other_server arenas that are unused for 5 secs.
+    pub fn prune_arenas(&mut self) {
+        let now = get_unix_time_now();
+        self.arenas
+            .retain(|_arena_id, arena| !arena.other_server || now < arena.date_put + 5000);
+    }
+
+    /// Server (re)starts arena when the executable is run.
     pub fn start_arena(
         &mut self,
         game_id: GameId,
@@ -206,9 +227,14 @@ impl Repo {
         let mut result: Option<ArenaId> = None;
         if let Some(arena_id) = saved_arena_id {
             if let Some(arena) = self.arenas.get_mut(&arena_id) {
-                arena.date_start = get_unix_time_now();
-                arena.date_stop = None;
-                result = Some(arena_id);
+                if arena.other_server {
+                    // Get rid of other_server arena because it doesn't have complete parameters.
+                    self.arenas.remove(&arena_id);
+                } else {
+                    arena.date_start = get_unix_time_now();
+                    arena.other_server = false;
+                    result = Some(arena_id);
+                }
             }
         }
 
@@ -251,10 +277,10 @@ impl Repo {
         result.unwrap()
     }
 
-    // Server reports it has stopped arena.
+    /// Server reports it has stopped arena.
     pub fn stop_arena(&mut self, arena_id: ArenaId) {
         debug!("stop_arena(arena={:?})", arena_id);
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             arena.date_stop = Some(get_unix_time_now());
 
             // Clear flags.

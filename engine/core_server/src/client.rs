@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::arena::Arena;
 use crate::chat::log_chat;
 use crate::core::*;
 use crate::repo::*;
@@ -9,11 +10,13 @@ use crate::user_agent::parse_user_agent;
 use actix::prelude::*;
 use core_protocol::id::*;
 use core_protocol::rpc::{ClientRequest, ClientUpdate};
-use log::{info, trace, warn};
+use log::{error, info, trace, warn};
+use rustrict::BlockReason;
 use serde::{Deserialize, Serialize};
 use server_util::observer::*;
 use server_util::user_agent::UserAgent;
 use std::collections::hash_map::Entry;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,6 +28,7 @@ const TEAM_TIMER_SECS: u64 = 15;
 pub struct ClientState {
     pub arena_id: Option<ArenaId>,
     pub newbie: bool,
+    pub ip_addr: Option<IpAddr>,
     pub session_id: Option<SessionId>,
     pub user_agent_id: Option<UserAgentId>,
 }
@@ -42,26 +46,29 @@ fn log_err<O, E: std::fmt::Display>(res: Result<O, E>) {
     }
 }
 
-impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> for Core {
+impl Handler<ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Option<UserAgent>)>>
+    for Core
+{
     type Result = ResponseActFuture<Self, ()>;
 
     fn handle(
         &mut self,
-        msg: ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>,
+        msg: ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Option<UserAgent>)>,
         _ctx: &mut Context<Self>,
     ) -> Self::Result {
         match msg {
             ObserverMessage::Request { observer, request } => match request {
                 // Handle asynchronous requests (i.e. those that may access database).
                 ClientRequest::CreateInvitation => {
-                    let client = self.clients.get_mut(&observer).unwrap();
-                    if let Some(arena_id) = client.arena_id {
-                        if let Some(session_id) = client.session_id {
-                            if let Some(invitation_id) =
-                                self.repo.create_invitation(arena_id, session_id)
-                            {
-                                let message = ClientUpdate::InvitationCreated { invitation_id };
-                                log_err(observer.do_send(ObserverUpdate::Send { message }));
+                    if let Some(client) = self.clients.get_mut(&observer) {
+                        if let Some(arena_id) = client.arena_id {
+                            if let Some(session_id) = client.session_id {
+                                if let Some(invitation_id) =
+                                    self.repo.create_invitation(arena_id, session_id)
+                                {
+                                    let message = ClientUpdate::InvitationCreated { invitation_id };
+                                    log_err(observer.do_send(ObserverUpdate::Send { message }));
+                                }
                             }
                         }
                     }
@@ -72,6 +79,25 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                     referrer,
                     saved_session_tuple,
                 } => {
+                    if let Some(data) = self.clients.get(&observer) {
+                        if let Some(ip_addr) = data.ip_addr {
+                            if self.session_rate_limiter.limit_rate(ip_addr) {
+                                // Should only log IP of malicious actors.
+                                warn!("IP {} was rate limited in create_session", ip_addr);
+                                return Box::pin(fut::ready(()));
+                            }
+                        } else {
+                            error!("client missing ip address in create_session");
+                        }
+                    } else {
+                        error!("client not found in create_session");
+                    }
+
+                    info!(
+                        "session rate limiter is tracking {} ip(s)",
+                        self.session_rate_limiter.len()
+                    );
+
                     // TODO: if invitation_id is not in cache then load it from DB and call self.repo.put_invitation(invitatation_id, invitation)
                     let found = self.repo.is_session_in_cache(saved_session_tuple);
                     info!("session cache hit={}", found);
@@ -111,15 +137,14 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                                     session_item.previous_id,
                                     session_item.referrer,
                                     Some(session_item.server_id),
-                                    None, // TODO: session_item.user_agent,
+                                    session_item.user_agent_id,
                                 );
                                 session.date_created = session_item.date_created;
                                 session.date_renewed = session_item.date_renewed;
                                 session.date_terminated = session_item.date_terminated;
                                 session.previous_plays = session_item.plays;
-                                session.user_agent_id = session_item.user_agent_id;
 
-                                let _ = act.repo.put_session(
+                                act.repo.put_session(
                                     session_item.arena_id,
                                     session_item.session_id,
                                     session,
@@ -183,7 +208,8 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, Option<UserAgent>>> fo
                     e.insert(ClientState {
                         arena_id: None,
                         newbie: true,
-                        user_agent_id: parse_user_agent(payload),
+                        ip_addr: payload.0,
+                        user_agent_id: parse_user_agent(payload.1),
                         session_id: None,
                     });
                 }
@@ -425,6 +451,7 @@ impl Core {
         }); // ctx.run_interval LEADERBOARD
 
         ctx.run_interval(Duration::from_secs(TEAM_TIMER_SECS), |act, _ctx| {
+            act.repo.prune_arenas();
             act.repo.prune_sessions();
             act.repo.prune_teams();
             act.repo.prune_invitations();
@@ -521,23 +548,39 @@ impl Repo {
             }
             ClientRequest::SendChat { message, whisper } => {
                 if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id) {
-                    let player_id = self.send_chat(arena_id, session_id, message.clone(), whisper);
-                    if let Some(chat_log) = chat_log {
-                        if let Some(arena) = self.arenas.get(&arena_id) {
-                            if let Some(session) = arena.sessions.get(&session_id) {
-                                log_chat(
-                                    chat_log,
-                                    Some(arena.game_id),
-                                    whisper,
-                                    // player_id being Some means the message went through.
-                                    player_id.is_some(),
-                                    session.alias,
-                                    &message,
-                                );
+                    if let Some(chat_result) =
+                        self.send_chat(arena_id, session_id, message.clone(), whisper)
+                    {
+                        let result_str = match chat_result {
+                            Ok(_) => "ok",
+                            Err(BlockReason::Inappropriate(_)) => "inappropriate",
+                            Err(BlockReason::Unsafe(_)) => "unsafe",
+                            Err(BlockReason::Repetitious(_)) => "repetitious",
+                            Err(BlockReason::Spam(_)) => "spam",
+                            Err(BlockReason::Muted(_)) => "muted",
+                            Err(BlockReason::Empty) => "empty",
+                            _ => "???",
+                        };
+
+                        if let Some(chat_log) = chat_log {
+                            if let Some(arena) = Arena::get(&mut self.arenas, arena_id) {
+                                if let Some(session) = arena.sessions.get(&session_id) {
+                                    log_chat(
+                                        chat_log,
+                                        Some(arena.game_id),
+                                        whisper,
+                                        // player_id being Some means the message went through.
+                                        result_str,
+                                        session.alias,
+                                        &message,
+                                    );
+                                }
                             }
                         }
+                        result = Ok(ClientUpdate::ChatSent {
+                            player_id: chat_result.ok(),
+                        });
                     }
-                    result = Ok(ClientUpdate::ChatSent { player_id });
                 }
             }
             ClientRequest::SubmitSurvey { survey: _ } => {}

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::contact_ref::ContactRef;
-use crate::player::Player;
 use crate::player::Status;
+use crate::server::Server;
 use crate::world::World;
 use atomic_refcell::AtomicRef;
 use common::complete::CompleteTrait;
@@ -14,6 +14,7 @@ use common::terrain;
 use common::terrain::{ChunkSet, Terrain};
 use common::ticks::{Ticks, TicksRepr};
 use common::velocity::Velocity;
+use game_server::context::PlayerData;
 use glam::Vec2;
 use std::ops::RangeInclusive;
 
@@ -21,7 +22,7 @@ use std::ops::RangeInclusive;
 pub struct CompleteRef<'a, I: Iterator<Item = ContactRef<'a>>> {
     /// Always some, until taken.
     contacts: Option<I>,
-    player: AtomicRef<'a, Player>,
+    player: AtomicRef<'a, PlayerData<Server>>,
     world: &'a World,
     camera_pos: Vec2,
     camera_dims: Vec2,
@@ -30,7 +31,7 @@ pub struct CompleteRef<'a, I: Iterator<Item = ContactRef<'a>>> {
 impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
     pub fn new(
         contacts: I,
-        player: AtomicRef<'a, Player>,
+        player: AtomicRef<'a, PlayerData<Server>>,
         world: &'a World,
         camera_pos: Vec2,
         camera_dims: Vec2,
@@ -45,7 +46,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
     }
 
     pub fn into_update(self, counter: Ticks, loaded_chunks: &mut ChunkSet) -> Update {
-        let death_reason = if let Status::Dead { reason, .. } = &self.player.status {
+        let death_reason = if let Status::Dead { reason, .. } = &self.player.data.status {
             Some(reason.clone())
         } else {
             None
@@ -109,7 +110,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
                 })
                 .collect(),
             death_reason,
-            score: self.player.score,
+            score: self.player.data.score,
             world_radius: self.world.radius,
             terrain,
         }
@@ -129,7 +130,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteTrait<'a> for CompleteRef<'
     }
 
     fn death_reason(&self) -> Option<&DeathReason> {
-        if let Status::Dead { reason, .. } = &self.player.status {
+        if let Status::Dead { reason, .. } = &self.player.data.status {
             Some(reason)
         } else {
             None
@@ -138,7 +139,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteTrait<'a> for CompleteRef<'
 
     #[inline]
     fn score(&self) -> u32 {
-        self.player.score
+        self.player.data.score
     }
 
     #[inline]

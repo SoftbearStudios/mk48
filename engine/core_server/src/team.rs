@@ -51,7 +51,7 @@ impl Repo {
             arena_id, session_id, player_id
         );
         let mut accepted = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             let mut captain_team_id: Option<TeamId> = None;
             if let Some((team_id, _)) = arena.team_of_captain(session_id) {
                 captain_team_id = Some(team_id);
@@ -121,7 +121,7 @@ impl Repo {
         accepted
     }
 
-    // Client assigns another player as team captain.
+    /// Client assigns another player as team captain.
     pub fn assign_captain(
         &mut self,
         arena_id: ArenaId,
@@ -133,7 +133,7 @@ impl Repo {
             arena_id, session_id, player_id
         );
         let mut assigned = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some((captain_team_id, _)) = arena.team_of_captain(session_id) {
                 if let Some((_, session)) =
                     Self::player_id_to_session_mut(&self.players, &mut arena.sessions, player_id)
@@ -176,7 +176,7 @@ impl Repo {
         assigned
     }
 
-    // Client creates a new team.
+    /// Client creates a new team.
     pub fn create_team(
         &mut self,
         arena_id: ArenaId,
@@ -190,7 +190,7 @@ impl Repo {
 
         let censored_team_name = TeamName::new(team_name.as_str());
 
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last_mut() {
                     if !session.live {
@@ -263,7 +263,7 @@ impl Repo {
         }
     }
 
-    // Client removes another player from its team.
+    /// Client removes another player from its team.
     pub fn kick_player(
         &mut self,
         arena_id: ArenaId,
@@ -275,7 +275,7 @@ impl Repo {
             arena_id, session_id, player_id
         );
         let mut removed = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some((captain_team_id, _)) = arena.team_of_captain(session_id) {
                 if let Some((session_id, play)) = Self::player_id_to_session_and_play_mut(
                     &self.players,
@@ -304,7 +304,7 @@ impl Repo {
         removed
     }
 
-    // Assume this is called every minute to prune teams, promote captains, etc.
+    /// Assume this is called every minute to prune teams, promote captains, etc.
     pub fn prune_teams(&mut self) {
         for (_, arena) in Arena::iter_mut(&mut self.arenas) {
             struct Tally {
@@ -393,12 +393,12 @@ impl Repo {
         }
     }
 
-    // Client wants to go it alone.
+    /// Client wants to go it alone.
     pub fn quit_team(&mut self, arena_id: ArenaId, session_id: SessionId) -> bool {
         debug!("quit_team(arena={:?}, session={:?})", arena_id, session_id);
         let mut quit = false;
         let mut captain = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last_mut() {
                     if play.team_captain {
@@ -435,7 +435,7 @@ impl Repo {
         quit
     }
 
-    // Client rejects another player's join request.
+    /// Client rejects another player's join request.
     pub fn reject_player(
         &mut self,
         arena_id: ArenaId,
@@ -447,7 +447,7 @@ impl Repo {
             arena_id, session_id, player_id
         );
         let mut rejected = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             let mut captain_team_id: Option<TeamId> = None;
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last_mut() {
@@ -481,7 +481,7 @@ impl Repo {
         rejected
     }
 
-    // Client no longer wants to go it alone.
+    /// Client no longer wants to go it alone.
     pub fn request_join(
         &mut self,
         arena_id: ArenaId,
@@ -493,7 +493,7 @@ impl Repo {
             arena_id, session_id, team_id
         );
         let mut requested = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             let mut joiner_player_id: Option<PlayerId> = None;
             let captain_session_id = arena.captain_of_team(team_id);
             if captain_session_id.is_some() {

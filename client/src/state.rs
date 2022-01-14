@@ -3,6 +3,7 @@
 
 use crate::animation::Animation;
 use crate::interpolated_contact::InterpolatedContact;
+use crate::trail::TrailSystem;
 use client_util::apply::Apply;
 use common::contact::Contact;
 use common::death_reason::DeathReason;
@@ -14,13 +15,14 @@ use std::collections::HashMap;
 /// State associated with game server connection. Reset when connection is reset.
 #[derive(Default)]
 pub struct Mk48State {
-    pub score: u32,
-    pub entity_id: Option<EntityId>,
-    pub contacts: HashMap<EntityId, InterpolatedContact>,
     pub animations: Vec<Animation>,
-    pub terrain: Terrain,
-    pub world_radius: f32,
+    pub contacts: HashMap<EntityId, InterpolatedContact>,
     pub death_reason: Option<DeathReason>,
+    pub entity_id: Option<EntityId>,
+    pub score: u32,
+    pub terrain: Terrain,
+    pub trails: TrailSystem,
+    pub world_radius: f32,
 }
 
 impl Mk48State {

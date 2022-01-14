@@ -68,9 +68,14 @@ pub struct RendererLayer {
     pub sea_level_particles: ParticleLayer,
     sprites: SpriteLayer,
     pub airborne_particles: ParticleLayer,
+    airborne_graphics: GraphicLayer,
     overlay: BackgroundLayer<Mk48OverlayContext>,
     graphics: GraphicLayer,
     text: TextLayer,
+}
+
+pub fn wind() -> Vec2 {
+    Vec2::new(7.0, 1.5)
 }
 
 impl GameClient for Mk48Game {
@@ -155,7 +160,6 @@ impl GameClient for Mk48Game {
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
         let sprite_texture =
             renderer.load_texture("/sprites_webgl.png", UVec2::new(2048, 2048), None, false);
-        let wind = Vec2::new(7.0, 1.5);
 
         let background_context =
             Mk48BackgroundContext::new(context.settings.render_terrain_textures, &*renderer);
@@ -167,7 +171,8 @@ impl GameClient for Mk48Game {
             background: BackgroundLayer::new(renderer, background_shader, background_context),
             sea_level_particles: ParticleLayer::new(renderer, Vec2::ZERO),
             sprites: SpriteLayer::new(renderer, sprite_texture, sprite_sheet),
-            airborne_particles: ParticleLayer::new(renderer, wind),
+            airborne_particles: ParticleLayer::new(renderer, wind()),
+            airborne_graphics: GraphicLayer::new(renderer),
             overlay: BackgroundLayer::new(renderer, overlay_shader, overlay_context),
             graphics: GraphicLayer::new(renderer),
             text: TextLayer::new(renderer),
@@ -469,6 +474,9 @@ impl GameClient for Mk48Game {
                 i += 1;
             }
         }
+
+        // Update trails.
+        game_state.trails.set_time(context.client.update_seconds);
 
         for InterpolatedContact { view: contact, .. } in game_state.contacts.values() {
             let friendly = core_state.is_friendly(contact.player_id());
@@ -814,41 +822,54 @@ impl GameClient for Mk48Game {
                 let amount =
                     (((data.width * 0.1 + speed * 0.007) * particle_multiplier) as usize).max(1);
 
-                // Wake/trail particles.
+                // Wake/thrust particles and shell trails.
                 if contact.transform().velocity != Velocity::ZERO
                     && (data.sub_kind != EntitySubKind::Submarine
                         || contact.transform().velocity
                             > Velocity::from_mps(EntityData::CAVITATION_VELOCITY))
                 {
-                    let layer = if contact.altitude().is_airborne() {
-                        &mut layer.airborne_particles
+                    if data.sub_kind == EntitySubKind::Shell {
+                        let t = contact.transform();
+                        game_state.trails.add_trail(
+                            entity_id,
+                            t.position,
+                            t.direction.to_vec() * t.velocity.to_mps(),
+                            data.width * 2.0,
+                        );
                     } else {
-                        &mut layer.sea_level_particles
-                    };
+                        let layer = if contact.altitude().is_airborne() {
+                            &mut layer.airborne_particles
+                        } else {
+                            &mut layer.sea_level_particles
+                        };
 
-                    let spread = match (data.kind, data.sub_kind) {
-                        (EntityKind::Weapon, EntitySubKind::Torpedo) => 0.16,
-                        (EntityKind::Weapon, EntitySubKind::Shell) => 0.0,
-                        _ => 0.1,
-                    };
+                        let spread = match (data.kind, data.sub_kind) {
+                            (EntityKind::Weapon, EntitySubKind::Torpedo) => 0.16,
+                            _ => 0.1,
+                        };
 
-                    let start = contact.transform().position;
-                    let end = start + direction_vector * speed * elapsed_seconds;
+                        let start = contact.transform().position;
+                        let end = start + direction_vector * speed * elapsed_seconds;
 
-                    let factor = 1.0 / amount as f32;
-                    for i in 0..amount {
-                        let pos = start.lerp(end, i as f32 * factor);
+                        let factor = 1.0 / amount as f32;
+                        for i in 0..amount {
+                            let r = rng.gen::<f32>() - 0.5;
 
-                        let r = rng.gen::<f32>() - 0.5;
-                        layer.add(Particle {
-                            position: pos - direction_vector * (data.length * 0.485)
-                                + tangent_vector * (data.width * r * 0.25),
-                            velocity: direction_vector * (speed * 0.75)
-                                + tangent_vector * (speed * r * spread),
-                            radius: 1.0,
-                            color: 1.0,
-                            smoothness: 1.0,
-                        });
+                            let position = start.lerp(end, i as f32 * factor)
+                                - direction_vector * (data.length * 0.485)
+                                + tangent_vector * (data.width * r * 0.25);
+
+                            let velocity = direction_vector * (speed * 0.75)
+                                + tangent_vector * (speed * r * spread);
+
+                            layer.add(Particle {
+                                position,
+                                velocity,
+                                radius: 1.0,
+                                color: 1.0,
+                                smoothness: 1.0,
+                            });
+                        }
                     }
                 }
 
@@ -884,6 +905,8 @@ impl GameClient for Mk48Game {
                 );
             }
         }
+
+        game_state.trails.update(&mut layer.airborne_graphics);
 
         // Play anti-aircraft sfx.
         if anti_aircraft_volume > 0.0 && !layer.audio.is_playing("aa") {

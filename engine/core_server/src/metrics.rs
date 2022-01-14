@@ -47,6 +47,9 @@ pub struct Metrics {
     /// Ratio of new players who were invited to new players who were not.
     #[serde(default)]
     pub invited: RatioMetric,
+    /// Ration of players with FPS below 22 to all players.
+    #[serde(default)]
+    pub low_fps: RatioMetric,
     /// Minutes per completed play (a measure of engagement).
     #[serde(default)]
     pub minutes_per_play: ContinuousExtremaMetric,
@@ -56,6 +59,9 @@ pub struct Metrics {
     /// Ratio of unique players that are new to players that are not.
     #[serde(default)]
     pub new: RatioMetric,
+    /// Ration of players with no referrer to all players.
+    #[serde(default)]
+    pub no_referrer: RatioMetric,
     /// Ratio of previous players that leave without playing (e.g. to peek at player count).
     #[serde(default)]
     pub peek: RatioMetric,
@@ -108,9 +114,11 @@ impl Metrics {
             flop: self.flop.summarize(),
             fps: self.fps.summarize(),
             invited: self.invited.summarize(),
+            low_fps: self.low_fps.summarize(),
             minutes_per_play: self.minutes_per_play.summarize(),
             minutes_per_session: self.minutes_per_session.summarize(),
             new: self.new.summarize(),
+            no_referrer: self.no_referrer.summarize(),
             peek: self.peek.summarize(),
             plays_per_session: self.plays_per_session.summarize(),
             plays_total: self.plays_total.summarize(),
@@ -137,9 +145,11 @@ impl Metrics {
             flop: self.flop.data_point(),
             fps: self.fps.data_point(),
             invited: self.invited.data_point(),
+            low_fps: self.low_fps.data_point(),
             minutes_per_play: self.minutes_per_play.data_point(),
             minutes_per_session: self.minutes_per_session.data_point(),
             new: self.new.data_point(),
+            no_referrer: self.no_referrer.data_point(),
             peek: self.peek.data_point(),
             plays_per_session: self.plays_per_session.data_point(),
             plays_total: self.plays_total.data_point(),
@@ -198,7 +208,7 @@ impl Repo {
 
         let mut hash: HashMap<GameId, u32> = HashMap::new();
         let mut total = 0;
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             let count = hash.entry(arena.game_id).or_insert(0);
 
             for (_, session) in arena.sessions.iter() {
@@ -223,7 +233,7 @@ impl Repo {
 
         let mut hash: HashMap<Referrer, u32> = HashMap::new();
         let mut total = 0;
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             for (_, session) in arena.sessions.iter() {
                 if session.bot || session.date_terminated.is_some() {
                     continue;
@@ -315,7 +325,7 @@ impl Repo {
             Err(e) => error!("could not get pid: {}", e),
         }
 
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             if arena.game_id != *game_id {
                 continue;
             }
@@ -350,6 +360,7 @@ impl Repo {
                     / (24 * 60 * 60 * 1000) as f32;
                 metrics.retention_days.push(days);
                 metrics.retention_histogram.push(days);
+                metrics.no_referrer.push(session.referrer.is_none());
 
                 let mut activity_minutes = 0.0;
                 let mut bounced_or_peeked = true;
@@ -428,6 +439,7 @@ impl Repo {
 
                 if let Some(fps) = session.fps {
                     metrics.fps.push(fps);
+                    metrics.low_fps.push(fps < 22.0);
                 }
                 metrics
                     .reports
@@ -482,7 +494,7 @@ impl Repo {
 
         let mut hash: HashMap<UserAgentId, u32> = HashMap::new();
         let mut total = 0;
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             for (_, session) in arena.sessions.iter() {
                 if session.bot || session.date_terminated.is_some() {
                     continue;
@@ -504,7 +516,7 @@ impl Repo {
     }
 
     pub fn tally_fps(&mut self, arena_id: ArenaId, session_id: SessionId, fps: f32) {
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 session.fps = Some(Self::sanitize_tps(fps));
             }
@@ -512,7 +524,7 @@ impl Repo {
     }
 
     pub fn tally_ups(&mut self, arena_id: ArenaId, ups: f32) {
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             arena.ups = Some(Self::sanitize_tps(ups));
         }
     }

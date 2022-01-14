@@ -3,29 +3,16 @@
 
 use crate::server::*;
 use crate::world::World;
-use actix::prelude::*;
-use actix::Recipient;
 use common::protocol::*;
-use core_protocol::dto::InvitationDto;
-use core_protocol::id::{PlayerId, SessionId};
-use server_util::observer::ObserverUpdate;
-
-pub type Client = Recipient<ObserverUpdate<Update>>;
-
-/// For main to authenticate SessionIds before opening a websocket.
-#[derive(Message)]
-#[rtype(result = "Option<(PlayerId, Option<InvitationDto>)>")]
-pub struct Authenticate {
-    pub session_id: SessionId,
-}
+use game_server::context::PlayerTuple;
+use std::sync::Arc;
 
 /// All client->server commands use this unified interface.
 pub trait CommandTrait {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str>;
 }
 

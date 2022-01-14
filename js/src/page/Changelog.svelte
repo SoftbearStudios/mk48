@@ -19,7 +19,7 @@
 	<ul>
 		<li>Improve spawning system to reduce spawn-killing.</li>
 		<li>Add visual and auditory representation for automatic anti-aircraft gunfire.</li>
-		<li>Improve appearance of water.</li>
+		<li>Improve appearance of water and airborne explosions.</li>
 		<li>Harden network connection logic against temporary connection loss.</li>
 		<li>Guided weapons prioritize hitting targets at similar depths/altitudes.</li>
 		<li>Guided missiles will no seek towards submerged submarines.</li>

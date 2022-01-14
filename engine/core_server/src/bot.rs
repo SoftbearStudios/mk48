@@ -39,10 +39,10 @@ fn random_name() -> PlayerAlias {
 }
 
 impl Repo {
-    // Assume caller reads newly available bots.
+    /// Assume caller reads newly available bots.
     pub fn read_available_bots(&mut self, arena_id: ArenaId) -> Option<Vec<(PlayerId, SessionId)>> {
         let mut available_bots: Vec<(PlayerId, SessionId)> = vec![];
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             // Apply rules
             let mut player_count = 0;
             let mut bot_count = 0;

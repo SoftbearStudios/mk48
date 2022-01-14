@@ -10,6 +10,7 @@ use arrayvec::ArrayVec;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::*;
+use common::ticks;
 use common::ticks::Ticks;
 use common::util::hash_u32_to_f32;
 use common::velocity::Velocity;
@@ -75,7 +76,7 @@ impl World {
                 return;
             }
             let player = potentially_limited_entity.borrow_player();
-            if let Status::Alive { entity_index, .. } = player.status {
+            if let Status::Alive { entity_index, .. } = player.data.status {
                 mutations.lock().unwrap().push((
                     entity_index,
                     Mutation::ReloadLimited {
@@ -379,7 +380,7 @@ impl World {
                                 max_health - damage * 0.5
                             }
 
-                            damage_contribution(entity).min(damage_contribution(other_entity)) * delta / Ticks::RATE
+                            damage_contribution(entity).min(damage_contribution(other_entity)) * delta / Ticks::FREQUENCY_HZ
                         };
 
                         // Process both boats (relative to the other boat).
@@ -452,7 +453,7 @@ impl World {
 
                         let damage_resistance = boat_data.resistance_to_subkind(weapon_data.sub_kind) * boats[0].extension().spawn_protection();
 
-                        let damage = Ticks::from_damage(
+                        let damage = ticks::from_damage(
                             weapon_data.damage * collision_multiplier(d2, r2, boat_data.sub_kind == EntitySubKind::Submarine) * damage_resistance,
                         );
 

@@ -30,7 +30,7 @@ fn arc_default_n<T: Default>(n: usize) -> Arc<[T]> {
 
 impl EntityExtension {
     /// How long spawn protection lasts (it linearly fades over this time).
-    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::RATE.0 * 20);
+    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::FREQUENCY_HZ.0 * 20);
 
     /// new allocates a new entity extension, sized to a particular entity type.
     pub fn new(entity_type: EntityType) -> Self {

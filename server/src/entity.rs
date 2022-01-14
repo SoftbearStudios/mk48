@@ -6,6 +6,7 @@ use crate::collision::{radius_collision, sat_collision};
 use crate::entities::*;
 use crate::entity_extension::EntityExtension;
 use crate::player::*;
+use crate::server::Server;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -16,6 +17,7 @@ use common::terrain::*;
 use common::ticks::{Ticks, TicksRepr};
 use common::transform::{DimensionTransform, Transform};
 use common::util::hash_u32_to_f32;
+use game_server::context::{PlayerData, PlayerTuple};
 use glam::Vec2;
 use std::ptr;
 use std::sync::Arc;
@@ -33,7 +35,7 @@ pub struct Entity {
     /// Unique id, useful for communicating contacts between client and server.
     pub id: EntityId,
     /// All boats, aircraft, decoys, weapons, and paid coins have `Some`, everything else has `None`.
-    pub player: Option<Arc<PlayerTuple>>,
+    pub player: Option<Arc<PlayerTuple<Server>>>,
     /// When it represents damage, it is less than or equal to self.data().max_health(). Otherwise,
     /// it represents lifetime (for entities with finite lifespan).
     pub ticks: Ticks,
@@ -46,7 +48,7 @@ pub fn unset_entity_id() -> EntityId {
 
 impl Entity {
     /// Allocates a new entity with some blank fields that should probably be populated, e.g. transform.
-    pub fn new(entity_type: EntityType, player: Option<Arc<PlayerTuple>>) -> Self {
+    pub fn new(entity_type: EntityType, player: Option<Arc<PlayerTuple<Server>>>) -> Self {
         Self {
             transform: Transform::default(),
             guidance: Guidance::new(),
@@ -63,7 +65,7 @@ impl Entity {
     /// to the entity which is the sole owner of the extension.
     pub fn extension(&self) -> &EntityExtension {
         assert!(self.is_boat());
-        unsafe { self.player.as_ref().unwrap().unsafe_extension() }
+        unsafe { &*self.player.as_ref().unwrap().extension.0.get() }
     }
 
     /// extension_mut gets the extension of the entity.
@@ -71,7 +73,7 @@ impl Entity {
     /// to the entity which is the sole owner of the extension.
     pub fn extension_mut(&mut self) -> &mut EntityExtension {
         assert!(self.is_boat());
-        unsafe { self.player.as_ref().unwrap().unsafe_extension_mut() }
+        unsafe { &mut *self.player.as_ref().unwrap().extension.0.get() }
     }
 
     /// change_entity_type is the only valid way to change an entity's type.
@@ -145,14 +147,14 @@ impl Entity {
     /// Adds a reference from player to self.
     pub fn create_index(&mut self, i: EntityIndex) {
         if let Some(ref player) = self.player {
-            let mut player = player.borrow_mut();
+            let mut player = player.borrow_player_mut();
 
             // Set status to alive.
-            assert!(!player.status.is_alive());
-            player.status = Status::new_alive(i);
+            assert!(!player.data.status.is_alive());
+            player.data.status = Status::new_alive(i);
 
             // Clear flags when player's boat is spawned.
-            player.flags = Flags::default();
+            player.data.flags = Flags::default();
         } else {
             return;
         }
@@ -162,14 +164,14 @@ impl Entity {
     /// Adjusts player's pointer to self, if applicable.
     pub fn set_index(&mut self, i: EntityIndex) {
         if let Some(ref player) = self.player {
-            player.borrow_mut().status.set_entity_index(i);
+            player.borrow_player_mut().data.status.set_entity_index(i);
         }
     }
 
     /// Set's player to dead, removing reference to self, if applicable.
     pub fn delete_index(&mut self, reason: DeathReason) {
         if let Some(ref player) = self.player {
-            player.borrow_mut().status = Status::Dead {
+            player.borrow_player_mut().data.status = Status::Dead {
                 reason,
                 position: self.transform.position,
                 time: Instant::now(),
@@ -181,29 +183,33 @@ impl Entity {
     /// Borrows player immutably.
     /// Must be manually serialized to avoid contention.
     /// Panics if entity doesn't have player.
-    pub fn borrow_player(&self) -> AtomicRef<Player> {
+    pub fn borrow_player(&self) -> AtomicRef<PlayerData<Server>> {
         Self::borrow_player_inner(&self.player)
     }
 
-    fn borrow_player_inner(player: &Option<Arc<PlayerTuple>>) -> AtomicRef<Player> {
+    fn borrow_player_inner(
+        player: &Option<Arc<PlayerTuple<Server>>>,
+    ) -> AtomicRef<PlayerData<Server>> {
         player
             .as_ref()
             .expect("only call on entities that are guaranteed to have players")
-            .borrow()
+            .borrow_player()
     }
 
     /// Borrows player mutably.
     /// Must be manually serialized to avoid contention.
     /// Panics if entity doesn't have player.
-    pub fn borrow_player_mut(&mut self) -> AtomicRefMut<Player> {
+    pub fn borrow_player_mut(&mut self) -> AtomicRefMut<PlayerData<Server>> {
         Self::borrow_player_mut_inner(&mut self.player)
     }
 
-    pub fn borrow_player_mut_inner(player: &mut Option<Arc<PlayerTuple>>) -> AtomicRefMut<Player> {
+    pub fn borrow_player_mut_inner(
+        player: &mut Option<Arc<PlayerTuple<Server>>>,
+    ) -> AtomicRefMut<PlayerData<Server>> {
         player
             .as_ref()
             .expect("only call on entities that are guaranteed to have players")
-            .borrow_mut()
+            .borrow_player_mut()
     }
 
     /// Get's the entity's data, corresponding to it's current entity type.
@@ -273,7 +279,8 @@ impl Entity {
 
     /// Updates the aim of all turrets, assuming delta_seconds have elapsed.
     pub fn update_turret_aim(&mut self, delta_seconds: f32) {
-        let aim_target = if let Status::Alive { aim_target, .. } = &self.borrow_player().status {
+        let aim_target = if let Status::Alive { aim_target, .. } = &self.borrow_player().data.status
+        {
             *aim_target
         } else {
             panic!("boat's player was not alive in update_turret_aim()");
@@ -505,7 +512,7 @@ impl Entity {
         self.is_friendly_to_player(other.player.as_deref())
     }
 
-    pub fn is_friendly_to_player(&self, other_player: Option<&PlayerTuple>) -> bool {
+    pub fn is_friendly_to_player(&self, other_player: Option<&PlayerTuple<Server>>) -> bool {
         if self.player.is_none() || other_player.is_none() {
             return false;
         }
@@ -516,8 +523,8 @@ impl Entity {
             return true;
         }
 
-        let player = player.borrow();
-        let other_player = other_player.borrow();
+        let player = player.borrow_player();
+        let other_player = other_player.borrow_player();
 
         if player.team_id.is_none() || other_player.team_id.is_none() {
             return false;

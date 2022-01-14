@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::unused_ticks::{Ticks, TicksRepr};
+use crate::ticks::{Ticks, TicksRepr};
 use core_protocol::serde_util::{F32Visitor, I16Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;

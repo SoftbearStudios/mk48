@@ -53,7 +53,7 @@ impl World {
                 return;
             }
             let player = potentially_limited_entity.borrow_player();
-            if let Status::Alive { entity_index, .. } = player.status {
+            if let Status::Alive { entity_index, .. } = player.data.status {
                 limited_reloads
                     .lock()
                     .unwrap()
@@ -84,13 +84,15 @@ impl World {
 
                 if entity.player.is_some() {
                     let player = entity.borrow_player();
-                    if (data.limited && !player.status.is_alive()) || player.flags.left_game {
+                    if (data.limited && !player.data.status.is_alive())
+                        || player.data.flags.left_game
+                    {
                         // Remove limited entities when player is dead.
                         // Remove all oof player's entities when the player leaves.
                         return Some((index, Fate::Remove(DeathReason::Unknown)));
                     } else if data.limited {
                         // Delete limited armaments on upgrade.
-                        if player.flags.upgraded {
+                        if player.data.flags.upgraded {
                             return Some((index, Fate::Remove(DeathReason::Unknown)));
                         }
                     }
@@ -104,7 +106,7 @@ impl World {
                         let position_diff = if let Status::Alive {
                             aim_target: Some(aim_target),
                             ..
-                        } = entity.borrow_player().status
+                        } = entity.borrow_player().data.status
                         {
                             aim_target - entity.transform.position
                         } else {
@@ -168,7 +170,7 @@ impl World {
                                 }
                                 EntitySubKind::Mine => {
                                     // Delete mines when leaving populated team.
-                                    if entity.borrow_player().flags.left_populated_team {
+                                    if entity.borrow_player().data.flags.left_populated_team {
                                         // Current mines aren't limited but they could be in the future.
                                         potential_limited_reload(entity);
                                         return Some((index, Fate::Remove(DeathReason::Unknown)));
@@ -186,7 +188,7 @@ impl World {
                             delta,
                         );
 
-                        if entity.borrow_player().flags != Flags::default() {
+                        if entity.borrow_player().data.flags != Flags::default() {
                             reset_flags
                                 .lock()
                                 .unwrap()
@@ -350,7 +352,7 @@ impl World {
         }
 
         for player in reset_flags.into_inner().unwrap() {
-            player.borrow_mut().flags = Flags::default();
+            player.borrow_player_mut().data.flags = Flags::default();
         }
 
         // Sorted in reverse to remove correctly.

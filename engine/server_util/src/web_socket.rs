@@ -14,6 +14,7 @@ use core_protocol::web_socket::WebSocketFormat;
 use log::{debug, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
 const TIMER_SECONDS: u64 = 5;
@@ -27,20 +28,27 @@ pub async fn sock_index<A, I, O>(
     data: Addr<A>,
 ) -> Result<HttpResponse, Error>
 where
-    A: Handler<ObserverMessage<I, O, Option<UserAgent>>>,
-    <A as Actor>::Context: ToEnvelope<A, ObserverMessage<I, O, Option<UserAgent>>>,
+    A: Handler<ObserverMessage<I, O, (Option<IpAddr>, Option<UserAgent>)>>,
+    <A as Actor>::Context:
+        ToEnvelope<A, ObserverMessage<I, O, (Option<IpAddr>, Option<UserAgent>)>>,
     I: 'static + Send + DeserializeOwned,
     O: 'static + Message + Send + Serialize,
     O: Message<Result = ()>,
 {
+    let ip_address = r.peer_addr().map(|addr| addr.ip());
+    let user_agent = r
+        .headers()
+        .get(header::USER_AGENT)
+        .and_then(|hv| hv.to_str().ok())
+        .map(UserAgent::new);
+
+    debug_assert!(ip_address.is_some());
+
     ws::start(
-        WebSocket::<I, O, Option<UserAgent>>::new(
+        WebSocket::<I, O, (Option<IpAddr>, Option<UserAgent>)>::new(
             data.recipient(),
             WebSocketFormat::Json,
-            r.headers()
-                .get(header::USER_AGENT)
-                .and_then(|hv| hv.to_str().ok())
-                .map(UserAgent::new),
+            (ip_address, user_agent),
         ),
         &r,
         stream,

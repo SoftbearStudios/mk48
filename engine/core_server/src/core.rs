@@ -14,6 +14,7 @@ use core_protocol::rpc::{ClientUpdate, ServerUpdate};
 use core_protocol::*;
 use futures::stream::futures_unordered::FuturesUnordered;
 use log::{error, info, warn};
+use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::observer::*;
 use std::collections::hash_map::HashMap;
 use std::lazy::OnceCell;
@@ -41,6 +42,8 @@ pub struct Core {
     pub servers: HashMap<Recipient<ObserverUpdate<ServerUpdate>>, ServerState>,
     /// Control HTTP redirection at the highest level (affects both core and bundled game server).
     pub redirect_server_id: Option<&'static AtomicU8>,
+    /// Rate limiter for (expensive) session creation.
+    pub session_rate_limiter: IpRateLimiter,
 }
 
 impl Core {
@@ -63,6 +66,7 @@ impl Core {
             repo: Repo::new(),
             servers: HashMap::new(),
             redirect_server_id,
+            session_rate_limiter: IpRateLimiter::new(Duration::from_secs(60), 32),
         }
     }
 

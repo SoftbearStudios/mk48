@@ -68,7 +68,7 @@ impl Repo {
     )> {
         debug!("get_initializers()");
 
-        if let Some(arena) = self.arenas.get(&arena_id) {
+        if let Some(arena) = Arena::get(&mut self.arenas, arena_id) {
             let leaderboard_initializer = arena.leaderboards.clone();
 
             let (liveboard, _, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
@@ -139,7 +139,7 @@ impl Repo {
     // Returns the list of regions and the number of players in each.
     pub fn get_regions(&mut self) -> Arc<[RegionDto]> {
         let mut regions = Vec::new();
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             if arena.date_stop.is_some() {
                 continue;
             }
@@ -167,7 +167,7 @@ impl Repo {
     fn get_usage(&self) -> (u32, u32) {
         let mut player_count = 0;
         let mut max_score = 0;
-        for (_, arena) in self.arenas.iter() {
+        for (_, arena) in Arena::iter(&self.arenas) {
             if arena.date_stop.is_some() {
                 continue;
             }
@@ -224,7 +224,7 @@ impl Repo {
         leaderboard: Arc<[LeaderboardDto]>,
         period: PeriodId,
     ) {
-        if let Some(arena) = self.arenas.get_mut(&arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if arena.leaderboards[period as usize] != leaderboard {
                 arena.leaderboards[period as usize] = leaderboard;
                 arena.leaderboard_changed[period as usize] = true;
@@ -311,7 +311,7 @@ impl Repo {
                 }
 
                 players_counted_added_or_removed
-                    .push((*arena_id, (player_count, added.into(), removed.into())));
+                    .push((arena_id, (player_count, added.into(), removed.into())));
             }
 
             if !(arena.broadcast_teams.add.is_empty() && arena.broadcast_teams.remove.is_empty()) {
@@ -337,7 +337,7 @@ impl Repo {
                     }
                     arena.broadcast_teams.remove.clear();
                 }
-                teams_added_or_removed.push((*arena_id, (added.into(), removed.into())));
+                teams_added_or_removed.push((arena_id, (added.into(), removed.into())));
             }
         }
 
@@ -354,7 +354,7 @@ impl Repo {
     pub fn read_leaderboards(
         &mut self,
     ) -> impl Iterator<Item = (ArenaId, Arc<[LeaderboardDto]>, PeriodId)> + '_ {
-        Arena::iter_mut(&mut self.arenas).flat_map(|(&arena_id, arena)| {
+        Arena::iter_mut(&mut self.arenas).flat_map(|(arena_id, arena)| {
             PeriodId::into_enum_iter().filter_map(move |period| {
                 if !arena.leaderboard_changed[period as usize] {
                     return None;
@@ -430,7 +430,7 @@ impl Repo {
                 return None;
             }
 
-            Some((*arena_id, added.into(), removed.into()))
+            Some((arena_id, added.into(), removed.into()))
         })
     }
 
@@ -447,7 +447,7 @@ impl Repo {
                 }
             }
             if !team_assignments.is_empty() {
-                result.push((*arena_id, team_assignments.into()));
+                result.push((arena_id, team_assignments.into()));
             }
         }
 
@@ -480,7 +480,7 @@ impl Repo {
         let mut joins_added_or_removed = (vec![].into(), vec![].into());
         let mut messages_added = vec![].into();
 
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 messages_added = mem::take(&mut session.inbox)
                     .iter()

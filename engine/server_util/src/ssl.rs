@@ -64,7 +64,10 @@ impl<'a> Ssl<'a> {
 
         if expiry > now {
             let expires_in = expiry.duration_since(now);
-            warn!("Certificate expires in {:?}", expires_in);
+            warn!(
+                "Certificate expires in {:.2} days",
+                expires_in.as_secs_f32() / (3600.0 * 24.0)
+            );
         }
 
         now < expiry

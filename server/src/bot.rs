@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use arrayvec::ArrayVec;
+use crate::server::Server;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::complete::CompleteTrait;
@@ -14,6 +14,7 @@ use common::terrain::Terrain;
 use common::ticks::Ticks;
 use common::util::gen_radius;
 use core_protocol::id::PlayerId;
+use game_server::game_service::GameArenaService;
 use glam::Vec2;
 use rand::rngs::ThreadRng;
 use rand::seq::IteratorRandom;
@@ -33,12 +34,8 @@ pub struct Bot {
     spawned_at_least_once: bool,
 }
 
-impl Bot {
-    /// This arbitrary value controls how chill the bots are. If too high, bots are trigger-happy
-    /// maniacs, and the waters get filled with stray torpedoes.
-    const MAX_AGGRESSION: f32 = 0.1;
-
-    pub fn new() -> Self {
+impl Default for Bot {
+    fn default() -> Self {
         let mut rng = thread_rng();
 
         fn random_level(rng: &mut ThreadRng) -> u8 {
@@ -55,16 +52,28 @@ impl Bot {
             spawned_at_least_once: false,
         }
     }
+}
 
-    /// update processes a complete update and returns some commands to execute, and a boolean
-    /// of whether to quit.
-    pub fn update<'a, U: 'a + CompleteTrait<'a>>(
+impl Bot {
+    /// This arbitrary value controls how chill the bots are. If too high, bots are trigger-happy
+    /// maniacs, and the waters get filled with stray torpedoes.
+    const MAX_AGGRESSION: f32 = 0.1;
+
+    /// Returns true if there is land or border at the given position.
+    fn is_land_or_border(pos: Vec2, terrain: &Terrain, world_radius: f32) -> bool {
+        if pos.length_squared() > world_radius.powi(2) {
+            return true;
+        }
+
+        terrain.sample(pos).unwrap_or(Altitude::MIN) >= terrain::SAND_LEVEL
+    }
+
+    /// update processes a complete update and returns some command (or None to quit).
+    fn update<'a, U: 'a + CompleteTrait<'a>>(
         &mut self,
         mut update: U,
         player_id: PlayerId,
-    ) -> (ArrayVec<Command, 2>, bool) {
-        let mut ret = ArrayVec::new();
-        let mut quit = false;
+    ) -> Option<Command> {
         let mut rng = thread_rng();
 
         let mut contacts = update.contacts();
@@ -282,7 +291,7 @@ impl Bot {
                 }
             }
 
-            ret.push(Command::Control(Control {
+            let mut ret = Command::Control(Control {
                 guidance: Some(Guidance {
                     direction_target: Angle::from(movement) + self.steer_bias,
                     velocity_target: data.speed * 0.8,
@@ -314,7 +323,7 @@ impl Bot {
                     }),
                 pay: None,
                 hint: None,
-            }));
+            });
 
             if rng.gen_bool(self.aggression as f64) && data.level < self.level_ambition {
                 // Upgrade, if possible.
@@ -322,29 +331,30 @@ impl Bot {
                     .upgrade_options(update.score(), true)
                     .choose(&mut rng)
                 {
-                    ret.push(Command::Upgrade(Upgrade { entity_type }))
+                    ret = Command::Upgrade(Upgrade { entity_type });
                 }
             }
+
+            Some(ret)
         } else if self.spawned_at_least_once && rng.gen_bool(1.0 / 3.0) {
             // Rage quit.
-            quit = true;
+            None
         } else {
-            ret.push(Command::Spawn(Spawn {
+            Some(Command::Spawn(Spawn {
                 entity_type: EntityType::spawn_options(true)
                     .choose(&mut rng)
                     .expect("there must be at least one entity type to spawn as"),
-            }));
+            }))
         }
-
-        (ret, quit)
     }
+}
 
-    /// Returns true if there is land or border at the given position.
-    fn is_land_or_border(pos: Vec2, terrain: &Terrain, world_radius: f32) -> bool {
-        if pos.length_squared() > world_radius.powi(2) {
-            return true;
-        }
-
-        terrain.sample(pos).unwrap_or(Altitude::MIN) >= terrain::SAND_LEVEL
+impl game_server::game_service::Bot<Server> for Bot {
+    fn update<'a>(
+        &mut self,
+        update: <Server as GameArenaService>::BotUpdate<'a>,
+        player_id: PlayerId,
+    ) -> Option<<Server as GameArenaService>::Command> {
+        self.update(update, player_id)
     }
 }

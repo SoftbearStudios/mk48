@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::arena::Arena;
 use crate::repo::Repo;
 use core_protocol::id::*;
 use log::debug;
@@ -28,7 +29,7 @@ impl Repo {
         arena_id: ArenaId,
         session_id: SessionId,
     ) -> Option<InvitationId> {
-        if let Some(arena) = self.arenas.get_mut(&arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = arena.sessions.get_mut(&session_id) {
                 // Purposefully omit check for whether is live, to allow creating an invitation
                 // before starting the first play (i.e. on the splash screen).
@@ -64,7 +65,7 @@ impl Repo {
         let arenas = &mut self.arenas;
         self.invitations.retain(|invitation_id, invitation| {
             if let Some(session_id) = players.get(&invitation.player_id) {
-                if let Some(arena) = arenas.get(&invitation.arena_id) {
+                if let Some(arena) = Arena::get(&arenas, invitation.arena_id) {
                     if let Some(session) = arena.sessions.get(session_id) {
                         return session.live || session.plays.is_empty();
                     }

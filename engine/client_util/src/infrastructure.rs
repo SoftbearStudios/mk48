@@ -385,6 +385,13 @@ impl<G: GameClient> Infrastructure<G> {
         self.context.core_socket.send(ClientRequest::QuitTeam);
     }
 
+    /// Sends a command to the server to report another.
+    pub fn report_player(&mut self, player_id: PlayerId) {
+        self.context
+            .core_socket
+            .send(ClientRequest::ReportPlayer { player_id })
+    }
+
     /// Sends a command to the server to mute or un-mute another player.
     pub fn mute_player(&mut self, player_id: PlayerId, mute: bool) {
         self.context.core_socket.send(ClientRequest::MuteSender {

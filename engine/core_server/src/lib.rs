@@ -3,6 +3,7 @@
 
 #![feature(once_cell)]
 #![feature(binary_heap_into_iter_sorted)]
+#![feature(bool_to_option)]
 /*
  * Copyright (c) 2020 Softbear Studios - All Rights Reserved
  */

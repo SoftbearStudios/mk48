@@ -1,0 +1,31 @@
+[package]
+name = "game_server"
+version = "0.1.0"
+edition = "2018"
+authors = ["Softbear, Inc."]
+license = "AGPL-3.0-or-later"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix = "0.12"
+actix-web = {version = "4.0.0-beta.19", features=["rustls"], default-features=false}
+actix-tls = "3.0"
+actix-files = "0.6.0-beta.13"
+actix-http = "3.0.0-beta.18"
+actix-web-actors = "4.0.0-beta.10"
+actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
+actix-cors = "0.6.0-beta.8"
+include_dir = "0.6"
+arrayvec = { version = "0.7", features = ["serde"] }
+atomic_refcell = "0.1"
+core_server = {path="../core_server"}
+core_protocol = {path="../core_protocol", features=["server"]}
+common_util = {path="../common_util"}
+server_util = {path="../server_util"}
+serde = {version = "1", features=["derive"]}
+log = "0.4"
+rayon = "1.5"
+structopt = "0.3"
+futures = "0.3"
+env_logger = "0.9"

@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use server_util::observer::*;
 use server_util::user_agent::UserAgent;
 use std::collections::hash_map::Entry;
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -35,11 +36,13 @@ fn log_err<O, E: std::fmt::Display>(res: Result<O, E>) {
     }
 }
 
-impl Handler<ObserverMessage<ServerRequest, ServerUpdate, Option<UserAgent>>> for Core {
+impl Handler<ObserverMessage<ServerRequest, ServerUpdate, (Option<IpAddr>, Option<UserAgent>)>>
+    for Core
+{
     type Result = ();
     fn handle(
         &mut self,
-        msg: ObserverMessage<ServerRequest, ServerUpdate, Option<UserAgent>>,
+        msg: ObserverMessage<ServerRequest, ServerUpdate, (Option<IpAddr>, Option<UserAgent>)>,
         _ctx: &mut Context<Self>,
     ) -> Self::Result {
         match msg {
@@ -145,6 +148,7 @@ impl Repo {
                     arena_id: server.arena_id,
                     newbie: false,
                     session_id: Some(session_id),
+                    ip_addr: None,
                     user_agent_id: None,
                 };
                 let _ = self.handle_client_sync(&mut client, request, None);

@@ -11,7 +11,7 @@ use core_protocol::id::{ArenaId, GameId, PlayerId, SessionId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use log::{debug, error, warn};
 use ringbuffer::RingBufferWrite;
-use rustrict::{trim_whitespace, ContextProcessingOptions, ContextRateLimitOptions};
+use rustrict::{trim_whitespace, BlockReason, ContextProcessingOptions, ContextRateLimitOptions};
 use std::fs::OpenOptions;
 use std::rc::Rc;
 
@@ -29,7 +29,7 @@ impl Repo {
             arena_id, session_id, enable, player_id
         );
         let mut muted = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if self.players.contains_key(&player_id) {
                     session.muted.insert(player_id);
@@ -61,13 +61,13 @@ impl Repo {
         );
         let mut reported = false;
         let mut report_session_id = None;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(&sess) = self.players.get(&player_id) {
                     if let Some(play) = session.plays.last() {
                         // Throttle abuse of the feature.
                         if play.date_stop.is_none()
-                            && get_unix_time_now() > play.date_created + 20
+                            && get_unix_time_now() > play.date_created + 20 * 1000
                             && play.score.map(|s| s > 100).unwrap_or(false)
                             && session.reported.insert(player_id)
                         {
@@ -96,20 +96,20 @@ impl Repo {
         reported
     }
 
-    // Client is chatty.
+    /// Client is chatty.
     pub fn send_chat(
         &mut self,
         arena_id: ArenaId,
         session_id: SessionId,
         message: String,
         whisper: bool,
-    ) -> Option<PlayerId> {
+    ) -> Option<Result<PlayerId, BlockReason>> {
         debug!(
             "send_chat(arena={:?}, session={:?}): {}",
             arena_id, session_id, &message
         );
-        let mut sent = None;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        let mut result = None;
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             let mut maybe_message_tuple = None;
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 if let Some(play) = session.plays.last() {
@@ -163,6 +163,8 @@ impl Repo {
 
                                 // Send warning to sending player only.
                                 session.inbox.push(Rc::new(warning));
+
+                                result = Some(Err(reason));
                             }
                         }
                     }
@@ -185,7 +187,7 @@ impl Repo {
                             if let Some(play) = session.plays.last_mut() {
                                 if play.team_id == Some(whisper_team_id) {
                                     session.inbox.push(Rc::clone(&message));
-                                    sent = Some(session.player_id);
+                                    result = Some(Ok(session.player_id));
                                 }
                             }
                         }
@@ -198,20 +200,20 @@ impl Repo {
                             .unwrap_or(false)
                         {
                             session.inbox.push(Rc::clone(&message));
-                            sent = Some(session.player_id);
+                            result = Some(Ok(session.player_id));
                         }
                     }
                     arena.newbie_messages.push(Rc::clone(&message));
                 }
             }
         }
-        if sent.is_none() {
+        if result.is_none() {
             warn!(
                 "send_chat(arena={:?}, session={:?}) failed: {}",
                 arena_id, session_id, &message
             );
         }
-        sent
+        result
     }
 
     /// Admins can send chats from any alias (although no PlayerId).
@@ -226,7 +228,7 @@ impl Repo {
             arena_id, alias, &message
         );
         let mut sent = false;
-        if let Some(arena) = Arena::get_mut(&mut self.arenas, &arena_id) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             let trimmed = trim_whitespace(message);
 
             let message = Rc::new(MessageDto {
@@ -260,10 +262,12 @@ pub fn log_chat(
     chat_log: &str,
     game_id: Option<GameId>,
     whisper: bool,
-    ok: bool,
+    result: &str,
     alias: PlayerAlias,
     message: &str,
 ) {
+    let ctx = if whisper { "team" } else { "global" };
+
     match OpenOptions::new().create(true).append(true).open(chat_log) {
         Ok(file) => {
             let mut wtr = csv::Writer::from_writer(file);
@@ -272,8 +276,8 @@ pub fn log_chat(
                 &game_id
                     .map(|id| format!("{:?}", id))
                     .unwrap_or_else(|| String::from("-")),
-                &format!("{:?}", whisper),
-                &format!("{}", ok),
+                ctx,
+                result,
                 alias.as_str(),
                 message,
             ]) {

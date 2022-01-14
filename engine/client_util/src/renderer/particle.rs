@@ -29,7 +29,7 @@ impl Particle {
 /// Renders particles.
 pub struct ParticleLayer {
     buffer: PointRenderDeque<ParticleVertex>,
-    to_add: Vec<Particle>,
+    time: f32,
     wind: Vec2,
 }
 
@@ -47,7 +47,7 @@ impl ParticleLayer {
 
         Self {
             buffer: PointRenderDeque::new(&renderer.gl, &renderer.oes_vao),
-            to_add: Vec::new(),
+            time: 0.0,
             wind,
         }
     }
@@ -55,7 +55,22 @@ impl ParticleLayer {
     /// Adds a particle. Once a particle is added, it can be forgotten, as the remainder of its existence
     /// will be managed by this layer.
     pub fn add(&mut self, p: Particle) {
-        self.to_add.push(p);
+        let Particle {
+            color,
+            position,
+            radius,
+            smoothness,
+            velocity,
+        } = p;
+
+        self.buffer.push_back(ParticleVertex {
+            color,
+            created: self.time,
+            position,
+            radius,
+            smoothness,
+            velocity,
+        });
     }
 }
 
@@ -73,25 +88,11 @@ struct ParticleVertex {
 }
 
 impl Layer for ParticleLayer {
-    fn pre_render(&mut self, renderer: &Renderer) {
-        for particle in self.to_add.drain(..) {
-            let Particle {
-                position,
-                velocity,
-                color,
-                radius,
-                smoothness,
-            } = particle;
-            self.buffer.push_back(ParticleVertex {
-                position,
-                velocity,
-                color,
-                radius,
-                smoothness,
-                created: renderer.time,
-            });
-        }
+    fn pre_prepare(&mut self, r: &Renderer) {
+        self.time = r.time;
+    }
 
+    fn pre_render(&mut self, renderer: &Renderer) {
         let expired = renderer.time - Particle::LIFESPAN;
 
         while let Some(particle) = self.buffer.front() {

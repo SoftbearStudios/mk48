@@ -62,6 +62,16 @@ impl GraphicLayer {
 
     /// add_rectangle_graphic adds a transformed square to the graphics queue.
     pub fn add_rectangle(&mut self, center: Vec2, scale: Vec2, angle: f32, color: Vec4) {
+        self.add_rectangle_gradient(center, scale, angle, [color; 4])
+    }
+
+    pub fn add_rectangle_gradient(
+        &mut self,
+        center: Vec2,
+        scale: Vec2,
+        angle: f32,
+        colors: [Vec4; 4],
+    ) {
         let index = self.mesh.vertices.len();
         self.mesh.push_quad([
             index as Index,
@@ -79,22 +89,28 @@ impl GraphicLayer {
             Vec2::new(half_scale.x, -half_scale.y),
         ];
 
-        self.mesh.vertices.extend(positions.map(|pos| PosColor {
-            pos: center + rot * pos,
-            color,
-        }));
+        self.mesh
+            .vertices
+            .extend(positions.zip(colors).map(|(pos, color)| PosColor {
+                pos: center + rot * pos,
+                color,
+            }));
     }
 
     /// add_rectangle_graphic adds a line to the graphics queue.
     pub fn add_line(&mut self, start: Vec2, end: Vec2, thickness: f32, color: Vec4) {
+        self.add_line_gradient(start, end, thickness, color, color)
+    }
+
+    pub fn add_line_gradient(&mut self, start: Vec2, end: Vec2, thickness: f32, s: Vec4, e: Vec4) {
         let diff = end - start;
         let angle = diff.y.atan2(diff.x);
 
-        self.add_rectangle(
+        self.add_rectangle_gradient(
             start + diff * 0.5,
             Vec2::new(diff.length(), thickness),
             angle,
-            color,
+            [s, e, s, e],
         );
     }
 

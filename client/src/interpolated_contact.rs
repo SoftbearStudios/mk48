@@ -207,17 +207,22 @@ impl Mk48Game {
                 _ => return,
             };
 
-            if entity_type.data().kind == EntityKind::Boat {
+            let data = entity_type.data();
+            if data.kind == EntityKind::Boat {
                 audio_layer.play_with_volume("explosion_long", volume);
             } else {
                 audio_layer.play_with_volume("explosion_short", volume);
             }
 
+            // The more damage/health the entity has the larger its explosion is.
+            debug_assert!(data.damage >= 0.0);
+            let scale = (data.damage.sqrt() * 10.0).clamp(5.0, 50.0);
+
             animations.push(Animation::new(
                 name,
                 contact.transform().position,
                 contact.altitude().to_norm(),
-                10.0,
+                scale,
                 time_seconds,
             ));
         }

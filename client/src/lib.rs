@@ -17,6 +17,7 @@ mod interpolated_contact;
 mod settings;
 mod sprite;
 mod state;
+mod trail;
 mod ui;
 mod zoom;
 

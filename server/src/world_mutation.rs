@@ -3,7 +3,7 @@
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
-use crate::player::PlayerTuple;
+use crate::server::Server;
 use crate::world::World;
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -13,6 +13,7 @@ use common::guidance::Guidance;
 use common::ticks::Ticks;
 use common::util::*;
 use common::velocity::Velocity;
+use game_server::context::PlayerTuple;
 use glam::Vec2;
 use rand::seq::IteratorRandom;
 use rand::{thread_rng, Rng};
@@ -22,7 +23,7 @@ use std::sync::Arc;
 #[derive(Clone, Debug)]
 pub(crate) enum Mutation {
     CollidedWithBoat {
-        other_player: Arc<PlayerTuple>,
+        other_player: Arc<PlayerTuple<Server>>,
         damage: Ticks,
         impulse: Velocity,
         ram: bool,
@@ -43,8 +44,8 @@ pub(crate) enum Mutation {
         instant: bool,
     },
     // For things that may only be collected once.
-    CollectedBy(Arc<PlayerTuple>, u32),
-    HitBy(Arc<PlayerTuple>, EntityType, Ticks),
+    CollectedBy(Arc<PlayerTuple<Server>>, u32),
+    HitBy(Arc<PlayerTuple<Server>>, EntityType, Ticks),
     Attraction(Vec2, Velocity),
     Guidance {
         direction_target: Angle,
@@ -125,8 +126,8 @@ impl Mutation {
                 let e = &mut entities[index];
                 if e.damage(damage) {
                     let player_id = {
-                        let mut other_player = other_player.borrow_mut();
-                        other_player.score += kill_score(e.borrow_player().score);
+                        let mut other_player = other_player.borrow_player_mut();
+                        other_player.data.score += kill_score(e.borrow_player().data.score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -147,8 +148,8 @@ impl Mutation {
                 let entity = &mut entities[index];
                 if entity.damage(damage) {
                     let player_id = {
-                        let mut other_player = other_player.borrow_mut();
-                        other_player.score += ram_score(entity.borrow_player().score);
+                        let mut other_player = other_player.borrow_player_mut();
+                        other_player.data.score += ram_score(entity.borrow_player().data.score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -200,10 +201,10 @@ impl Mutation {
                 Self::reload_limited_armament(world, index, entity_type, instant);
             }
             Self::Score(score) => {
-                entities[index].borrow_player_mut().score += score;
+                entities[index].borrow_player_mut().data.score += score;
             }
             Self::CollectedBy(player, score) => {
-                player.borrow_mut().score += score;
+                player.borrow_player_mut().data.score += score;
                 world.remove(index, DeathReason::Unknown);
                 return true;
             }
@@ -288,12 +289,12 @@ impl Mutation {
         let mut player = entity.borrow_player_mut();
 
         let coin_amount = if score_to_coins {
-            (player.score / 4 / 10).min(200)
+            (player.data.score / 4 / 10).min(200)
         } else {
             0
         };
 
-        player.score = respawn_score(player.score);
+        player.data.score = respawn_score(player.data.score);
         drop(player);
 
         let data = entity.data();

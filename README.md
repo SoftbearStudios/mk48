@@ -13,20 +13,26 @@
 
 ## Developing
 
+### Tools
+
+0. Install Rust Nightly (install [rustup](https://rustup.rs/), then `rustup override set nightly-2021-10-28`)
+1. Install NodeJS 14 or higher ([here](https://nodejs.org/en/download/))
+
+You may use any version of Rust that works, but we use some nightly features and `nightly-2021-10-28` is known to work,
+whereas some newer versions produce internal compiler errors.
+
 ### Client
 
-0. Install NodeJS 14 or higher ([here](https://nodejs.org/en/download/)) and nightly Rust ([here](https://rustup.rs/), then `rustup default nightly-2021-10-28`)
-1. Enter `/js`
-2. `npm install`
-3. `make`
-4. Deploy the server to host the client
+0. Enter `/js`
+1. `npm install`
+2. `make`
+3. Deploy the server to host the client
 
 ### Server
 
-0. Install nightly Rust ([here](https://rustup.rs/), then `rustup default nightly-2021-10-28`)
-1. Enter `/server`
-2. `make`
-3. Navigate to `localhost:8000`
+0. Enter `/server`
+1. `make` to build and run a test server
+2. Navigate to `localhost:8000`
 
 ## Contributing
 See [Contributing](https://github.com/SoftbearStudios/mk48/wiki/Contributing) Wiki page.

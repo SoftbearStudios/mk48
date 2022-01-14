@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use core_protocol::serde_util::F32Visitor;
+use core_protocol::serde_util::{F32Visitor, U16Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::ops::*;
@@ -122,7 +122,7 @@ impl Rem for Ticks {
 
 impl fmt::Debug for Ticks {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} seconds", self.to_secs())
+        write!(f, "{:.1} seconds", self.to_secs())
     }
 }
 
@@ -131,7 +131,11 @@ impl Serialize for Ticks {
     where
         S: Serializer,
     {
-        serializer.serialize_f32(self.to_secs())
+        if serializer.is_human_readable() {
+            serializer.serialize_f32(self.to_secs())
+        } else {
+            serializer.serialize_u16(self.0)
+        }
     }
 }
 
@@ -140,8 +144,12 @@ impl<'de> Deserialize<'de> for Ticks {
     where
         D: Deserializer<'de>,
     {
-        deserializer
-            .deserialize_f32(F32Visitor)
-            .map(Ticks::from_secs)
+        if deserializer.is_human_readable() {
+            deserializer
+                .deserialize_f32(F32Visitor)
+                .map(Ticks::from_secs)
+        } else {
+            deserializer.deserialize_u16(U16Visitor).map(Ticks)
+        }
     }
 }

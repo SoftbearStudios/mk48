@@ -4,13 +4,14 @@
 use crate::entity::Entity;
 use crate::player::{Player, Status};
 use crate::protocol::*;
-use crate::server::SharedData;
+use crate::server::Server;
 use crate::world::World;
 use common::angle::Angle;
 use common::entity::*;
 use common::protocol::*;
 use common::ticks::Ticks;
 use common::util::level_to_score;
+use game_server::context::PlayerTuple;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
 use rayon::iter::ParallelIterator;
@@ -22,16 +23,15 @@ impl CommandTrait for Spawn {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        let player = shared_data.player.borrow();
+        let player = player_tuple.borrow_player();
 
-        if player.status.is_alive() {
+        if player.data.status.is_alive() {
             return Err("cannot spawn while already alive");
         }
 
-        if !self.entity_type.can_spawn_as(bot) {
+        if !self.entity_type.can_spawn_as(player.bot) {
             return Err("cannot spawn as given entity type");
         }
 
@@ -39,7 +39,7 @@ impl CommandTrait for Spawn {
         let mut spawn_position = Vec2::ZERO;
         let mut spawn_radius = world.radius;
 
-        let exclusion_zone = match &player.status {
+        let exclusion_zone = match &player.data.status {
             // Player is excluded from spawning too close to where another player sunk them, for
             // fairness reasons.
             Status::Dead {
@@ -57,7 +57,7 @@ impl CommandTrait for Spawn {
             _ => None,
         };
 
-        if player.team_id.is_some() || shared_data.invitation.is_some() {
+        if player.team_id.is_some() || player.invitation.is_some() {
             // TODO: Inefficient to scan all entities; only need to scan all players. Unfortunately,
             // that data is not available here, currently.
             if let Some((_, team_boat)) = world.entities.par_iter().find_any(|(_, entity)| {
@@ -65,9 +65,9 @@ impl CommandTrait for Spawn {
                 if data.kind == EntityKind::Boat
                     && ((player.team_id.is_some()
                         && entity.borrow_player().team_id == player.team_id)
-                        || (shared_data.invitation.is_some()
+                        || (player.invitation.is_some()
                             && entity.borrow_player().player_id
-                                == shared_data.invitation.as_ref().unwrap().player_id))
+                                == player.invitation.as_ref().unwrap().player_id))
                 {
                     if let Some(exclusion_zone) = exclusion_zone {
                         if entity.transform.position.distance_squared(exclusion_zone)
@@ -89,12 +89,13 @@ impl CommandTrait for Spawn {
 
         drop(player);
 
-        let mut boat = Entity::new(self.entity_type, Some(Arc::clone(&shared_data.player)));
+        let mut boat = Entity::new(self.entity_type, Some(Arc::clone(player_tuple)));
         boat.transform.position = spawn_position;
         if world.spawn_here_or_nearby(boat, spawn_radius, exclusion_zone) {
-            return Ok(());
+            Ok(())
+        } else {
+            Err("failed to find enough space to spawn")
         }
-        Err("failed to find enough space to spawn")
     }
 }
 
@@ -102,10 +103,9 @@ impl CommandTrait for Control {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        let mut player = shared_data.player.borrow_mut();
+        let mut player = player_tuple.borrow_player_mut();
 
         // Pre-borrow.
         let world_radius = world.radius;
@@ -114,7 +114,7 @@ impl CommandTrait for Control {
             entity_index,
             aim_target,
             ..
-        } = &mut player.status
+        } = &mut player.data.status
         {
             let entity = &mut world.entities[*entity_index];
 
@@ -141,15 +141,15 @@ impl CommandTrait for Control {
             drop(player);
 
             if let Some(fire) = &self.fire {
-                fire.apply(world, shared_data, bot)?;
+                fire.apply(world, player_tuple)?;
             }
 
             if let Some(pay) = &self.pay {
-                pay.apply(world, shared_data, bot)?;
+                pay.apply(world, player_tuple)?;
             }
 
             if let Some(hint) = &self.hint {
-                hint.apply(world, shared_data, bot)?;
+                hint.apply(world, player_tuple)?;
             }
 
             Ok(())
@@ -163,19 +163,18 @@ impl CommandTrait for Fire {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        _bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        let player = shared_data.player.as_ref().borrow();
+        let player = player_tuple.borrow_player();
 
         return if let Status::Alive {
             entity_index,
             aim_target,
             ..
-        } = player.status
+        } = player.data.status
         {
             // Prevents limited armaments from being invalidated since all limited armaments are destroyed on upgrade.
-            if player.flags.upgraded {
+            if player.data.flags.upgraded {
                 return Err("cannot fire right after upgrading");
             }
 
@@ -242,7 +241,7 @@ impl CommandTrait for Fire {
                 world.terrain.modify(pos, 60.0);
             } else {
                 // Fire weapon.
-                let player_arc = Arc::clone(&shared_data.player);
+                let player_arc = Arc::clone(player_tuple);
 
                 drop(player);
                 let mut armament_entity = Entity::new(armament.entity_type, Some(player_arc));
@@ -291,15 +290,14 @@ impl CommandTrait for Pay {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        _bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
         let mut position = self.position;
         sanitize_floats(position.as_mut(), -world.radius * 2.0..world.radius * 2.0)?;
 
-        let mut player = shared_data.player.as_ref().borrow_mut();
+        let mut player = player_tuple.borrow_player_mut();
 
-        return if let Status::Alive { entity_index, .. } = player.status {
+        return if let Status::Alive { entity_index, .. } = player.data.status {
             let entity = &world.entities[entity_index];
 
             if position.distance_squared(entity.transform.position)
@@ -311,7 +309,7 @@ impl CommandTrait for Pay {
             let pay = 10; // Value of coin.
             let withdraw = pay * 2; // Payment has 50% efficiency.
 
-            if player.score < level_to_score(entity.data().level) + withdraw {
+            if player.data.score < level_to_score(entity.data().level) + withdraw {
                 return Err("insufficient funds");
             }
 
@@ -324,7 +322,7 @@ impl CommandTrait for Pay {
 
             if world.spawn_here_or_nearby(payment, 1.0, None) {
                 // Payment successfully spawned, withdraw funds.
-                player.score -= withdraw;
+                player.data.score -= withdraw;
             }
 
             Ok(())
@@ -338,10 +336,9 @@ impl CommandTrait for Hint {
     fn apply(
         &self,
         _: &mut World,
-        shared_data: &mut SharedData,
-        _bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        shared_data.player.borrow_mut().hint = Hint {
+        player_tuple.borrow_player_mut().data.hint = Hint {
             aspect: sanitize_float(self.aspect, 0.5..2.0)?,
         };
         Ok(())
@@ -352,22 +349,21 @@ impl CommandTrait for Upgrade {
     fn apply(
         &self,
         world: &mut World,
-        shared_data: &mut SharedData,
-        bot: bool,
+        player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        let mut player = shared_data.player.as_ref().borrow_mut();
-        let Player { status, score, .. } = &mut *player;
+        let mut player = player_tuple.borrow_player_mut();
+        let Player { status, score, .. } = &mut player.data;
 
         if let Status::Alive { entity_index, .. } = status {
             let entity = &mut world.entities[*entity_index];
             if !entity
                 .entity_type
-                .can_upgrade_to(self.entity_type, *score, bot)
+                .can_upgrade_to(self.entity_type, *score, player.bot)
             {
                 return Err("cannot upgrade to provided entity type");
             }
 
-            player.flags.upgraded = true;
+            player.data.flags.upgraded = true;
             drop(player);
 
             entity.change_entity_type(self.entity_type, &mut world.arena);

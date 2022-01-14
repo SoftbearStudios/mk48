@@ -7,7 +7,7 @@ attribute float created;
 uniform mat3 uView;
 uniform vec4 uWind_uTime_uScale;
 varying vec4 vColor;
-varying float vSmoothness;
+varying float vSharpness;
 
 void main() {
     float time = uWind_uTime_uScale.z - created;
@@ -31,9 +31,9 @@ void main() {
     float size = uWind_uTime_uScale.w * (1.0 + life * smoothness * 2.0) * radius;
 
     // Instead of making particles less than 1px, reduce their alpha.
-    gl_PointSize = max(size, 1.0);
-    float alpha = min(size * size, 1.0) * ((1.0 - life) * (1.15 - smoothness));
+    gl_PointSize = max(size, 2.0);
+    float alpha = min(size * size * 0.25, 1.0) * ((1.0 - life) * (1.15 - smoothness));
 
     vColor = vec4(solidColor, alpha);
-    vSmoothness = smoothness;
+    vSharpness = (1.0 - smoothness) * 0.35 + 0.15;
 }
