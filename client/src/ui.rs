@@ -40,7 +40,7 @@ impl Default for UiState {
 #[derive(Deserialize)]
 pub enum UiEvent {
     Spawn {
-        alias: PlayerAlias,
+        alias: String,
         #[serde(rename = "entityType")]
         entity_type: EntityType,
     },

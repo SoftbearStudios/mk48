@@ -14,6 +14,13 @@
 
 	<h2>2021</h2>
 
+	<h3>1/15/2022</h3>
+
+	<ul>
+		<li>Fix air-dropped homing torpedoes.</li>
+		<li>Fix nickname trimming.</li>
+	</ul>
+
 	<h3>1/13/2022</h3>
 
 	<ul>
@@ -23,6 +30,7 @@
 		<li>Harden network connection logic against temporary connection loss.</li>
 		<li>Guided weapons prioritize hitting targets at similar depths/altitudes.</li>
 		<li>Guided missiles will no seek towards submerged submarines.</li>
+		<li>Reduce salvo size of missiles on "Yasen."</li>
 		<li>Trees are now decorative (unaffected by boats).</li>
 		<li>World border and sub vision overlays affect ships, particles, etc.</li>
 		<li>Fix team name length limit to allow more emojis.</li>

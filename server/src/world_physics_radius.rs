@@ -219,14 +219,17 @@ impl World {
                                             let seeker_position = weapon.transform.position + weapon.transform.direction.to_vec() * weapon.transform.velocity.to_mps().max(2.0);
                                             let target_position = target.closest_point_on_keel_to(seeker_position, 0.5);
                                             let diff = target_position - weapon.transform.position;
+                                            let distance_squared = diff.length_squared();
                                             let angle = Angle::from(diff);
 
+                                            // Should not exceed range.
+                                            let remaining_range = weapon.transform.velocity.to_mps() * weapon.data().lifespan.saturating_sub(weapon.ticks).to_secs() + 30.0;
                                             // Should not go off target.
                                             let angle_target_diff = (angle - weapon.guidance.direction_target).abs();
                                             // Cannot sense beyond this angle.
                                             let angle_diff = (angle - weapon.transform.direction).abs();
 
-                                            if angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
+                                            if distance_squared <= remaining_range.powi(2) && angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
                                                 let mut size = target_data.radius;
                                                 if target_data.kind == EntityKind::Decoy {
                                                     // Decoys appear very large to weapons.
@@ -239,12 +242,12 @@ impl World {
                                                 // Altitude diff.
                                                 let altitude_diff = weapon.altitude.difference(target.altitude).to_norm();
 
-                                                let randomness = (1.0 / 3.0) * hash_u32_to_f32(target.id.get() ^ weapon.id.get());
+                                                let randomness = hash_u32_to_f32(target.id.get() ^ weapon.id.get());
                                                 let strength = size / EntityData::MAX_RADIUS
-                                                    - diff.length_squared() / radius.powi(2)
+                                                    - distance_squared / radius.powi(2)
                                                     - angle_diff.to_radians() / Angle::MAX.to_radians()
                                                     - altitude_diff
-                                                    + randomness;
+                                                    + (1.0 / 3.0) * randomness;
                                                 mutate(weapon, Mutation::Guidance {direction_target: angle, altitude_target: target.altitude, signal_strength: strength});
                                             }
                                         }

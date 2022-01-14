@@ -34,6 +34,7 @@ use common::transform::Transform;
 use common::velocity::Velocity;
 use common_util::range::{gen_radius, map_ranges};
 use core_protocol::id::{GameId, TeamId};
+use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::ClientRequest;
 use glam::{Mat2, UVec2, Vec2, Vec4};
 use rand::{thread_rng, Rng};
@@ -1113,24 +1114,30 @@ impl GameClient for Mk48Game {
         context: &mut Context<Self>,
         layer: &mut Self::RendererLayer,
     ) {
-        match *event {
+        match event {
             UiEvent::Spawn { alias, entity_type } => {
-                context.send_to_core(ClientRequest::IdentifySession { alias });
-                context.send_to_game(Command::Spawn(Spawn { entity_type }))
+                context.send_to_core(ClientRequest::IdentifySession {
+                    alias: PlayerAlias::new(alias),
+                });
+                context.send_to_game(Command::Spawn(Spawn {
+                    entity_type: *entity_type,
+                }))
             }
             UiEvent::Upgrade(entity_type) => {
                 layer.audio.play("upgrade");
-                context.send_to_game(Command::Upgrade(Upgrade { entity_type }))
+                context.send_to_game(Command::Upgrade(Upgrade {
+                    entity_type: *entity_type,
+                }))
             }
             UiEvent::Active(active) => {
                 if let Some(contact) = context.game().player_contact() {
-                    if active && contact.data().sensors.sonar.range >= 0.0 {
+                    if *active && contact.data().sensors.sonar.range >= 0.0 {
                         layer.audio.play("sonar1")
                     }
                 }
             }
             UiEvent::AltitudeTarget(altitude_norm) => {
-                let altitude = Altitude::from_norm(altitude_norm);
+                let altitude = Altitude::from_norm(*altitude_norm);
                 if let Some(contact) = context.game().player_contact() {
                     if contact.data().sub_kind == EntitySubKind::Submarine {
                         if !context.ui.altitude_target.is_submerged() && altitude.is_submerged() {
