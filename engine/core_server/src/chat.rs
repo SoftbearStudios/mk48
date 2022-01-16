@@ -10,7 +10,6 @@ use core_protocol::get_unix_time_now;
 use core_protocol::id::{ArenaId, GameId, PlayerId, SessionId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use log::{debug, error, warn};
-use ringbuffer::RingBufferWrite;
 use rustrict::{trim_whitespace, BlockReason, ContextProcessingOptions, ContextRateLimitOptions};
 use std::fs::OpenOptions;
 use std::rc::Rc;
@@ -162,7 +161,7 @@ impl Repo {
                                 };
 
                                 // Send warning to sending player only.
-                                session.inbox.push(Rc::new(warning));
+                                session.inbox.write(Rc::new(warning));
 
                                 result = Some(Err(reason));
                             }
@@ -175,7 +174,7 @@ impl Repo {
                 if whisper {
                     if let Some(whisper_team_id) = maybe_team_id {
                         for (_, session) in Session::iter_mut(&mut arena.sessions) {
-                            // Must be live to receive whisper, otherwise your team affilation isn't real.
+                            // Must be live to receive whisper, otherwise your team affiliation isn't real.
                             if !session.live
                                 || message
                                     .player_id
@@ -186,7 +185,7 @@ impl Repo {
                             }
                             if let Some(play) = session.plays.last_mut() {
                                 if play.team_id == Some(whisper_team_id) {
-                                    session.inbox.push(Rc::clone(&message));
+                                    session.inbox.write(Rc::clone(&message));
                                     result = Some(Ok(session.player_id));
                                 }
                             }
@@ -199,11 +198,11 @@ impl Repo {
                             .map(|id| session.muted.contains(&id))
                             .unwrap_or(false)
                         {
-                            session.inbox.push(Rc::clone(&message));
+                            session.inbox.write(Rc::clone(&message));
                             result = Some(Ok(session.player_id));
                         }
                     }
-                    arena.newbie_messages.push(Rc::clone(&message));
+                    arena.newbie_messages.write(Rc::clone(&message));
                 }
             }
         }
@@ -242,10 +241,10 @@ impl Repo {
             });
 
             for (_, session) in Session::iter_mut(&mut arena.sessions) {
-                session.inbox.push(Rc::clone(&message));
+                session.inbox.write(Rc::clone(&message));
                 sent = true;
             }
-            arena.newbie_messages.push(Rc::clone(&message));
+            arena.newbie_messages.write(Rc::clone(&message));
         }
         if !sent {
             warn!(

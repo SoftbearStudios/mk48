@@ -236,6 +236,16 @@ impl Entity {
                 other_data.radius,
                 delta_seconds,
             )
+        } else if data.kind == EntityKind::Boat
+            && other_data.sub_kind == EntitySubKind::DepthCharge
+            && self.altitude.is_submerged()
+        {
+            other.is_in_proximity_to(self, EntityData::DEPTH_CHARGE_PROXIMITY)
+        } else if data.sub_kind == EntitySubKind::DepthCharge
+            && other_data.kind == EntityKind::Boat
+            && other.altitude.is_submerged()
+        {
+            self.is_in_proximity_to(other, EntityData::DEPTH_CHARGE_PROXIMITY)
         } else {
             sat_collision(
                 self.transform,
@@ -446,6 +456,7 @@ impl Entity {
                 EntitySubKind::Missile
                 | EntitySubKind::Sam
                 | EntitySubKind::Rocket
+                | EntitySubKind::RocketTorpedo
                 | EntitySubKind::Shell => Altitude::MAX,
                 _ => Altitude::ZERO,
             },
@@ -476,10 +487,11 @@ impl Entity {
                 EntitySubKind::Torpedo => target.unwrap_or(-unguided_weapon_altitude),
                 EntitySubKind::DepthCharge => Altitude::MIN, // Sink to bottom.
                 EntitySubKind::Mine => -unguided_weapon_altitude,
-                EntitySubKind::Missile => unguided_weapon_altitude,
-                EntitySubKind::Rocket => unguided_weapon_altitude,
+                EntitySubKind::Shell
+                | EntitySubKind::Rocket
+                | EntitySubKind::RocketTorpedo
+                | EntitySubKind::Missile => unguided_weapon_altitude,
                 EntitySubKind::Sam => target.unwrap_or(unguided_weapon_altitude),
-                EntitySubKind::Shell => unguided_weapon_altitude,
                 _ => {
                     debug_assert!(false, "{:?}", data.sub_kind);
                     Altitude::ZERO
@@ -581,23 +593,33 @@ impl Entity {
         false
     }
 
-    /// Returns whether an entity is in close proximity to a boat. This is the same as whether a mine
-    /// should attract, or whether a weapon should be visible regardless of sensor conditions.
-    /// This assumes there is sufficient overlap in altitude.
-    pub fn is_in_close_proximity_to(&self, boat: &Self) -> bool {
-        let boat_data = boat.data();
+    /// Constant used for checking whether, for example, a weapon becomes visible regardless of
+    /// sensor ranges.
+    pub const CLOSE_PROXIMITY: f32 = 60.0;
 
+    /// Calculates proximity to a boat (which is defined as the minimum normal or tangential
+    /// difference to the boats front or side).
+    pub fn proximity_to(&self, boat: &Self) -> f32 {
+        let boat_data = boat.data();
         debug_assert_eq!(boat_data.kind, EntityKind::Boat);
 
-        const DISTANCE: f32 = 60.0;
         let normal = boat.transform.direction.to_vec();
         let tangent = Vec2::new(-normal.y, normal.x);
         let normal_distance =
             (normal.dot(boat.transform.position) - normal.dot(self.transform.position)).abs();
         let tangent_distance =
             (tangent.dot(boat.transform.position) - tangent.dot(self.transform.position)).abs();
-        normal_distance < DISTANCE + boat_data.length * 0.5
-            && tangent_distance < DISTANCE + boat_data.width * 0.5
+        (normal_distance - boat_data.length * 0.5)
+            .max(tangent_distance - boat_data.width * 0.5)
+            .max(0.0)
+    }
+
+    /// Returns whether an entity is in close proximity to a boat. This is the same as whether a mine
+    /// should attract, or whether a weapon should be visible regardless of sensor conditions.
+    /// This assumes there is sufficient overlap in altitude.
+    pub fn is_in_proximity_to(&self, boat: &Self, distance: f32) -> bool {
+        debug_assert!(distance >= 0.0);
+        self.proximity_to(boat) <= distance
     }
 
     // hash returns a float in range [0, 1) based on the entity's id.

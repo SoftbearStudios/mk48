@@ -31,6 +31,7 @@ pub struct InterpolatedContact {
 }
 
 impl InterpolatedContact {
+    /// Initializes an interpolated contact.
     pub(crate) fn new(contact: Contact) -> Self {
         // When a new contact appears, its model and view are identical.
         Self {
@@ -105,7 +106,10 @@ impl InterpolatedContact {
 
                     if !matches!(
                         armament_entity_data.sub_kind,
-                        EntitySubKind::Shell | EntitySubKind::Rocket | EntitySubKind::Missile
+                        EntitySubKind::Shell
+                            | EntitySubKind::Rocket
+                            | EntitySubKind::RocketTorpedo
+                            | EntitySubKind::Missile
                     ) {
                         // Don't generate particles.
                         continue;
@@ -178,6 +182,7 @@ impl InterpolatedContact {
 }
 
 impl Mk48Game {
+    /// Call when a contact disappears (keep alive already expired).
     pub fn lost_contact(
         &mut self,
         player_position: Vec2,
@@ -197,6 +202,7 @@ impl Mk48Game {
                     EntitySubKind::Missile
                     | EntitySubKind::Sam
                     | EntitySubKind::Rocket
+                    | EntitySubKind::RocketTorpedo
                     | EntitySubKind::Shell => "explosion",
                     _ => "splash",
                 },
@@ -216,7 +222,7 @@ impl Mk48Game {
 
             // The more damage/health the entity has the larger its explosion is.
             debug_assert!(data.damage >= 0.0);
-            let scale = (data.damage.sqrt() * 10.0).clamp(5.0, 50.0);
+            let scale = (data.damage.sqrt() * 10.0).clamp(5.0, 40.0);
 
             animations.push(Animation::new(
                 name,
@@ -235,6 +241,7 @@ impl Mk48Game {
         entity_id.map(move |id| contacts.get_mut(&id).unwrap())
     }
 
+    /// Call when a previously-unseen contact appears.
     pub fn new_contact(
         &mut self,
         contact: &Contact,
@@ -282,7 +289,7 @@ impl Mk48Game {
                         }
                         audio_layer.play_with_volume("rocket", volume);
                     }
-                    EntitySubKind::Sam => {
+                    EntitySubKind::Sam | EntitySubKind::RocketTorpedo => {
                         audio_layer.play_with_volume("rocket", volume);
                     }
                     EntitySubKind::DepthCharge | EntitySubKind::Mine => {

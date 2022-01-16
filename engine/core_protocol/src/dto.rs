@@ -63,17 +63,19 @@ mod test {
 
     #[test]
     fn sort_order() {
-        assert!(LiveboardDto{
-            player_id: PlayerId(NonZeroU32::new(2).unwrap()),
-            score: 5,
-            team_captain: true,
-            team_id: Some(TeamId(NonZeroU32::new(1).unwrap())),
-        } < LiveboardDto{
-            player_id: PlayerId(NonZeroU32::new(1).unwrap()),
-            score: 3,
-            team_captain: false,
-            team_id: None,
-        })
+        assert!(
+            LiveboardDto {
+                player_id: PlayerId(NonZeroU32::new(2).unwrap()),
+                score: 5,
+                team_captain: true,
+                team_id: Some(TeamId(NonZeroU32::new(1).unwrap())),
+            } < LiveboardDto {
+                player_id: PlayerId(NonZeroU32::new(1).unwrap()),
+                score: 3,
+                team_captain: false,
+                team_id: None,
+            }
+        )
     }
 }
 
@@ -99,6 +101,7 @@ pub struct MessageDto {
 /// The Metrics Data Transfer Object (DTO) contains core server metrics.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct MetricsSummaryDto {
+    pub abuse_reports: <DiscreteMetric as Metric>::Summary,
     pub arenas_cached: <DiscreteMetric as Metric>::Summary,
     pub bounce: <RatioMetric as Metric>::Summary,
     pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
@@ -113,10 +116,10 @@ pub struct MetricsSummaryDto {
     pub new: <RatioMetric as Metric>::Summary,
     pub no_referrer: <RatioMetric as Metric>::Summary,
     pub peek: <RatioMetric as Metric>::Summary,
+    pub players_cached: <DiscreteMetric as Metric>::Summary,
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::Summary,
     pub plays_total: <DiscreteMetric as Metric>::Summary,
     pub ram: <ContinuousExtremaMetric as Metric>::Summary,
-    pub reports: <DiscreteMetric as Metric>::Summary,
     pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
     pub retention_histogram: <HistogramMetric as Metric>::Summary,
     pub score: <ContinuousExtremaMetric as Metric>::Summary,
@@ -129,6 +132,7 @@ pub struct MetricsSummaryDto {
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct MetricsDataPointDto {
+    pub abuse_reports: <DiscreteMetric as Metric>::DataPoint,
     pub arenas_cached: <DiscreteMetric as Metric>::DataPoint,
     pub bounce: <RatioMetric as Metric>::DataPoint,
     pub concurrent: <ContinuousExtremaMetric as Metric>::DataPoint,
@@ -143,10 +147,10 @@ pub struct MetricsDataPointDto {
     pub new: <RatioMetric as Metric>::DataPoint,
     pub no_referrer: <RatioMetric as Metric>::DataPoint,
     pub peek: <RatioMetric as Metric>::DataPoint,
+    pub players_cached: <DiscreteMetric as Metric>::DataPoint,
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub plays_total: <DiscreteMetric as Metric>::DataPoint,
     pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub reports: <DiscreteMetric as Metric>::DataPoint,
     pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
@@ -185,14 +189,8 @@ pub struct RestartDto {
 /// The Rules Data Transfer Object (DTO) specifies arena rules.
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RulesDto {
-    /// Minimum number of players, to be reached by adding bots.
-    pub bot_min: u32,
-    /// Multiply real players by this as a percent to get minimum bots.
-    pub bot_percent: u32,
     /// Start play's score at this.
     pub default_score: Option<u32>,
-    /// Do bots appear on the live leaderboard? (bots never appear on the persistent leaderboard)
-    pub show_bots_on_liveboard: bool,
     /// Leaderboard won't be touched if player count is below.
     pub leaderboard_min_players: u32,
     /// Maximum number of players in a team before no more can be accepted.
@@ -202,10 +200,7 @@ pub struct RulesDto {
 impl Default for RulesDto {
     fn default() -> Self {
         Self {
-            bot_min: 0,
-            bot_percent: 0,
             default_score: None,
-            show_bots_on_liveboard: false,
             leaderboard_min_players: 0,
             team_size_max: 6,
         }

@@ -406,7 +406,7 @@
 				"positionForward": -18.25
 			}
 		],
-		"antiAircraft": 0.074,
+		"antiAircraft": 0.284,
 		"damage": 5.133333333333333
 	},
 	"bismarck": {
@@ -564,7 +564,7 @@
 				"positionForward": -1
 			}
 		],
-		"antiAircraft": 0.12,
+		"antiAircraft": 0.413,
 		"torpedoResistance": 0.4,
 		"damage": 8.053333333333333
 	},
@@ -682,7 +682,7 @@
 				"azimuthBR": 0.6981317007977318
 			}
 		],
-		"antiAircraft": 0.033,
+		"antiAircraft": 0.167,
 		"damage": 2.5,
 		"exhausts": []
 	},
@@ -839,7 +839,7 @@
 				"positionForward": -5.8322
 			}
 		],
-		"antiAircraft": 0.078,
+		"antiAircraft": 0.294,
 		"damage": 5.363333333333333
 	},
 	"clemenceau": {
@@ -1036,7 +1036,7 @@
 				"positionSide": -15.8169
 			}
 		],
-		"antiAircraft": 0.132,
+		"antiAircraft": 0.448,
 		"damage": 8.833333333333334
 	},
 	"dredger": {
@@ -1208,7 +1208,7 @@
 				"positionForward": -0.822
 			}
 		],
-		"antiAircraft": 0.066,
+		"antiAircraft": 0.261,
 		"damage": 4.6137999999999995
 	},
 	"essex": {
@@ -1383,7 +1383,7 @@
 				"positionSide": -12.71
 			}
 		],
-		"antiAircraft": 0.132,
+		"antiAircraft": 0.449,
 		"damage": 8.86
 	},
 	"fairmileD": {
@@ -1496,7 +1496,7 @@
 				"positionForward": 0
 			}
 		],
-		"antiAircraft": 0.013,
+		"antiAircraft": 0.107,
 		"damage": 1.1666666666666667
 	},
 	"fletcher": {
@@ -1734,7 +1734,7 @@
 				"positionForward": -4.5
 			}
 		],
-		"antiAircraft": 0.054,
+		"antiAircraft": 0.226,
 		"damage": 3.8266666666666667
 	},
 	"freccia": {
@@ -1902,7 +1902,7 @@
 				"positionForward": 7.9804
 			}
 		],
-		"antiAircraft": 0.044,
+		"antiAircraft": 0.198,
 		"damage": 3.205
 	},
 	"freedom": {
@@ -2082,7 +2082,7 @@
 				"positionSide": -1.68
 			}
 		],
-		"antiAircraft": 0.054,
+		"antiAircraft": 0.226,
 		"damage": 3.8333333333333335
 	},
 	"g5": {
@@ -2118,7 +2118,7 @@
 				"external": true
 			}
 		],
-		"antiAircraft": 0.004,
+		"antiAircraft": 0.083,
 		"damage": 0.6283333333333334,
 		"turrets": [],
 		"exhausts": []
@@ -2283,7 +2283,7 @@
 				"range": 558.4429
 			}
 		},
-		"antiAircraft": 0.022,
+		"antiAircraft": 0.134,
 		"npc": true,
 		"damage": 1.7604766666666667,
 		"turrets": [],
@@ -2530,7 +2530,7 @@
 				"positionForward": -19
 			}
 		],
-		"antiAircraft": 0.125,
+		"antiAircraft": 0.429,
 		"torpedoResistance": 0.2,
 		"damage": 8.4
 	},
@@ -2717,7 +2717,7 @@
 				"positionForward": -24.21
 			}
 		],
-		"antiAircraft": 0.079,
+		"antiAircraft": 0.297,
 		"damage": 5.433333333333334
 	},
 	"komar": {
@@ -2816,7 +2816,7 @@
 				"speed": 1.8849555921538759
 			}
 		],
-		"antiAircraft": 0.008,
+		"antiAircraft": 0.093,
 		"damage": 0.8466666666666666,
 		"exhausts": []
 	},
@@ -3041,7 +3041,7 @@
 				"positionForward": 7
 			}
 		],
-		"antiAircraft": 0.082,
+		"antiAircraft": 0.306,
 		"torpedoResistance": 0.2,
 		"damage": 5.636666666666667
 	},
@@ -3125,7 +3125,7 @@
 				"external": true
 			}
 		],
-		"antiAircraft": 0.044,
+		"antiAircraft": 0.197,
 		"damage": 3.1933333333333334,
 		"turrets": [],
 		"exhausts": []
@@ -3297,7 +3297,7 @@
 				"positionForward": -3.09
 			}
 		],
-		"antiAircraft": 0.039,
+		"antiAircraft": 0.182,
 		"damage": 2.8433333333333333
 	},
 	"montana": {
@@ -3482,7 +3482,7 @@
 				"positionForward": -14.5
 			}
 		],
-		"antiAircraft": 0.14,
+		"antiAircraft": 0.472,
 		"torpedoResistance": 0.4,
 		"damage": 9.36
 	},
@@ -3648,7 +3648,7 @@
 				"positionForward": -13.35
 			}
 		],
-		"antiAircraft": 0.092,
+		"antiAircraft": 0.336,
 		"damage": 6.3
 	},
 	"ohio": {
@@ -3903,7 +3903,7 @@
 				"range": 510.7
 			}
 		},
-		"antiAircraft": 0.014,
+		"antiAircraft": 0.11,
 		"damage": 1.23,
 		"armaments": [],
 		"turrets": [],
@@ -3993,7 +3993,7 @@
 				"speed": 1.8849555921538759
 			}
 		],
-		"antiAircraft": 0.014,
+		"antiAircraft": 0.113,
 		"damage": 1.2866666666666666,
 		"exhausts": []
 	},
@@ -4046,7 +4046,7 @@
 				"external": true
 			}
 		],
-		"antiAircraft": 0.006,
+		"antiAircraft": 0.09,
 		"damage": 0.7666666666666666,
 		"turrets": [],
 		"exhausts": []
@@ -4516,7 +4516,7 @@
 				"positionForward": -8
 			}
 		],
-		"antiAircraft": 0.088,
+		"antiAircraft": 0.323,
 		"torpedoResistance": 0.2,
 		"damage": 6.010000000000001
 	},
@@ -4706,7 +4706,7 @@
 				"positionSide": -1.45
 			}
 		],
-		"antiAircraft": 0.088,
+		"antiAircraft": 0.322,
 		"damage": 6
 	},
 	"typeVIIC": {
@@ -4964,7 +4964,7 @@
 				"azimuthBR": 0.5235987755982988
 			}
 		],
-		"antiAircraft": 0.032,
+		"antiAircraft": 0.163,
 		"damage": 2.4233333333333333,
 		"exhausts": []
 	},
@@ -5125,7 +5125,7 @@
 				"positionForward": -24.7
 			}
 		],
-		"antiAircraft": 0.131,
+		"antiAircraft": 0.445,
 		"damage": 8.766666666666666
 	},
 	"yasen": {
@@ -5460,7 +5460,7 @@
 				"positionSide": -6.91
 			}
 		],
-		"antiAircraft": 0.024,
+		"antiAircraft": 0.14,
 		"damage": 1.9
 	},
 	"zumwalt": {
@@ -5652,7 +5652,7 @@
 				"positionSide": -0.72
 			}
 		],
-		"antiAircraft": 0.093,
+		"antiAircraft": 0.337,
 		"damage": 6.333333333333333
 	},
 	"100mm": {
@@ -5970,7 +5970,7 @@
 		"label": "ASROC",
 		"link": "https://en.wikipedia.org/wiki/RUR-5_ASROC",
 		"kind": "weapon",
-		"subkind": "rocket",
+		"subkind": "rocketTorpedo",
 		"level": 5,
 		"length": 4.5,
 		"width": 0.80859,
@@ -6536,8 +6536,8 @@
 		"length": 0.448056,
 		"width": 0.701675,
 		"lifespan": 5,
-		"damage": 0.8,
-		"reload": 8,
+		"damage": 0.7,
+		"reload": 16,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -7104,7 +7104,7 @@
 		"label": "Vodopad",
 		"link": "https://en.wikipedia.org/wiki/RPK-6_Vodopad/RPK-7_Veter",
 		"kind": "weapon",
-		"subkind": "rocket",
+		"subkind": "rocketTorpedo",
 		"level": 6,
 		"length": 6.5,
 		"width": 0.533,

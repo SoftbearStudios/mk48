@@ -55,7 +55,7 @@ lazy_static! {
             source: "freesound.org/260939__picassoct__antiair.ogg",
             author: Some("PicassoCT"),
             url: Some("https://freesound.org/people/PicassoCT/sounds/260939/"),
-            volume: -1.5,
+            volume: -3.0,
             pitch: -0.5,
             start: Some(0.05),
             end: Some(0.63),

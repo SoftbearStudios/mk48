@@ -156,6 +156,7 @@ impl World {
                                 // Wait until risen to surface.
                                 EntitySubKind::Missile
                                 | EntitySubKind::Rocket
+                                | EntitySubKind::RocketTorpedo
                                 | EntitySubKind::Sam => {
                                     max_speed = EntityData::SURFACING_PROJECTILE_SPEED_LIMIT;
 

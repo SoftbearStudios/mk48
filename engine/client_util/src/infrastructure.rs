@@ -3,6 +3,7 @@
 
 use crate::apply::Apply;
 use crate::context::Context;
+use crate::fps_monitor::FpsMonitor;
 use crate::game_client::GameClient;
 use crate::js_hooks::{canvas, domain_name_of};
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
@@ -19,7 +20,6 @@ use glam::{IVec2, Vec2};
 use std::panic;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent};
-use crate::fps_monitor::FpsMonitor;
 
 pub struct Infrastructure<G: GameClient> {
     game: G,
@@ -139,9 +139,7 @@ impl<G: GameClient> Infrastructure<G> {
         }
 
         if let Some(fps) = self.statistic_fps_monitor.update(elapsed_seconds) {
-            self.context.send_to_core(ClientRequest::TallyFps {
-                fps
-            });
+            self.context.send_to_core(ClientRequest::TallyFps { fps });
         }
     }
 
@@ -177,11 +175,14 @@ impl<G: GameClient> Infrastructure<G> {
                         }
                     }
 
+                    // Don't block CTRL+C, CTRL+V, etc.
+                    if !(e.ctrl && matches!(e.key, Key::F | Key::C | Key::V | Key::X)) {
+                        event.prevent_default();
+                        event.stop_propagation();
+                    }
+
                     self.game.peek_keyboard(&e, &mut self.context);
                     self.context.keyboard.apply(e);
-
-                    event.prevent_default();
-                    event.stop_propagation();
                 }
             }
             _ => {}

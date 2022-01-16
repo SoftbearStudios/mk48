@@ -127,7 +127,7 @@ impl Mutation {
                 if e.damage(damage) {
                     let player_id = {
                         let mut other_player = other_player.borrow_player_mut();
-                        other_player.data.score += kill_score(e.borrow_player().data.score);
+                        other_player.score += kill_score(e.borrow_player().score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -149,7 +149,7 @@ impl Mutation {
                 if entity.damage(damage) {
                     let player_id = {
                         let mut other_player = other_player.borrow_player_mut();
-                        other_player.data.score += ram_score(entity.borrow_player().data.score);
+                        other_player.score += ram_score(entity.borrow_player().score);
                         let player_id = other_player.player_id;
                         drop(other_player);
                         player_id
@@ -201,10 +201,10 @@ impl Mutation {
                 Self::reload_limited_armament(world, index, entity_type, instant);
             }
             Self::Score(score) => {
-                entities[index].borrow_player_mut().data.score += score;
+                entities[index].borrow_player_mut().score += score;
             }
             Self::CollectedBy(player, score) => {
-                player.borrow_player_mut().data.score += score;
+                player.borrow_player_mut().score += score;
                 world.remove(index, DeathReason::Unknown);
                 return true;
             }
@@ -247,7 +247,7 @@ impl Mutation {
 
                             armament_entity.ticks =
                                 armament.entity_type.reduced_lifespan(Ticks::from_secs(
-                                    100.0 / armament_data.speed.to_mps().clamp(10.0, 30.0),
+                                    150.0 / armament_data.speed.to_mps().clamp(15.0, 50.0),
                                 ));
                             armament_entity.transform =
                                 entity.transform + data.armament_transform(&[], i);
@@ -261,7 +261,7 @@ impl Mutation {
                             armament_entity.transform.velocity = armament_entity
                                 .transform
                                 .velocity
-                                .clamp_magnitude(Velocity::from_mps(40.0));
+                                .clamp_magnitude(Velocity::from_mps(50.0));
 
                             Some(armament_entity)
                         } else {
@@ -289,12 +289,12 @@ impl Mutation {
         let mut player = entity.borrow_player_mut();
 
         let coin_amount = if score_to_coins {
-            (player.data.score / 4 / 10).min(200)
+            (player.score / 4 / 10).min(200)
         } else {
             0
         };
 
-        player.data.score = respawn_score(player.data.score);
+        player.score = respawn_score(player.score);
         drop(player);
 
         let data = entity.data();

@@ -23,7 +23,7 @@ use std::sync::atomic::AtomicU8;
 use std::sync::Arc;
 use std::time::Duration;
 
-const DB_SESSION_TIMER_SECS: u64 = 60;
+pub(crate) const DB_SESSION_TIMER_SECS: u64 = 60;
 const DB_METRICS_MILLIS: u64 = 60 * 60 * 1000;
 
 /// Putting these in an actor is very tricky. They won't have a static lifetime, and that makes
@@ -109,7 +109,7 @@ impl Core {
             {
                 let stream: FuturesUnordered<_> = act
                     .repo
-                    .get_liveboards(false)
+                    .get_liveboards()
                     .into_iter()
                     .map(|(arena_id, game_id, liveboard, leaderboard_worthy)| {
                         let mut player_scores: Vec<Score> = liveboard

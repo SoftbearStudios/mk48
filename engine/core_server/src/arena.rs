@@ -10,14 +10,14 @@ use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, RulesDto};
 use core_protocol::id::*;
 use core_protocol::UnixTime;
 use core_protocol::*;
+use heapless::HistoryBuffer;
 use log::debug;
-use ringbuffer::ConstGenericRingBuffer;
+use std::cmp::Reverse;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::BinaryHeap;
 use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::cmp::Reverse;
 
 // Eventually, each arena will be able to contain one or more scenes.
 #[allow(dead_code)]
@@ -36,7 +36,7 @@ pub struct Arena {
     pub liveboard_changed: bool,
     // Minimum score to appear on liveboard.
     pub liveboard_min_score: u32,
-    pub newbie_messages: ConstGenericRingBuffer<Rc<MessageDto>, 16>,
+    pub newbie_messages: HistoryBuffer<Rc<MessageDto>, 16>,
     pub other_server: bool,
     pub region_id: RegionId,
     pub rules: RulesDto,
@@ -69,7 +69,7 @@ impl Arena {
             leaderboard_changed: [false; PeriodId::VARIANT_COUNT],
             liveboard_changed: false,
             liveboard_min_score: 0,
-            newbie_messages: ConstGenericRingBuffer::new(),
+            newbie_messages: HistoryBuffer::new(),
             other_server: false,
             region_id,
             rules,
@@ -123,7 +123,7 @@ impl Arena {
 
     /// Returns a tuple consisting of the liveboard, the minimum score on the liveboard, and
     /// a boolean representing if the liveboard scores are worthy of leaderboard placement.
-    pub fn get_liveboard(&self, include_bots: bool) -> (Vec<LiveboardDto>, u32, bool) {
+    pub fn get_liveboard(&self) -> (Vec<LiveboardDto>, u32, bool) {
         let mut liveboard = BinaryHeap::new();
         let mut real_players = 0;
 
@@ -137,24 +137,26 @@ impl Arena {
                     // Even if session remains live, remove from liveboard when play stops.
                     return None;
                 }
-                if !session.bot {
-                    real_players += 1;
-                } else if !include_bots {
-                    return None;
-                }
+                real_players += 1;
                 // We actually wanted a min-heap.
-                play.score.map(|score| Reverse(LiveboardDto {
-                    team_captain: play.team_captain,
-                    team_id: play.team_id,
-                    player_id: session.player_id,
-                    score,
-                }))
+                play.score.map(|score| {
+                    Reverse(LiveboardDto {
+                        team_captain: play.team_captain,
+                        team_id: play.team_id,
+                        player_id: session.player_id,
+                        score,
+                    })
+                })
             } else {
                 None
             }
         }));
 
-        let liveboard: Vec<_> = liveboard.into_iter_sorted().take(10).map(|rev| rev.0).collect();
+        let liveboard: Vec<_> = liveboard
+            .into_iter_sorted()
+            .take(10)
+            .map(|rev| rev.0)
+            .collect();
 
         // If there isn't a 10th item anyone is qualified no matter their score.
         let min_score = liveboard.get(10).map(|i| i.score).unwrap_or(0);

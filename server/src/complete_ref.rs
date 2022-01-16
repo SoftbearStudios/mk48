@@ -110,7 +110,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
                 })
                 .collect(),
             death_reason,
-            score: self.player.data.score,
+            score: self.player.score,
             world_radius: self.world.radius,
             terrain,
         }
@@ -139,7 +139,7 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteTrait<'a> for CompleteRef<'
 
     #[inline]
     fn score(&self) -> u32 {
-        self.player.data.score
+        self.player.score
     }
 
     #[inline]

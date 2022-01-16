@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::arena::Arena;
+use crate::core::DB_SESSION_TIMER_SECS;
 use crate::generate_id::{generate_id, generate_id_64};
 use crate::invitation::Invitation;
 use crate::notify_set::NotifySet;
@@ -11,6 +12,7 @@ use core_protocol::get_unix_time_now;
 use core_protocol::id::*;
 use core_protocol::name::{Location, PlayerAlias, Referrer};
 use core_protocol::UnixTime;
+use heapless::HistoryBuffer;
 use log::{debug, info, trace, warn};
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::HashSet;
@@ -18,53 +20,104 @@ use std::rc::Rc;
 
 pub struct Play {
     pub date_created: UnixTime,
+
+    /// If player joined a team, this date/time is used calculate seniority.
     pub date_join: Option<UnixTime>,
+
+    /// If play was stopped, this is when it happened.
     pub date_stop: Option<UnixTime>,
+
+    /// True if play was started via an invitation from another player.
     pub invited: bool,
+
+    /// The most recent score sent by game server, if any.
     pub score: Option<u32>, // e.g. 1234
+
+    /// True if player became captain of a team.
     pub team_captain: bool,
+
+    /// If player joined team, this is the team ID.
     pub team_id: Option<TeamId>,
 }
 
-#[allow(dead_code)]
 pub struct Session {
+    /// The most recent alias (pseudonym) of the player that owns this session.
     pub alias: PlayerAlias,
+
+    /// The ID of the arena that this session is connected to.
     pub arena_id: ArenaId,
-    pub bot: bool,
+
+    /// The chat context is used to filter profanity and detect toxicity.
     pub chat_context: rustrict::Context,
+
+    /// When this session was created.
     pub date_created: UnixTime,
+
+    /// If this session was ever dropped this is the most recent date/time it happened.
     pub date_drop: Option<UnixTime>,
+
+    /// If this session has ancestors, this is when the oldest was created.  Used to calculate retention.
     pub date_previous: Option<UnixTime>,
+
     /// When last called create_session.
     pub date_renewed: UnixTime,
+
+    /// If this session was terminated, this is when it happened.  A session is terminated
+    /// after 24 hours of inactivity.  After which, a new session ID is required to play.
     pub date_terminated: Option<UnixTime>,
-    /// Frames per second, as reported by the game client.
+
+    /// Frames per second, if reported by the game client.
     pub fps: Option<f32>,
+
+    // The ID of the game that this session is connected to.
     pub game_id: GameId,
+
     /// e.g. (001, 215, 912)
     pub location: Option<Location>,
-    // For recipient (even if NOT playing).
-    pub inbox: Vec<Rc<MessageDto>>,
-    /// Inbound invitation to consume (accept) when starting the next play.
+
+    // The inbox of messages that the player who owns this session will receive.
+    // Appended to even when NOT playing, so that the player has messages upon return.
+    pub inbox: HistoryBuffer<Rc<MessageDto>, 10>,
+
+    /// If player was invited, invitation to consume (accept) when starting next play.
     pub invitation: Option<Invitation>,
-    /// Previously created outbound invitation id (useful to prevent creating multiple).
+
+    /// If player created invitation, outbound invitation id (useful to prevent creating multiple).
     pub invitation_id: Option<InvitationId>,
+
+    /// Other players that were muted by player that owns this session.
     pub muted: HashSet<PlayerId>,
-    /// Prevent multiple reports from same user.
+
+    /// Prevent multiple abuse reports from same user.
     pub reported: HashSet<PlayerId>,
+
+    /// Whether this session is live, meaning that player is now (or recently was) playing.
     pub live: bool,
+
+    // The ID of the player that owns this session.
     pub player_id: PlayerId,
+
+    // A transcript of the recent plays in this session, used to calculate metrics.
     pub plays: Vec<Play>,
+
     // TODO: combine all previous into tuple, e.g. previous_session: Option<(ArenaId, SessionId, u32, UnixTime)>,
     pub previous_id: Option<SessionId>,
+
+    // The number of previous plays in this session beyond those already in "plays".
     pub previous_plays: u32,
+
+    // If the player got to the game by clicking on a referrer page, this is the abbreviated referrer URL.
     pub referrer: Option<Referrer>,
+
+    // The ID of the server that runs this session.
     pub server_id: Option<ServerId>,
+
+    // If known, the user agent (browser type) of the browser used by the player who owns this session.
     pub user_agent_id: Option<UserAgentId>,
-    /// For muter (even if NOT playing).
-    pub whisper_muted: NotifySet<PlayerId>,
+
     /// For joiner.
     pub whisper_joins: NotifySet<TeamId>,
+
     /// For captain.
     pub whisper_joiners: NotifySet<PlayerId>,
 }
@@ -91,13 +144,7 @@ impl Play {
 
     // Returns true if the player might be on the liveboard.
     pub fn exceeds_score(&self, min_score: u32) -> bool {
-        let mut result = false;
-        if let Some(score) = self.score {
-            if score >= min_score {
-                result = true;
-            }
-        }
-        result
+        self.score.map(|s| s >= min_score).unwrap_or(false)
     }
 }
 
@@ -106,7 +153,6 @@ impl Session {
     pub fn new(
         alias: PlayerAlias,
         arena_id: ArenaId,
-        bot: bool,
         date_previous: Option<UnixTime>,
         game_id: GameId,
         player_id: PlayerId,
@@ -119,7 +165,6 @@ impl Session {
         Self {
             alias,
             arena_id,
-            bot,
             chat_context: rustrict::Context::default(),
             date_created,
             date_drop: None,
@@ -128,7 +173,7 @@ impl Session {
             date_terminated: None,
             fps: None,
             game_id,
-            inbox: Vec::new(),
+            inbox: HistoryBuffer::new(),
             invitation: None,
             invitation_id: None,
             live: false,
@@ -142,7 +187,6 @@ impl Session {
             previous_plays: 0,
             server_id,
             user_agent_id,
-            whisper_muted: NotifySet::new(),
             whisper_joins: NotifySet::new(),
             whisper_joiners: NotifySet::new(),
         }
@@ -175,7 +219,8 @@ impl Session {
             })
     }
 
-    /// Terminate a session and stop all of its plays.
+    /// Terminate a session and stop all of its plays. Returns true if terminated now, false if already
+    /// terminated.
     pub fn terminate_session(&mut self) -> bool {
         if self.date_terminated.is_none() {
             let now = Some(get_unix_time_now());
@@ -241,6 +286,7 @@ impl Repo {
         None
     }
 
+    /// Generates a [`PlayerId`] and associates it with a [`SessionId`].
     pub fn create_entity(
         players: &mut HashMap<PlayerId, SessionId>,
         session_id: SessionId,
@@ -396,11 +442,9 @@ impl Repo {
                         "create_session(alias={:?}) => session={:?}, player={:?}",
                         &guest_alias, session_id, player_id
                     );
-                    let bot = false;
                     let mut session = Session::new(
                         guest_alias,
                         arena_id,
-                        bot,
                         date_previous,
                         game_id,
                         player_id,
@@ -512,7 +556,7 @@ impl Repo {
         false
     }
 
-    /// Iterates recently modified, non-bot sessions.
+    /// Iterates recently modified sessions.
     pub fn iter_recently_modified_sessions(
         &mut self,
         period: UnixTime,
@@ -523,10 +567,9 @@ impl Repo {
                 .sessions
                 .iter()
                 .filter_map(move |(session_id, session)| {
-                    if !session.bot
-                        && (session.date_renewed >= threshold
-                            || (session.date_terminated.is_some()
-                                && session.date_terminated.unwrap() >= threshold))
+                    if session.date_renewed >= threshold
+                        || (session.date_terminated.is_some()
+                            && session.date_terminated.unwrap() >= threshold)
                     {
                         Some((arena_id, *session_id, session))
                     } else {
@@ -540,7 +583,8 @@ impl Repo {
     pub fn prune_sessions(&mut self) {
         let now = get_unix_time_now();
         let date_dead = now - Self::DYING_DURATION_MILLIS;
-        const TWENTY_FOUR_HOURS_IN_MILLIS: u64 = 24 * 60 * 60 * 1000;
+        const ONE_HOUR_IN_MILLIS: u64 = 60 * 60 * 1000;
+        const TWO_DAYS_IN_MILLIS: u64 = 48 * ONE_HOUR_IN_MILLIS;
 
         for (_, arena) in Arena::iter_mut(&mut self.arenas) {
             let mut removable = vec![];
@@ -589,22 +633,29 @@ impl Repo {
                         }
                     }
                 } else if session.date_terminated.is_none() {
-                    // Terminate non-live sessions.
+                    // Terminate non-live sessions if they are at least 2 days old.
+                    // (The first day is to guarantee IDs are unique, and is also useful
+                    // for metrics; the second day is to speed up session creation.)
                     let elapsed_millis = now.saturating_sub(session.date_renewed);
-                    if elapsed_millis > TWENTY_FOUR_HOURS_IN_MILLIS {
+                    if elapsed_millis > TWO_DAYS_IN_MILLIS {
                         session.date_terminated = Some(now);
                     }
                 } else if let Some(date_terminated) = session.date_terminated {
-                    // Remove terminated sessions.
+                    // It is necessary to wait DB_SESSION_TIMER_SECS or more for
+                    // terminated sessions to be saved.
+                    debug_assert!(ONE_HOUR_IN_MILLIS > DB_SESSION_TIMER_SECS * 1000);
                     let elapsed_millis = now.saturating_sub(date_terminated);
-                    if elapsed_millis > TWENTY_FOUR_HOURS_IN_MILLIS {
-                        removable.push(*session_id);
+                    if elapsed_millis > ONE_HOUR_IN_MILLIS {
+                        removable.push((*session_id, session.player_id));
                     }
                 }
             } // for session
 
-            for session_id in removable {
+            for (session_id, player_id) in removable {
                 arena.sessions.remove(&session_id);
+                if self.players.get(&player_id) == Some(&session_id) {
+                    self.players.remove(&player_id);
+                }
             }
         } // for arena
     }
@@ -629,28 +680,21 @@ impl Repo {
         score: Option<u32>,
     ) {
         trace!("set_status(arena={:?}, session={:?})", arena_id, session_id);
-        let mut liveboard_changed = false;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
-                let liveboard_can_change = !session.bot || arena.rules.show_bots_on_liveboard;
-
                 if let Some(play) = session.plays.last_mut() {
                     if play.date_stop.is_none() {
                         if let Some(value) = location {
                             session.location = Some(value);
-                            liveboard_changed = liveboard_can_change;
                         }
                         if let Some(value) = score {
                             play.score = Some(value);
-                            liveboard_changed = liveboard_can_change;
+                            if play.exceeds_score(arena.liveboard_min_score) {
+                                arena.liveboard_changed = true;
+                            }
                         }
                     }
                 }
-            }
-        }
-        if liveboard_changed {
-            if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
-                arena.liveboard_changed = true;
             }
         }
     }
@@ -688,14 +732,10 @@ impl Repo {
         let mut result = None;
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
-                if !session.bot {
-                    debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
-                }
+                debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
                 let mut new_play = Play::new();
                 new_play.score = arena.rules.default_score;
-                if new_play.exceeds_score(arena.liveboard_min_score)
-                    && (!session.bot || arena.rules.show_bots_on_liveboard)
-                {
+                if new_play.exceeds_score(arena.liveboard_min_score) {
                     arena.liveboard_changed = true;
                 }
                 if invited {
@@ -737,16 +777,12 @@ impl Repo {
     pub fn stop_play(&mut self, arena_id: ArenaId, session_id: SessionId) {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
-                if !session.bot {
-                    debug!("stop_play(arena={:?}, session={:?})", arena_id, session_id);
-                }
+                debug!("stop_play(arena={:?}, session={:?})", arena_id, session_id);
                 if let Some(play) = session.plays.last_mut() {
                     if play.date_stop.is_none() {
                         play.date_stop = Some(get_unix_time_now());
                     }
-                    if play.exceeds_score(arena.liveboard_min_score)
-                        && (!session.bot || arena.rules.show_bots_on_liveboard)
-                    {
+                    if play.exceeds_score(arena.liveboard_min_score) {
                         // Even if session remains live, remove from liveboard when play stops.
                         arena.liveboard_changed = true;
                     }

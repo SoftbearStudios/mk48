@@ -126,11 +126,9 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Optio
                             if let Ok(Some(session_item)) = db_result {
                                 info!("populating cache with session from DB {:?}", session_item);
 
-                                let bot = false;
                                 let mut session = Session::new(
                                     session_item.alias,
                                     session_item.arena_id,
-                                    bot,
                                     session_item.date_previous,
                                     session_item.game_id,
                                     session_item.player_id,
@@ -272,7 +270,7 @@ impl Core {
                         leaderboard_initializer,
                         liveboard_initializer,
                         message_initializer,
-                        (player_count, player_initializer),
+                        player_initializer,
                         team_initializer,
                     )) = act.repo.get_initializers(client.arena_id.unwrap())
                     {
@@ -306,7 +304,6 @@ impl Core {
                         sent += 1;
                         log_err(addr.do_send(ObserverUpdate::Send {
                             message: ClientUpdate::PlayersUpdated {
-                                count: player_count,
                                 added: player_initializer.clone(),
                                 removed: Arc::new([]),
                             },
@@ -327,9 +324,7 @@ impl Core {
             if let Some((players_counted_added_or_removed, teams_added_or_removed)) =
                 act.repo.read_broadcasts()
             {
-                for (arena_id, (player_count, added, removed)) in
-                    players_counted_added_or_removed.iter()
-                {
+                for (arena_id, (added, removed)) in players_counted_added_or_removed.iter() {
                     found += 1;
                     for (addr, client) in act.clients.iter_mut() {
                         if let Some(client_arena_id) = client.arena_id {
@@ -337,7 +332,6 @@ impl Core {
                                 sent += 1;
                                 log_err(addr.do_send(ObserverUpdate::Send {
                                     message: ClientUpdate::PlayersUpdated {
-                                        count: *player_count,
                                         added: Arc::clone(added),
                                         removed: Arc::clone(removed),
                                     },

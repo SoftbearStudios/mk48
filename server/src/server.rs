@@ -13,6 +13,7 @@ use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
+use core_protocol::dto::RulesDto;
 use core_protocol::id::*;
 use game_server::context::{CoreStatus, PlayerTuple};
 use game_server::game_service::GameArenaService;
@@ -66,6 +67,26 @@ impl GameArenaService for Server {
         }
     }
 
+    fn get_rules(&self) -> RulesDto {
+        RulesDto {
+            default_score: Some(0),
+            leaderboard_min_players: 10,
+            team_size_max: 6,
+        }
+    }
+
+    fn player_joined(&mut self, #[allow(unused_variables)] player_tuple: &Arc<PlayerTuple<Self>>) {
+        #[cfg(debug_assertions)]
+        {
+            #[cfg(debug_assertions)]
+            use common::entity::EntityData;
+            #[cfg(debug_assertions)]
+            use common::util::level_to_score;
+
+            player_tuple.borrow_player_mut().score = level_to_score(EntityData::MAX_BOAT_LEVEL);
+        }
+    }
+
     fn player_command(&mut self, update: Self::Command, player: &Arc<PlayerTuple<Self>>) {
         if let Err(e) = update.as_command().apply(&mut self.world, player) {
             warn!("Command resulted in {}", e);
@@ -86,7 +107,7 @@ impl GameArenaService for Server {
         }
     }
 
-    fn player_left_game(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
+    fn player_left(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
         let borrow = player_tuple.borrow_player();
         if let Status::Alive { entity_index, .. } = borrow.data.status {
             drop(borrow);
@@ -136,11 +157,11 @@ impl GameArenaService for Server {
 
         player_entity.map(|e| CoreStatus {
             location: e.transform.position.extend(0.0),
-            score: e.borrow_player().data.score,
+            score: e.borrow_player().score,
         })
     }
 
-    /// tick runs one server tick.
+    /// update runs server ticks.
     fn update(&mut self, ticks: Ticks, counter: Ticks) {
         benchmark_scope!("tick");
 
@@ -158,8 +179,6 @@ impl GameArenaService for Server {
 
             benchmark::reset_all();
         }
-
-        //self.flush_limbo(ctx);
     }
 
     fn post_update(&mut self) {

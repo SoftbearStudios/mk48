@@ -15,7 +15,6 @@ use core_protocol::id::PeriodId;
 use core_protocol::id::*;
 use enum_iterator::IntoEnumIterator;
 use log::{debug, trace};
-use ringbuffer::RingBufferExt;
 use std::collections::hash_map::HashMap;
 use std::mem;
 use std::sync::Arc;
@@ -63,7 +62,7 @@ impl Repo {
         [Arc<[LeaderboardDto]>; PeriodId::VARIANT_COUNT],
         Arc<[LiveboardDto]>,
         Arc<[MessageDto]>,
-        (u32, Arc<[PlayerDto]>),
+        Arc<[PlayerDto]>,
         Arc<[TeamDto]>,
     )> {
         debug!("get_initializers()");
@@ -71,26 +70,21 @@ impl Repo {
         if let Some(arena) = Arena::get(&mut self.arenas, arena_id) {
             let leaderboard_initializer = arena.leaderboards.clone();
 
-            let (liveboard, _, _) = arena.get_liveboard(arena.rules.show_bots_on_liveboard);
+            let (liveboard, _, _) = arena.get_liveboard();
             let liveboard_initializer = liveboard.into();
 
             let message_initializer = arena
                 .newbie_messages
-                .iter()
+                .oldest_ordered()
                 .map(|rc| MessageDto::clone(rc))
                 .collect();
 
-            let mut player_count = 0;
             let mut players = vec![];
             for session in arena.sessions.values() {
                 if !session.live {
                     continue;
                 }
                 if let Some(play) = session.plays.last() {
-                    if !session.bot {
-                        player_count += 1;
-                    }
-
                     players.push(PlayerDto {
                         alias: session.alias,
                         player_id: session.player_id,
@@ -114,7 +108,7 @@ impl Repo {
                 leaderboard_initializer,
                 liveboard_initializer,
                 message_initializer,
-                (player_count, players_initializer),
+                players_initializer,
                 teams_initializer,
             ))
         } else {
@@ -123,14 +117,11 @@ impl Repo {
     }
 
     // Returns the liveboards for all arenas.
-    pub fn get_liveboards(
-        &self,
-        include_bots: bool,
-    ) -> Vec<(ArenaId, GameId, Vec<LiveboardDto>, bool)> {
+    pub fn get_liveboards(&self) -> Vec<(ArenaId, GameId, Vec<LiveboardDto>, bool)> {
         self.arenas
             .iter()
             .map(|(arena_id, arena)| {
-                let (liveboard, _, leaderboard_worthy) = arena.get_liveboard(include_bots);
+                let (liveboard, _, leaderboard_worthy) = arena.get_liveboard();
                 (*arena_id, arena.game_id, liveboard, leaderboard_worthy)
             })
             .collect()
@@ -145,7 +136,7 @@ impl Repo {
             }
             let mut player_count = 0;
             for (_, session) in arena.sessions.iter() {
-                if session.bot || session.date_terminated.is_some() || !session.live {
+                if session.date_terminated.is_some() || !session.live {
                     continue;
                 }
                 player_count += 1;
@@ -172,7 +163,7 @@ impl Repo {
                 continue;
             }
             for (_, session) in arena.sessions.iter() {
-                if !session.live || session.bot {
+                if !session.live {
                     continue;
                 }
                 player_count += 1;
@@ -247,36 +238,26 @@ impl Repo {
     pub fn read_broadcasts(
         &mut self,
     ) -> Option<(
-        Vec<(ArenaId, (u32, Arc<[PlayerDto]>, Arc<[PlayerId]>))>,
+        Vec<(ArenaId, (Arc<[PlayerDto]>, Arc<[PlayerId]>))>,
         Vec<(ArenaId, (Arc<[TeamDto]>, Arc<[TeamId]>))>,
     )> {
         trace!("read_broadcasts()");
 
         // ARC is used because the same message is sent to multiple observers.
-        let mut players_counted_added_or_removed = vec![];
+        let mut players_added_or_removed = vec![];
         let mut teams_added_or_removed = vec![];
 
         for (arena_id, arena) in Arena::iter_mut(&mut self.arenas) {
             if !(arena.broadcast_players.add.is_empty()
                 && arena.broadcast_players.remove.is_empty())
             {
-                let mut player_count = 0;
-
-                for (_, session) in arena.sessions.iter() {
-                    if session.live && !session.bot {
-                        player_count += 1;
-                    }
-                }
-
                 let mut added = vec![];
                 let mut count = 0;
 
                 if !arena.broadcast_players.add.is_empty() {
                     for session_id in arena.broadcast_players.add.iter() {
                         if let Some(session) = arena.sessions.get(session_id) {
-                            if !session.bot {
-                                count += 1;
-                            }
+                            count += 1;
                             if let Some(play) = session.plays.last() {
                                 added.push(PlayerDto {
                                     alias: session.alias,
@@ -298,9 +279,7 @@ impl Repo {
                     let mut count = 0;
                     for session_id in arena.broadcast_players.remove.iter() {
                         if let Some(session) = arena.sessions.get(session_id) {
-                            if !session.bot {
-                                count += 1;
-                            }
+                            count += 1;
                             removed.push(session.player_id);
                         }
                     }
@@ -310,8 +289,7 @@ impl Repo {
                     }
                 }
 
-                players_counted_added_or_removed
-                    .push((arena_id, (player_count, added.into(), removed.into())));
+                players_added_or_removed.push((arena_id, (added.into(), removed.into())));
             }
 
             if !(arena.broadcast_teams.add.is_empty() && arena.broadcast_teams.remove.is_empty()) {
@@ -341,10 +319,10 @@ impl Repo {
             }
         }
 
-        if players_counted_added_or_removed.is_empty() && teams_added_or_removed.is_empty() {
+        if players_added_or_removed.is_empty() && teams_added_or_removed.is_empty() {
             None
         } else {
-            Some((players_counted_added_or_removed, teams_added_or_removed))
+            Some((players_added_or_removed, teams_added_or_removed))
         }
     }
 
@@ -391,8 +369,7 @@ impl Repo {
 
             trace!("liveboard_changed for arena {:?}", arena_id);
 
-            let (current_liveboard, min_score, _) =
-                arena.get_liveboard(arena.rules.show_bots_on_liveboard);
+            let (current_liveboard, min_score, _) = arena.get_liveboard();
             arena.liveboard_min_score = min_score;
 
             let mut added = vec![];
@@ -483,7 +460,7 @@ impl Repo {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 messages_added = mem::take(&mut session.inbox)
-                    .iter()
+                    .oldest_ordered()
                     .map(|rc| MessageDto::clone(rc))
                     .collect();
                 joiners_added_or_removed = (

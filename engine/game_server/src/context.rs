@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::bot::BotZoo;
 use crate::game_service::GameArenaService;
 use actix::Recipient;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
@@ -19,8 +20,19 @@ pub type ClientAddr<G> = Recipient<ObserverUpdate<<G as GameArenaService>::Clien
 
 pub struct BotData<G: GameArenaService> {
     pub(crate) player_tuple: Arc<PlayerTuple<G>>,
-    pub(crate) last_status: Option<CoreStatus>,
+    /// Only Some during an update cycle.
+    pub(crate) action_buffer: Option<G::Command>,
     pub(crate) bot: G::Bot,
+}
+
+impl<G: GameArenaService> BotData<G> {
+    pub fn new(player_tuple: PlayerTuple<G>) -> Self {
+        Self {
+            bot: G::Bot::default(),
+            player_tuple: Arc::new(player_tuple),
+            action_buffer: None,
+        }
+    }
 }
 
 pub struct ClientData<G: GameArenaService> {
@@ -29,6 +41,18 @@ pub struct ClientData<G: GameArenaService> {
     pub(crate) limbo_expiry: Option<Instant>,
     pub(crate) last_status: Option<CoreStatus>,
     pub(crate) data: G::ClientData,
+}
+
+impl<G: GameArenaService> ClientData<G> {
+    pub fn new(session_id: SessionId, player_tuple: PlayerTuple<G>) -> Self {
+        Self {
+            player_tuple: Arc::new(player_tuple),
+            session_id,
+            limbo_expiry: None,
+            last_status: None,
+            data: G::ClientData::default(),
+        }
+    }
 }
 
 /// Player tuple contains the Player and the EntityExtension.
@@ -40,6 +64,15 @@ pub struct ClientData<G: GameArenaService> {
 pub struct PlayerTuple<G: GameArenaService> {
     pub player: AtomicRefCell<PlayerData<G>>,
     pub extension: G::PlayerExtension,
+}
+
+impl<G: GameArenaService> PlayerTuple<G> {
+    pub fn new(player: PlayerData<G>) -> Self {
+        PlayerTuple {
+            player: AtomicRefCell::new(player),
+            extension: G::PlayerExtension::default(),
+        }
+    }
 }
 
 impl<G: GameArenaService> PlayerTuple<G> {
@@ -75,7 +108,7 @@ pub struct Context<G: GameArenaService> {
     /// Wrapping counter.
     pub counter: Ticks,
     pub(crate) clients: HashMap<ClientAddr<G>, ClientData<G>>,
-    pub(crate) bots: HashMap<SessionId, BotData<G>>,
+    pub(crate) bots: BotZoo<G>,
 }
 
 /// The status of a player from the perspective of the core.
@@ -97,8 +130,24 @@ impl PartialEq for CoreStatus {
 #[derive(Debug)]
 pub struct PlayerData<G: GameArenaService> {
     pub player_id: PlayerId,
-    pub bot: bool,
     pub team_id: Option<TeamId>,
+    pub score: u32,
     pub invitation: Option<InvitationDto>,
     pub data: G::PlayerData,
+}
+
+impl<G: GameArenaService> PlayerData<G> {
+    pub fn new(player_id: PlayerId, invitation: Option<InvitationDto>) -> Self {
+        Self {
+            player_id,
+            team_id: None,
+            score: 0,
+            invitation,
+            data: G::PlayerData::default(),
+        }
+    }
+
+    pub fn is_bot(&self) -> bool {
+        self.player_id.is_bot()
+    }
 }

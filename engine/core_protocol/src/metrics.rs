@@ -54,6 +54,64 @@ impl Add for DiscreteMetric {
     }
 }
 
+/// A metric tracking the maximum and minimum of something discrete.
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+pub struct DiscreteExtremaMetric {
+    pub count: u32,
+    pub min: u32,
+    pub max: u32,
+}
+
+impl DiscreteExtremaMetric {
+    pub fn push(&mut self, sample: u32) {
+        if self.count == 0 {
+            self.min = sample;
+            self.max = sample;
+        } else if self.count < u32::MAX {
+            self.min = self.min.min(sample);
+            self.max = self.max.max(sample);
+            self.count += 1;
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+struct DiscreteExtremaMetricSummary {
+    pub min: f32,
+    pub max: f32,
+}
+
+impl Metric for DiscreteExtremaMetric {
+    type Summary = Self;
+    type DataPoint = (u32, u32);
+
+    fn summarize(&self) -> Self::Summary {
+        *self
+    }
+
+    fn data_point(&self) -> Self::DataPoint {
+        (self.min, self.max)
+    }
+}
+
+impl Add for DiscreteExtremaMetric {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.count == 0 {
+            rhs
+        } else if rhs.count == 0 {
+            self
+        } else {
+            Self {
+                count: self.count.saturating_add(rhs.count),
+                min: self.min.min(rhs.min),
+                max: self.max.max(rhs.max),
+            }
+        }
+    }
+}
+
 /// A metric tracking the maximum and minimum of something.
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct ExtremaMetric {
@@ -64,14 +122,12 @@ pub struct ExtremaMetric {
 
 impl ExtremaMetric {
     pub fn push(&mut self, sample: f32) {
-        if self.count < u32::MAX {
-            if self.count == 0 {
-                self.min = sample;
-                self.max = sample;
-            } else {
-                self.min = self.min.min(sample);
-                self.max = self.max.max(sample);
-            }
+        if self.count == 0 {
+            self.min = sample;
+            self.max = sample;
+        } else if self.count < u32::MAX {
+            self.min = self.min.min(sample);
+            self.max = self.max.max(sample);
             self.count += 1;
         }
     }

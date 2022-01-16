@@ -105,7 +105,7 @@ impl GameClient for Mk48Game {
             saved_camera: None,
             control_rate_limiter: RateLimiter::new(0.1),
             ui_props_rate_limiter: RateLimiter::new(0.1),
-            alarm_fast_rate_limiter: RateLimiter::new(10.0), // TODO: is this an aspect of rendering or of the game?
+            alarm_fast_rate_limiter: RateLimiter::new(10.0),
             fps_counter: FpsMonitor::new(5.0),
         }
     }
@@ -395,7 +395,7 @@ impl GameClient for Mk48Game {
             {
                 // Update team_proximity.
                 if let Some(player_id) = interp.model.player_id() {
-                    if let Some(player) = core_state.players.get(&player_id) {
+                    if let Some(player) = core_state.only_players().get(&player_id) {
                         if let Some(team_id) = player.team_id {
                             let distance =
                                 camera.distance_squared(interp.model.transform().position);
@@ -775,9 +775,8 @@ impl GameClient for Mk48Game {
                         }
 
                         // Name
-                        let text = if let Some(player) = core_state
-                            .players
-                            .get(contact.player_id().as_ref().unwrap())
+                        let text = if let Some(player) =
+                            core_state.player_or_bot(contact.player_id().unwrap())
                         {
                             if let Some(team) = player
                                 .team_id
@@ -1097,14 +1096,14 @@ impl GameClient for Mk48Game {
             }
         };
 
+        if let Some(control) = control {
+            context.send_to_game(control);
+        }
+
         self.fps_counter.update(elapsed_seconds);
 
         if self.ui_props_rate_limiter.update_ready(elapsed_seconds) {
             self.update_ui_props(context, status, &team_proximity);
-        }
-
-        if let Some(control) = control {
-            context.send_to_game(control);
         }
     }
 

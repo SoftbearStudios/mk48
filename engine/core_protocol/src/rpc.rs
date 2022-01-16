@@ -107,10 +107,6 @@ pub enum ClientRequest {
 // Server requests are from the game server to the core service.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ServerRequest {
-    BotRequest {
-        session_id: SessionId,
-        request: ClientRequest,
-    },
     // This should be called when a web socket it dropped regardless of whether client is playing.
     DropSession {
         session_id: SessionId,
@@ -231,11 +227,9 @@ pub enum ClientUpdate {
         player_id: PlayerId,
     },
     PlayersUpdated {
-        /// Total count, *excluding* bots.
-        count: u32,
-        /// Added and/or changed players, including bots.
+        /// Added and/or changed players.
         added: Arc<[PlayerDto]>,
-        /// Removed players, including bots.
+        /// Removed players.
         removed: Arc<[PlayerId]>,
     },
     RegionsUpdated {
@@ -280,10 +274,6 @@ pub enum ServerUpdate {
     ArenaStopped,
     ArmageddonStarted {
         arena_id: ArenaId,
-    },
-    BotReady {
-        player_id: PlayerId,
-        session_id: SessionId,
     },
     MembersChanged {
         changes: Arc<[MemberDto]>,

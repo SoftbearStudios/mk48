@@ -23,19 +23,26 @@ pub trait GameArenaService: 'static + Unpin + Sized + Sync {
     type Bot: 'static + Bot<Self>;
     type ClientData: 'static + Default + Unpin + Send + Sync;
     type ClientUpdate: 'static + Message<Result = ()> + Send + Serialize;
-    type Command: 'static + DeserializeOwned + Send;
+    type Command: 'static + DeserializeOwned + Send + Unpin;
     type PlayerData: 'static + Default + Unpin + Send + Sync + Debug;
     type PlayerExtension: 'static + Default + Unpin + Send + Sync;
-    type BotUpdate<'a>;
+    type BotUpdate<'a>
+    where
+        Self: 'a;
+
+    fn new(min_players: usize) -> Self;
 
     fn get_rules(&self) -> RulesDto {
         RulesDto::default()
     }
 
-    fn new(min_players: usize) -> Self;
+    /// Called when a player joins the game.
+    fn player_joined(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
+    /// Called when a player issues a command.
     fn player_command(&mut self, update: Self::Command, player: &Arc<PlayerTuple<Self>>);
 
+    /// Called when a player's [`TeamId`] changes.
     fn player_changed_team(
         &mut self,
         _player_tuple: &Arc<PlayerTuple<Self>>,
@@ -43,7 +50,8 @@ pub trait GameArenaService: 'static + Unpin + Sized + Sync {
     ) {
     }
 
-    fn player_left_game(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
+    /// Called when a player leaves the game.
+    fn player_left(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
     // TODO: this leaves the timing of updates to the infrastructure.
     fn get_client_update(

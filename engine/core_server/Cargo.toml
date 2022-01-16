@@ -30,12 +30,12 @@ server_util = {path="../server_util" }
 enum-iterator = "0.7.0"
 env_logger = "0.9"
 futures = "0.3"
+heapless = {git="https://github.com/finnbear/heapless.git", branch="feature/historybuf_ordered_iterator"}
 rand = "0.8"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 lazy_static = "1.4"
 rustrict = {version = "0.3.5", features=["context"], default-features=false}
-ringbuffer = "0.8"
 derive_more = "0.99"
 log = "0.4"
 aws-config = { git = "https://github.com/awslabs/aws-sdk-rust", branch = "main", package = "aws-config" }

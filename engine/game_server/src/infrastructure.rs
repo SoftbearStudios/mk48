@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::bot::BotZoo;
 use crate::context::Context;
 use crate::context::PlayerData;
-use crate::context::{BotData, ClientAddr, ClientData, CoreStatus, PlayerTuple};
-use crate::game_service::{Bot, GameArenaService};
+use crate::context::{ClientAddr, ClientData, CoreStatus, PlayerTuple};
+use crate::game_service::GameArenaService;
 use crate::protocol::Authenticate;
 use actix::AsyncContext;
 use actix::{
     Actor, ActorFutureExt, Addr, Context as ActorContext, ContextFutureSpawner, Handler,
     ResponseActFuture, WrapFuture,
 };
-use atomic_refcell::AtomicRefCell;
 use common_util::ticks::Ticks;
 use core_protocol::dto::InvitationDto;
 use core_protocol::id::{PlayerId, RegionId, ServerId, SessionId};
@@ -25,7 +25,6 @@ use server_util::observer::{ObserverMessage, ObserverUpdate};
 use server_util::ups_monitor::UpsMonitor;
 use std::collections::HashMap;
 use std::process;
-use std::sync::Arc;
 use std::time::Instant;
 
 pub struct Infrastructure<G: GameArenaService> {
@@ -34,8 +33,6 @@ pub struct Infrastructure<G: GameArenaService> {
     core: Addr<Core>,
     server_id: Option<ServerId>,
     ups_monitor: UpsMonitor,
-    // Settings
-    min_players: usize,
 }
 
 impl<G: GameArenaService> Actor for Infrastructure<G> {
@@ -58,8 +55,6 @@ impl<G: GameArenaService> Actor for Infrastructure<G> {
             .into_actor(self)
             .then(move |res, self2, ctx| {
                 debug!("register resulted in {:?}", res);
-                let mut rules = self2.service.get_rules();
-                rules.bot_min = self2.min_players as u32;
                 self2
                     .core
                     .send(ObserverMessage::<ServerRequest, ServerUpdate, _>::Request {
@@ -67,7 +62,7 @@ impl<G: GameArenaService> Actor for Infrastructure<G> {
                         request: ServerRequest::StartArena {
                             game_id: G::GAME_ID,
                             region: RegionId::Usa,
-                            rules: Some(rules),
+                            rules: Some(self2.service.get_rules()),
                             saved_arena_id: None,
                             server_id: self2.server_id,
                         },
@@ -106,22 +101,23 @@ impl<G: GameArenaService> Infrastructure<G> {
                 arena_id: None,
                 counter: Ticks::ZERO,
                 clients: HashMap::new(),
-                bots: HashMap::new(),
+                bots: BotZoo::new(min_players, if min_players == 0 { 0 } else { 60 }),
             },
             ups_monitor: UpsMonitor::new(),
             service,
-            min_players,
         }
     }
 
     pub fn update(&mut self, ctx: &mut <Infrastructure<G> as Actor>::Context) {
-        let _now = Instant::now();
-
         self.context.counter = self.context.counter.wrapping_add(Ticks::ONE);
+
+        self.context
+            .bots
+            .update_count(self.context.clients.len(), &mut self.service);
 
         self.service.update(Ticks::ONE, self.context.counter);
 
-        let core = self.core.to_owned();
+        let core = &self.core;
         let addr = ctx.address();
         let counter = self.context.counter;
 
@@ -146,7 +142,7 @@ impl<G: GameArenaService> Infrastructure<G> {
 
                     let core_status = service.get_core_status(&client_data.player_tuple);
                     Self::update_core_status(
-                        &core,
+                        core,
                         &addr,
                         client_data.session_id,
                         &mut client_data.last_status,
@@ -156,35 +152,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             );
         }
 
-        let bot_actions: HashMap<SessionId, Option<G::Command>> = {
-            let service = &self.service;
-
-            self.context
-                .bots
-                .par_iter_mut()
-                .map(|(session_id, bot_data): (&SessionId, &mut BotData<G>)| {
-                    let update = service.get_bot_update(counter, &bot_data.player_tuple);
-                    (
-                        *session_id,
-                        bot_data
-                            .bot
-                            .update(update, bot_data.player_tuple.player.borrow().player_id),
-                    )
-                })
-                .collect()
-        };
-
-        for (session_id, action) in bot_actions {
-            let bot = self.context.bots.get_mut(&session_id).unwrap();
-            if let Some(command) = action {
-                self.service.player_command(command, &bot.player_tuple);
-            } else {
-                self.service.player_left_game(&bot.player_tuple);
-            }
-
-            let core_status = self.service.get_core_status(&bot.player_tuple);
-            Self::update_core_status(&core, &addr, session_id, &mut bot.last_status, core_status);
-        }
+        self.context.bots.update(counter, &mut self.service);
 
         self.service.post_update();
 
@@ -237,7 +205,7 @@ impl<G: GameArenaService> Infrastructure<G> {
                     .map(|exp| now >= exp)
                     .unwrap_or(false)
         }) {
-            self.service.player_left_game(&client_data.player_tuple);
+            self.service.player_left(&client_data.player_tuple);
 
             Self::update_core_status(
                 &self.core,
@@ -348,26 +316,14 @@ impl<G: GameArenaService>
                     self.context.clients.insert(observer, client_data);
                 } else {
                     // Create a new player.
-                    self.context.clients.insert(
-                        observer,
-                        ClientData {
-                            // TODO: Invitation
-                            player_tuple: Arc::new(PlayerTuple {
-                                player: AtomicRefCell::new(PlayerData {
-                                    player_id: payload.1,
-                                    bot: false,
-                                    team_id: None,
-                                    invitation: payload.2,
-                                    data: G::PlayerData::default(),
-                                }),
-                                extension: G::PlayerExtension::default(),
-                            }),
-                            session_id: payload.0,
-                            limbo_expiry: None,
-                            last_status: None,
-                            data: G::ClientData::default(),
-                        },
+                    let client_data = ClientData::new(
+                        payload.0,
+                        PlayerTuple::new(PlayerData::new(payload.1, payload.2)),
                     );
+
+                    self.service.player_joined(&client_data.player_tuple);
+
+                    self.context.clients.insert(observer, client_data);
                 }
             }
             ObserverMessage::Unregister { observer } => {
@@ -440,32 +396,6 @@ impl<G: GameArenaService> Handler<ObserverUpdate<ServerUpdate>> for Infrastructu
                         }
                     }
                      */
-                }
-                ServerUpdate::BotReady {
-                    session_id,
-                    player_id,
-                } => {
-                    self.context
-                        .bots
-                        .entry(session_id)
-                        .or_insert_with(|| BotData {
-                            bot: G::Bot::default(),
-                            player_tuple: Arc::new(PlayerTuple {
-                                player: AtomicRefCell::new(PlayerData {
-                                    player_id,
-                                    bot: true,
-                                    team_id: None,
-                                    invitation: None,
-                                    data: G::PlayerData::default(),
-                                }),
-                                extension: G::PlayerExtension::default(),
-                            }),
-                            last_status: None,
-                        })
-                        .player_tuple
-                        .player
-                        .borrow_mut()
-                        .player_id = player_id;
                 }
             }
         }

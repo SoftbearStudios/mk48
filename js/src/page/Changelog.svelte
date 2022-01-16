@@ -14,11 +14,16 @@
 
 	<h2>2021</h2>
 
-	<h3>1/15/2022</h3>
+	<h3>1/16/2022</h3>
 
 	<ul>
-		<li>Fix air-dropped homing torpedoes.</li>
-		<li>Fix nickname trimming.</li>
+		<li>Depth charges now explode when in proximity of a submarine.</li>
+		<li>Fix air-dropped homing torpedoes seeking out-of-range targets.</li>
+		<li>Rocket torpedoes can be aimed easier.</li>
+		<li>Aircraft and rocket torpedoes deploy closer to target.</li>
+		<li>Fix automatic nickname trimming.</li>
+		<li>Restore support for certain old devices without BigInteger support.</li>
+		<li>Can no longer launch aircraft while underwater.</li>
 	</ul>
 
 	<h3>1/13/2022</h3>

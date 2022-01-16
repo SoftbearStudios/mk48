@@ -138,6 +138,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                         }
                     }
                 };
+                let mut arbitrary = true;
 
                 let mut validations = Vec::new();
 
@@ -163,17 +164,17 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                                         });
                                     }
                                 }
-                                NestedMeta::Lit(Lit::Str(s)) => {
-                                    let val = s.value();
-                                    match val.as_str() {
-                                        "finite" => {
-                                            validations.push(quote! {
-                                                if !value.is_finite() {
-                                                    return None;
-                                                }
-                                            });
-                                        }
-                                        _ => panic!("Unexpected {}", val),
+                                NestedMeta::Meta(Meta::Path(path)) => {
+                                    if path.is_ident("finite") {
+                                        validations.push(quote! {
+                                            if !value.is_finite() {
+                                                return None;
+                                            }
+                                        });
+                                    } else if path.is_ident("no_serde_wasm_bindgen") {
+                                        arbitrary = false;
+                                    } else {
+                                        panic!("Unexpected path");
                                     }
                                 }
                                 _ => panic!("Expected nested name-value pair"),
@@ -196,16 +197,18 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                 getters.push(getter);
                 setters.push(setter);
                 validators.push(validator);
-                arbitrary_getters.push(quote! {
-                    #ident_string => serde_wasm_bindgen::to_value(&self.#getter_name()).unwrap_or(wasm_bindgen::JsValue::NULL),
-                });
-                arbitrary_setters.push(quote! {
-                    #ident_string => {
-                        if let Ok(value) = serde_wasm_bindgen::from_value(value) {
-                            self.#setter_name(value, local_storage);
+                if arbitrary {
+                    arbitrary_getters.push(quote! {
+                        #ident_string => serde_wasm_bindgen::to_value(&self.#getter_name()).unwrap_or(wasm_bindgen::JsValue::NULL),
+                    });
+                    arbitrary_setters.push(quote! {
+                        #ident_string => {
+                            if let Ok(value) = serde_wasm_bindgen::from_value(value) {
+                                self.#setter_name(value, local_storage);
+                            }
                         }
-                    }
-                })
+                    });
+                }
             }
 
             let output = quote! {

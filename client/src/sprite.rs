@@ -7,6 +7,7 @@ use common::transform::Transform;
 use glam::Vec2;
 use std::cmp::Ordering;
 
+/// Rendering information of a sprite that may be sorted relative to other sprites.
 pub struct SortableSprite {
     pub alpha: f32,
     pub altitude: f32,
@@ -18,6 +19,7 @@ pub struct SortableSprite {
 }
 
 impl SortableSprite {
+    /// Creates from an entity (contact).
     pub fn new_entity(
         entity_id: EntityId,
         entity_type: EntityType,
@@ -37,6 +39,7 @@ impl SortableSprite {
         }
     }
 
+    /// Creates from the child of an entity, i.e. a turret.
     pub fn new_child_entity(
         entity_id: EntityId,
         parent_type: EntityType,
@@ -49,6 +52,7 @@ impl SortableSprite {
         Self::new_entity(entity_id, entity_type, transform, altitude, alpha)
     }
 
+    /// Creates from an animation frame.
     pub fn new_animation(animation: &Animation, time_seconds: f32) -> Self {
         Self {
             alpha: 1.0,
@@ -61,7 +65,8 @@ impl SortableSprite {
         }
     }
 
-    pub fn entity_height(entity_type: EntityType) -> f32 {
+    /// Depth contribution of entity type, for sorting.
+    fn entity_height(entity_type: EntityType) -> f32 {
         entity_type.data().length * 0.0001
     }
 }

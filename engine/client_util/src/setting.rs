@@ -31,7 +31,9 @@ impl Settings for () {
 pub(crate) struct CommonSettings {
     /// Not manually set by the player.
     pub arena_id: Option<ArenaId>,
-    /// Not manually set by the player.
+    /// Not manually set by the player. Not accessible via arbitrary getter/setter as doing so would
+    /// pull BigUint64Array into the JS shim, invalidating compatibility with old devices.
+    #[setting(no_serde_wasm_bindgen)]
     pub session_id: Option<SessionId>,
     /// Whether to set antialias rendering option.
     #[setting(default = "true")]

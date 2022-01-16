@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::id::PlayerId;
 use arrayvec::ArrayString;
 use glam::Vec3;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -19,6 +21,13 @@ pub struct Referrer(pub ArrayString<16>);
 pub struct SurveyDetail(pub ArrayString<384>);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TeamName(ArrayString<12>);
+
+lazy_static! {
+    static ref BOT_NAMES: Box<[&'static str]> = include_str!("./famous_bots.txt")
+        .split('\n')
+        .filter(|s| !s.is_empty() && s.len() <= PlayerAlias::capacity())
+        .collect();
+}
 
 /// A player's alias (not their real name).
 impl PlayerAlias {
@@ -48,6 +57,12 @@ impl PlayerAlias {
 
         #[cfg(not(feature = "server"))]
         Self(slice_up_to_array_string(str))
+    }
+
+    pub fn from_bot_player_id(player_id: PlayerId) -> Self {
+        //debug_assert!(player_id.is_bot());
+        let names = &BOT_NAMES;
+        Self::new(names[player_id.0.get() as usize % names.len()])
     }
 
     pub fn as_str(&self) -> &str {

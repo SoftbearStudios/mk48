@@ -117,7 +117,10 @@ impl Contact {
             let guidance = *self.guidance();
             let max_speed = match entity_type.data().sub_kind {
                 // Wait until risen to surface.
-                EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::Sam
+                EntitySubKind::Missile
+                | EntitySubKind::Rocket
+                | EntitySubKind::RocketTorpedo
+                | EntitySubKind::Sam
                     if self.altitude().is_submerged() =>
                 {
                     EntityData::SURFACING_PROJECTILE_SPEED_LIMIT

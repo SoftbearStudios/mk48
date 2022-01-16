@@ -103,8 +103,6 @@ pub struct Player {
     pub flags: Flags,
     /// Hints from client.
     pub hint: Hint,
-    /// Current score.
-    pub score: u32,
     /// Current status e.g. Alive, Dead, or Spawning.
     pub status: Status,
 }
@@ -112,18 +110,9 @@ pub struct Player {
 impl Default for Player {
     /// new allocates a player with Status::Spawning.
     fn default() -> Self {
-        #[cfg(debug_assertions)]
-        use common::entity::EntityData;
-        #[cfg(debug_assertions)]
-        use common::util::level_to_score;
-
         Self {
             flags: Flags::default(),
             hint: Hint::default(),
-            #[cfg(debug_assertions)]
-            score: level_to_score(EntityData::MAX_BOAT_LEVEL),
-            #[cfg(not(debug_assertions))]
-            score: 0,
             status: Status::Spawning {
                 time: Instant::now(),
             },

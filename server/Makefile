@@ -10,6 +10,9 @@ all: debug_core
 debug_core:
 	RUST_BACKTRACE=1 cargo run -- --debug-core debug -p 0 --database-read-only
 
+debug_bots:
+	RUST_BACKTRACE=1 cargo run --release -- -p 50000 --database-read-only
+
 ssh:
 	ssh $(SSH_OPTS) root@mk48.io
 

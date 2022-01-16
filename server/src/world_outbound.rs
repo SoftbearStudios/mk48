@@ -3,6 +3,7 @@
 
 use crate::complete_ref::CompleteRef;
 use crate::contact_ref::ContactRef;
+use crate::entity::Entity;
 use crate::player::Status;
 use crate::server::Server;
 use crate::world::World;
@@ -241,7 +242,10 @@ impl World {
 
                     if data.kind == EntityKind::Weapon
                         && player_entity.is_some()
-                        && entity.is_in_close_proximity_to(player_entity.as_ref().unwrap())
+                        && entity.is_in_proximity_to(
+                            player_entity.as_ref().unwrap(),
+                            Entity::CLOSE_PROXIMITY,
+                        )
                     {
                         // Give players a fighting chance by showing mines that are attracted
                         // towards them.

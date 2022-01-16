@@ -10,7 +10,6 @@
 pub mod admin;
 pub mod app;
 mod arena;
-mod bot;
 mod chat;
 pub mod client;
 pub mod core;
@@ -24,6 +23,3 @@ pub mod server;
 mod session;
 mod team;
 mod user_agent;
-
-#[macro_use]
-extern crate lazy_static;

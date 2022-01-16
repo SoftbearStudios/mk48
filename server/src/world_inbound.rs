@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
-use crate::player::{Player, Status};
+use crate::player::Status;
 use crate::protocol::*;
 use crate::server::Server;
 use crate::world::World;
@@ -31,7 +31,7 @@ impl CommandTrait for Spawn {
             return Err("cannot spawn while already alive");
         }
 
-        if !self.entity_type.can_spawn_as(player.bot) {
+        if !self.entity_type.can_spawn_as(player.is_bot()) {
             return Err("cannot spawn as given entity type");
         }
 
@@ -195,9 +195,10 @@ impl CommandTrait for Fire {
             let armament_entity_data = armament.entity_type.data();
 
             if entity.altitude.is_submerged() {
-                // Submerged submarine
+                // Submerged submarine or former submarine.
                 if armament_entity_data.sub_kind == EntitySubKind::Shell
                     || armament_entity_data.sub_kind == EntitySubKind::Sam
+                    || armament_entity_data.kind == EntityKind::Aircraft
                 {
                     return Err("cannot fire provided armament while submerged");
                 }
@@ -263,7 +264,7 @@ impl CommandTrait for Fire {
 
                 // Some weapons experience random deviation on launch
                 let deviation = match armament_entity_data.sub_kind {
-                    EntitySubKind::Rocket => 0.05,
+                    EntitySubKind::Rocket | EntitySubKind::RocketTorpedo => 0.05,
                     EntitySubKind::Shell => 0.01,
                     _ => 0.03,
                 };
@@ -309,7 +310,7 @@ impl CommandTrait for Pay {
             let pay = 10; // Value of coin.
             let withdraw = pay * 2; // Payment has 50% efficiency.
 
-            if player.data.score < level_to_score(entity.data().level) + withdraw {
+            if player.score < level_to_score(entity.data().level) + withdraw {
                 return Err("insufficient funds");
             }
 
@@ -322,7 +323,7 @@ impl CommandTrait for Pay {
 
             if world.spawn_here_or_nearby(payment, 1.0, None) {
                 // Payment successfully spawned, withdraw funds.
-                player.data.score -= withdraw;
+                player.score -= withdraw;
             }
 
             Ok(())
@@ -352,13 +353,13 @@ impl CommandTrait for Upgrade {
         player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
         let mut player = player_tuple.borrow_player_mut();
-        let Player { status, score, .. } = &mut player.data;
+        let status = &mut player.data.status;
 
         if let Status::Alive { entity_index, .. } = status {
             let entity = &mut world.entities[*entity_index];
             if !entity
                 .entity_type
-                .can_upgrade_to(self.entity_type, *score, player.bot)
+                .can_upgrade_to(self.entity_type, player.score, player.is_bot())
             {
                 return Err("cannot upgrade to provided entity type");
             }

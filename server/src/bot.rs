@@ -233,6 +233,7 @@ impl Bot {
                                         | EntitySubKind::Plane
                                         | EntitySubKind::Heli
                                         | EntitySubKind::DepthCharge
+                                        | EntitySubKind::RocketTorpedo
                                 )
                             } else {
                                 matches!(

@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::client::ClientState;
 use crate::core::*;
 use crate::repo::*;
 use actix::prelude::*;
@@ -98,25 +97,6 @@ impl Core {
                 }
             }
 
-            // Notify servers of any new bots.  Do this regardless of whether there are players,
-            // because bots are required even if no players have joined yet (otherwise bots will all
-            // join the moment the first player does, which has negative side effects).
-            for (addr, server) in act.servers.iter() {
-                if server.arena_id.is_none() {
-                    continue;
-                }
-                if let Some(bots) = act.repo.read_available_bots(server.arena_id.unwrap()) {
-                    for (player_id, session_id) in bots {
-                        log_err(addr.do_send(ObserverUpdate::Send {
-                            message: ServerUpdate::BotReady {
-                                player_id,
-                                session_id,
-                            },
-                        }))
-                    }
-                }
-            }
-
             // Notify servers of armageddon.
             if act.repo.read_armageddon() {
                 for (addr, server) in act.servers.iter() {
@@ -139,20 +119,6 @@ impl Repo {
     ) -> Result<ServerUpdate, &'static str> {
         let mut result = Err("server request failed");
         match request {
-            ServerRequest::BotRequest {
-                session_id,
-                request,
-            } => {
-                // TODO: validate that session_id is actually a bot!
-                let mut client = ClientState {
-                    arena_id: server.arena_id,
-                    newbie: false,
-                    session_id: Some(session_id),
-                    ip_addr: None,
-                    user_agent_id: None,
-                };
-                let _ = self.handle_client_sync(&mut client, request, None);
-            }
             ServerRequest::DropSession { session_id } => {
                 if let Some(arena_id) = server.arena_id {
                     self.drop_session(arena_id, session_id);

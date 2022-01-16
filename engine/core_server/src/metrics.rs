@@ -23,6 +23,9 @@ const MINUTE_IN_MILLIS: u64 = 60000;
 
 #[derive(Clone, Debug, Default, Add, Deserialize, Serialize)]
 pub struct Metrics {
+    /// Number of active abuse reports.
+    #[serde(default)]
+    pub abuse_reports: DiscreteMetric,
     /// How many arenas are in cache.
     #[serde(default)]
     pub arenas_cached: DiscreteMetric,
@@ -47,7 +50,7 @@ pub struct Metrics {
     /// Ratio of new players who were invited to new players who were not.
     #[serde(default)]
     pub invited: RatioMetric,
-    /// Ratio of players with FPS below 22 to all players.
+    /// Ratio of players with FPS below 24 to all players.
     #[serde(default)]
     pub low_fps: RatioMetric,
     /// Minutes per completed play (a measure of engagement).
@@ -65,6 +68,9 @@ pub struct Metrics {
     /// Ratio of previous players that leave without playing (e.g. to peek at player count).
     #[serde(default)]
     pub peek: RatioMetric,
+    /// How many players (for now, [`PlayerId`]) are in memory cache.
+    #[serde(default)]
+    pub players_cached: DiscreteMetric,
     /// Plays per session (a measure of engagement).
     #[serde(default)]
     pub plays_per_session: ContinuousExtremaMetric,
@@ -74,9 +80,6 @@ pub struct Metrics {
     /// Percent of available server RAM required by service.
     #[serde(default)]
     pub ram: ContinuousExtremaMetric,
-    /// Number of active reports.
-    #[serde(default)]
-    pub reports: DiscreteMetric,
     /// Player retention in days.
     #[serde(default)]
     pub retention_days: ContinuousExtremaMetric,
@@ -106,6 +109,7 @@ pub struct Metrics {
 impl Metrics {
     pub fn summarize(&self) -> MetricsSummaryDto {
         MetricsSummaryDto {
+            abuse_reports: self.abuse_reports.summarize(),
             arenas_cached: self.arenas_cached.summarize(),
             bounce: self.bounce.summarize(),
             concurrent: self.concurrent.summarize(),
@@ -120,6 +124,7 @@ impl Metrics {
             new: self.new.summarize(),
             no_referrer: self.no_referrer.summarize(),
             peek: self.peek.summarize(),
+            players_cached: self.players_cached.summarize(),
             plays_per_session: self.plays_per_session.summarize(),
             plays_total: self.plays_total.summarize(),
             ram: self.ram.summarize(),
@@ -129,7 +134,6 @@ impl Metrics {
             sessions_cached: self.sessions_cached.summarize(),
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
-            reports: self.reports.summarize(),
             ups: self.ups.summarize(),
             uptime: self.uptime.summarize(),
         }
@@ -137,6 +141,7 @@ impl Metrics {
 
     pub fn data_point(&self) -> MetricsDataPointDto {
         MetricsDataPointDto {
+            abuse_reports: self.abuse_reports.data_point(),
             arenas_cached: self.arenas_cached.data_point(),
             bounce: self.bounce.data_point(),
             concurrent: self.concurrent.data_point(),
@@ -151,6 +156,7 @@ impl Metrics {
             new: self.new.data_point(),
             no_referrer: self.no_referrer.data_point(),
             peek: self.peek.data_point(),
+            players_cached: self.players_cached.data_point(),
             plays_per_session: self.plays_per_session.data_point(),
             plays_total: self.plays_total.data_point(),
             ram: self.ram.data_point(),
@@ -159,7 +165,6 @@ impl Metrics {
             sessions_cached: self.sessions_cached.data_point(),
             teamed: self.teamed.data_point(),
             toxicity: self.toxicity.data_point(),
-            reports: self.reports.data_point(),
             ups: self.ups.data_point(),
             uptime: self.uptime.data_point(),
         }
@@ -207,17 +212,12 @@ impl Repo {
         debug!("get_game_ids()");
 
         let mut hash: HashMap<GameId, u32> = HashMap::new();
-        let mut total = 0;
+        let mut total = 0u32;
         for (_, arena) in Arena::iter(&self.arenas) {
             let count = hash.entry(arena.game_id).or_insert(0);
 
-            for (_, session) in arena.sessions.iter() {
-                if session.bot {
-                    continue;
-                }
-                total += 1;
-                *count += 1;
-            }
+            total = total.saturating_add(arena.sessions.len() as u32);
+            *count = count.saturating_add(arena.sessions.len() as u32);
         }
         let mut list: Vec<(GameId, u32)> = hash.into_iter().collect();
         list.sort_by(|(_, a), (_, b)| b.cmp(a));
@@ -235,7 +235,7 @@ impl Repo {
         let mut total = 0;
         for (_, arena) in Arena::iter(&self.arenas) {
             for (_, session) in arena.sessions.iter() {
-                if session.bot || session.date_terminated.is_some() {
+                if session.date_terminated.is_some() {
                     continue;
                 }
                 total += 1;
@@ -288,6 +288,10 @@ impl Repo {
 
         let mut metrics: Metrics = Metrics::default();
 
+        metrics
+            .players_cached
+            .add_multiple(self.players.len() as u32);
+
         self.system_status.refresh_cpu();
         self.system_status.refresh_memory();
         metrics.ram.push(
@@ -330,6 +334,9 @@ impl Repo {
                 continue;
             }
             metrics.arenas_cached.increment();
+            metrics
+                .sessions_cached
+                .add_multiple(arena.sessions.len() as u32);
             metrics.uptime.push(
                 now.saturating_sub(arena.date_created) as f32
                     * (1.0 / (1000.0 * 60.0 * 60.0 * 24.0)) as f32,
@@ -342,10 +349,6 @@ impl Repo {
             let mut unique_visitors = HashSet::new();
 
             for (_, session) in arena.sessions.iter() {
-                if session.bot {
-                    continue;
-                }
-
                 let session_stop = session.date_terminated.unwrap_or(clip_stop);
                 if session_stop < clip_start {
                     continue;
@@ -353,7 +356,6 @@ impl Repo {
                 if !filter(session) {
                     continue;
                 }
-                metrics.sessions_cached.increment();
 
                 let session_start = session.date_previous.unwrap_or(session.date_created);
                 let days = session_stop.saturating_sub(session_start) as f32
@@ -439,10 +441,11 @@ impl Repo {
 
                 if let Some(fps) = session.fps {
                     metrics.fps.push(fps);
-                    metrics.low_fps.push(fps < 22.0);
+                    // 24 FPS is lowest frame rate required to make motion appear natural.
+                    metrics.low_fps.push(fps < 24.0);
                 }
                 metrics
-                    .reports
+                    .abuse_reports
                     .add_multiple(session.chat_context.reports() as u32);
                 metrics.toxicity = metrics.toxicity
                     + RatioMetric {
@@ -496,7 +499,7 @@ impl Repo {
         let mut total = 0;
         for (_, arena) in Arena::iter(&self.arenas) {
             for (_, session) in arena.sessions.iter() {
-                if session.bot || session.date_terminated.is_some() {
+                if session.date_terminated.is_some() {
                     continue;
                 }
                 total += 1;

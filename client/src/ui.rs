@@ -74,7 +74,7 @@ pub struct UiProps {
     pub team_name: Option<TeamName>,
     pub invitation_id: Option<InvitationId>,
     pub score: u32,
-    pub player_count: u32,
+    pub player_count: usize,
     pub fps: f32,
     pub status: UiStatus,
     pub chats: Vec<ChatModel>,
@@ -169,8 +169,7 @@ impl DeathReasonModel {
                 death_type: "collision",
                 player: Some(
                     core_state
-                        .players
-                        .get(player_id)
+                        .player_or_bot(*player_id)
                         .map(|p| p.alias)
                         .unwrap_or_else(|| PlayerAlias::new("???")),
                 ),
@@ -185,8 +184,7 @@ impl DeathReasonModel {
                 death_type: "ramming",
                 player: Some(
                     core_state
-                        .players
-                        .get(player_id)
+                        .player_or_bot(*player_id)
                         .map(|p| p.alias)
                         .unwrap_or_else(|| PlayerAlias::new("???")),
                 ),
@@ -196,8 +194,7 @@ impl DeathReasonModel {
                 death_type: "sinking",
                 player: Some(
                     core_state
-                        .players
-                        .get(player_id)
+                        .player_or_bot(*player_id)
                         .map(|p| p.alias)
                         .unwrap_or_else(|| PlayerAlias::new("???")),
                 ),
@@ -237,7 +234,7 @@ impl Mk48Game {
             team_name: core_state.team().map(|t| t.team_name),
             invitation_id: core_state.created_invitation_id,
             score: context.game().score,
-            player_count: core_state.player_count,
+            player_count: core_state.only_players().len(),
             fps: self.fps_counter.last_sample().unwrap_or(0.0),
             status,
             chats: core_state
@@ -256,7 +253,7 @@ impl Mk48Game {
                 .liveboard
                 .iter()
                 .filter_map(|item| {
-                    let player = core_state.players.get(&item.player_id);
+                    let player = core_state.only_players().get(&item.player_id);
                     if let Some(player) = player {
                         let team_name = player
                             .team_id
@@ -294,7 +291,7 @@ impl Mk48Game {
                 .collect(),
             team_members: if let Some(team_id) = core_state.team_id() {
                 core_state
-                    .players
+                    .only_players()
                     .values()
                     .filter(|p| p.team_id == Some(team_id))
                     .map(|p| TeamPlayerModel {
@@ -316,7 +313,7 @@ impl Mk48Game {
                 .filter_map(|id| {
                     context
                         .core()
-                        .players
+                        .only_players()
                         .get(id)
                         .map(|player| TeamPlayerModel {
                             player_id: player.player_id,

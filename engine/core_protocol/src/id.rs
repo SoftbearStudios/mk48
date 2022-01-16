@@ -103,6 +103,41 @@ impl From<usize> for PeriodId {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub NonZeroU32);
 
+impl PlayerId {
+    pub const DAY_BITS: u32 = 10;
+    pub const RANDOM_BITS: u32 = 32 - Self::DAY_BITS;
+    pub const RANDOM_MASK: u32 = (1 << Self::RANDOM_BITS) - 1;
+    pub const DAY_MASK: u32 = !Self::RANDOM_MASK;
+
+    /// The player ID of the solo player in offline single player mode.
+    /// TODO: This is not currently used.
+    pub const SOLO_OFFLINE: Self = Self(NonZeroU32::new(1).unwrap());
+
+    /// Gets the bot number associated with this id, or [`None`] if the id is not a bot.
+    pub fn bot_number(self) -> Option<usize> {
+        self.is_bot().then_some(self.0.get() as usize - 2)
+    }
+
+    /// Gets the nth id associated with bots.
+    pub fn nth_bot(n: usize) -> Option<Self> {
+        debug_assert!(n <= u32::MAX as usize - 1);
+        NonZeroU32::new(n as u32 + 2)
+            .map(Self)
+            .filter(|id| id.is_bot())
+    }
+
+    /// Returns true if the id is reserved for bots.
+    pub fn is_bot(self) -> bool {
+        let n = self.0.get();
+        n & Self::DAY_MASK == 0 && !self.is_solo()
+    }
+
+    /// Returns true if the id is reserved for offline solo play.
+    pub fn is_solo(self) -> bool {
+        self.0.get() == 1
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum RegionId {
     Asia,
@@ -154,7 +189,7 @@ pub enum UserAgentId {
 
 #[cfg(test)]
 mod tests {
-    use crate::id::{InvitationId, ServerId};
+    use crate::id::{InvitationId, PlayerId, ServerId};
     use std::num::NonZeroU8;
 
     #[test]
@@ -164,5 +199,10 @@ mod tests {
             let iid = InvitationId::generate(Some(sid));
             assert_eq!(iid.server_id(), Some(sid));
         }
+    }
+
+    #[test]
+    fn solo() {
+        assert!(PlayerId::SOLO_OFFLINE.is_solo());
     }
 }

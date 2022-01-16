@@ -77,6 +77,7 @@ impl Mk48Game {
                 let max_angle_diff = match armament_entity_data.sub_kind {
                     EntitySubKind::Shell => Angle::from_degrees(30.0),
                     EntitySubKind::Rocket => Angle::from_degrees(45.0),
+                    EntitySubKind::RocketTorpedo => Angle::from_degrees(75.0),
                     EntitySubKind::Torpedo if armament_entity_data.sensors.sonar.range > 0.0 => {
                         Angle::from_degrees(150.0)
                     }

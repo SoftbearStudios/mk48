@@ -61,6 +61,7 @@ for (const entityType of Object.keys(entityDatas)) {
 					case 'sam':
 						maxRange *= 0.5;
 					case 'rocket':
+					case 'rocketTorpedo':
 					case 'missile':
 						maxRange = mapRanges(entityData.length, 1, 10, 500, 1200, true);
 
@@ -104,7 +105,7 @@ for (const entityType of Object.keys(entityDatas)) {
 				case 'tanker':
 					break;
 				default:
-					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.01, 0.15).toFixed(3));
+					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.1, 0.5).toFixed(3));
 			}
 
 			// Torpedo resistance.
@@ -171,7 +172,7 @@ for (const entityType of Object.keys(entityDatas)) {
                     }
                     break;
                 case 'depthCharge':
-                    entityData.damage = 0.8;
+                    entityData.damage = 0.7;
                     break;
             }
             break;
@@ -188,13 +189,11 @@ for (const entityType of Object.keys(entityDatas)) {
 						entityData.reload = 1;
 						break;
 					case 'rocket':
-						if (entityData.armaments && entityData.armaments.length > 0) {
-							// ASROC
-							entityData.reload = 20;
-						} else {
-							entityData.reload = 2.5;
-						}
+						entityData.reload = 2.5;
 						break;
+					case 'rocketTorpedo':
+					    entityData.reload = 20;
+					    break;
 					case 'mine':
 						entityData.reload = 30;
 						break;
@@ -214,6 +213,9 @@ for (const entityType of Object.keys(entityDatas)) {
 							entityData.reload *= 1.5;
 						}
 						break;
+					case 'depthCharge':
+					    entityData.reload = 16;
+					    break;
 					default:
 						entityData.reload = 8;
 						break;
@@ -390,6 +392,7 @@ for (const entityType of Object.keys(entityDatas)) {
 			'weapon/torpedo': 10,
 			'weapon/missile': 9,
 			'weapon/rocket': 8,
+			'weapon/rocketTorpedo': 8,
 			'weapon/shell': ['battleship', 'cruiser'].includes(entityData.subkind) ? 12 : 5,
 			'weapon/sam': -5,
 			'decoy/': -8,

@@ -49,11 +49,7 @@
 
 	export function summarizeType(translation, type) {
 		const data = entityData[type];
-		let subtype = data.subkind;
-		if (subtype === 'rocket' && data.armaments && data.armaments.length > 0) {
-			subtype = 'rocketTorpedo';
-		}
-		return translation(`kind.${data.kind}.${subtype}.name`);
+		return translation(`kind.${data.kind}.${data.subkind}.name`);
 	}
 
 	// Returns null if no sensors

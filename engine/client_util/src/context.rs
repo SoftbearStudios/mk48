@@ -8,6 +8,7 @@ use crate::reconn_web_socket::ReconnWebSocket;
 use crate::setting::{CommonSettings, Settings};
 use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, PlayerDto, TeamDto};
 use core_protocol::id::{InvitationId, PeriodId, PlayerId, TeamId};
+use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{ClientRequest, ClientUpdate};
 use core_protocol::web_socket::WebSocketFormat;
 use serde::Serialize;
@@ -56,8 +57,7 @@ pub struct CoreState {
     pub leaderboards: [Vec<LeaderboardDto>; PeriodId::VARIANT_COUNT],
     pub liveboard: Vec<LiveboardDto>,
     pub messages: VecDeque<MessageDto>,
-    pub player_count: u32,
-    pub players: HashMap<PlayerId, PlayerDto>,
+    pub(crate) players: HashMap<PlayerId, PlayerDto>,
     pub teams: HashMap<TeamId, TeamDto>,
 }
 
@@ -91,6 +91,26 @@ impl CoreState {
     /// Gets player's `PlayerDto`.
     pub fn player(&self) -> Option<&PlayerDto> {
         self.player_id.and_then(|id| self.players.get(&id))
+    }
+
+    /// Player or bot (simulated) `PlayerDto`.
+    pub fn player_or_bot(&self, player_id: PlayerId) -> Option<PlayerDto> {
+        player_id
+            .is_bot()
+            .then(|| {
+                Some(PlayerDto {
+                    alias: PlayerAlias::from_bot_player_id(player_id),
+                    player_id,
+                    team_captain: false,
+                    team_id: None,
+                })
+            })
+            .unwrap_or_else(|| self.players.get(&player_id).map(|r| r.clone()))
+    }
+
+    /// Gets hashmap that contains players, but *not* bots.
+    pub fn only_players(&self) -> &HashMap<PlayerId, PlayerDto> {
+        &self.players
     }
 
     /// Gets player's team's `TeamDto`.
@@ -164,12 +184,7 @@ impl Apply<ClientUpdate> for CoreState {
                     self.messages.push_back(chat.clone());
                 }
             }
-            ClientUpdate::PlayersUpdated {
-                count,
-                added,
-                removed,
-            } => {
-                self.player_count = count;
+            ClientUpdate::PlayersUpdated { added, removed } => {
                 for player in added.iter() {
                     self.players.insert(player.player_id, player.clone());
                 }

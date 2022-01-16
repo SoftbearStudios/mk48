@@ -18,6 +18,7 @@ variant_count = "1.1"
 rand = "0.8"
 unicode_categories = "0.1"
 rustrict = {version = "0.2", default-features = false}
+lazy_static = "1.4"
 
 [features]
 server = ["actix", "rustrict/censor"]

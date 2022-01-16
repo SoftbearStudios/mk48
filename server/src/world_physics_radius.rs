@@ -178,7 +178,7 @@ impl World {
 
                         if !friendly {
                             // Mines also gravitate towards boats.
-                            if boats.len() == 1 && weapons.len() == 1 && altitude_overlap && weapons[0].data().sub_kind == EntitySubKind::Mine && weapons[0].is_in_close_proximity_to(boats[0]) {
+                            if boats.len() == 1 && weapons.len() == 1 && altitude_overlap && weapons[0].data().sub_kind == EntitySubKind::Mine && weapons[0].is_in_proximity_to(boats[0], Entity::CLOSE_PROXIMITY) {
                                 mutate(weapons[0], Mutation::Attraction(boats[0].transform.position - weapons[0].transform.position, Velocity::from_mps(5.0)));
                             }
 
@@ -192,14 +192,14 @@ impl World {
                                 let target = if weapon == &entity { other_entity } else { entity };
                                 let target_data = target.data();
 
-                                if weapon_data.sensors.any() {
+                                if weapon_data.sensors.any() && !matches!(weapon_data.sub_kind, EntitySubKind::Rocket | EntitySubKind::RocketTorpedo) {
                                     // Home towards target/decoy
                                     // Sensor activates after 1 second.
                                     if weapons[0].ticks > Ticks::from_secs(1.0) {
                                         // Different targets are relevant to each weapon.
                                         let relevant = match weapon_data.sub_kind {
                                             EntitySubKind::Sam => {
-                                                target_data.kind == EntityKind::Aircraft || target_data.sub_kind == EntitySubKind::Missile || target_data.sub_kind == EntitySubKind::Rocket
+                                                target_data.kind == EntityKind::Aircraft || matches!(target_data.sub_kind, EntitySubKind::Missile | EntitySubKind::Rocket | EntitySubKind::RocketTorpedo)
                                             },
                                             EntitySubKind::Torpedo => {
                                                 target_data.kind == EntityKind::Boat || target_data.kind == EntityKind::Decoy
@@ -255,7 +255,7 @@ impl World {
                                 }
 
                                 // Aircraft/ASROC (simulate weapons and anti-aircraft).
-                                let fireall_sub_kind = if weapon_data.sub_kind == EntitySubKind::Rocket && !weapon_data.armaments.is_empty() && target_data.kind == EntityKind::Boat {
+                                let fireall_sub_kind = if weapon_data.sub_kind == EntitySubKind::RocketTorpedo && !weapon_data.armaments.is_empty() && target_data.kind == EntityKind::Boat {
                                     Some(weapon_data.armaments[0].entity_type.data().sub_kind)
                                 } else if weapon_data.kind == EntityKind::Aircraft {
                                     match target_data.kind {
@@ -285,11 +285,19 @@ impl World {
                                     let amount = weapon_data.armaments.iter().filter(|a| a.entity_type.data().sub_kind == sub_kind).count();
 
                                     // Small window of opportunity to fire.
+                                    let drop_time = match weapon.data().sub_kind {
+                                        // Helicopters are slower, need to drop earlier.
+                                        EntitySubKind::Heli => 2.5,
+                                        // Rocket torpedoes are fast, need to drop later.
+                                        EntitySubKind::RocketTorpedo => 1.1,
+                                        _ => 1.75
+                                    };
+
                                     // Uses aircraft lifespan as weapon consumption.
-                                    if (weapon.ticks > Ticks::from_secs(3.0 * amount as f32) || weapon_data.sub_kind == EntitySubKind::Rocket) && weapon.collides_with(target, 1.7 + target_data.length*0.01+weapon.hash() * 0.5) {
+                                    if (weapon.ticks > Ticks::from_secs(3.0 * amount as f32) || weapon_data.sub_kind == EntitySubKind::RocketTorpedo) && weapon.collides_with(target, drop_time + weapon.hash() * 0.25) {
                                         mutate(weapon, Mutation::FireAll(sub_kind));
 
-                                        if weapon_data.sub_kind == EntitySubKind::Rocket {
+                                        if weapon_data.sub_kind == EntitySubKind::RocketTorpedo {
                                             // ASROC expires when dropping torpedo.
                                             potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "asroc");
@@ -304,7 +312,7 @@ impl World {
 
                                     // In range of aa.
                                     if d2 <= r2 {
-                                        let chance = (1.0 - d2/r2) * target_data.anti_aircraft;
+                                        let chance = (1.0 - d2/r2) * target_data.anti_aircraft * delta.to_secs();
                                         if thread_rng().gen_bool((chance as f64).clamp(0.0, 1.0)) {
                                             potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "shot down");

@@ -79,6 +79,7 @@ pub enum EntitySubKind {
     Plane,
     Ram,
     Rocket,
+    RocketTorpedo,
     Sam,
     Score,
     Shell,
@@ -149,6 +150,9 @@ impl EntityData {
 
     /// Travelling at a speed (in mps) above this will cause more noise to be produced (12 knots).
     pub const CAVITATION_VELOCITY: f32 = 6.17333;
+
+    /// Constant used for checking whether a depth charge should explode.
+    pub const DEPTH_CHARGE_PROXIMITY: f32 = 30.0;
 
     /// radii range of throttle (0-100%) and limit of collecting things.
     pub fn radii(&self) -> Range<f32> {

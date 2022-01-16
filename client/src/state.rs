@@ -13,7 +13,6 @@ use common::terrain::Terrain;
 use std::collections::HashMap;
 
 /// State associated with game server connection. Reset when connection is reset.
-#[derive(Default)]
 pub struct Mk48State {
     pub animations: Vec<Animation>,
     pub contacts: HashMap<EntityId, InterpolatedContact>,
@@ -23,6 +22,22 @@ pub struct Mk48State {
     pub terrain: Terrain,
     pub trails: TrailSystem,
     pub world_radius: f32,
+}
+
+impl Default for Mk48State {
+    fn default() -> Self {
+        Self {
+            animations: Vec::new(),
+            contacts: HashMap::new(),
+            death_reason: None,
+            entity_id: None,
+            score: 0,
+            terrain: Terrain::default(),
+            trails: TrailSystem::default(),
+            // Keep border off splash screen by assuming radius.
+            world_radius: 10000.0,
+        }
+    }
 }
 
 impl Mk48State {
