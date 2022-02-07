@@ -216,12 +216,16 @@ impl GraphicLayer {
 
 impl Layer for GraphicLayer {
     fn pre_prepare(&mut self, renderer: &Renderer) {
-        self.zoom = renderer.zoom;
+        self.zoom = renderer.camera.zoom();
     }
 
     fn render(&mut self, renderer: &Renderer) {
+        if self.mesh.is_empty() {
+            return;
+        }
+
         if let Some(shader) = renderer.bind_shader(renderer.graphic_shader.as_ref().unwrap()) {
-            shader.uniform_matrix3f("uView", &renderer.view_matrix);
+            shader.uniform_matrix3f("uView", &renderer.camera.view_matrix);
 
             self.buffer.buffer_mesh(&renderer.gl, &self.mesh);
             self.buffer

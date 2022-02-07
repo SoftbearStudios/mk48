@@ -112,9 +112,9 @@ impl Layer for ParticleLayer {
         if let Some(shader) = renderer.bind_shader(renderer.particle_shader.as_ref().unwrap()) {
             let width = renderer.canvas_size().x as f32
                 * 0.5
-                * (renderer.view_matrix * vec3(1.0, 0.0, 0.0)).length();
+                * (renderer.camera.view_matrix * vec3(1.0, 0.0, 0.0)).length();
 
-            shader.uniform_matrix3f("uView", &renderer.view_matrix);
+            shader.uniform_matrix3f("uView", &renderer.camera.view_matrix);
             shader.uniform4f(
                 "uWind_uTime_uScale",
                 vec4(self.wind.x, self.wind.y, renderer.time, width),

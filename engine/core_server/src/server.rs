@@ -61,6 +61,7 @@ impl Handler<ObserverMessage<ServerRequest, ServerUpdate, (Option<IpAddr>, Optio
             ObserverMessage::Unregister { observer } => {
                 self.servers.remove(&observer);
             }
+            _ => {}
         }
     }
 }

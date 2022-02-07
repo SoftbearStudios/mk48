@@ -40,7 +40,7 @@ pub trait GameArenaService: 'static + Unpin + Sized + Sync {
     fn player_joined(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
     /// Called when a player issues a command.
-    fn player_command(&mut self, update: Self::Command, player: &Arc<PlayerTuple<Self>>);
+    fn player_command(&mut self, command: Self::Command, player_tuple: &Arc<PlayerTuple<Self>>);
 
     /// Called when a player's [`TeamId`] changes.
     fn player_changed_team(
@@ -58,15 +58,15 @@ pub trait GameArenaService: 'static + Unpin + Sized + Sync {
         &self,
         counter: Ticks,
         player: &Arc<PlayerTuple<Self>>,
-        client_data: &mut Self::ClientData,
+        player_tuple: &mut Self::ClientData,
     ) -> Option<Self::ClientUpdate>;
     /// If None, bot quits.
     fn get_bot_update<'a>(
         &'a self,
         counter: Ticks,
-        player: &'a Arc<PlayerTuple<Self>>,
+        player_tuple: &'a Arc<PlayerTuple<Self>>,
     ) -> Self::BotUpdate<'a>;
-    fn get_core_status(&self, player: &Arc<PlayerTuple<Self>>) -> Option<CoreStatus>;
+    fn get_core_status(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> Option<CoreStatus>;
     fn peek_core(&mut self, _inbound: &ServerUpdate) {}
     /// Before sending.
     fn update(&mut self, ticks: Ticks, counter: Ticks);

@@ -6,6 +6,7 @@ use crate::invitation::Invitation;
 use crate::session::Session;
 use crate::team::Team;
 // TODO: use chrono::{DateTime, Utc};
+use crate::health::Health;
 use chrono::Timelike;
 use chrono::Utc;
 use core_protocol::dto::{
@@ -18,7 +19,6 @@ use log::{debug, trace};
 use std::collections::hash_map::HashMap;
 use std::mem;
 use std::sync::Arc;
-use sysinfo::{RefreshKind, System, SystemExt};
 
 pub struct Repo {
     // Assume these fields are synchronized via Actor so Mutex is not required.
@@ -28,7 +28,7 @@ pub struct Repo {
     pub players: HashMap<PlayerId, SessionId>,
     pub prior_liveboard: Vec<LiveboardDto>,
     pub stopping: Option<RestartDto>,
-    pub system_status: System,
+    pub health: Health,
 }
 
 impl Default for Repo {
@@ -49,7 +49,7 @@ impl Repo {
             players: HashMap::new(),
             prior_liveboard: Vec::new(),
             stopping: None,
-            system_status: System::new_with_specifics(RefreshKind::new().with_cpu().with_memory()),
+            health: Health::default(),
         }
     }
 

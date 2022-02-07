@@ -5,7 +5,7 @@ use crate::context::{BotData, PlayerData, PlayerTuple};
 use crate::game_service::{Bot, GameArenaService};
 use common_util::ticks::Ticks;
 use core_protocol::id::PlayerId;
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 
 /// Manages the storage and updating of bots.
 pub struct BotZoo<G: GameArenaService> {
@@ -31,6 +31,7 @@ impl<G: GameArenaService> BotZoo<G> {
 
             self.bots
                 .par_iter_mut()
+                .with_min_len(64)
                 .for_each(|bot_data: &mut BotData<G>| {
                     let update = service.get_bot_update(counter, &bot_data.player_tuple);
                     bot_data.action_buffer = bot_data
@@ -60,7 +61,8 @@ impl<G: GameArenaService> BotZoo<G> {
 
     /// Changes number of bots by spawning/despawning.
     fn set_count(&mut self, count: usize, service: &mut G) {
-        let mut governor = 32;
+        // Give server 3 seconds (50 ticks) to create all testing bots.
+        let mut governor = 4.max(self.min_players / 50);
 
         while count < self.bots.len() && governor > 0 {
             governor -= 1;

@@ -7,9 +7,11 @@ use crate::fps_monitor::FpsMonitor;
 use crate::game_client::GameClient;
 use crate::js_hooks::{canvas, domain_name_of};
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
+use crate::local_storage::LocalStorage;
 use crate::mouse::{MouseButton, MouseButtonState, MouseEvent as GameClientMouseEvent};
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::renderer::Renderer;
+use crate::setting::CommonSettings;
 use crate::setting::Settings;
 use common_util::range::map_ranges;
 use core_protocol::id::{PlayerId, TeamId};
@@ -33,9 +35,18 @@ impl<G: GameClient> Infrastructure<G> {
     pub fn new(mut game: G) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
 
-        let mut context = Context::new();
-        let mut renderer = Renderer::new(context.common_settings.antialias);
-        let renderer_layer = game.init(&mut renderer, &mut context);
+        // First load local storage common settings.
+        // Not guaranteed to set either or both to Some. Could fail to load.
+        let local_storage = LocalStorage::new();
+        let common_settings = CommonSettings::load(&local_storage, CommonSettings::default());
+
+        // Next create renderer and load game settings with it.
+        let mut renderer = Renderer::new(common_settings.antialias);
+        let game_settings = G::Settings::load(&local_storage, game.init_settings(&mut renderer));
+
+        // Finally create context with common and game settings.
+        let mut context = Context::new(local_storage, common_settings, game_settings);
+        let renderer_layer = game.init_layer(&mut renderer, &mut context);
 
         Self {
             game,
@@ -49,6 +60,8 @@ impl<G: GameClient> Infrastructure<G> {
     pub fn frame(&mut self, time_seconds: f32) {
         let elapsed_seconds = (time_seconds - self.context.client.update_seconds).clamp(0.001, 0.5);
         self.context.client.update_seconds = time_seconds;
+
+        self.sync_mouse_world_space();
 
         for inbound in self.context.core_socket.update(time_seconds) {
             if let &ClientUpdate::SessionCreated {
@@ -176,7 +189,7 @@ impl<G: GameClient> Infrastructure<G> {
                     }
 
                     // Don't block CTRL+C, CTRL+V, etc.
-                    if !(e.ctrl && matches!(e.key, Key::F | Key::C | Key::V | Key::X)) {
+                    if !(e.ctrl && matches!(e.key, Key::C | Key::F | Key::R | Key::V | Key::X)) {
                         event.prevent_default();
                         event.stop_propagation();
                     }
@@ -213,12 +226,7 @@ impl<G: GameClient> Infrastructure<G> {
                 }
             }
             "mousemove" => {
-                let e = GameClientMouseEvent::Move(Self::client_coordinate_to_view(
-                    event.client_x(),
-                    event.client_y(),
-                ));
-                self.game.peek_mouse(&e, &mut self.context);
-                self.context.mouse.apply(e);
+                self.mouse_move(event.client_x(), event.client_y());
             }
             "mouseleave" => {
                 self.context.mouse.reset();
@@ -265,12 +273,7 @@ impl<G: GameClient> Infrastructure<G> {
                         // Emulate left mouse.
                         let first = target_touches.item(0);
                         if let Some(first) = first {
-                            let e = GameClientMouseEvent::Move(Self::client_coordinate_to_view(
-                                first.client_x(),
-                                first.client_y(),
-                            ));
-                            self.game.peek_mouse(&e, &mut self.context);
-                            self.context.mouse.apply(e);
+                            self.mouse_move(first.client_x(), first.client_y());
                             self.context.mouse.pinch_distance = None;
                         } else {
                             debug_assert!(false, "expected 1 touch");
@@ -338,6 +341,33 @@ impl<G: GameClient> Infrastructure<G> {
         self.game
             .peek_ui(&event, &mut self.context, &mut self.renderer_layer);
         self.context.ui.apply(event);
+    }
+
+    /// Helper to issue a mouse move event. Takes client coordinates.
+    fn mouse_move(&mut self, x: i32, y: i32) {
+        let view_position = Self::client_coordinate_to_view(x, y);
+
+        let e = GameClientMouseEvent::MoveViewSpace(view_position);
+        self.game.peek_mouse(&e, &mut self.context);
+        self.context.mouse.apply(e);
+
+        // If the mouse moves in view space, it also moves in world space.
+        let e2 =
+            GameClientMouseEvent::MoveWorldSpace(self.renderer.to_world_position(view_position));
+        self.game.peek_mouse(&e2, &mut self.context);
+        self.context.mouse.apply(e2);
+    }
+
+    /// Helper to issue a mouse move world space event if needed.
+    fn sync_mouse_world_space(&mut self) {
+        if let Some(view_position) = self.context.mouse.view_position {
+            let world_position = self.renderer.to_world_position(view_position);
+            if self.context.mouse.world_position != Some(world_position) {
+                let e = GameClientMouseEvent::MoveWorldSpace(world_position);
+                self.game.peek_mouse(&e, &mut self.context);
+                self.context.mouse.apply(e);
+            }
+        }
     }
 
     pub fn wheel(&mut self, event: WheelEvent) {

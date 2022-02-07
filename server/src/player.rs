@@ -36,8 +36,6 @@ pub enum Status {
         entity_index: EntityIndex,
         /// Where the player is aiming. Used by turrets and aircraft.
         aim_target: Option<Vec2>,
-        /// When they spawned.
-        time: Instant,
     },
     /// Player had a boat.
     Dead {
@@ -45,16 +43,13 @@ pub enum Status {
         reason: DeathReason,
         /// Where they died.
         position: Vec2,
-        /// When they died.
+        /// When they died (for spawn exclusion and bandwidth saving).
         time: Instant,
         /// How far they could see when they died.
         visual_range: f32,
     },
     /// Player never had a boat.
-    Spawning {
-        /// When they started spawning.
-        time: Instant,
-    },
+    Spawning,
 }
 
 impl Status {
@@ -62,7 +57,6 @@ impl Status {
         Self::Alive {
             entity_index,
             aim_target: None,
-            time: Instant::now(),
         }
     }
 
@@ -113,23 +107,7 @@ impl Default for Player {
         Self {
             flags: Flags::default(),
             hint: Hint::default(),
-            status: Status::Spawning {
-                time: Instant::now(),
-            },
+            status: Status::Spawning,
         }
     }
 }
-
-/*
-TODO
-impl Player {
-    /// changes the player's team, setting the left_team flag if appropriate.
-    pub fn change_team(&mut self, team_id: Option<TeamId>) {
-        if self.team_id.is_some() {
-            // TODO know if team was populated.
-            self.flags.left_populated_team = true;
-        }
-        self.team_id = team_id;
-    }
-}
- */

@@ -61,14 +61,13 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Optio
                 // Handle asynchronous requests (i.e. those that may access database).
                 ClientRequest::CreateInvitation => {
                     if let Some(client) = self.clients.get_mut(&observer) {
-                        if let Some(arena_id) = client.arena_id {
-                            if let Some(session_id) = client.session_id {
-                                if let Some(invitation_id) =
-                                    self.repo.create_invitation(arena_id, session_id)
-                                {
-                                    let message = ClientUpdate::InvitationCreated { invitation_id };
-                                    log_err(observer.do_send(ObserverUpdate::Send { message }));
-                                }
+                        if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id)
+                        {
+                            if let Some(invitation_id) =
+                                self.repo.create_invitation(arena_id, session_id)
+                            {
+                                let message = ClientUpdate::InvitationCreated { invitation_id };
+                                log_err(observer.do_send(ObserverUpdate::Send { message }));
                             }
                         }
                     }
@@ -81,7 +80,7 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Optio
                 } => {
                     if let Some(data) = self.clients.get(&observer) {
                         if let Some(ip_addr) = data.ip_addr {
-                            if self.session_rate_limiter.limit_rate(ip_addr) {
+                            if self.session_rate_limiter.should_limit_rate(ip_addr) {
                                 // Should only log IP of malicious actors.
                                 warn!("IP {} was rate limited in create_session", ip_addr);
                                 return Box::pin(fut::ready(()));
@@ -201,6 +200,16 @@ impl Handler<ObserverMessage<ClientRequest, ClientUpdate, (Option<IpAddr>, Optio
                     }
                 }
             },
+            ObserverMessage::RoundTripTime {
+                observer,
+                rtt: round_trip_time,
+            } => {
+                if let Some(client) = self.clients.get_mut(&observer) {
+                    if let Some((arena_id, session_id)) = client.arena_id.zip(client.session_id) {
+                        self.repo.tally_rtt(arena_id, session_id, round_trip_time);
+                    }
+                }
+            }
             ObserverMessage::Register { observer, payload } => {
                 if let Entry::Vacant(e) = self.clients.entry(observer) {
                     e.insert(ClientState {

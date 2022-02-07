@@ -15,7 +15,6 @@ use common::util::*;
 use common::velocity::Velocity;
 use game_server::context::PlayerTuple;
 use glam::Vec2;
-use rand::seq::IteratorRandom;
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
 
@@ -287,13 +286,7 @@ impl Mutation {
     pub fn boat_died(world: &mut World, index: EntityIndex, score_to_coins: bool) {
         let entity = &mut world.entities[index];
         let mut player = entity.borrow_player_mut();
-
-        let coin_amount = if score_to_coins {
-            (player.score / 4 / 10).min(200)
-        } else {
-            0
-        };
-
+        let score = player.score;
         player.score = respawn_score(player.score);
         drop(player);
 
@@ -301,29 +294,13 @@ impl Mutation {
         debug_assert_eq!(data.kind, EntityKind::Boat);
         let mut rng = thread_rng();
         // Loot is based on the length of the boat.
-        let loot_amount = (data.length * 0.25 * (rng.gen::<f32>() * 0.1 + 0.9)) as u32;
-
-        let loot_table = match data.sub_kind {
-            EntitySubKind::Pirate => vec![EntityType::Crate, EntityType::Coin],
-            EntitySubKind::Tanker => vec![EntityType::Scrap, EntityType::Barrel],
-            _ => vec![EntityType::Scrap],
-        };
 
         let center = entity.transform.position;
         let normal = entity.transform.direction.to_vec();
         let tangent = Vec2::new(-normal.y, normal.x);
         let altitude = entity.altitude;
 
-        for i in 0..(loot_amount + coin_amount) {
-            let loot_type = if i < loot_amount {
-                *loot_table
-                    .iter()
-                    .choose(&mut rng)
-                    .expect("at least once option")
-            } else {
-                EntityType::Coin
-            };
-
+        for loot_type in entity.entity_type.loot(score, score_to_coins) {
             let mut loot_entity = Entity::new(loot_type, None);
 
             // Make loot roughly conform to rectangle of ship.

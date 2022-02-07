@@ -177,7 +177,9 @@ impl Repo {
                 result = Ok(AdminUpdate::RestartRequested);
             }
             AdminRequest::RequestStatus => {
-                result = Ok(AdminUpdate::StatusRequested);
+                result = Ok(AdminUpdate::StatusRequested {
+                    healthy: self.health.healthy(),
+                });
             }
             AdminRequest::RequestSummary {
                 game_id,

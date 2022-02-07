@@ -8,6 +8,7 @@
 #![feature(hash_drain_filter)]
 #![feature(type_alias_impl_trait)]
 #![feature(generic_associated_types)]
+#![feature(bool_to_option)]
 
 //! The game server has authority over all game logic. Clients are served the client, which connects
 //! via websocket.

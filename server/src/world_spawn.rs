@@ -11,15 +11,16 @@ use common::ticks::Ticks;
 use common::transform::Transform;
 use common::util::gen_radius;
 use common::velocity::Velocity;
+use common::world::clamp_y_to_default_area_border;
 use glam::Vec2;
 use log::{info, warn};
-use rand::Rng;
+use rand::{thread_rng, Rng};
 use server_util::benchmark::Timer;
 use server_util::benchmark_scope;
 
 impl World {
     /// Target square meters of world per square meter of player vision.
-    pub const BOAT_VISUAL_OVERLAP: f32 = 0.28;
+    pub const BOAT_VISUAL_OVERLAP: f32 = 0.32;
     /// Target density of crates (per square meter).
     const CRATE_DENSITY: f32 = 1.0 / 30000.0;
     /// Target density of obstacles (per square meter).
@@ -64,6 +65,16 @@ impl World {
                 let position = gen_radius(&mut rng, radius);
                 entity.transform.position = center + position;
                 entity.transform.direction = rng.gen();
+
+                // Clamp boats to correct area.
+                if entity.is_boat() {
+                    let y = &mut entity.transform.position.y;
+                    *y = clamp_y_to_default_area_border(
+                        entity.entity_type,
+                        *y,
+                        entity.entity_type.data().radius,
+                    );
+                }
 
                 radius = (radius * 1.1).min(self.radius * 0.85);
                 threshold = 0.05 + threshold * 0.95; // Approaches 1.0
@@ -137,10 +148,10 @@ impl World {
                         return false;
                     }
                 }
-                return !entity.collides_with_terrain(&self.terrain, 0.0);
+                return entity.collides_with_terrain(&self.terrain, 0.0).is_none();
             }
             EntityKind::Collectible | EntityKind::Aircraft => {
-                return !entity.collides_with_terrain(&self.terrain, 0.0);
+                return entity.collides_with_terrain(&self.terrain, 0.0).is_none();
             }
             EntityKind::Boat => {
                 // TODO: Terrain/keel depth check.
@@ -195,14 +206,23 @@ impl World {
             self.arena.count(EntityType::OilPlatform) + self.arena.count(EntityType::Hq);
 
         self.spawn_static_amount(
-            EntityType::Crate,
+            |_| Some(EntityType::Crate),
             crate_count,
             self.target_count(Self::CRATE_DENSITY),
             ticks.0 as usize * 150,
         );
 
         self.spawn_static_amount(
-            EntityType::OilPlatform,
+            |position| {
+                Some(if position.y >= common::world::ARCTIC {
+                    EntityType::Hq
+                } else if thread_rng().gen_bool(0.25) {
+                    EntityType::OilPlatform
+                } else {
+                    // Fail, to bias against ocean spawns, in favor of arctic.
+                    return None;
+                })
+            },
             platform_count,
             self.target_count(Self::OBSTACLE_DENSITY),
             ticks.0 as usize * 2,
@@ -210,28 +230,33 @@ impl World {
     }
 
     /// Spawns a certain amount of basic entities, all throughout the world.
+    ///
+    /// Takes function to get the exact type of entity to spawn, based on the location.
     fn spawn_static_amount(
         &mut self,
-        entity_type: EntityType,
+        mut get_entity_type: impl FnMut(Vec2) -> Option<EntityType>,
         current: usize,
         target: usize,
         rate: usize,
     ) {
         let mut rng = rand::thread_rng();
-        let lifespan = entity_type.data().lifespan;
 
         for _ in 0..target.saturating_sub(current).min(rate) {
             let position = gen_radius(&mut rng, self.radius);
             let direction = rng.gen();
 
-            // Randomize lifespan a bit to avoid all spawned entities dying at the same time.
-            let ticks = if lifespan != Ticks::ZERO {
-                lifespan * (rng.gen::<f32>() * 0.25)
-            } else {
-                Ticks::ZERO
-            };
+            if let Some(entity_type) = get_entity_type(position) {
+                let lifespan = entity_type.data().lifespan;
 
-            self.spawn_static(entity_type, position, direction, Velocity::ZERO, ticks);
+                // Randomize lifespan a bit to avoid all spawned entities dying at the same time.
+                let ticks = if lifespan != Ticks::ZERO {
+                    lifespan * (rng.gen::<f32>() * 0.25)
+                } else {
+                    Ticks::ZERO
+                };
+
+                self.spawn_static(entity_type, position, direction, Velocity::ZERO, ticks);
+            }
         }
     }
 

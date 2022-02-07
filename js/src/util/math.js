@@ -1,6 +1,17 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+// Analogous to Transform.Add but only for position
+export function addTransforms(parentPosX, parentPosY, childPosX, childPosY, childAngle) {
+	const sin = Math.sin(childAngle);
+	const cos = Math.cos(childAngle);
+
+	return {
+		x: parentPosX + childPosX*cos - childPosY*sin,
+		y: parentPosY + childPosX*sin + childPosY*cos
+	};
+}
+
 export function angleDiff(angle1, angle2) {
 	let angleDifference = (angle2 - angle1) % (Math.PI * 2);
 	if (angleDifference < -Math.PI) {
@@ -32,15 +43,4 @@ export function mapRanges(number, oldMin, oldMax, newMin, newMax, clampToRange =
 		mapped = clamp(mapped, newMin, newMax);
 	}
 	return mapped;
-}
-
-// Analogous to Transform.Add but only for position
-export function addTransforms(parentPosX, parentPosY, childPosX, childPosY, childAngle) {
-	const sin = Math.sin(childAngle);
-	const cos = Math.cos(childAngle);
-
-	return {
-		x: parentPosX + childPosX*cos - childPosY*sin,
-		y: parentPosY + childPosX*sin + childPosY*cos
-	};
 }

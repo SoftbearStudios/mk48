@@ -101,7 +101,7 @@ impl<G: GameArenaService> Infrastructure<G> {
                 arena_id: None,
                 counter: Ticks::ZERO,
                 clients: HashMap::new(),
-                bots: BotZoo::new(min_players, if min_players == 0 { 0 } else { 60 }),
+                bots: BotZoo::new(min_players, if min_players == 0 { 0 } else { 80 }),
             },
             ups_monitor: UpsMonitor::new(),
             service,
@@ -343,6 +343,7 @@ impl<G: GameArenaService>
                         .player_command(request, &client_data.player_tuple);
                 }
             }
+            _ => {}
         }
     }
 }

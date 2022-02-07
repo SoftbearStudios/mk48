@@ -35,7 +35,12 @@ impl Mk48Game {
     /// Interpolates the zoom level closer as if delta_seconds elapsed.
     /// If the player's ship exists, it's camera info is cached, such that it may be returned
     /// even after that ship sinks.
-    pub fn update_camera(&mut self, player_contact: Option<&Contact>, delta_seconds: f32) {
+    pub fn update_camera(
+        &mut self,
+        player_contact: Option<&Contact>,
+        delta_seconds: f32,
+        snap: bool,
+    ) {
         let zoom = if let Some(player_contact) = player_contact {
             let camera = player_contact.transform().position;
             let zoom = player_contact.entity_type().unwrap().data().camera_range();
@@ -47,7 +52,12 @@ impl Mk48Game {
             Self::MENU_VISUAL_RANGE
         } * self.zoom_input;
 
-        self.interpolated_zoom += (zoom - self.interpolated_zoom) * (6.0 * delta_seconds).min(1.0);
+        if snap {
+            self.interpolated_zoom = zoom;
+        } else {
+            self.interpolated_zoom +=
+                (zoom - self.interpolated_zoom) * (6.0 * delta_seconds).min(1.0);
+        }
     }
 
     pub(crate) fn zoom(&mut self, delta: &f32) {

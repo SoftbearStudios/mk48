@@ -22,7 +22,7 @@ use rand::{thread_rng, Rng};
 
 /// Bot implements a ship-controlling AI that is, in many ways, equivalent to a player.
 pub struct Bot {
-    /// Bot's chance of attacking, randomized to improve variety of bots.
+    /// Chance of attacking, randomized to improve variety of bots.
     aggression: f32,
     /// Amount to offset steering by. This creates more interesting behavior.
     steer_bias: Angle,
@@ -155,9 +155,14 @@ impl Bot {
                             );
                         }
                     } else if match contact_data.kind {
-                        // Don't kill smol boats unless they get too close.
+                        // Don't kill smol/peaceful boats unless they get too close.
                         EntityKind::Boat => {
-                            contact_data.level + 1 >= data.level
+                            (contact_data.level + 1 >= data.level
+                                && !matches!(
+                                    contact_data.sub_kind,
+                                    EntitySubKind::Dredger | EntitySubKind::Icebreaker
+                                ))
+                                || contact.player_id().map(|id| id.is_bot()).unwrap_or(false)
                                 || distance_squared < 1.5 * data.radius.powi(2)
                                 || health_percent < 1.0 / 3.0
                         }
@@ -297,7 +302,6 @@ impl Bot {
                     direction_target: Angle::from(movement) + self.steer_bias,
                     velocity_target: data.speed * 0.8,
                 }),
-                angular_velocity_target: None,
                 altitude_target: if data.sub_kind == EntitySubKind::Submarine {
                     // More positive values mean want to surface, more negative values mean want to dive.
                     let surface_bias =
@@ -320,7 +324,6 @@ impl Bot {
                     .filter(|_| rng.gen_bool(self.aggression as f64))
                     .map(|sol| Fire {
                         armament_index: sol.0,
-                        position_target: sol.1,
                     }),
                 pay: None,
                 hint: None,
@@ -351,9 +354,9 @@ impl Bot {
 }
 
 impl game_server::game_service::Bot<Server> for Bot {
-    fn update<'a>(
+    fn update(
         &mut self,
-        update: <Server as GameArenaService>::BotUpdate<'a>,
+        update: <Server as GameArenaService>::BotUpdate<'_>,
         player_id: PlayerId,
     ) -> Option<<Server as GameArenaService>::Command> {
         self.update(update, player_id)

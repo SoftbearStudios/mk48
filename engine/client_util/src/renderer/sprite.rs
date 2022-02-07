@@ -101,7 +101,7 @@ impl Layer for SpriteLayer {
 
         if let Some(shader) = renderer.bind_shader(renderer.sprite_shader.as_ref().unwrap()) {
             shader.uniform_texture("uSampler", &self.texture, 0);
-            shader.uniform_matrix3f("uView", &renderer.view_matrix);
+            shader.uniform_matrix3f("uView", &renderer.camera.view_matrix);
 
             self.mesh.push_default_quads();
             self.buffer.buffer_mesh(&renderer.gl, &self.mesh);

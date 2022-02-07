@@ -66,7 +66,7 @@ impl Shader {
         r.entry(name).or_insert_with(|| {
             let uniform = gl.get_uniform_location(program, name);
             if uniform.is_none() {
-                // TODO: console_log!("warning: uniform {} does not exist or is not in use", name);
+                crate::console_log!("warning: uniform {} does not exist or is not in use", name);
             }
             uniform
         });

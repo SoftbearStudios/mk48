@@ -3,9 +3,9 @@
 
 use crate::renderer::buffer::{RenderBuffer, RenderBufferBinding};
 use crate::renderer::shader::{Shader, ShaderBinding};
-use crate::renderer::texture::{Texture, TextureBinding};
-use crate::renderer::vertex::Vertex;
-use glam::{uvec2, Mat3, UVec2, Vec2, Vec4};
+use crate::renderer::texture::{Texture, TextureBinding, TextureFormat};
+use crate::renderer::vertex::{PosUv, Vertex};
+use glam::{uvec2, UVec2, Vec2, Vec4};
 use serde::Serialize;
 use std::cell::Cell;
 use std::mem;
@@ -34,6 +34,7 @@ pub trait Layer {
     fn render(&mut self, renderer: &Renderer);
 }
 
+use crate::renderer::camera::Camera;
 pub use engine_macros::Layer;
 
 /// A general WebGL renderer, focused on 2d for now.
@@ -47,15 +48,13 @@ pub struct Renderer {
     pub(crate) khr: Option<KhrParallelShaderCompile>,
     pub(crate) oes_vao: OesVertexArrayObject,
     /// Camera information.
-    pub(crate) center: Vec2,
-    pub(crate) zoom: f32,
-    pub(crate) camera_matrix: Mat3,
-    pub(crate) view_matrix: Mat3,
+    pub camera: Camera,
+    pub aligned_camera: Camera,
     /// Timing information
-    pub(crate) time: f32,
-    pub(crate) time_delta: f32,
+    pub time: f32,
+    pub time_delta: f32,
     /// Caches.
-    pub(crate) background_buffer: Option<RenderBuffer<Vec2>>,
+    pub(crate) background_buffer: Option<RenderBuffer<PosUv>>,
     pub(crate) text_shader: Option<Shader>,
     pub(crate) graphic_shader: Option<Shader>,
     pub(crate) particle_shader: Option<Shader>,
@@ -75,20 +74,24 @@ impl Renderer {
         struct ContextOptions {
             alpha: bool,
             antialias: bool,
+            power_preference: &'static str,
             premultiplied_alpha: bool,
+            preserve_drawing_buffer: bool,
         }
 
         let options = serde_wasm_bindgen::to_value(&ContextOptions {
             alpha: true,
             antialias,
+            power_preference: "high-performance",
             premultiplied_alpha: true,
+            preserve_drawing_buffer: false,
         })
         .unwrap();
 
         let gl = canvas
             .get_context_with_context_options("webgl", &options)
             .unwrap()
-            .unwrap()
+            .expect("could not create webgl context")
             .dyn_into::<Gl>()
             .unwrap();
 
@@ -114,11 +117,9 @@ impl Renderer {
             gl,
             khr,
             oes_vao,
-            camera_matrix: Mat3::ZERO,
-            view_matrix: Mat3::ZERO,
+            camera: Camera::new(false),
+            aligned_camera: Camera::new(true),
             time: 0.0,
-            center: Vec2::ZERO,
-            zoom: 1.0,
             background_buffer: None,
             text_shader: None,
             graphic_shader: None,
@@ -126,6 +127,24 @@ impl Renderer {
             sprite_shader: None,
             time_delta: 0.0,
         }
+    }
+
+    /// Returns if highp is supported in a fragment shader.
+    pub fn fragment_has_highp(&self) -> bool {
+        let precison = self
+            .gl
+            .get_shader_precision_format(Gl::FRAGMENT_SHADER, Gl::HIGH_FLOAT)
+            .unwrap();
+        precison.precision() >= 23
+    }
+
+    /// Returns mediump is not just an alias for highp in a fragment shader.
+    pub fn fragment_uses_mediump(&self) -> bool {
+        let precison = self
+            .gl
+            .get_shader_precision_format(Gl::FRAGMENT_SHADER, Gl::MEDIUM_FLOAT)
+            .unwrap();
+        precison.precision() < 23
     }
 
     /// Call early on if any custom shaders need OES standard derivatives.
@@ -159,8 +178,7 @@ impl Renderer {
 
     /// Returns the aspect ratio (width/height) of the canvas.
     pub fn aspect_ratio(&self) -> f32 {
-        let size = self.canvas_size().as_vec2();
-        size.x / size.y
+        self.camera.aspect_ratio()
     }
 
     /// color is RGBA with components 0.0-1.0.
@@ -170,13 +188,13 @@ impl Renderer {
     }
 
     pub(crate) fn pre_prepare(&mut self, layer: &mut impl Layer) {
+        self.cached_canvas_size.set(None);
         layer.pre_prepare(self);
     }
 
     /// start starts the renderer changing the aspect ratio if necessary, clearing the screen.
     pub(crate) fn render(&mut self, layer: &mut impl Layer, time_seconds: f32) {
         // Reset caches.
-        self.cached_canvas_size.set(None);
         self.time_delta = time_seconds - self.time;
         self.time = time_seconds;
 
@@ -192,30 +210,21 @@ impl Renderer {
         layer.render(self);
     }
 
-    /// Gets the camera.
-    pub fn camera(&self) -> (Vec2, f32) {
-        (self.center, self.zoom)
-    }
-
     /// Gets the camera center.
     pub fn camera_center(&self) -> Vec2 {
-        self.center
+        self.camera.center()
     }
 
     /// Defines the view matrix.
     pub fn set_camera(&mut self, center: Vec2, zoom: f32) {
-        self.center = center;
-        self.zoom = zoom;
-
-        // This matrix is the camera matrix manually inverted.
-        self.view_matrix = Mat3::from_scale(Vec2::new(1.0, self.aspect_ratio()) / zoom)
-            .mul_mat3(&Mat3::from_translation(-center));
-        self.camera_matrix = self.view_matrix.inverse();
+        let viewport = self.canvas_size();
+        self.camera.update(center, zoom, viewport);
+        self.aligned_camera.update(center, zoom, viewport);
     }
 
     /// Convert a position in view space (-1..1) to world space.
-    pub fn to_world_position(&mut self, view_position: Vec2) -> Vec2 {
-        self.camera_matrix.transform_point2(view_position)
+    pub fn to_world_position(&self, view_position: Vec2) -> Vec2 {
+        self.camera.camera_matrix.transform_point2(view_position)
     }
 
     /// Lower level function to bind a buffer.
@@ -236,6 +245,8 @@ impl Renderer {
         texture.bind(&self.gl, index)
     }
 
+    /// Loads an RBGA texture from a URL.
+    /// TODO remove dimensions from this function.
     pub fn load_texture(
         &self,
         img_src: &str,
@@ -246,14 +257,19 @@ impl Renderer {
         Texture::load(&self.gl, img_src, dimensions, placeholder, repeating)
     }
 
-    /// Overwrites self (a single channel texture) with bytes, creating a new texture if necessary.
-    pub fn realloc_texture_from_bytes(
+    /// Creates a new empty texture with the given formatting and fitler.
+    /// Mipmaps and repeating cannot be used.
+    pub fn new_empty_texture(&self, format: TextureFormat, linear_filter: bool) -> Texture {
+        Texture::new_empty(&self.gl, format, linear_filter)
+    }
+
+    /// Copies the bytes to the texture, resizing it if necessary.
+    pub fn realloc_texture_with_opt_bytes(
         &self,
-        opt: &mut Option<Texture>,
-        width: u32,
-        height: u32,
-        bytes: &[u8],
+        texture: &mut Texture,
+        dimensions: UVec2,
+        bytes: Option<&[u8]>,
     ) {
-        Texture::realloc_from_bytes(opt, &self.gl, width, height, bytes);
+        texture.realloc_with_opt_bytes(&self.gl, dimensions, bytes);
     }
 }

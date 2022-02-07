@@ -4124,22 +4124,20 @@
 				"external": false
 			},
 			{
-				"type": "tomahawk",
+				"type": "mark48",
 				"width": 0.533,
 				"positionForward": 37.7849,
 				"positionSide": 4.73435,
 				"angle": 0,
-				"external": false,
-				"hidden": true
+				"external": false
 			},
 			{
-				"type": "tomahawk",
+				"type": "mark48",
 				"width": 0.533,
 				"positionForward": 37.7849,
 				"positionSide": -4.73435,
 				"angle": 0,
-				"external": false,
-				"hidden": true
+				"external": false
 			},
 			{
 				"type": "mk70",
@@ -4266,6 +4264,39 @@
 			}
 		],
 		"damage": 5.966666666666667,
+		"turrets": []
+	},
+	"terryFox": {
+		"label": "Terry Fox",
+		"link": "https://en.wikipedia.org/wiki/CCGS_Terry_Fox",
+		"kind": "boat",
+		"subkind": "icebreaker",
+		"level": 6,
+		"length": 88,
+		"width": 17.7031,
+		"speed": 8.231111,
+		"draft": 8.3,
+		"sensors": {
+			"visual": {
+				"range": 664
+			},
+			"radar": {
+				"range": 1132
+			}
+		},
+		"armaments": [],
+		"exhausts": [
+			{
+				"positionForward": 7.308,
+				"positionSide": 4.531
+			},
+			{
+				"positionForward": 7.308,
+				"positionSide": -4.531
+			}
+		],
+		"antiAircraft": 0.186,
+		"damage": 2.933333333333333,
 		"turrets": []
 	},
 	"town": {

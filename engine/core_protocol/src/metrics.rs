@@ -279,7 +279,7 @@ impl ContinuousMetric {
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct ContinuousMetricSummary {
     average: f32,
-    standard_deviaton: f32,
+    standard_deviation: f32,
 }
 
 impl Metric for ContinuousMetric {
@@ -289,7 +289,7 @@ impl Metric for ContinuousMetric {
     fn summarize(&self) -> Self::Summary {
         ContinuousMetricSummary {
             average: self.average(),
-            standard_deviaton: self.standard_deviation(),
+            standard_deviation: self.standard_deviation(),
         }
     }
 

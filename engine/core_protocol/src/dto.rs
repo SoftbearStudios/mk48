@@ -120,14 +120,17 @@ pub struct MetricsSummaryDto {
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::Summary,
     pub plays_total: <DiscreteMetric as Metric>::Summary,
     pub ram: <ContinuousExtremaMetric as Metric>::Summary,
+    pub renewed: <DiscreteMetric as Metric>::Summary,
     pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
     pub retention_histogram: <HistogramMetric as Metric>::Summary,
+    pub rtt: <ContinuousExtremaMetric as Metric>::Summary,
     pub score: <ContinuousExtremaMetric as Metric>::Summary,
     pub sessions_cached: <DiscreteMetric as Metric>::Summary,
     pub teamed: <RatioMetric as Metric>::Summary,
     pub toxicity: <RatioMetric as Metric>::Summary,
     pub ups: <ContinuousExtremaMetric as Metric>::Summary,
     pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
+    pub visits: <DiscreteMetric as Metric>::Summary,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -151,13 +154,16 @@ pub struct MetricsDataPointDto {
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub plays_total: <DiscreteMetric as Metric>::DataPoint,
     pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub renewed: <DiscreteMetric as Metric>::DataPoint,
     pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub rtt: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
     pub teamed: <RatioMetric as Metric>::DataPoint,
     pub toxicity: <RatioMetric as Metric>::DataPoint,
     pub ups: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
+    pub visits: <DiscreteMetric as Metric>::DataPoint,
 }
 
 /// The Player Data Transfer Object (DTO) binds player ID to player data.

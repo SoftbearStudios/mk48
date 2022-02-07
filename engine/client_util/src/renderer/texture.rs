@@ -12,106 +12,154 @@ use web_sys::WebGlTexture;
 /// Texture references a WebGL texture. There are several options for creating one.
 pub struct Texture {
     inner: Rc<WebGlTexture>,
-    /// Width and height not always known/used.
-    dimensions: UVec2,
-    /// Cache of height / width.
-    pub(crate) aspect: f32,
+    format: TextureFormat,
+    pub dimensions: UVec2,
+}
+
+pub enum TextureFormat {
+    Alpha,
+    Rgba,
+}
+
+impl TextureFormat {
+    /// Size of one pixel in bytes.
+    fn pixel_size(&self) -> u32 {
+        // If more options are added, make sure Self::pixel_align is kept up to date.
+        match self {
+            Self::Alpha => 1,
+            Self::Rgba => 4,
+        }
+    }
+
+    /// Alignment between pixels in bytes.
+    fn pixel_align(&self) -> u32 {
+        self.pixel_size()
+    }
+
+    /// Get the underlying WebGL format.
+    fn as_format(&self) -> u32 {
+        match self {
+            Self::Alpha => Gl::ALPHA,
+            Self::Rgba => Gl::RGBA,
+        }
+    }
 }
 
 impl Texture {
     /// Helper to calculate aspect ratio.
-    fn from_inner(inner: Rc<WebGlTexture>, width: u32, height: u32) -> Self {
+    fn from_inner(inner: Rc<WebGlTexture>, format: TextureFormat, dimensions: UVec2) -> Self {
         Self {
             inner,
-            dimensions: UVec2::new(width, height),
-            aspect: height as f32 / width as f32,
+            format,
+            dimensions,
         }
     }
 
-    /// Creates a single-color-channel texture from bytes.
-    pub fn from_bytes(gl: &Gl, width: u32, height: u32, bytes: &[u8]) -> Self {
-        let texture = Rc::new(gl.create_texture().unwrap());
-        gl.bind_texture(Gl::TEXTURE_2D, Some(&texture));
-        let level = 0;
-        let internal_format = Gl::ALPHA;
-        let border = 0;
-        let src_format = Gl::ALPHA;
-        let src_type = Gl::UNSIGNED_BYTE;
+    pub(crate) fn get_inner(&self) -> &WebGlTexture {
+        &self.inner
+    }
 
-        assert_eq!(width * height, bytes.len() as u32);
+    pub fn aspect(&self) -> f32 {
+        let [width, height] = self.dimensions.as_vec2().to_array();
+        width / height
+    }
 
-        gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 1);
+    /// Creates a new empty texture with the given formatting and fitler.
+    /// Mipmaps and repeating cannot be used.
+    pub(crate) fn new_empty(gl: &Gl, format: TextureFormat, linear_filter: bool) -> Self {
+        let texture = Self::from_inner(Rc::new(gl.create_texture().unwrap()), format, UVec2::ZERO);
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&texture.inner));
 
-        gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-            Gl::TEXTURE_2D,
-            level,
-            internal_format as i32,
-            width as i32,
-            height as i32,
-            border,
-            src_format,
-            src_type,
-            Some(bytes),
-        )
-        .unwrap();
-
+        // Can't be repeating because size isn't known yet.
         gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
         gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
-        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MIN_FILTER, Gl::LINEAR as i32);
-        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
 
-        gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
+        let filter = if linear_filter {
+            Gl::LINEAR
+        } else {
+            Gl::NEAREST
+        } as i32;
+
+        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MIN_FILTER, filter);
+        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, filter);
 
         unbind_texture_cfg_debug(gl);
-
-        Self::from_inner(texture, width, height)
+        texture
     }
 
-    /// Overwrites self (a single channel texture) with bytes, creating a new texture if necessary.
-    pub(crate) fn realloc_from_bytes(
-        opt: &mut Option<Self>,
+    /// Copies the bytes to the texture, resizing it if necessary.
+    pub(crate) fn realloc_with_opt_bytes(
+        &mut self,
         gl: &Gl,
-        width: u32,
-        height: u32,
-        bytes: &[u8],
+        dimensions: UVec2,
+        bytes: Option<&[u8]>,
     ) {
-        if let Some(texture) = opt {
-            if texture.dimensions.x == width && texture.dimensions.y == height {
-                gl.bind_texture(Gl::TEXTURE_2D, Some(&texture.inner));
-                let level = 0;
-                let src_format = Gl::ALPHA;
-                let src_type = Gl::UNSIGNED_BYTE;
+        gl.bind_texture(Gl::TEXTURE_2D, Some(&self.inner));
 
-                assert_eq!(width * height, bytes.len() as u32);
+        // No mipmaps.
+        let level = 0;
+        let src_format = self.format.as_format();
+        let src_type = Gl::UNSIGNED_BYTE;
+        let [width, height] = dimensions.to_array();
 
-                gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 1);
-
-                gl.tex_sub_image_2d_with_i32_and_i32_and_u32_and_type_and_opt_u8_array(
-                    Gl::TEXTURE_2D,
-                    level,
-                    0,
-                    0,
-                    width as i32,
-                    height as i32,
-                    src_format,
-                    src_type,
-                    Some(bytes),
-                )
-                .unwrap();
-
-                gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
-
-                unbind_texture_cfg_debug(gl);
-
-                return;
-            }
+        if let Some(bytes) = bytes {
+            assert_eq!(
+                width * height * self.format.pixel_size(),
+                bytes.len() as u32
+            );
         }
-        // Alloc/realloc.
-        *opt = Some(Self::from_bytes(gl, width, height, bytes));
+
+        // Set alignment if it's not the default.
+        let align = self.format.pixel_align();
+        if align != 4 {
+            gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 1);
+        }
+
+        // Don't reallocate if dimensions haven't changed.
+        if self.dimensions == dimensions {
+            gl.tex_sub_image_2d_with_i32_and_i32_and_u32_and_type_and_opt_u8_array(
+                Gl::TEXTURE_2D,
+                level,
+                0,
+                0,
+                width as i32,
+                height as i32,
+                src_format,
+                src_type,
+                bytes,
+            )
+            .unwrap();
+        } else {
+            self.dimensions = dimensions;
+
+            let internal_format = src_format;
+            let border = 0;
+
+            gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+                Gl::TEXTURE_2D,
+                level,
+                internal_format as i32,
+                width as i32,
+                height as i32,
+                border,
+                src_format,
+                src_type,
+                bytes,
+            )
+            .unwrap();
+        }
+
+        // Reset to the default alignment.
+        if align != 4 {
+            gl.pixel_storei(Gl::UNPACK_ALIGNMENT, 4);
+        }
+
+        unbind_texture_cfg_debug(gl);
     }
 
     /// Creates a texture from some text, with variable length and constant height.
-    pub fn from_str(gl: &Gl, text: &str) -> Self {
+    /// Apply color to texture instead of shader so emoji colors are preserved.
+    pub(crate) fn from_str_and_color(gl: &Gl, text: &str, color: [u8; 4]) -> Self {
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document.create_element("canvas").unwrap();
         let canvas: web_sys::HtmlCanvasElement = canvas
@@ -127,7 +175,7 @@ impl Texture {
             .unwrap();
 
         const FONT: &str = "30px Arial";
-        const HEIGHT: u32 = 32;
+        const HEIGHT: u32 = 36; // 32 -> 36 to fit "😊".
 
         context.set_font(FONT);
         context.set_text_baseline("bottom");
@@ -137,7 +185,11 @@ impl Texture {
         canvas.set_width(canvas_width);
         canvas.set_height(HEIGHT);
 
-        context.set_fill_style(&JsValue::from_str("white"));
+        // Convert to css color (format hex, remove "0x" and prepend #).
+        let mut color_hex = format!("{:#08x}", u32::from_be_bytes(color));
+        color_hex = "#".to_owned() + color_hex.strip_prefix("0x").unwrap();
+
+        context.set_fill_style(&JsValue::from_str(&color_hex));
         context.set_font(FONT);
         context.set_text_baseline("bottom");
 
@@ -149,9 +201,13 @@ impl Texture {
         gl.bind_texture(Gl::TEXTURE_2D, Some(&texture));
         gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
+        // No mipmaps since not always a power of 2.
         let level = 0;
-        let internal_format = Gl::RGBA;
-        let src_format = Gl::RGBA;
+
+        // Always use RGBA because text can have colored unicode.
+        let format = TextureFormat::Rgba;
+        let internal_format = format.as_format();
+        let src_format = internal_format;
         let src_type = Gl::UNSIGNED_BYTE;
 
         gl.tex_image_2d_with_u32_and_u32_and_canvas(
@@ -173,11 +229,12 @@ impl Texture {
 
         unbind_texture_cfg_debug(gl);
 
-        Self::from_inner(texture, canvas_width, HEIGHT)
+        let dimensions = UVec2::new(canvas_width, HEIGHT);
+        Self::from_inner(texture, format, dimensions)
     }
 
     /// Loads an RBGA texture from a URL.
-    pub fn load(
+    pub(crate) fn load(
         gl: &Gl,
         img_src: &str,
         dimensions: UVec2,
@@ -186,17 +243,21 @@ impl Texture {
     ) -> Self {
         let texture = Rc::new(gl.create_texture().unwrap());
         gl.bind_texture(Gl::TEXTURE_2D, Some(&texture));
-        let level = 0;
-        let internal_format = Gl::RGBA;
-        let width = 1;
-        let height = 1;
-        let border = 0;
-        let src_format = Gl::RGBA;
+
+        // Format is always RGBA for now.
+        let format = TextureFormat::Rgba;
+        let internal_format = format.as_format();
+        let src_format = internal_format;
         let src_type = Gl::UNSIGNED_BYTE;
 
         // Unloaded textures are single pixel of placeholder or NONE.
+        let level = 0;
+        let width = 1;
+        let height = 1;
+        let border = 0;
         let p = placeholder.unwrap_or([0, 0, 0]);
         let pixel: [u8; 4] = [p[0], p[1], p[2], placeholder.is_some() as u8 * 255];
+
         gl.tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
             Gl::TEXTURE_2D,
             level,
@@ -247,7 +308,8 @@ impl Texture {
                     panic!("failed to load image");
                 }
 
-                if img2.width().is_power_of_two() && img2.height().is_power_of_two() {
+                let is_pow2 = img2.width().is_power_of_two() && img2.height().is_power_of_two();
+                if is_pow2 {
                     gl.generate_mipmap(Gl::TEXTURE_2D);
                     gl.tex_parameteri(
                         Gl::TEXTURE_2D,
@@ -260,8 +322,12 @@ impl Texture {
 
                 gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_MAG_FILTER, Gl::LINEAR as i32);
                 if repeating {
-                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::REPEAT as i32);
-                    gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::REPEAT as i32);
+                    if is_pow2 {
+                        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::REPEAT as i32);
+                        gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::REPEAT as i32);
+                    } else {
+                        panic!("repeating texture must be power of two")
+                    }
                 } else {
                     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_S, Gl::CLAMP_TO_EDGE as i32);
                     gl.tex_parameteri(Gl::TEXTURE_2D, Gl::TEXTURE_WRAP_T, Gl::CLAMP_TO_EDGE as i32);
@@ -281,22 +347,12 @@ impl Texture {
         // Start loading image.
         img.set_src(img_src);
 
-        Self::from_inner(texture, dimensions.x, dimensions.y)
+        Self::from_inner(texture, format, dimensions)
     }
 
     /// Bind a texture for affecting subsequent draw calls.
     pub(crate) fn bind<'a>(&self, gl: &'a Gl, index: usize) -> TextureBinding<'a> {
         TextureBinding::new(gl, index, self)
-    }
-}
-
-impl Clone for Texture {
-    fn clone(&self) -> Self {
-        Self {
-            inner: Rc::clone(&self.inner),
-            dimensions: self.dimensions,
-            aspect: self.aspect,
-        }
     }
 }
 

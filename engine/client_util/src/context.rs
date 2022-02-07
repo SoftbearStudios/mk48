@@ -5,7 +5,7 @@ use crate::keyboard::KeyboardState;
 use crate::local_storage::LocalStorage;
 use crate::mouse::MouseState;
 use crate::reconn_web_socket::ReconnWebSocket;
-use crate::setting::{CommonSettings, Settings};
+use crate::setting::CommonSettings;
 use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, PlayerDto, TeamDto};
 use core_protocol::id::{InvitationId, PeriodId, PlayerId, TeamId};
 use core_protocol::name::PlayerAlias;
@@ -212,12 +212,11 @@ impl Apply<ClientUpdate> for CoreState {
 }
 
 impl<G: GameClient> Context<G> {
-    pub(crate) fn new() -> Self {
-        // Not guaranteed to set either or both to Some. Could fail to load.
-        let local_storage = LocalStorage::new();
-
-        let common_settings = CommonSettings::load(&local_storage);
-
+    pub(crate) fn new(
+        local_storage: LocalStorage,
+        common_settings: CommonSettings,
+        settings: G::Settings,
+    ) -> Self {
         #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
         extern "C" {
             #[wasm_bindgen(js_name = "getRealHost", catch)]
@@ -250,7 +249,7 @@ impl<G: GameClient> Context<G> {
             ui: G::UiState::default(),
             keyboard: KeyboardState::default(),
             mouse: MouseState::default(),
-            settings: G::Settings::load(&local_storage),
+            settings,
             common_settings,
             local_storage,
             web_socket_info,

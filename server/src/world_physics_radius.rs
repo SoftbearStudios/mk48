@@ -368,7 +368,7 @@ impl World {
 
                         // Collecting your own coins does not have auxiliary benefits.
                         if !friendly {
-                            mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.0)));
+                            mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.5)));
                             mutate(boats[0], Mutation::Reload(collectibles[0].data().reload));
                         }
                     } else if boats.len() == 2 {

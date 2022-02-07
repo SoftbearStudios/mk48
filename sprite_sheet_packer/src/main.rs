@@ -16,6 +16,7 @@ fn main() {
 
     webpify("../js/public/sand.png");
     webpify("../js/public/grass.png");
+    webpify("../js/public/snow.png");
 
     pack_audio_sprite_sheet(
         1,
@@ -36,7 +37,7 @@ fn main() {
             if true {
                 fn boat_meters_to_pixels(meters: f32) -> f32 {
                     fn f(x: f32) -> f32 {
-                        63.0 * x.sqrt()
+                        62.0 * x.sqrt()
                     }
                     f(meters).min(meters * f(18.0) / 18.0)
                 }

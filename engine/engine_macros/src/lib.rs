@@ -102,7 +102,6 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, .. } = parse_macro_input!(input);
     if let Data::Struct(DataStruct { fields, .. }) = data {
         if let Fields::Named(FieldsNamed { named, .. }) = fields {
-            let mut defaults = Vec::with_capacity(named.len());
             let mut loaders = Vec::with_capacity(named.len());
             let mut getters = Vec::with_capacity(named.len());
             let mut setters = Vec::with_capacity(named.len());
@@ -119,11 +118,8 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                 let getter_name = format_ident!("get_{}", ident);
                 let setter_name = format_ident!("set_{}", ident);
                 let validator_name = format_ident!("validate_{}", ident);
-                let mut default = quote! {
-                    #ident: Default::default(),
-                };
-                let mut loader = quote! {
-                    #ident: local_storage.get(#ident_string).and_then(Self::#validator_name).unwrap_or_default(),
+                let loader = quote! {
+                    #ident: local_storage.get(#ident_string).and_then(Self::#validator_name).unwrap_or(default.#ident),
                 };
                 let getter = quote! {
                     pub fn #getter_name(&self) -> #ty {
@@ -148,15 +144,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                         for meta in nested {
                             match meta {
                                 NestedMeta::Meta(Meta::NameValue(meta)) => {
-                                    if meta.path.is_ident("default") {
-                                        let default_value = str_lit_to_expr(meta.lit);
-                                        default = quote! {
-                                            #ident: #default_value,
-                                        };
-                                        loader = quote! {
-                                            #ident: local_storage.get(#ident_string).and_then(Self::#validator_name).unwrap_or(#default_value),
-                                        };
-                                    } else if meta.path.is_ident("range") {
+                                    if meta.path.is_ident("range") {
                                         let valid_range = str_lit_to_expr(meta.lit);
                                         validations.push(quote! {
                                             let valid = #valid_range;
@@ -192,7 +180,6 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                     }
                 };
 
-                defaults.push(default);
                 loaders.push(loader);
                 getters.push(getter);
                 setters.push(setter);
@@ -212,16 +199,8 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
             }
 
             let output = quote! {
-                impl Default for #ident {
-                    fn default() -> Self {
-                        Self {
-                            #(#defaults)*
-                        }
-                    }
-                }
-
                 impl Settings for #ident {
-                    fn load(local_storage: &LocalStorage) -> Self {
+                    fn load(local_storage: &LocalStorage, default: Self) -> Self {
                         Self {
                             #(#loaders)*
                         }

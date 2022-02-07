@@ -16,6 +16,11 @@ where
         observer: Recipient<ObserverUpdate<O>>,
         request: I,
     },
+    RoundTripTime {
+        observer: Recipient<ObserverUpdate<O>>,
+        /// Unique measurement of the round trip time, in milliseconds.
+        rtt: u16,
+    },
     Register {
         observer: Recipient<ObserverUpdate<O>>,
         payload: P,

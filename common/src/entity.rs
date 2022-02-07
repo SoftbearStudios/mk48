@@ -6,13 +6,15 @@ use crate::angle::Angle;
 use crate::ticks;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
-use crate::util::level_to_score;
+use crate::util::{level_to_score, natural_death_coins};
 use crate::velocity::Velocity;
+use arrayvec::ArrayVec;
 use core_protocol::serde_util::{StrVisitor, U8Visitor};
 use enum_iterator::IntoEnumIterator;
 use glam::Vec2;
 use macros::entity_type;
 use rand::seq::IteratorRandom;
+use rand::{thread_rng, Rng};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::num::NonZeroU32;
@@ -69,6 +71,7 @@ pub enum EntitySubKind {
     Dredger,
     Heli,
     Hovercraft,
+    Icebreaker,
     Gun,
     Lcs,
     Mine,
@@ -434,7 +437,6 @@ impl<'de> Deserialize<'de> for EntityType {
     {
         if deserializer.is_human_readable() {
             deserializer.deserialize_str(StrVisitor).and_then(|s| {
-                // TODO don't allocate String.
                 Self::from_str(s.as_str()).ok_or_else(|| {
                     serde::de::Error::custom(format!("invalid entity type {}", s.as_str()))
                 })
@@ -468,9 +470,9 @@ impl EntityType {
 
     /// can_spawn_as returns whether it is possible to spawn as the entity type, which may depend
     /// on whether you are a bot.
-    pub fn can_spawn_as(self, bot: bool) -> bool {
+    pub fn can_spawn_as(self, score: u32, bot: bool) -> bool {
         let data = self.data();
-        data.kind == EntityKind::Boat && data.level == 1 && (bot || !data.npc)
+        data.kind == EntityKind::Boat && level_to_score(data.level) <= score && (bot || !data.npc)
     }
 
     /// can_upgrade_to returns whether it is possible to upgrade to the entity type, which may depend
@@ -493,7 +495,7 @@ impl EntityType {
     /// spawn_options returns an iterator that visits all spawnable entity types and allows a random
     /// choice to be made.
     pub fn spawn_options(bot: bool) -> impl Iterator<Item = Self> + IteratorRandom {
-        Self::iter().filter(move |t| t.can_spawn_as(bot))
+        Self::iter().filter(move |t| t.can_spawn_as(0, bot))
     }
 
     /// upgrade_options returns an iterator that visits all entity types that may be upgraded to
@@ -512,6 +514,50 @@ impl EntityType {
         }
         .into_iter()
         .flatten()
+    }
+
+    /// iterates all loot types entity should drop. Takes score before death.
+    pub fn loot(self, score: u32, score_to_coins: bool) -> impl Iterator<Item = Self> + 'static {
+        let data: &EntityData = self.data();
+
+        debug_assert_eq!(data.kind, EntityKind::Boat);
+
+        let coin_amount = if score_to_coins {
+            natural_death_coins(score)
+        } else {
+            0
+        };
+
+        let mut rng = thread_rng();
+
+        // Loot is based on the length of the boat.
+        let loot_amount = (data.length * 0.25 * (rng.gen::<f32>() * 0.1 + 0.9)) as u32;
+
+        let mut loot_table = ArrayVec::<Self, 4>::new();
+
+        match data.sub_kind {
+            EntitySubKind::Pirate => {
+                loot_table.push(Self::Crate);
+                loot_table.push(Self::Coin);
+            }
+            EntitySubKind::Tanker => {
+                loot_table.push(Self::Scrap);
+                loot_table.push(Self::Barrel);
+            }
+            _ => match self {
+                Self::Olympias => loot_table.push(Self::Crate),
+                _ => loot_table.push(Self::Scrap),
+            },
+        };
+
+        (0..loot_amount)
+            .map(move |_| {
+                *loot_table
+                    .iter()
+                    .choose(&mut rng)
+                    .expect("at least once loot table option")
+            })
+            .chain((0..coin_amount).map(|_| Self::Coin))
     }
 
     /// init initializes EntityData.

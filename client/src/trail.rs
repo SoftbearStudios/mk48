@@ -35,10 +35,21 @@ impl Trail {
     }
 
     fn add_to_layer(&self, layer: &mut GraphicLayer, time: f32) {
+        // How long the start point of the trail has been visible.
+        // Clamp the start point to the visible range.
         let start_alive = time - self.created;
-        let start_pos = self.start + Self::offset(start_alive);
+        let start_clamp = (start_alive - self.lifespan).max(0.0);
+        let start_alive = start_alive.min(self.lifespan);
+
+        // Move start position towards end position based on how much start alive was clamped.
+        let start_pos = self
+            .start
+            .lerp(self.end, start_clamp / (self.updated - self.created))
+            + Self::offset(start_alive);
         let start_color = self.color(start_alive);
 
+        // How long the end point of the trail has been visible.
+        // Don't need to clamp the end point because it will be expired first.
         let end_alive = time - self.updated;
         let end_pos = self.end + Self::offset(end_alive);
         let end_color = self.color(end_alive);

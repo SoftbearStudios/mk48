@@ -5,6 +5,7 @@ use crate::altitude::Altitude;
 use crate::protocol::TerrainUpdate;
 use crate::transform::DimensionTransform;
 use crate::util::lerp;
+use crate::world;
 use fast_hilbert as hilbert;
 use glam::Vec2;
 use lazy_static::lazy_static;
@@ -20,9 +21,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Coord(pub usize, pub usize);
-
 // Scale of terrain aka meters per pixel.
 pub const SCALE: f32 = 25.0;
 // Size of whole terrain.
@@ -30,6 +28,8 @@ pub const SCALE: f32 = 25.0;
 pub const SIZE: usize = (1 << 10) * crate::world::SIZE;
 // Offset to convert between signed coordinates to unsigned.
 const OFFSET: isize = (SIZE / 2) as isize;
+// Position of arctic biome in terrain y coordinate.
+pub const ARCTIC: usize = ((world::ARCTIC / SCALE) as isize + OFFSET) as usize;
 
 // Size of a chunk.
 // Must be a power of 2.
@@ -45,7 +45,7 @@ pub const GRASS_LEVEL: Altitude = Altitude(1 << 4);
 /// Terrain data to altitude (non-linear, to allow both shallow and deep areas).
 const ALTITUDE_LUT: [i8; 17] = [
     i8::MIN,
-    -120,
+    -115,
     -100,
     -50,
     -20,
@@ -59,18 +59,39 @@ const ALTITUDE_LUT: [i8; 17] = [
     20,
     50,
     100,
-    120,
+    115,
     i8::MAX,
 ];
 
-/// Converts terrain data into `Altitude`.
+/// Offset the terrain by 6 units, so that the strata representing sea level is slightly
+/// above 0. A typical terrain shader would add a similar amount (on average, via noise) to
+/// make islands more interesting (but still smooth).
+const DATA_OFFSET: u8 = 6;
+
+/// Converts terrain data into [`Altitude`].
 const fn lookup_altitude(data: u8) -> Altitude {
+    let data = data.saturating_add(DATA_OFFSET);
+
     // Linearly interpolate between adjacent altitudes.
     let low = ALTITUDE_LUT[(data >> 4) as usize] as i16;
     let high = ALTITUDE_LUT[((data >> 4) + 1) as usize] as i16;
     let frac = (data & 0b1111) as i16;
-    Altitude((low + (high - low) * frac / 0b1111) as i8)
+    Altitude((low + (high - low) * frac / 0b10000) as i8)
 }
+
+/// Converts [`Altitude`] into terrain data.
+///
+/// TODO: Doesn't interpolate at all. Only returns multiples of 16, minus DATA_OFFSET.
+fn reverse_lookup_altitude(altitude: Altitude) -> u8 {
+    (ALTITUDE_LUT
+        .binary_search(&altitude.0)
+        .map_err(|n| n.saturating_sub(1))
+        .into_ok_or_err() as u8)
+        .saturating_mul(16) //.saturating_sub(DATA_OFFSET)
+}
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub struct Coord(pub usize, pub usize);
 
 /// Any terrain pixel can be represented as a `Coord`.
 impl Coord {
@@ -105,11 +126,20 @@ impl Coord {
 
     pub fn corner(&self) -> Vec2 {
         // TODO investigate if this is actually the corner.
-        Vec2::new(
+        let pos = Vec2::new(
             (self.0 as isize - OFFSET) as f32,
             (self.1 as isize - OFFSET) as f32,
         )
-        .mul(SCALE)
+        .mul(SCALE);
+        debug_assert_eq!(self, &Self::saturating_from_position(pos));
+        pos
+    }
+}
+
+impl Add<RelativeCoord> for Coord {
+    type Output = Coord;
+    fn add(self, rhs: RelativeCoord) -> Self::Output {
+        Self(self.0 + rhs.0 as usize, self.1 + rhs.1 as usize)
     }
 }
 
@@ -139,7 +169,7 @@ impl ChunkId {
         Self((index % SIZE_CHUNKS) as u16, (index / SIZE_CHUNKS) as u16)
     }
 
-    fn as_coord(&self) -> Coord {
+    pub fn as_coord(&self) -> Coord {
         Coord(self.0 as usize * CHUNK_SIZE, self.1 as usize * CHUNK_SIZE)
     }
 
@@ -205,10 +235,71 @@ fn zero_generator(_: usize, _: usize) -> u8 {
 pub struct Terrain {
     chunks: [[Option<Box<Chunk>>; SIZE_CHUNKS]; SIZE_CHUNKS],
     /// Which chunks were modified since the last reset.
+    /// Resets are triggered by terrain regeneration in post update on the server
+    /// and the background layer on the client.
     pub updated: ChunkSet,
     /// Guards chunk generation.
     mutex: Mutex<()>,
     generator: Generator,
+}
+
+pub struct TerrainMutation {
+    /// Four surrounding pixels will be affected.
+    position: Vec2,
+    /// Amount to add/subtract.
+    amount: f32,
+    /// Pixels lying in this range are modified.
+    condition: RangeInclusive<Altitude>,
+    /// Modified pixels will be clamped to this range.
+    clamp: RangeInclusive<Altitude>,
+}
+
+impl TerrainMutation {
+    /// Changes the height of nearby terrain.
+    pub fn simple(position: Vec2, amount: f32) -> Self {
+        Self {
+            position,
+            amount,
+            condition: Altitude::MIN..=Altitude::MAX,
+            clamp: Altitude::MIN..=Altitude::MAX,
+        }
+    }
+
+    /// Changes the height of nearby terrain provided it is within a range.
+    pub fn conditional(position: Vec2, amount: f32, condition: RangeInclusive<Altitude>) -> Self {
+        Self {
+            position,
+            amount,
+            condition,
+            clamp: Altitude::MIN..=Altitude::MAX,
+        }
+    }
+
+    /// Changes the height of nearby terrain such that it remain within a range.
+    pub fn clamped(position: Vec2, amount: f32, clamp: RangeInclusive<Altitude>) -> Self {
+        Self {
+            position,
+            amount,
+            condition: Altitude::MIN..=Altitude::MAX,
+            clamp,
+        }
+    }
+
+    /// Changes the height of nearby terrain provided it is within a range, such that it remains within
+    /// another range.
+    pub fn conditional_clamped(
+        position: Vec2,
+        amount: f32,
+        condition: RangeInclusive<Altitude>,
+        clamp: RangeInclusive<Altitude>,
+    ) -> Self {
+        Self {
+            position,
+            amount,
+            condition,
+            clamp,
+        }
+    }
 }
 
 impl Terrain {
@@ -276,6 +367,7 @@ impl Terrain {
     pub fn apply_update(&mut self, update: &TerrainUpdate) {
         for (chunk_id, serialized) in update.iter() {
             self.mut_chunk(*chunk_id).apply_serialized_chunk(serialized);
+            self.updated.add(*chunk_id)
         }
     }
 
@@ -319,15 +411,18 @@ impl Terrain {
             })
     }
 
-    /// Sets the raw terrain data at a Coord.
-    fn set(&mut self, coord: Coord, value: u8) {
+    /// Sets the raw terrain data at a Coord. Returns if actually changed underlying data.
+    fn set(&mut self, coord: Coord, value: u8) -> bool {
         let chunk_id = ChunkId::from_coord(coord);
         let chunk = self.mut_chunk(chunk_id);
 
         // Don't record sets that change nothing.
         if chunk.at(coord) & 0b11110000 != value & 0b11110000 {
             chunk.set_capture(coord, value);
-            self.updated.add(chunk_id)
+            self.updated.add(chunk_id);
+            true
+        } else {
+            false
         }
     }
 
@@ -365,28 +460,22 @@ impl Terrain {
             c11 = self.at(Coord(cx, cy));
         }
 
-        // Offset the terrain by 6 units, so that the strata representing sea level is slightly
-        // above 0. A typical terrain shader would add a similar amount (on average, via noise) to
-        // make islands more interesting (but still smooth).
-
         let delta = pos.sub(f_pos);
-        Some(lookup_altitude(
-            lerp(
-                lerp(c00 as f32, c10 as f32, delta.x),
-                lerp(c01 as f32, c11 as f32, delta.x),
-                delta.y,
-            ) as u8
-                + 6,
-        ))
+        Some(lookup_altitude(lerp(
+            lerp(c00 as f32, c10 as f32, delta.x),
+            lerp(c01 as f32, c11 as f32, delta.x),
+            delta.y,
+        ) as u8))
     }
 
-    /// collides_with returns if an entity collides with the terrain given a time step in seconds.
+    /// collides_with returns one point (and the altitude there) of collision if an entity collides
+    /// with the terrain any time in the next delta_seconds.
     pub fn collides_with(
         &self,
         mut dim_transform: DimensionTransform,
         threshold: Altitude,
         delta_seconds: f32,
-    ) -> bool {
+    ) -> Option<(Vec2, Altitude)> {
         let normal = dim_transform.transform.direction.to_vec();
         let tangent = Vec2::new(-normal.y, normal.x);
 
@@ -397,7 +486,7 @@ impl Terrain {
         // Not worth doing multiple terrain samples for small, slow moving entities.
         if dim_transform.dimensions.x <= SCALE * 0.2 && dim_transform.dimensions.y <= SCALE * 0.2 {
             if let Some(alt) = self.sample(dim_transform.transform.position) {
-                return alt >= threshold;
+                return (alt >= threshold).then_some((dim_transform.transform.position, alt));
             }
         }
 
@@ -411,25 +500,40 @@ impl Terrain {
         let half_length = (dim_transform.dimensions.x / dx) as i32 / 2;
         let half_width = (dim_transform.dimensions.y / dy) as i32 / 2;
 
+        // Find highest altitude point that we are colliding with.
+        let mut max = Altitude::MIN;
+        let mut max_position = Vec2::ZERO;
+
         for l in -(half_length as i32)..=half_length as i32 {
             for w in -(half_width as i32)..=half_width as i32 {
                 let l = l as f32 * dx;
-                debug_assert!(l > dim_transform.dimensions.x * -0.5);
-                debug_assert!(l < dim_transform.dimensions.x * 0.5);
+                debug_assert!(
+                    l > dim_transform.dimensions.x * -0.5,
+                    "{} <= {}",
+                    l,
+                    dim_transform.dimensions.x * -0.5
+                );
+                debug_assert!(
+                    l < dim_transform.dimensions.x * 0.5,
+                    "{} >= {}",
+                    l,
+                    dim_transform.dimensions.x * 0.5
+                );
                 let w = w as f32 * dy;
                 debug_assert!(w > dim_transform.dimensions.y * -0.5);
                 debug_assert!(w < dim_transform.dimensions.y * 0.5);
                 let pos = dim_transform.transform.position + normal * l + tangent * w;
 
                 if let Some(alt) = self.sample(pos) {
-                    if alt >= threshold {
-                        return true;
+                    if alt >= threshold && alt >= max {
+                        max = alt;
+                        max_position = pos;
                     }
                 }
             }
         }
 
-        false
+        (max > Altitude::MIN).then_some((max_position, max))
     }
 
     /// Returns if there is any land in a square, centered at center. Useful for determining whether something can spawn.
@@ -447,10 +551,10 @@ impl Terrain {
         false
     }
 
-    /// Modifies a small radius around a pos by adding or subtracting an amount of land. Returns None
-    /// if unsuccessful.
-    pub fn modify(&mut self, pos: Vec2, mut amount: f32) -> Option<()> {
-        let pos = pos.mul(1.0 / SCALE);
+    /// Modifies a small radius around a pos by adding or subtracting an amount of land. Returns
+    /// if actually modified terrain, or None if unsuccessful.
+    pub fn modify(&mut self, mut mutation: TerrainMutation) -> Option<bool> {
+        let pos = mutation.position.mul(1.0 / SCALE);
 
         let c_pos = pos.ceil();
         let Coord(cx, cy) = Coord::from_scaled_position(c_pos)?;
@@ -458,28 +562,41 @@ impl Terrain {
         let f_pos = pos.floor();
         let Coord(fx, fy) = Coord::from_scaled_position(f_pos)?;
 
-        let delta = pos.sub(f_pos);
+        let fract = pos.sub(f_pos);
 
-        // The following code effectively double's the amount, so correct for this.
-        amount *= 0.5;
+        // The following code effectively doubles the amount, so correct for this.
+        mutation.amount *= 0.5;
 
-        self.set(
-            Coord(fx, fy),
-            ((self.at(Coord(fx, fy)) + 0b0011) as f32 + amount * (2.0 - delta.x - delta.y)) as u8,
-        );
-        self.set(
-            Coord(cx, fy),
-            ((self.at(Coord(cx, fy)) + 0b0011) as f32 + amount * (1.0 + delta.x - delta.y)) as u8,
-        );
-        self.set(
-            Coord(fx, cy),
-            ((self.at(Coord(fx, cy)) + 0b0011) as f32 + amount * (1.0 - delta.x + delta.y)) as u8,
-        );
-        self.set(
-            Coord(cx, cy),
-            ((self.at(Coord(cx, cy)) + 0b0011) as f32 + amount * (delta.x + delta.y)) as u8,
-        );
-        Some(())
+        // Return if actually changed underlying data.
+        fn mutate(
+            terrain: &mut Terrain,
+            x: usize,
+            y: usize,
+            factor: f32,
+            mutation: &TerrainMutation,
+        ) -> bool {
+            let coord = Coord(x, y);
+            let old = terrain.at(coord) + 0b0011;
+            let old_altitude = lookup_altitude(old);
+            if mutation.condition.contains(&old_altitude) {
+                let to_add = (mutation.amount * factor) as i8;
+                let new = lookup_altitude(old.saturating_add_signed(to_add));
+                let clamped = new.clamp(*mutation.clamp.start(), *mutation.clamp.end());
+                //println!("old: {:?}, new: {:?}, clamped: {:?}, reverse: {}", old_altitude, new, clamped, reverse_lookup_altitude(clamped));
+                terrain.set(coord, reverse_lookup_altitude(clamped))
+            } else {
+                false
+            }
+        }
+
+        let mut modified = false;
+
+        modified |= mutate(self, fx, fy, 2.0 - fract.x - fract.y, &mutation);
+        modified |= mutate(self, cx, fy, 1.0 + fract.x - fract.y, &mutation);
+        modified |= mutate(self, fx, cy, 1.0 - fract.x + fract.y, &mutation);
+        modified |= mutate(self, cx, cy, fract.x + fract.y, &mutation);
+
+        Some(modified)
     }
 
     /// pre_update is called once before all clients recieve updates after physics each tick.
@@ -518,11 +635,19 @@ impl Terrain {
             }
         }
     }
+
+    /// Clears the update from all chunks that were updated.
+    pub fn clear_updated(&mut self) {
+        let updated = std::mem::take(&mut self.updated);
+        for chunk_id in updated.into_iter() {
+            self.mut_chunk(chunk_id).update = ChunkUpdate::None;
+        }
+    }
 }
 
 /// RelativeCoord is a coord within a chunk.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct RelativeCoord(u8, u8);
+pub struct RelativeCoord(pub u8, pub u8);
 
 impl From<Coord> for RelativeCoord {
     fn from(coord: Coord) -> Self {
@@ -542,6 +667,14 @@ impl RelativeCoord {
     /// into_absolute_coord is like into_coord, but it assumes chunk is at 0, 0.
     fn into_absolute_coord(self) -> Coord {
         Coord(self.0 as usize, self.1 as usize)
+    }
+}
+
+impl Add for RelativeCoord {
+    type Output = RelativeCoord;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0, self.1 + rhs.1)
     }
 }
 
@@ -823,18 +956,148 @@ impl Chunk {
 
     pub fn apply_serialized_chunk(&mut self, serialized: &SerializedChunk) {
         let bytes: &[u8] = &*serialized.bytes;
-        if serialized.is_update {
-            // Apply mods.
-            for m in bytes.array_chunks::<2>().map(|b| Mod::from_bytes(*b)) {
-                let m: Mod = m;
-                let (coord, value) = m.to_coord_and_value();
-                let coord = coord.into_absolute_coord();
-                self.set(coord, value);
-            }
+
+        self.update = if serialized.is_update {
+            // Apply mods and collect coords.
+            ChunkUpdate::Coords(
+                bytes
+                    .array_chunks::<2>()
+                    .map(|b| {
+                        let m = Mod::from_bytes(*b);
+                        let (coord, value) = m.to_coord_and_value();
+                        self.set(coord.into_absolute_coord(), value);
+                        coord
+                    })
+                    .collect(),
+            )
         } else {
             // Overwrite chunk.
             *self = Self::from_bytes(bytes);
+            ChunkUpdate::Complete
         }
+    }
+
+    /// Returns an iterator of rects that cover the updated portion of the chunk.
+    pub fn updated_rects(&self) -> impl Iterator<Item = (RelativeCoord, RelativeCoord)> {
+        let mut iter1 = None;
+        let mut iter2 = None;
+
+        match &self.update {
+            ChunkUpdate::Coords(coords) => {
+                let mut mask = [[false; CHUNK_SIZE + 1]; CHUNK_SIZE + 1];
+                for &coord in coords.iter() {
+                    for c in [
+                        RelativeCoord(0, 0),
+                        RelativeCoord(1, 0),
+                        RelativeCoord(0, 1),
+                        RelativeCoord(1, 1),
+                    ]
+                    .iter()
+                    .map(|&o| coord + o)
+                    {
+                        // Coords are sorted by x and then y so index in that order.
+                        mask[c.0 as usize][c.1 as usize] = true;
+                    }
+                }
+
+                // Preserve a copy of mask before it's modified in debug mode for assertions.
+                #[cfg(debug_assertions)]
+                let mask1 = mask;
+
+                // Use greedy meshing algorithm.
+                let mut rects = vec![];
+                for x in 0..=CHUNK_SIZE {
+                    let mut y = 0;
+
+                    while y <= CHUNK_SIZE {
+                        if mask[x][y] {
+                            let mut maybe_y2 = None;
+                            for x2 in x..=(CHUNK_SIZE + 1) {
+                                let i = (x2 <= CHUNK_SIZE)
+                                    .then(|| {
+                                        mask[x2][y..=maybe_y2.unwrap_or(CHUNK_SIZE)]
+                                            .iter()
+                                            .enumerate()
+                                            .take_while(|(_, &v)| v)
+                                            .map(|(i, _)| i)
+                                            .last()
+                                    })
+                                    .flatten();
+
+                                if let Some(y2) = maybe_y2 {
+                                    if i.map(|i| i + y) != Some(y2) {
+                                        rects.push((
+                                            RelativeCoord(x as u8, y as u8),
+                                            RelativeCoord((x2 - 1) as u8, y2 as u8),
+                                        ));
+                                        y = y2;
+                                        break;
+                                    }
+                                } else {
+                                    if let Some(i) = i {
+                                        maybe_y2 = Some(i + y);
+                                    } else {
+                                        break;
+                                    }
+                                }
+
+                                mask[x2][y..=(y + i.unwrap())].fill(false);
+                            }
+                        }
+
+                        y += 1;
+                    }
+                }
+
+                #[cfg(debug_assertions)]
+                {
+                    let mut mask2 = [[false; CHUNK_SIZE + 1]; CHUNK_SIZE + 1];
+                    for (s, e) in rects.iter().copied() {
+                        for x in s.0..=e.0 {
+                            for y in s.1..=e.1 {
+                                mask2[x as usize][y as usize] = true;
+                            }
+                        }
+                    }
+
+                    fn format_mask(mask: &[[bool; CHUNK_SIZE + 1]; CHUNK_SIZE + 1]) -> String {
+                        let mut s = String::new();
+                        for x in 0..=CHUNK_SIZE {
+                            for y in 0..=CHUNK_SIZE {
+                                s.push((b'0' + mask[x][y] as u8) as char);
+                            }
+                            s.push('\n');
+                        }
+                        s
+                    }
+
+                    if mask1 != mask2 {
+                        let mut s = String::from("mask1\n");
+                        s += &format_mask(&mask1);
+                        s += "mask2\n";
+                        s += &format_mask(&mask2);
+                        let mut diff = mask1;
+                        for x in 0..=CHUNK_SIZE {
+                            for y in 0..=CHUNK_SIZE {
+                                diff[x][y] = diff[x][y] != mask2[x][y];
+                            }
+                        }
+                        s += "diff\n";
+                        s += &format_mask(&diff);
+                        panic!("{}", s);
+                    }
+                }
+
+                iter1 = Some(rects.into_iter());
+            }
+            ChunkUpdate::Complete => {
+                const MAX: u8 = CHUNK_SIZE as u8;
+                iter2 = Some((RelativeCoord(0, 0), RelativeCoord(MAX, MAX)))
+            }
+            _ => panic!("invalid update"),
+        }
+
+        iter1.into_iter().flatten().chain(iter2.into_iter())
     }
 }
 
@@ -911,6 +1174,10 @@ impl ChunkSet {
     fn contains_index(&self, index: usize) -> bool {
         let row = self.data[index >> Self::ROW_SIZE_LOG2];
         row & 1 << (index % Self::ROW_SIZE) != 0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self == &Self::new()
     }
 
     /// Inserts a given ChunkId into this set.
@@ -1064,6 +1331,103 @@ mod tests {
     }
 
     #[test]
+    fn altitude() {
+        //assert!(lookup_altitude(u8::MAX / 2).is_submerged());
+        //assert_eq!(lookup_altitude(u8::MAX / 2 + 1), Altitude::ZERO);
+
+        for i in 0..=u8::MAX {
+            println!(
+                "i={}, i={:b}, i>>4={}, alt={}, bs={:?}, rev={}",
+                i,
+                i,
+                i >> 4,
+                lookup_altitude(i).0,
+                ALTITUDE_LUT
+                    .binary_search(&lookup_altitude(i).0)
+                    .map(|n| n + 1),
+                reverse_lookup_altitude(lookup_altitude(i)) >> 4
+            );
+        }
+
+        for i in 0..u8::MAX {
+            assert_eq!(
+                i.saturating_add(DATA_OFFSET) >> 4,
+                (reverse_lookup_altitude(lookup_altitude(i)) + DATA_OFFSET) >> 4
+            );
+        }
+
+        // This is a very lenient test (until reverse_altitude_lookup is interpolated).
+        for i in i8::MIN..=i8::MAX {
+            let a = Altitude(i);
+            let r = reverse_lookup_altitude(a);
+            let l = lookup_altitude(r);
+            let bound = if (-10i8..10i8).contains(&i) { 20 } else { 50 };
+            assert!(
+                l.difference(a) < Altitude(bound),
+                "{:?} -> {} -> {:?}",
+                a.0,
+                r,
+                l.0
+            );
+        }
+    }
+
+    #[test]
+    fn mutate() {
+        let mut terrain = Terrain::with_generator(zero_generator);
+
+        let pos = Vec2::ZERO;
+
+        assert!(terrain.sample(pos).unwrap() < Altitude(-120));
+
+        terrain.modify(TerrainMutation::simple(pos, 50.0)).unwrap();
+
+        assert!(
+            terrain.sample(pos).unwrap() > Altitude(-120),
+            "{:?}",
+            terrain.sample(pos).unwrap()
+        );
+
+        terrain.modify(TerrainMutation::simple(pos, -50.0)).unwrap();
+
+        assert!(
+            terrain.sample(pos).unwrap() < Altitude(-60),
+            "{:?}",
+            terrain.sample(pos).unwrap()
+        );
+
+        terrain
+            .modify(TerrainMutation::conditional(
+                pos,
+                50.0,
+                Altitude::ZERO..=Altitude::MAX,
+            ))
+            .unwrap();
+
+        assert!(terrain.sample(pos).unwrap() < Altitude(-60));
+
+        terrain
+            .modify(TerrainMutation::conditional(
+                pos,
+                50.0,
+                Altitude::MIN..=Altitude::ZERO,
+            ))
+            .unwrap();
+
+        assert!(terrain.sample(pos).unwrap() > Altitude(-60));
+
+        terrain
+            .modify(TerrainMutation::clamped(
+                pos,
+                -50.0,
+                Altitude(-1)..=Altitude(1),
+            ))
+            .unwrap();
+
+        assert_eq!(terrain.sample(pos).unwrap(), Altitude(-1));
+    }
+
+    #[test]
     fn compress() {
         let mut terrain = Terrain::with_generator(random_generator);
         let chunk = terrain.mut_chunk(ChunkId(0, 0));
@@ -1075,5 +1439,41 @@ mod tests {
         );
         let chunk2 = Chunk::from_bytes(&bytes);
         assert_eq!(chunk.data, chunk2.data);
+    }
+
+    #[test]
+    fn updated_rects() {
+        let mut chunk = Chunk::new(ChunkId(0, 0), zero_generator);
+        let mut rng = thread_rng();
+
+        for _ in 0..1000 {
+            let mut coords: Vec<RelativeCoord> = (0..rng.gen_range(0..1000))
+                .map(|_| {
+                    RelativeCoord(
+                        rng.gen_range(0..CHUNK_SIZE as u8),
+                        rng.gen_range(0..CHUNK_SIZE as u8),
+                    )
+                })
+                .collect();
+
+            coords.sort_unstable();
+            coords.dedup();
+            chunk.update = ChunkUpdate::Coords(coords);
+
+            let _ = chunk.updated_rects().collect::<Vec<_>>();
+        }
+
+        let coords = (0..CHUNK_SIZE as u8)
+            .flat_map(|x| (0..CHUNK_SIZE as u8).map(move |y| RelativeCoord(x, y)))
+            .collect();
+        chunk.update = ChunkUpdate::Coords(coords);
+
+        assert_eq!(
+            chunk.updated_rects().collect::<Vec<_>>(),
+            vec![(
+                RelativeCoord(0, 0),
+                RelativeCoord(CHUNK_SIZE as u8, CHUNK_SIZE as u8)
+            )]
+        );
     }
 }

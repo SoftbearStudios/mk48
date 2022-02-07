@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::observer::*;
+use crate::rate_limiter::{RateLimiter, RateLimiterProps};
 use crate::user_agent::UserAgent;
 use actix::dev::ToEnvelope;
 use actix::prelude::*;
@@ -11,9 +12,11 @@ use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
 use bincode::Options;
 use core_protocol::web_socket::WebSocketFormat;
+use core_protocol::{get_unix_time_now, UnixTime};
 use log::{debug, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::convert::TryInto;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
@@ -48,6 +51,7 @@ where
         WebSocket::<I, O, (Option<IpAddr>, Option<UserAgent>)>::new(
             data.recipient(),
             WebSocketFormat::Json,
+            RateLimiterProps::new(Duration::from_millis(90), 5),
             (ip_address, user_agent),
         ),
         &r,
@@ -66,6 +70,7 @@ where
     data: Recipient<ObserverMessage<I, O, P>>,
     date_last_activity: Instant,
     payload: P,
+    rate_limiter: RateLimiter,
 }
 
 impl<I, O, P> WebSocket<I, O, P>
@@ -78,6 +83,7 @@ where
     pub fn new(
         data: Recipient<ObserverMessage<I, O, P>>,
         format: WebSocketFormat,
+        rate_limiter_props: RateLimiterProps,
         payload: P,
     ) -> Self {
         Self {
@@ -85,6 +91,7 @@ where
             data,
             date_last_activity: Instant::now(),
             payload,
+            rate_limiter: RateLimiter::from(rate_limiter_props),
         }
     }
 
@@ -104,7 +111,7 @@ where
                 ctx.stop();
             } else if elapsed > WEBSOCK_SOFT_TIMEOUT {
                 warn!("ping idle websocket {:?} {:?}", act.format, elapsed);
-                ctx.ping(b"");
+                ctx.ping(&get_unix_time_now().to_ne_bytes());
             } else {
                 info!("websocket is responsive {:?} {:?}", act.format, elapsed);
             }
@@ -174,6 +181,14 @@ where
         self.set_keep_alive();
         match ws_message {
             Ok(ws::Message::Binary(bin)) => {
+                if self
+                    .rate_limiter
+                    .should_limit_rate_with_now(self.date_last_activity)
+                {
+                    debug!("binary request rate limited");
+                    return;
+                }
+
                 match bincode::DefaultOptions::new()
                     .with_limit(1024 * 1024)
                     .with_fixint_encoding()
@@ -201,12 +216,44 @@ where
                 debug!("received ping");
                 ctx.pong(&ping_data);
             }
-            Ok(ws::Message::Pong(_)) => {
+            Ok(ws::Message::Pong(pong_data)) => {
+                if self
+                    .rate_limiter
+                    .should_limit_rate_with_now(self.date_last_activity)
+                {
+                    debug!("pong was rate limited");
+                    return;
+                }
+
                 debug!("received pong");
-                // set_keep_alive already called
+
+                if let Ok(bytes) = pong_data.as_ref().try_into() {
+                    let now = get_unix_time_now();
+                    let timestamp = UnixTime::from_ne_bytes(bytes);
+                    let rtt = now.saturating_sub(timestamp);
+                    if rtt < u16::MAX as UnixTime {
+                        let _ = self
+                            .data
+                            .do_send(ObserverMessage::<I, O, P>::RoundTripTime {
+                                observer: ctx.address().recipient(),
+                                rtt: rtt as u16,
+                            });
+                    }
+                } else {
+                    debug!("received invalid pong data");
+                }
             }
             Ok(ws::Message::Text(text)) => {
+                if self
+                    .rate_limiter
+                    .should_limit_rate_with_now(self.date_last_activity)
+                {
+                    debug!("text request was rate limited");
+                    return;
+                }
+
                 debug!("request {}", text);
+
                 let result: Result<I, serde_json::Error> = serde_json::from_str(&text);
                 match result {
                     Ok(request) => {

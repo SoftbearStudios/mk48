@@ -16,10 +16,11 @@ use std::collections::{HashMap, HashSet};
 use std::iter::Sum;
 use std::process::Command;
 use std::sync::Arc;
-use sysinfo::{get_current_pid, ProcessorExt, SystemExt};
+use sysinfo::get_current_pid;
 
 const BUCKET_MILLIS: u64 = 60000;
 const MINUTE_IN_MILLIS: u64 = 60000;
+const MIN_VISIT_GAP_IN_MILLIS: u64 = 30 * 60 * 1000;
 
 #[derive(Clone, Debug, Default, Add, Deserialize, Serialize)]
 pub struct Metrics {
@@ -80,12 +81,18 @@ pub struct Metrics {
     /// Percent of available server RAM required by service.
     #[serde(default)]
     pub ram: ContinuousExtremaMetric,
+    /// Number of times session was renewed.
+    #[serde(default)]
+    pub renewed: DiscreteMetric,
     /// Player retention in days.
     #[serde(default)]
     pub retention_days: ContinuousExtremaMetric,
     /// Player retention histogram.
     #[serde(default)]
     pub retention_histogram: HistogramMetric,
+    /// Network latency round trip time in seconds.
+    #[serde(default)]
+    pub rtt: ContinuousExtremaMetric,
     /// Score per completed play.
     #[serde(default)]
     pub score: ContinuousExtremaMetric,
@@ -104,6 +111,9 @@ pub struct Metrics {
     /// Uptime in (fractional) days.
     #[serde(default)]
     pub uptime: ContinuousExtremaMetric,
+    /// Visits
+    #[serde(default)]
+    pub visits: DiscreteMetric,
 }
 
 impl Metrics {
@@ -128,14 +138,17 @@ impl Metrics {
             plays_per_session: self.plays_per_session.summarize(),
             plays_total: self.plays_total.summarize(),
             ram: self.ram.summarize(),
+            renewed: self.renewed.summarize(),
             retention_days: self.retention_days.summarize(),
             retention_histogram: self.retention_histogram.summarize(),
+            rtt: self.rtt.summarize(),
             score: self.score.summarize(),
             sessions_cached: self.sessions_cached.summarize(),
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
             ups: self.ups.summarize(),
             uptime: self.uptime.summarize(),
+            visits: self.visits.summarize(),
         }
     }
 
@@ -160,13 +173,16 @@ impl Metrics {
             plays_per_session: self.plays_per_session.data_point(),
             plays_total: self.plays_total.data_point(),
             ram: self.ram.data_point(),
+            renewed: self.renewed.data_point(),
             retention_days: self.retention_days.data_point(),
+            rtt: self.rtt.data_point(),
             score: self.score.data_point(),
             sessions_cached: self.sessions_cached.data_point(),
             teamed: self.teamed.data_point(),
             toxicity: self.toxicity.data_point(),
             ups: self.ups.data_point(),
             uptime: self.uptime.data_point(),
+            visits: self.visits.data_point(),
         }
     }
 }
@@ -273,6 +289,8 @@ impl Repo {
         }
 
         let now = get_unix_time_now();
+        const TWENTY_FOUR_HOURS_IN_MILLIS: u64 = 24 * 3600 * 1000;
+        let yesterday = now - TWENTY_FOUR_HOURS_IN_MILLIS;
         let clip_stop = period_stop.unwrap_or(now);
         let clip_start = period_start.unwrap_or_else(|| clip_stop.saturating_sub(24 * 3600 * 1000));
 
@@ -292,20 +310,8 @@ impl Repo {
             .players_cached
             .add_multiple(self.players.len() as u32);
 
-        self.system_status.refresh_cpu();
-        self.system_status.refresh_memory();
-        metrics.ram.push(
-            self.system_status.used_memory() as f32 / self.system_status.total_memory() as f32,
-        );
-        metrics.cpu.push(
-            self.system_status
-                .processors()
-                .iter()
-                .map(|processor| processor.cpu_usage())
-                .sum::<f32>()
-                * 0.01
-                / self.system_status.processors().len() as f32,
-        );
+        metrics.ram.push(self.health.ram());
+        metrics.cpu.push(self.health.cpu());
 
         match get_current_pid() {
             Ok(pid) => {
@@ -329,14 +335,22 @@ impl Repo {
             Err(e) => error!("could not get pid: {}", e),
         }
 
-        for (_, arena) in Arena::iter(&self.arenas) {
+        for (_, arena) in self.arenas.iter() {
             if arena.game_id != *game_id {
                 continue;
             }
+
+            // All arenas count, even those that are proxy for another server.
             metrics.arenas_cached.increment();
+            // All sessions in the game count even if in an arena that is proxy for another server.
             metrics
                 .sessions_cached
                 .add_multiple(arena.sessions.len() as u32);
+
+            if !arena.valid() {
+                continue;
+            }
+
             metrics.uptime.push(
                 now.saturating_sub(arena.date_created) as f32
                     * (1.0 / (1000.0 * 60.0 * 60.0 * 24.0)) as f32,
@@ -368,10 +382,14 @@ impl Repo {
                 let mut bounced_or_peeked = true;
                 let mut flopped = session.previous_id.is_none();
                 let mut play_count = 0;
+                let mut previous_stop: Option<UnixTime> = None;
                 // Next bucket to insert into (to avoid duplicating).
                 let mut next_bucket = 0;
 
                 for play in session.plays.iter() {
+                    if play.date_stop.is_some() {
+                        previous_stop = play.date_stop;
+                    }
                     let prorata_start = clip_start.max(play.date_created);
                     let prorata_stop = play
                         .date_stop
@@ -381,6 +399,15 @@ impl Repo {
                     if prorata_stop < clip_start || prorata_start > clip_stop {
                         // Exclude plays prior to start or after end.
                         continue;
+                    }
+                    if play.renewed {
+                        metrics.renewed.increment();
+                    }
+                    if previous_stop
+                        .map(|t| play.date_created.saturating_sub(t) >= MIN_VISIT_GAP_IN_MILLIS)
+                        .unwrap_or(true)
+                    {
+                        metrics.visits.increment();
                     }
 
                     metrics.plays_total.increment();
@@ -444,6 +471,9 @@ impl Repo {
                     // 24 FPS is lowest frame rate required to make motion appear natural.
                     metrics.low_fps.push(fps < 24.0);
                 }
+                if let Some(rtt) = session.rtt {
+                    metrics.rtt.push(rtt as f32 * 0.001);
+                }
                 metrics
                     .abuse_reports
                     .add_multiple(session.chat_context.reports() as u32);
@@ -458,7 +488,9 @@ impl Repo {
                 metrics.plays_per_session.push(play_count as f32);
 
                 if unique_visitors.insert(session.player_id) {
-                    metrics.new.push(session.previous_id.is_none());
+                    metrics
+                        .new
+                        .push(session.date_previous.unwrap_or(session.date_created) > yesterday);
                 }
 
                 if session.previous_id.is_none() {
@@ -518,6 +550,7 @@ impl Repo {
             .collect()
     }
 
+    /// Tally (client) frames-per-second measurement.
     pub fn tally_fps(&mut self, arena_id: ArenaId, session_id: SessionId, fps: f32) {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
@@ -526,6 +559,16 @@ impl Repo {
         }
     }
 
+    /// Tally (network) round-trip-time in millis.
+    pub fn tally_rtt(&mut self, arena_id: ArenaId, session_id: SessionId, rtt: u16) {
+        if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
+            if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
+                session.rtt = Some(rtt);
+            }
+        }
+    }
+
+    /// Tally (server) updates-per-second measurement.
     pub fn tally_ups(&mut self, arena_id: ArenaId, ups: f32) {
         if let Some(arena) = Arena::get_mut(&mut self.arenas, arena_id) {
             arena.ups = Some(Self::sanitize_tps(ups));

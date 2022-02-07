@@ -4,5 +4,6 @@ target
 terrain.png
 *.data
 *.data.old
+*.swp
 serde-test/*
 .ssh/*

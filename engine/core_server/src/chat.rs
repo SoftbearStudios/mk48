@@ -66,7 +66,7 @@ impl Repo {
                     if let Some(play) = session.plays.last() {
                         // Throttle abuse of the feature.
                         if play.date_stop.is_none()
-                            && get_unix_time_now() > play.date_created + 20 * 1000
+                            && get_unix_time_now() > play.date_created + 30 * 1000
                             && play.score.map(|s| s > 100).unwrap_or(false)
                             && session.reported.insert(player_id)
                         {

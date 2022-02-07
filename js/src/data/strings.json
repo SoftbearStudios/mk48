@@ -60,6 +60,10 @@
 					"hint": "Your boat can travel on both land and water!",
 					"name": "hovercraft"
 				},
+				"icebreaker": {
+					"hint": "Your ship can plow through ice sheets!",
+					"name": "icebreaker"
+				},
 				"lcs": {
 					"hint": "Your boat can unleash deadly weapons from within small island groups!",
 					"name": "littoral combat ship"
@@ -174,11 +178,11 @@
 			},
 			"instruction": {
 				"mouse": {
-					"movement": "Click and hold to move, click to fire torpedos",
+					"movement": "Click and hold to move, click to fire torpedoes",
 					"zoom": "Scroll to zoom out for a better view"
 				},
 				"touch": {
-					"movement": "Touch in a direction to move, tap to fire torpedos",
+					"movement": "Touch in a direction to move, tap to fire torpedoes",
 					"zoom": "Pinch to zoom out for a better view"
 				}
 			},
@@ -192,6 +196,9 @@
 			},
 			"online": {
 				"label": "{players} online"
+			},
+			"respawn": {
+				"label": "Respawn as level {level}"
 			},
 			"ship": {
 				"action": {
@@ -362,6 +369,10 @@
 					"hint": "¡Su barco puede viajar tanto por tierra como por agua!",
 					"name": "aerodeslizador"
 				},
+				"icebreaker": {
+					"hint": "¡Tu barco puede atravesar capas de hielo!",
+					"name": "rompehielos"
+				},
 				"lcs": {
 					"hint": "¡Tu barco puede desencadenar armas mortales desde pequeños grupos de islas!",
 					"name": "barco de combate costero"
@@ -494,6 +505,9 @@
 			},
 			"online": {
 				"label": "{players} en línea"
+			},
+			"respawn": {
+				"label": "Reaparecer como nivel {level}"
 			},
 			"ship": {
 				"action": {
@@ -663,6 +677,10 @@
 					"hint": "Votre bateau peut voyager aussi bien sur terre que sur l'eau!",
 					"name": "aéroglisseur"
 				},
+				"icebreaker": {
+					"hint": "Votre navire peut traverser les calottes glaciaires!",
+					"name": "brise-glace"
+				},
 				"lcs": {
 					"hint": "Votre bateau peut déchaîner des armes mortelles au sein de petits groupes d'îles!",
 					"name": "navire de combat côtier"
@@ -795,6 +813,9 @@
 			},
 			"online": {
 				"label": "{players} en ligne"
+			},
+			"respawn": {
+				"label": "Réapparaître au niveau {level}"
 			},
 			"ship": {
 				"action": {
@@ -964,6 +985,10 @@
 					"hint": "Ваша лодка может путешествовать как по суше, так и по воде!",
 					"name": "судно на воздушной подушке"
 				},
+				"icebreaker": {
+					"hint": "Ваш корабль может преодолевать ледяные щиты!",
+					"name": "ледокол"
+				},
 				"lcs": {
 					"hint": "Ваша лодка может выпускать смертоносное оружие из небольших островных групп!",
 					"name": "прибрежный боевой корабль"
@@ -1096,6 +1121,9 @@
 			},
 			"online": {
 				"label": "{players} онлайн"
+			},
+			"respawn": {
+				"label": "Возрождение на уровне {level}"
 			},
 			"ship": {
 				"action": {
@@ -1265,6 +1293,10 @@
 					"hint": "您的船可以在陆地和水上行驶!",
 					"name": "气垫船"
 				},
+				"icebreaker": {
+					"hint": "你的船可以穿过冰盖!",
+					"name": "破冰船"
+				},
 				"lcs": {
 					"hint": "您的船可以从小岛群内释放致命的武器!",
 					"name": "濒海战斗舰"
@@ -1397,6 +1429,9 @@
 			},
 			"online": {
 				"label": "{players}名球员"
+			},
+			"respawn": {
+				"label": "重生为级别 {level}"
 			},
 			"ship": {
 				"action": {
@@ -1566,6 +1601,10 @@
 					"hint": "Dein Schiff kann sich auf Wasser und Land fortbewegen!",
 					"name": "Luftkissenfahrzeug"
 				},
+				"icebreaker": {
+					"hint": "Dein Schiff kann durch Eisschilde pflügen!",
+					"name": "Eisbrecher"
+				},
 				"lcs": {
 					"hint": "Dein Schiff kann tödliche Waffen in der Nähe von Inselgruppen abfeuern!",
 					"name": "Küstennahes Kampfschiff"
@@ -1698,6 +1737,9 @@
 			},
 			"online": {
 				"label": "{players} Spieler"
+			},
+			"respawn": {
+				"label": "Respawn als Level {level}"
 			},
 			"ship": {
 				"action": {
@@ -1868,6 +1910,10 @@
 					"hint": "Thuyền của bạn có thể đi cả trên cạn và dưới nước!",
 					"name": "thủy phi cơ"
 				},
+				"icebreaker": {
+					"hint": "Con tàu của bạn có thể xuyên qua các tảng băng!",
+					"name": "tàu phá băng"
+				},
 				"lcs": {
 					"hint": "Thuyền của bạn có thể giải phóng vũ khí chết người từ trong các nhóm đảo nhỏ!",
 					"name": "tàu chiến đấu ven biển"
@@ -2000,6 +2046,9 @@
 			},
 			"online": {
 				"label": "{players} trực tuyến"
+			},
+			"respawn": {
+				"label": "Được tạo lại dưới dạng cấp {level}"
 			},
 			"ship": {
 				"action": {
@@ -2169,6 +2218,10 @@
 					"hint": "あなたのボートは陸と水の両方を旅することができます!",
 					"name": "ホバークラフト"
 				},
+				"icebreaker": {
+					"hint": "あなたの船は氷床を耕すことができます!",
+					"name": "砕氷船"
+				},
 				"lcs": {
 					"hint": "あなたのボートは小さな島のグループの中から致命的な武器を解き放つことができます!",
 					"name": "沿海域戦闘艦"
@@ -2301,6 +2354,9 @@
 			},
 			"online": {
 				"label": "{players}オンライン"
+			},
+			"respawn": {
+				"label": "レベル{level}としてリスポーン"
 			},
 			"ship": {
 				"action": {
@@ -2770,6 +2826,10 @@
 				"hovercraft": {
 					"hint": "Bork is a landbork",
 					"name": "hoverbork"
+				},
+				"icebreaker": {
+					"hint": "Bork can bork ice sheets!",
+					"name": "iceborker"
 				},
 				"lcs": {
 					"hint": "Bork can bork other borks from small island groups!",

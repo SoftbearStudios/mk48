@@ -9,6 +9,7 @@ use actix_web::rt::time::sleep;
 use awc::Client;
 use core_protocol::id::ServerId;
 use log::{error, info, warn};
+use serde::Deserialize;
 use std::collections::HashSet;
 use std::lazy::OnceCell;
 use std::time::Duration;
@@ -33,7 +34,7 @@ impl Watchdog {
     const TRIES: usize = 2;
 
     /// How long to wait between tries
-    const RETRY: Duration = Duration::from_secs(5);
+    const RETRY: Duration = Duration::from_secs(35);
 
     /// # Safety
     ///
@@ -55,7 +56,7 @@ impl Actor for Watchdog {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        ctx.run_interval(Duration::from_secs(300), |act, ctx| {
+        ctx.run_interval(Duration::from_secs(180), |act, ctx| {
             let domain = act.domain.to_owned();
 
             Box::pin(async move {
@@ -102,7 +103,7 @@ impl Actor for Watchdog {
                                             }
                                         };
 
-                                        let _body = match response.body().await {
+                                        let body = match response.body().await {
                                             Ok(b) => b,
                                             Err(e) => {
                                                 warn!(
@@ -116,15 +117,36 @@ impl Actor for Watchdog {
                                             }
                                         };
 
-                                        /*
-                                        let body: AdminUpdate = match response.json().await {
-                                            Ok(b) => b,
-                                            Err(e) => {
-                                                println!("could not reach server {:?}: {}", server_id, e);
-                                                break;
+                                        // Now, parse {"StatusRequested":{"healthy":true}}
+
+                                        #[derive(Deserialize)]
+                                        struct Status {
+                                            healthy: bool,
+                                        }
+
+                                        #[derive(Deserialize)]
+                                        struct Response {
+                                            #[serde(rename = "StatusRequested")]
+                                            status: Status
+                                        }
+
+                                        match serde_json::from_slice::<Response>(body.as_ref()) {
+                                            Ok(r) => {
+                                                if r.status.healthy {
+                                                    info!("server {:?} is healthy", server_id);
+                                                } else {
+                                                    warn!("server {:?} is unhealthy", server_id);
+                                                    if i != Self::TRIES - 1 {
+                                                        sleep(Self::RETRY).await;
+                                                    }
+                                                    continue;
+                                                }
                                             }
-                                        };
-                                         */
+                                            Err(e) => {
+                                                // For backwards compatibility, don't treat as fatal error.
+                                                warn!("could not decode server response as json: {:?}", e);
+                                            }
+                                        }
 
                                         alive.insert(ip_addresses.pop().unwrap());
                                         break;

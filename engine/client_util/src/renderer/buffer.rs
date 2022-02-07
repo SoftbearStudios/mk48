@@ -15,14 +15,21 @@ pub type Index = u16;
 pub type Quad = [Index; 4];
 
 /// MeshBuffer allows building a mesh in RAM.
+#[derive(Debug)]
 pub struct MeshBuffer<V: Vertex> {
     pub vertices: Vec<V>,
     pub indices: Vec<Index>,
     default_indices: bool,
 }
 
+impl<V: Vertex> Default for MeshBuffer<V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<V: Vertex> MeshBuffer<V> {
-    #[allow(clippy::new_without_default)]
+    /// Create an empty mesh buffer.
     pub fn new() -> Self {
         Self {
             vertices: Vec::new(),
@@ -31,17 +38,34 @@ impl<V: Vertex> MeshBuffer<V> {
         }
     }
 
+    /// Returns if there are no vertices.
     pub fn is_empty(&self) -> bool {
         self.vertices.is_empty()
     }
 
+    /// Pushes a single Quad which indexes 4 vertices.
     pub fn push_quad(&mut self, quad: Quad) {
         self.indices
             .extend_from_slice(&[quad[0], quad[1], quad[2], quad[1], quad[3], quad[2]]);
     }
 
+    /// Pushes a point for every vertex.
+    pub fn push_default_points(&mut self) {
+        assert!(self.indices.is_empty());
+        self.default_indices = true;
+    }
+
+    /// Pushes a triangle every 3 vertices.
+    #[allow(unused)]
+    pub fn push_default_triangles(&mut self) {
+        assert_eq!(self.vertices.len() % 3, 0);
+        self.push_default_points()
+    }
+
+    /// Pushes a quad for every 4 vertices.
     pub fn push_default_quads(&mut self) {
         assert!(self.indices.is_empty());
+
         let n = self.vertices.len();
         assert_eq!(n % 4, 0);
         let quads = n / 4;
@@ -52,19 +76,16 @@ impl<V: Vertex> MeshBuffer<V> {
         }
     }
 
-    #[allow(unused)]
-    pub fn push_default_points(&mut self) {
-        assert!(self.indices.is_empty());
-        self.default_indices = true;
-    }
-
+    /// Clears all vertices and indices, but preserves their allocations for reuse.
     pub fn clear(&mut self) {
         self.vertices.clear();
         self.indices.clear();
+        self.default_indices = false;
     }
 }
 
 /// RenderBuffer facilitates buffering a mesh to the GPU.
+/// TODO find a better name because it's too similar to WebGlRenderBuffer.
 pub struct RenderBuffer<V: Vertex> {
     vertices: WebGlBuffer,
     vertices_capacity: usize, // The amount of capacity in vertices that is available in the buffer.
@@ -129,17 +150,21 @@ impl<V: Vertex> RenderBuffer<V> {
         RenderBufferBinding::new(gl, oes, self)
     }
 
+    /// Copies a whole mesh into the render buffer.
+    /// The mesh must have indices.
     pub fn buffer_mesh(&mut self, gl: &Gl, mesh: &MeshBuffer<V>) {
         assert!(
-            mesh.vertices.is_empty() || mesh.default_indices || !mesh.indices.is_empty(),
-            "mesh has vertices but no indices"
+            mesh.default_indices || !mesh.indices.is_empty(),
+            "mesh has no indices"
         );
         self.buffer(gl, mesh.vertices.as_slice(), mesh.indices.as_slice());
     }
 
-    // buffer moves the data from floats to the WebGL buffer.
-    // If indices.is_empty() it performs array based rendering.
+    /// Copies vertices and indices into the render buffer.
+    /// If indices is empty it performs array based rendering.
     pub fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[Index]) {
+        assert!(!vertices.is_empty(), "buffering no vertices");
+
         self.index_count = indices.len() as u32;
         self.vertex_count = vertices.len() as Index;
 

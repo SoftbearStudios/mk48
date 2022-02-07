@@ -9,8 +9,10 @@ use crate::world::World;
 use common::angle::Angle;
 use common::entity::*;
 use common::protocol::*;
+use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::level_to_score;
+use common::world::{outside_area, ARCTIC};
 use game_server::context::PlayerTuple;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
@@ -31,13 +33,55 @@ impl CommandTrait for Spawn {
             return Err("cannot spawn while already alive");
         }
 
-        if !self.entity_type.can_spawn_as(player.is_bot()) {
+        if !self.entity_type.can_spawn_as(player.score, player.is_bot()) {
             return Err("cannot spawn as given entity type");
         }
 
-        // Default to spawning near the center of the world.
+        /*
+        // Default to spawning near the center of the world, with more points making you spawn further north.
+        let vertical_bias = map_ranges(
+            player.score as f32,
+            0.0..level_to_score(EntityData::MAX_BOAT_LEVEL) as f32,
+            -0.75..0.75,
+            true,
+        );
+        debug_assert!((-1.0..=1.0).contains(&vertical_bias));
+
+        // Don't spawn in wrong area.
+        let spawn_y = clamp_y_to_default_area_border(
+            self.entity_type,
+            world.radius * vertical_bias,
+            self.entity_type.data().radius * 2.0,
+        );
+
+        if spawn_y.abs() > world.radius {
+            return Err("unable to spawn this type of boat");
+        }
+
+        // Solve circle equation.
+        let world_half_width_at_spawn_y = (world.radius.powi(2) - spawn_y.powi(2)).sqrt();
+        debug_assert!(world_half_width_at_spawn_y <= world.radius);
+
+        // Randomize horizontal a bit.
+        let spawn_x = (thread_rng().gen::<f32>() - 0.5) * world_half_width_at_spawn_y;
+
+        // These initial positions may be overwritten later.
+        let mut spawn_position = Vec2::new(spawn_x, spawn_y);
+        let mut spawn_radius = 0.25 * world.radius;
+         */
         let mut spawn_position = Vec2::ZERO;
-        let mut spawn_radius = world.radius;
+        let mut spawn_radius = 0.8 * world.radius;
+
+        debug_assert!(spawn_position.length() <= world.radius);
+
+        /*
+        if !player.player_id.is_bot() {
+            debug!(
+                "player spawning with {} points, with vertical bias {}, near {} r~{}",
+                player.score, vertical_bias, spawn_position, spawn_radius
+            );
+        }
+         */
 
         let exclusion_zone = match &player.data.status {
             // Player is excluded from spawning too close to where another player sunk them, for
@@ -48,7 +92,16 @@ impl CommandTrait for Spawn {
                 time,
                 ..
             } => {
-                if reason.is_due_to_player() && time.elapsed() < Duration::from_secs(10) {
+                let exclusion_seconds =
+                    if player.score > level_to_score(EntityData::MAX_BOAT_LEVEL / 2) {
+                        20
+                    } else {
+                        10
+                    };
+
+                if reason.is_due_to_player()
+                    && time.elapsed() < Duration::from_secs(exclusion_seconds)
+                {
                     Some(*position)
                 } else {
                     None
@@ -218,28 +271,30 @@ impl CommandTrait for Fire {
             let armament_transform =
                 entity.transform + data.armament_transform(&entity.extension().turrets, index);
 
-            let mut failed = false;
             if armament_entity_data.sub_kind == EntitySubKind::Depositor {
-                let depositor = armament_transform.position;
+                if let Some(mut target) = aim_target {
+                    // Can't deposit in arctic.
+                    target.y = target.y.min(ARCTIC - 2.0 * common::terrain::SCALE);
 
-                // Radius of depositor.
-                const MAX_RADIUS: f32 = 60.0;
+                    let depositor = armament_transform.position;
 
-                // Max radius that will snap to MAX_RADIUS.
-                const CUTOFF_RADIUS: f32 = MAX_RADIUS * 2.0;
+                    // Radius of depositor.
+                    const MAX_RADIUS: f32 = 60.0;
 
-                // Snap to valid radius.
-                let mut position_target = self.position_target;
-                sanitize_floats(
-                    position_target.as_mut(),
-                    -world.radius * 2.0..world.radius * 2.0,
-                )?;
-                let delta = position_target - depositor;
-                if delta.length_squared() > CUTOFF_RADIUS.powi(2) {
-                    return Err("outside maximum range");
+                    // Max radius that will snap to MAX_RADIUS.
+                    const CUTOFF_RADIUS: f32 = MAX_RADIUS * 2.0;
+
+                    // Make sure target is in valid range.
+                    let delta = target - depositor;
+                    if delta.length_squared() > CUTOFF_RADIUS.powi(2) {
+                        return Err("outside maximum range");
+                    }
+                    let pos = depositor + delta.clamp_length_max(MAX_RADIUS);
+
+                    world.terrain.modify(TerrainMutation::simple(pos, 60.0));
+                } else {
+                    return Err("cannot deposit without aim target");
                 }
-                let pos = depositor + delta.clamp_length_max(MAX_RADIUS);
-                world.terrain.modify(pos, 60.0);
             } else {
                 // Fire weapon.
                 let player_arc = Arc::clone(player_tuple);
@@ -270,17 +325,16 @@ impl CommandTrait for Fire {
                 };
                 armament_entity.transform.direction += thread_rng().gen::<Angle>() * deviation;
 
-                failed |= !world.spawn_here_or_nearby(armament_entity, 0.0, None);
+                if !world.spawn_here_or_nearby(armament_entity, 0.0, None) {
+                    return Err("failed to fire from current location");
+                }
             }
 
-            if failed {
-                Err("failed to fire from current location")
-            } else {
-                let entity = &mut world.entities[entity_index];
-                entity.consume_armament(index);
-                entity.extension_mut().clear_spawn_protection();
-                Ok(())
-            }
+            let entity = &mut world.entities[entity_index];
+            entity.consume_armament(index);
+            entity.extension_mut().clear_spawn_protection();
+
+            Ok(())
         } else {
             Err("cannot fire while not alive")
         };
@@ -293,12 +347,14 @@ impl CommandTrait for Pay {
         world: &mut World,
         player_tuple: &Arc<PlayerTuple<Server>>,
     ) -> Result<(), &'static str> {
-        let mut position = self.position;
-        sanitize_floats(position.as_mut(), -world.radius * 2.0..world.radius * 2.0)?;
-
         let mut player = player_tuple.borrow_player_mut();
 
-        return if let Status::Alive { entity_index, .. } = player.data.status {
+        return if let Status::Alive {
+            entity_index,
+            aim_target: Some(position),
+            ..
+        } = player.data.status
+        {
             let entity = &world.entities[entity_index];
 
             if position.distance_squared(entity.transform.position)
@@ -321,14 +377,14 @@ impl CommandTrait for Pay {
 
             payment.transform.position = position;
 
+            // If payment successfully spawns, withdraw funds.
             if world.spawn_here_or_nearby(payment, 1.0, None) {
-                // Payment successfully spawned, withdraw funds.
                 player.score -= withdraw;
             }
 
             Ok(())
         } else {
-            Err("cannot pay while not alive")
+            Err("cannot pay while not alive and aiming")
         };
     }
 }
@@ -362,6 +418,10 @@ impl CommandTrait for Upgrade {
                 .can_upgrade_to(self.entity_type, player.score, player.is_bot())
             {
                 return Err("cannot upgrade to provided entity type");
+            }
+
+            if outside_area(self.entity_type, entity.transform.position) {
+                return Err("cannot upgrade outside the correct area");
             }
 
             player.data.flags.upgraded = true;

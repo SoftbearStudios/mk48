@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use common::terrain;
 use common::terrain::*;
 use noise::{NoiseFn, SuperSimplex};
 use std::mem::MaybeUninit;
@@ -20,20 +21,46 @@ fn get_noise() -> &'static SuperSimplex {
 
 /// noise generator returns noise (one of 256 possible Altitude's) for a given terrain coordinate.
 pub fn noise_generator(x: usize, y: usize) -> u8 {
+    // Distance from border of arctic (positive = arctic, negative = ocean).
+    let arctic_distance = y as isize - terrain::ARCTIC as isize;
+
+    // Don't generate land near ocean/arctic border due to "subduction".
+    let scale = ((arctic_distance as f64).abs() * (1.0 / 20.0)).min(1.0);
+
     const S: f64 = SCALE as f64 * 0.0012;
     // Safety: Seed is only ever modified for testing purposes, when there are no other threads
     // accessing the terrain.
-    let x = x as f64 * S + unsafe { SEED };
-    let y = y as f64 * S;
-    (fractal_noise(get_noise(), x, y) * 255.0) as u8
+    let noise_x = x as f64 * S + unsafe { SEED };
+    let noise_y = y as f64 * S;
+
+    // Height in range of 0.0..1.0, 0.0 being the lowest point in the ocean and 1.0 being highest mountain.
+    let mut height = fractal_noise(get_noise(), noise_x, noise_y, 4) * scale;
+
+    if arctic_distance > 0 {
+        let ice_sheet = (arctic_distance as f64 * (1.0 / 40.0)).min(1.0);
+
+        let v = fractal_noise(get_noise(), noise_x * 0.35 + 1000.0, noise_y * 0.35, 4) * scale;
+        let m = (v + 0.04).max(height + 0.25) - (1.0 - ice_sheet);
+
+        // Ice sheets.
+        match m {
+            m if m > 0.5 => height = height.max(10.0 / 16.0),
+            m if m > 0.3 => height = height.max(9.0 / 16.0),
+            _ => (),
+        }
+    }
+
+    // Convert height to u8 (later converted to u4 by terrain).
+    (height * 255.0) as u8
 }
 
 /// fractal noise returns multi-level noise for a given fractional coordinate.
-fn fractal_noise(noise: &SuperSimplex, x: f64, y: f64) -> f64 {
-    (0..4)
+#[inline]
+fn fractal_noise(noise: &SuperSimplex, x: f64, y: f64, octaves: u32) -> f64 {
+    (0..octaves)
         .map(|i| {
             let freq = (1 << i) as f64;
-            noise.get([x * freq, y * freq]) / freq
+            noise.get([x * freq, y * freq]) * (1.0 / freq)
         })
         .sum()
 }

@@ -27,6 +27,19 @@ impl Vertex for Vec2 {
     }
 }
 
+#[repr(C)]
+pub struct PosUv {
+    pub pos: Vec2,
+    pub uv: Vec2,
+}
+
+impl Vertex for PosUv {
+    fn bind_attribs(attribs: &mut Attribs<Self>) {
+        Vec2::bind_attrib(attribs);
+        Vec2::bind_attrib(attribs);
+    }
+}
+
 /// PosUvAlpha stores a vertex with (only) a given position, texture coordinate, and alpha.
 #[repr(C)]
 pub struct PosUvAlpha {

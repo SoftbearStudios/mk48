@@ -126,7 +126,6 @@ impl EntityIndex {
     }
 }
 
-#[allow(dead_code)]
 impl Entities {
     pub fn new() -> Self {
         const INIT: Sector = Sector::new();
@@ -211,12 +210,15 @@ impl Entities {
             .flat_map(|(sector_index, sector)| {
                 let sector_id = SectorId::from_sector_index(sector_index);
 
-                sector.entities.par_iter().with_min_len(64).enumerate().map(
-                    move |(index, entity)| {
+                sector
+                    .entities
+                    .par_iter()
+                    .with_min_len(256)
+                    .enumerate()
+                    .map(move |(index, entity)| {
                         let entity_index = EntityIndex(sector_id, index as u16);
                         (entity_index, entity)
-                    },
-                )
+                    })
             })
     }
 
@@ -231,7 +233,7 @@ impl Entities {
                 sector
                     .entities
                     .par_iter_mut()
-                    .with_min_len(64)
+                    .with_min_len(256)
                     .enumerate()
                     .map(move |(index, entity)| {
                         let entity_index = EntityIndex(sector_id, index as u16);

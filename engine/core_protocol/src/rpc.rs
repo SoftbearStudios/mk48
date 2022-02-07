@@ -172,7 +172,9 @@ pub enum AdminUpdate {
     SummaryRequested {
         metrics: MetricsSummaryDto,
     },
-    StatusRequested,
+    StatusRequested {
+        healthy: bool,
+    },
     UserAgentsRequested {
         user_agents: Arc<[(UserAgentId, f32)]>,
     },

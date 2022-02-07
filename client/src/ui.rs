@@ -10,9 +10,10 @@ use common::death_reason::DeathReason;
 use common::entity::{EntityKind, EntitySubKind, EntityType};
 use common::ticks::Ticks;
 use common::velocity::Velocity;
+use common::world::outside_area;
 use core_protocol::id::{InvitationId, PeriodId, PlayerId, TeamId};
 use core_protocol::name::{PlayerAlias, TeamName};
-use glam::Vec2;
+use glam::{vec2, Vec2};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -51,6 +52,8 @@ pub enum UiEvent {
     AltitudeTarget(f32),
     Armament(EntityKind, EntitySubKind),
     Cinematic(bool),
+    /// Go from respawning to spawning.
+    OverrideRespawn,
 }
 
 impl Apply<UiEvent> for UiState {
@@ -84,6 +87,7 @@ pub struct UiProps {
     pub team_members: Vec<TeamPlayerModel>,
     pub team_join_requests: Vec<TeamPlayerModel>,
     pub teams: Vec<TeamModel>,
+    pub restrictions: Vec<EntityType>, // Entity types that can't be used.
 }
 
 /// Mutually exclusive statuses.
@@ -91,7 +95,9 @@ pub struct UiProps {
 #[serde(rename_all = "camelCase")]
 pub enum UiStatus {
     #[serde(rename_all = "camelCase")]
-    Alive {
+    Offline,
+    #[serde(rename_all = "camelCase")]
+    Playing {
         #[serde(rename = "type")]
         entity_type: EntityType,
         velocity: Velocity,
@@ -102,10 +108,12 @@ pub enum UiStatus {
         armament_consumption: Option<Arc<[Ticks]>>,
     },
     #[serde(rename_all = "camelCase")]
-    Spawning {
-        connection_lost: bool,
-        death_reason: Option<DeathReasonModel>,
+    Respawning {
+        death_reason: DeathReasonModel,
+        respawn_level: u8,
     },
+    #[serde(rename_all = "camelCase")]
+    Spawning,
 }
 
 #[derive(Serialize)]
@@ -236,7 +244,6 @@ impl Mk48Game {
             score: context.game().score,
             player_count: core_state.only_players().len(),
             fps: self.fps_counter.last_sample().unwrap_or(0.0),
-            status,
             chats: core_state
                 .messages
                 .iter()
@@ -340,6 +347,16 @@ impl Mk48Game {
                 })
                 .take(5)
                 .collect(),
+            restrictions: EntityType::iter()
+                .filter(|&entity_type: &EntityType| {
+                    if let UiStatus::Playing { position, .. } = &status {
+                        outside_area(entity_type, vec2(position.x, position.y))
+                    } else {
+                        false
+                    }
+                })
+                .collect(),
+            status,
         };
 
         context.set_ui_props(props);

@@ -2148,19 +2148,9 @@
 				"positionForward": 37.7849,
 				"positionSide": 4.73435,
 				"angle": 0,
-				"count": 3,
+				"count": 4,
 				"symmetrical": true,
 				"external": false
-			},
-			{
-				"type": "tomahawk",
-				"width": 0.533,
-				"positionForward": 37.7849,
-				"positionSide": 4.73435,
-				"angle": 0,
-				"symmetrical": true,
-				"external": false,
-				"hidden": true
 			},
 			{
 				"type": "mk70",
@@ -2244,6 +2234,29 @@
 		"exhausts": [
 			{
 				"positionForward": -77
+			}
+		]
+	},
+	"terryFox": {
+		"label": "Terry Fox",
+		"link": "https://en.wikipedia.org/wiki/CCGS_Terry_Fox",
+		"kind": "boat",
+		"subkind": "icebreaker",
+		"level": 6,
+		"length": 88,
+		"width": 17.7031,
+		"speed": 8.231111,
+		"draft": 8.3,
+		"sensors": {
+			"visual": {},
+			"radar": {}
+		},
+		"armaments": [],
+		"exhausts": [
+			{
+				"positionForward": 7.308,
+				"positionSide": 4.531,
+				"symmetrical": true
 			}
 		]
 	},

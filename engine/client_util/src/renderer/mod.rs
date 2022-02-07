@@ -4,7 +4,9 @@
 pub mod attribute;
 pub mod background;
 pub mod buffer;
+pub mod camera;
 mod deque;
+pub mod framebuffer;
 pub mod graphic;
 pub mod particle;
 pub mod renderer;

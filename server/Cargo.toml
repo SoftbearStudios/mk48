@@ -16,8 +16,6 @@ debug = false
 opt-level = 3
 
 [dependencies]
-futures = "0.3"
-tokio = { version = "1.2" }
 glam = { version = "0.18", features = ["serde"] }
 serde = "1.0"
 serde_json = "1.0"
@@ -34,11 +32,10 @@ core_server = {path="../engine/core_server"}
 server_util = {path="../engine/server_util"}
 rayon = "1.5"
 ringbuffer = "0.8"
-structopt = "0.3"
 log = {version = "0.4", features = [ "release_max_level_info" ] }
 env_logger = "0.9"
 lazy_static = "1"
-rustrict = {version = "0.1", features=["customize"], default-features=false}
+rustrict = {version = "0.3", features=["customize"], default-features=false}
 
 [dev-dependencies]
 image = { version = "0.23.14", features = [ "png" ] }

@@ -99,10 +99,6 @@ impl<G: GameArenaService> Debug for PlayerTuple<G> {
     }
 }
 
-// These are intended to be 100% sound (TODO: Explain why).
-unsafe impl<G: GameArenaService> Send for PlayerTuple<G> {}
-unsafe impl<G: GameArenaService> Sync for PlayerTuple<G> {}
-
 pub struct Context<G: GameArenaService> {
     pub arena_id: Option<ArenaId>,
     /// Wrapping counter.

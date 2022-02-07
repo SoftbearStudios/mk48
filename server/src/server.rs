@@ -75,16 +75,12 @@ impl GameArenaService for Server {
         }
     }
 
-    fn player_joined(&mut self, #[allow(unused_variables)] player_tuple: &Arc<PlayerTuple<Self>>) {
-        #[cfg(debug_assertions)]
-        {
-            #[cfg(debug_assertions)]
-            use common::entity::EntityData;
-            #[cfg(debug_assertions)]
-            use common::util::level_to_score;
+    #[cfg(debug_assertions)]
+    fn player_joined(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
+        use common::entity::EntityData;
+        use common::util::level_to_score;
 
-            player_tuple.borrow_player_mut().score = level_to_score(EntityData::MAX_BOAT_LEVEL);
-        }
+        player_tuple.borrow_player_mut().score = level_to_score(EntityData::MAX_BOAT_LEVEL);
     }
 
     fn player_command(&mut self, update: Self::Command, player: &Arc<PlayerTuple<Self>>) {

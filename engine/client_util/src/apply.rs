@@ -7,3 +7,7 @@ pub trait Apply<U>: Default {
         *self = Self::default();
     }
 }
+
+impl Apply<()> for () {
+    fn apply(&mut self, _update: ()) {}
+}

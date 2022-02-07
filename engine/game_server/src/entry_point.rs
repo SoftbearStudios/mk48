@@ -15,6 +15,7 @@ use actix_web::http::uri::PathAndQuery;
 use actix_web::http::{Method, Uri};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
+use common_util::ticks::Ticks;
 use core_protocol::dto::InvitationDto;
 use core_protocol::id::*;
 use core_protocol::web_socket::WebSocketFormat;
@@ -25,6 +26,7 @@ use serde::Deserialize;
 use server_util::app::static_files;
 use server_util::cloud::Cloud;
 use server_util::linode::Linode;
+use server_util::rate_limiter::RateLimiterProps;
 use server_util::ssl::{run_until_ssl_renewal, Ssl};
 use server_util::tcp::{
     max_connections_per_worker, on_connect_enable_nodelay, BACKLOG, KEEP_ALIVE, SHUTDOWN_TIMEOUT,
@@ -34,6 +36,7 @@ use server_util::web_socket::WebSocket;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 use structopt::StructOpt;
 
 /// Server options, to be specified as arguments.
@@ -108,7 +111,12 @@ async fn ws_index<G: GameArenaService>(
                     G::Command,
                     G::ClientUpdate,
                     (SessionId, PlayerId, Option<InvitationDto>),
-                >::new(srv.recipient(), format, (session_id, player_id, invitation)),
+                >::new(
+                    srv.recipient(),
+                    format,
+                    RateLimiterProps::new(Duration::from_secs_f32(Ticks::PERIOD_SECS * 0.9), 5),
+                    (session_id, player_id, invitation),
+                ),
                 &r,
                 stream,
             ),

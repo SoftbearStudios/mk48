@@ -44,35 +44,41 @@
 </script>
 
 <script>
-	import ContextMenu from './lib/ContextMenu.svelte';
+	import AboutDialog from './dialog/AboutDialog.svelte';
+	import Changelog from './dialog/Changelog.svelte';
+	import Chat from './overlay/Chat.svelte';
+	import ContextMenu from './overlay/ContextMenu.svelte';
+	import HelpDialog from './dialog/HelpDialog.svelte';
+	import HelpLinks from './overlay/HelpLinks.svelte';
+	import Hint from './overlay/Hint.svelte';
+	import Instructions from './overlay/Instructions.svelte';
+	import Leaderboard from './overlay/Leaderboard.svelte';
+	import LevelsDialog from './dialog/LevelsDialog.svelte';
+	import PrivacyDialog from './dialog/PrivacyDialog.svelte';
+	import ProgressSpinner from './overlay/ProgressSpinner.svelte';
+	import XButton from './component/XButton.svelte';
+	import RespawnMenu from './overlay/RespawnMenu.svelte';
 	import Router from 'svelte-spa-router';
-	import Help from './page/Help.svelte';
-	import About from './page/About.svelte';
-	import Privacy from './page/Privacy.svelte';
-	import Terms from './page/Terms.svelte';
-	import Settings from './page/Settings.svelte';
-	import Ships from './page/Ships.svelte';
-	import Levels from './page/Levels.svelte';
-	import Changelog from './page/Changelog.svelte';
-	import Chat from './lib/Chat.svelte';
-	import Instructions from './lib/Instructions.svelte';
-	import Leaderboard from './lib/Leaderboard.svelte';
-	import Ship from './lib/Ship.svelte';
-	import Sidebar from './lib/Sidebar.svelte';
-	import SplashScreen from './lib/SplashScreen.svelte';
-	import Status from './lib/Status.svelte';
-	import Teams from './lib/Teams.svelte';
-	import Hint from './lib/Hint.svelte';
-	import t from './lib/translation.js';
-	import Upgrades, {canUpgrade} from './lib/Upgrades.svelte';
+	import SettingsDialog from './dialog/SettingsDialog.svelte';
+	import ShipControls from './overlay/ShipControls.svelte';
+	import ShipsDialog from './dialog/ShipsDialog.svelte';
+	import ShipStatus from './overlay/ShipStatus.svelte';
+	import Sidebar from './overlay/Sidebar.svelte';
+	import SpawnOverlay from './overlay/SpawnOverlay.svelte';
+	import TeamsOverlay from './overlay/TeamsOverlay.svelte';
+	import TermsDialog from './dialog/TermsDialog.svelte';
+	import WarningPanel from './overlay/WarningPanel.svelte';
+	import t from './util/translation.js';
+	import UpgradeMenu from './overlay/UpgradeMenu.svelte';
 	import wasm from '../../client/Cargo.toml';
+	import {canUpgrade} from './util/warship.js';
 	import {getMouseButton} from './util/compatibility.js';
 	import {mapRanges} from './util/math.js';
 	import {onMount} from 'svelte';
-	import {antialias, cinematic, renderTerrainTextures, volume, waveQuality, resolution} from './util/settings.js';
-	import {outboundEnabled} from './lib/Link.svelte';
+	import {antialias, cinematic, volume, waveQuality, resolution, loadRustSettings} from './util/settings.js';
+	import {outboundEnabled} from './component/Link.svelte';
 
-	let canvas, chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
+	let chatRef, shipRef, client, innerWidth, innerHeight, animationFrameRequest;
 	let active, altitudeTarget, armamentSelection;
 	let instructBasics = true;
 	let instructZoom = true;
@@ -89,17 +95,17 @@
 
 		client = await wasm();
 
-		//client.run(host, encrypted, settings, storage.arenaId, storage.sessionId, invitationId);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
 
 		// Make client accessible (for debugging only).
 		window.rust = client;
+		loadRustSettings();
 	});
 
 	function onAnimationFrame(timestamp) {
 		client && client.frame(timestamp / 1000.0);
 		animationFrameRequest = requestAnimationFrame(onAnimationFrame);
-	};
+	}
 
 	function safeNumber(num) {
 		return typeof num === 'number' && isFinite(num);
@@ -215,7 +221,7 @@
 		client && client.handleSendChat(message, team);
 	}
 
-	function onReportPlayer(playerId) {
+	function onReportAbuse(playerId) {
 		client && client.handleReportPlayer(playerId);
 	}
 
@@ -262,12 +268,12 @@
 		client && client.mouse(event);
 	}
 
-	function onChangeWindowFocused(focused) {
+	function onChangeWindowFocused(event) {
 		client && client.keyboardFocus(event);
 	}
 
 	// Originates from iframe parent.
-	// Also handled by lib/SplashScreen.svelte
+	// Also handled by overlay/SpawnOverlay.svelte
 	function onMessage(event) {
 		console.log(`game received message: ${event.data}`);
 		switch (event.data) {
@@ -306,7 +312,6 @@
 
 <canvas
 	id='canvas'
-	bind:this={canvas}
 	width={processWindowDimension(innerWidth, $resolution)}
 	height={processWindowDimension(innerHeight, $resolution)}
 	on:mousedown|preventDefault={onMouseButton}
@@ -321,54 +326,39 @@
 	on:contextmenu|preventDefault
 ></canvas>
 
-<div class='top bar'>
-	{#if client && $state && $state.status.alive}
-		<Teams state={$state} {onCreateTeam} {onRequestJoinTeam} {onAcceptJoinTeam} {onRejectJoinTeam} {onKickFromTeam} {onLeaveTeam}/>
-		{#if canUpgrade($state.status.alive.type, $state.score)}
-			<Upgrades
-				type={$state.status.alive.type}
-				{onUpgrade}
-			/>
-		{:else}
-			<Instructions {touch} {instructBasics} {instructZoom}/>
-		{/if}
-	{:else}
-		<!-- Render this div even without contents, as it causes the flex
-		box to shift the other contents to the right side -->
-		<div>
-			<Leaderboard label={$t('panel.leaderboard.type.single/all')} leaderboard={$state && $state.leaderboards && $state.leaderboards['AllTime'] ? $state.leaderboards['AllTime'] : []} headerAlign='left'/>
-			<br/>
-			<Leaderboard label={$t('panel.leaderboard.type.single/week')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Weekly'] ? $state.leaderboards['Weekly'] : []} headerAlign='left'/>
-			<br/>
-			<Leaderboard label={$t('panel.leaderboard.type.single/day')} open={false} leaderboard={$state && $state.leaderboards && $state.leaderboards['Daily'] ? $state.leaderboards['Daily'] : []} headerAlign='left'/>
-		</div>
-	{/if}
-	{#if $state && $state.liveboard}
-		<Leaderboard leaderboard={$state.liveboard} headerAlign='right' footer={$state.playerCount ? $t('panel.online.label').replace('{players}', $state.playerCount) : null}/>
-	{:else}
-		<div><!--placeholder--></div>
-	{/if}
-</div>
-
-{#if client}
-	{#if $state && $state.status}
-		{#if $state.status.alive}
-			<div class='bottom bar'>
-				<Ship bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
-				<Status state={$state}/>
-				<Chat bind:this={chatRef} state={$state} {onSendChat} {onMutePlayer} {onReportPlayer}/>
-			</div>
-			{#if !$cinematic}
-				<Hint type={$state.status.alive.type}/>
-			{/if}
-		{:else if $state.status.spawning}
-			<SplashScreen state={$state} {onSpawn}/>
-		{/if}
-	{/if}
+{#if !(client && $state && $state.status)}
+	<ProgressSpinner />
+{:else if $state.status == 'offline'}
+	<WarningPanel message={$t('panel.splash.connectionLost')} />
+{:else if $state.status == 'spawning'}
+	<SpawnOverlay {onSpawn} />
+	<HelpLinks />
+{:else if $state.status.playing}
+	<Chat bind:this={chatRef} state={$state} {onMutePlayer} {onReportAbuse} {onSendChat}/>
+	<Hint type={$state.status.playing.type}/>
+	<Leaderboard state={$state} footer={$state.playerCount ? $t('panel.online.label').replace('{players}', $state.playerCount) : null}/>
+    <ShipControls bind:this={shipRef} state={$state} bind:active bind:altitudeTarget bind:selection={armamentSelection}/>
+	<ShipStatus state={$state}/>
 	<Sidebar onZoom={client.zoom} {onCopyInvitationLink}/>
+	<TeamsOverlay state={$state} {onAcceptJoinTeam} {onCreateTeam} {onKickFromTeam} {onLeaveTeam} {onRejectJoinTeam} {onRequestJoinTeam}/>
+	{#if canUpgrade($state.status.playing.type, $state.score)}
+		<UpgradeMenu
+			score={$state.score}
+			type={$state.status.playing.type}
+			restrictions={$state.restrictions}
+			{onUpgrade}
+		/>
+	{/if}
+{:else if $state.status.respawning}
+	<XButton on:click={() => client && client.event('OverrideRespawn')}/>
+	<RespawnMenu respawnLevel={$state.status.respawning.respawnLevel} state={$state} {onSpawn}/>
+	<HelpLinks />
+{:else}
+	<WarningPanel message="Invalid state {JSON.stringify($state)}"/>
 {/if}
+
 <ContextMenu/>
-<Router routes={{'/help': Help, '/about': About, '/settings': Settings, '/privacy': Privacy, '/terms': Terms, '/ships': Ships, '/levels': Levels, '/changelog': Changelog}}></Router>
+<Router routes={{'/help': HelpDialog, '/about': AboutDialog, '/settings': SettingsDialog, '/privacy': PrivacyDialog, '/terms': TermsDialog, '/ships': ShipsDialog, '/levels': LevelsDialog, '/changelog': Changelog}}></Router>
 
 <svelte:head>
 	<title>mk48.io</title>
@@ -376,8 +366,8 @@
 <svelte:window
 	bind:innerWidth bind:innerHeight
 	on:keydown={onKey} on:keyup={onKey}
-	on:blur={() => onChangeWindowFocused(false)}
-	on:focus={() => onChangeWindowFocused(true)}
+	on:blur={onChangeWindowFocused}
+	on:focus={onChangeWindowFocused}
 	on:message={onMessage}
 	on:error={onError} on:unhandledrejection={onError}
 />

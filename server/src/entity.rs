@@ -96,7 +96,7 @@ impl Entity {
         // Regen half of damage (as a fraction). Get original damage fraction before changing
         // entity type. Never result in boat being dead.
         let damage_fraction = self.ticks.to_secs() / old_data.max_health().to_secs();
-        let new_damage_fraction = damage_fraction * 0.5;
+        let new_damage_fraction = damage_fraction * 0.75;
         let max_health = new_data.max_health();
         self.ticks = (max_health * new_damage_fraction).min(max_health - Ticks::ONE);
 
@@ -277,12 +277,30 @@ impl Entity {
 
     /// Determines whether an entity collides with the terrain (underwater terrain ignored to avoid
     /// damaging submarines when going from deep to shallow; submarines must be forced to rise elsewhere).
-    pub fn collides_with_terrain(&self, t: &Terrain, delta_seconds: f32) -> bool {
+    ///
+    /// Threshold is minimum terrain altitude to be considered colliding. `Altitude::ZERO` is a good
+    /// default.
+    ///
+    /// Returns one point of collision, if any.
+    pub fn collides_with_terrain(
+        &self,
+        t: &Terrain,
+        delta_seconds: f32,
+    ) -> Option<(Vec2, Altitude)> {
+        let arctic = self.transform.position.y >= common::world::ARCTIC;
+
+        let threshold = if arctic && self.altitude < Altitude::from_meters(-5.0) {
+            // Below ice, so only collide with solid land.
+            Altitude(2)
+        } else {
+            Altitude::ZERO
+        };
+
         // If submerged, colliding with terrain should be relatively temporary (boats should simply
         // rise up rather than taking damage) so it is ignored.
         t.collides_with(
             self.dimension_transform(),
-            self.altitude.max(Altitude::ZERO),
+            self.altitude.max(threshold),
             delta_seconds,
         )
     }
@@ -469,6 +487,14 @@ impl Entity {
 
         let min_altitude = (terrain
             .sample(self.transform.position)
+            .map(|alt| {
+                if alt < Altitude(2) && self.transform.position.y > common::world::ARCTIC {
+                    // Under ice sheet
+                    Altitude::MIN
+                } else {
+                    alt
+                }
+            })
             .unwrap_or(Altitude::MIN)
             .max(if data.sub_kind == EntitySubKind::Submarine {
                 -data.depth

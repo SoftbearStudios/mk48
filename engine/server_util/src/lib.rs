@@ -10,6 +10,7 @@ pub mod cloud;
 pub mod ip_rate_limiter;
 pub mod linode;
 pub mod observer;
+pub mod rate_limiter;
 pub mod ssl;
 pub mod tcp;
 pub mod ups_monitor;

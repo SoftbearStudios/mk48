@@ -31,12 +31,12 @@ impl FpsMonitor {
 
         if self.elapsed
             >= if self.last_sample.is_none() {
-                self.period * 0.1
+                (self.period * 0.1).max(1.0)
             } else {
                 self.period
             }
         {
-            let fps = self.frames as f32 / self.elapsed as f32;
+            let fps = self.frames as f32 / self.elapsed;
             self.elapsed = 0.0;
             self.frames = 0;
             self.last_sample = Some(fps);

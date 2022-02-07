@@ -15,6 +15,7 @@ pub mod client;
 pub mod core;
 mod database;
 mod generate_id;
+mod health;
 mod invitation;
 mod metrics;
 mod notify_set;

@@ -4,9 +4,10 @@ use actix_web::dev::Extensions;
 use actix_web::rt::net::TcpStream;
 use log::{error, info};
 use std::any::Any;
+use std::time::Duration;
 
 /// Tcp Keep Alive.
-pub const KEEP_ALIVE: KeepAlive = KeepAlive::Timeout(10);
+pub const KEEP_ALIVE: KeepAlive = KeepAlive::Timeout(Duration::from_secs(10));
 
 /// Tcp server shutdown timeout, in seconds.
 pub const SHUTDOWN_TIMEOUT: u64 = 3;

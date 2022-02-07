@@ -35,9 +35,15 @@ pub trait GameClient {
 
     fn new() -> Self;
 
+    /// Creates the (game-specific) settings.
+    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::Settings;
+
     /// Creates the (game-specific) render layer.
-    fn init(&mut self, renderer: &mut Renderer, context: &mut Context<Self>)
-        -> Self::RendererLayer;
+    fn init_layer(
+        &mut self,
+        renderer: &mut Renderer,
+        context: &mut Context<Self>,
+    ) -> Self::RendererLayer;
 
     /// Peek at a core update before it is applied to `CoreState`.
     fn peek_core(&mut self, _inbound: &ClientUpdate, _context: &mut Context<Self>) {}
@@ -76,8 +82,8 @@ pub trait GameClient {
         renderer: &mut Renderer,
         renderer_layer: &mut Self::RendererLayer,
     ) {
-        self.update(elapsed_seconds, context);
-        self.render(elapsed_seconds, &*context, renderer, renderer_layer);
+        self.update(elapsed_seconds, context, &*renderer);
+        self.render(elapsed_seconds, context, renderer, renderer_layer);
     }
 
     /// Peek at a UI event before it is applied to `UiState`.
@@ -90,5 +96,11 @@ pub trait GameClient {
     }
 
     /// Updates the game. Optional, as may be done in `tick`.
-    fn update(&mut self, _elapsed_seconds: f32, _context: &Context<Self>) {}
+    fn update(
+        &mut self,
+        _elapsed_seconds: f32,
+        _context: &mut Context<Self>,
+        _renderer: &Renderer,
+    ) {
+    }
 }

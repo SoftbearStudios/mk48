@@ -33,6 +33,7 @@ struct Inner {
     track: Option<AudioBuffer>,
     sprite_sheet: AudioSpriteSheet,
     playing: HashMap<String, Vec<AudioBufferSourceNode>>,
+    muted: bool,
 }
 
 impl AudioLayer {
@@ -53,6 +54,7 @@ impl AudioLayer {
                     track: None,
                     sprite_sheet,
                     playing: HashMap::new(),
+                    muted: false,
                 })));
 
                 let promise = web_sys::window().unwrap().fetch_with_str(path);
@@ -135,8 +137,9 @@ impl AudioLayer {
 
     // Sets a multiplier for the volume of all sounds.
     pub fn set_volume(&self, volume: f32) {
-        if let Some(inner) = self.inner.borrow().as_ref() {
-            inner.sfx_gain.gain().set_value(volume)
+        if let Some(inner) = self.inner.borrow_mut().as_mut() {
+            inner.sfx_gain.gain().set_value(volume);
+            inner.muted = volume == 0.0;
         }
     }
 }
@@ -146,6 +149,10 @@ impl Inner {
     /// determined at runtime.
     fn play(rc: &Rc<RefCell<Option<Self>>>, name: &'static str, volume: f32, looping: bool) {
         if let Some(inner) = rc.borrow_mut().as_mut() {
+            if inner.muted {
+                return;
+            }
+
             if inner.context.state() == AudioContextState::Suspended {
                 let _ = inner.context.resume();
             } else if inner.track.is_some() {

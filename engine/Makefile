@@ -7,3 +7,4 @@ fmt:
 	cargo fmt --manifest-path client_util/Cargo.toml
 	cargo fmt --manifest-path engine_macros/Cargo.toml
 	cargo fmt --manifest-path sprite_sheet/Cargo.toml
+	cargo fmt --manifest-path sprite_sheet_util/Cargo.toml

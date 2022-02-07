@@ -30,6 +30,9 @@ pub struct Play {
     /// True if play was started via an invitation from another player.
     pub invited: bool,
 
+    /// True if this is the first play since session was created or renewed.
+    pub renewed: bool,
+
     /// The most recent score sent by game server, if any.
     pub score: Option<u32>, // e.g. 1234
 
@@ -91,6 +94,9 @@ pub struct Session {
     /// Prevent multiple abuse reports from same user.
     pub reported: HashSet<PlayerId>,
 
+    /// Network latency/round trip time (millis).
+    pub rtt: Option<u16>,
+
     /// Whether this session is live, meaning that player is now (or recently was) playing.
     pub live: bool,
 
@@ -136,6 +142,7 @@ impl Play {
             date_join: None,
             date_stop: None,
             invited: false,
+            renewed: false,
             score: None,
             team_captain: false,
             team_id: None,
@@ -172,6 +179,7 @@ impl Session {
             date_renewed: date_created,
             date_terminated: None,
             fps: None,
+            rtt: None,
             game_id,
             inbox: HistoryBuffer::new(),
             invitation: None,
@@ -586,6 +594,7 @@ impl Repo {
         const ONE_HOUR_IN_MILLIS: u64 = 60 * 60 * 1000;
         const TWO_DAYS_IN_MILLIS: u64 = 48 * ONE_HOUR_IN_MILLIS;
 
+        // Only prune from valid arenas because Arena::prune_arenas() prunes all else.
         for (_, arena) in Arena::iter_mut(&mut self.arenas) {
             let mut removable = vec![];
             for (session_id, session) in arena.sessions.iter_mut() {
@@ -734,6 +743,11 @@ impl Repo {
             if let Some(session) = Session::get_mut(&mut arena.sessions, session_id) {
                 debug!("start_play(arena={:?}, session={:?})", arena_id, session_id);
                 let mut new_play = Play::new();
+                new_play.renewed = session
+                    .plays
+                    .last()
+                    .map(|p| p.date_created < session.date_renewed)
+                    .unwrap_or(true);
                 new_play.score = arena.rules.default_score;
                 if new_play.exceeds_score(arena.liveboard_min_score) {
                     arena.liveboard_changed = true;

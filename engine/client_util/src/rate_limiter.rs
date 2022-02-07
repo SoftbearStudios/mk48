@@ -20,6 +20,11 @@ impl RateLimiter {
         self.elapsed = self.period;
     }
 
+    /// Reset the period of a rate limiter.
+    pub fn set_period(&mut self, period: f32) {
+        self.period = period;
+    }
+
     /// Takes how much time passed, in seconds, since last update.
     pub fn update(&mut self, elapsed: f32) {
         debug_assert!(elapsed >= 0.0);

@@ -8,6 +8,7 @@ use glam::Vec2;
 use std::cmp::Ordering;
 
 /// Rendering information of a sprite that may be sorted relative to other sprites.
+#[derive(Copy, Clone)]
 pub struct SortableSprite {
     pub alpha: f32,
     pub altitude: f32,

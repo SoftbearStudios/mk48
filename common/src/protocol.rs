@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::altitude::Altitude;
-use crate::angle::Angle;
 use crate::contact::Contact;
 use crate::death_reason::DeathReason;
 use crate::entity::*;
@@ -45,11 +44,9 @@ pub enum Command {
 pub struct Control {
     /// Steering commands.
     pub guidance: Option<Guidance>,
-    /// Unimplemented.
-    pub angular_velocity_target: Option<Angle>,
     /// Altitude target (useful for submarines).
     pub altitude_target: Option<Altitude>,
-    /// Turret/aircraft target.
+    /// Turret/aircraft/pay target.
     pub aim_target: Option<Vec2>,
     /// Active sensors.
     pub active: bool,
@@ -66,8 +63,6 @@ pub struct Control {
 pub struct Fire {
     /// The index of the weapon to fire/use, relative to `EntityData.armaments`.
     pub armament_index: u8,
-    /// The target of the weapon (useful for depositors).
-    pub position_target: Vec2,
 }
 
 /// Provide hints to optimize experience.
@@ -86,10 +81,7 @@ impl Default for Hint {
 
 /// Pay one coin.
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct Pay {
-    /// Where to spawn the coin. Must be within outer radius.
-    pub position: Vec2,
-}
+pub struct Pay;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Spawn {

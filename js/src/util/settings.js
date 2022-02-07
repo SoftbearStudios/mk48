@@ -3,9 +3,45 @@
 
 import {clamp, mapRanges} from '../util/math.js';
 import storage from '../util/storage.js';
-import {writable} from 'svelte/store';
+import {get, writable} from 'svelte/store';
 
-const settingStore = function(rusty, name, defaultValue, minValue, maxValue) {
+const rustSettingStores = [];
+
+export const loadRustSettings = function() {
+	for (const s of rustSettingStores) {
+		s()
+	}
+}
+
+const rustSettingStore = function(name) {
+	const store = {inner: writable(undefined)};
+	store.subscribe = function(c) {
+		function load() {
+			this.inner.set(window.rust.getSetting(name));
+		}
+		let l = load.bind(this);
+
+		if (window.rust && get(this.inner) === undefined) {
+			l()
+		} else {
+			rustSettingStores.push(l)
+		}
+		return this.inner.subscribe(c);
+	}
+	store.inner.subscribe(newValue => {
+		window.rust && window.rust.setSetting(name, newValue);
+	});
+	store.mapToInteger = (value, levels) => {
+		return Math.round(mapRanges(value, 0, 1, 0, levels - 1));
+	};
+	store.setFromInteger = (value, levels) => {
+		store.inner.set(mapRanges(value, 0, levels - 1, 0, 1));
+	};
+	store.set = value => store.inner.set(value);
+	return store;
+}
+
+const jsSettingsStore = function(name, defaultValue, minValue, maxValue) {
 	if (typeof defaultValue === 'number') {
 		if (minValue == undefined) {
 			minValue = 0;
@@ -42,27 +78,21 @@ const settingStore = function(rusty, name, defaultValue, minValue, maxValue) {
 
 	const store = writable(initialValue);
 	store.subscribe(newValue => {
-	    if (rusty) {
-	        window.rust && window.rust.setSetting(name, newValue);
-	    } else {
-	        storage[name] = newValue;
-	    }
+		storage[name] = newValue;
 	});
 
-    if (!rusty) {
-        window.addEventListener('storage', () => {
-            console.log('storage event');
-            if (typeof defaultValue === 'string') {
-                store.set(storage[name]);
-            } else {
-                try {
-                    store.set(JSON.parse(storage[name]));
-                } catch (err) {
-                    console.warn(err);
-                }
-            }
-        });
-    }
+	window.addEventListener('storage', () => {
+		console.log('storage event');
+		if (typeof defaultValue === 'string') {
+			store.set(storage[name]);
+		} else {
+			try {
+				store.set(JSON.parse(storage[name]));
+			} catch (err) {
+				console.warn(err);
+			}
+		}
+	});
 
 	if (typeof defaultValue === 'number') {
 		// levels of 5 would mean the possible integers 0, 1, 2, 3, and 4
@@ -77,13 +107,18 @@ const settingStore = function(rusty, name, defaultValue, minValue, maxValue) {
 	return store;
 };
 
-export const chatOpen = settingStore(false, 'chat', true);
-export const waveQuality = settingStore(true, 'waveQuality', 1, 0.0, 3.0);
-export const renderTerrainTextures = settingStore(true, 'renderTerrainTextures', true);
-export const volume = settingStore(true, 'volume', 1.0);
-export const antialias = settingStore(true, 'antialias', true);
-export const resolution = settingStore(false, 'resolution', 1.0, 0.25, 1.0);
-export const fpsCounter = settingStore(false, 'fpsCounter', false);
+export const chatShown = jsSettingsStore('chatShown', true);
+export const fpsShown = jsSettingsStore('fpsShown', false);
+export const leaderboardShown = jsSettingsStore('leaderboardShown', true);
+export const shipControlsShown = jsSettingsStore('shipControlsShown', true);
+export const teamsShown = jsSettingsStore('teamsShown', true);
+export const upgradeShown = jsSettingsStore('upgradeShown', true);
+export const resolution = jsSettingsStore('resolution', 1.0, 0.25, 1.0);
+
+export const waveQuality = rustSettingStore( 'waveQuality');
+export const animations = rustSettingStore( 'animations');
+export const volume = rustSettingStore( 'volume');
+export const antialias = rustSettingStore( 'antialias');
 
 // Not persisted, because that might trap users in cinematic mode.
 export const cinematic = writable(false);

@@ -8,7 +8,10 @@ use glam::Vec2;
 /// Helper for taking joystick input. For now, the only joystick input is emulated from keyboard input.
 #[derive(Debug)]
 pub struct Joystick {
+    /// Turning (x axis) is interpolated.
     pub position: Vec2,
+    /// X and Y are treated same.
+    pub translation_2d: Vec2,
     pub stop: bool,
 }
 
@@ -22,6 +25,7 @@ impl Joystick {
     ) -> Option<Self> {
         let mut forward_backward = 0f32;
         let mut left_right = 0f32;
+        let mut left_right_translation = 0f32;
         if keyboard_state
             .state(Key::W)
             .combined(keyboard_state.state(Key::Up))
@@ -42,6 +46,7 @@ impl Joystick {
         {
             let elapsed = time_seconds - start;
             left_right += map_ranges(elapsed, 0.0..1.0, 0.25..1.0, true);
+            left_right_translation -= 1.0;
         }
         if let KeyState::Down(start) = keyboard_state
             .state(Key::D)
@@ -49,6 +54,7 @@ impl Joystick {
         {
             let elapsed = time_seconds - start;
             left_right -= map_ranges(elapsed, 0.0..1.0, 0.25..1.0, true);
+            left_right_translation += 1.0;
         }
         let stop = keyboard_state.is_down(Key::X);
 
@@ -57,6 +63,7 @@ impl Joystick {
         } else {
             Some(Self {
                 position: Vec2::new(left_right, forward_backward),
+                translation_2d: Vec2::new(left_right_translation, forward_backward),
                 stop,
             })
         }

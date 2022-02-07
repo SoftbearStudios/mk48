@@ -107,6 +107,7 @@ dependencies = [
  "chrono",
  "enum-iterator",
  "glam",
+ "lazy_static",
  "rand",
  "rustrict",
  "serde",

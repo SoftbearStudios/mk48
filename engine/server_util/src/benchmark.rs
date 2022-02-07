@@ -21,6 +21,8 @@ macro_rules! benchmark_scope {
     };
 }
 
+pub use benchmark_scope;
+
 /// Borrows a map of all benchmarks, such as for printing out.
 pub fn borrow_all() -> AtomicRef<'static, BTreeMap<&'static str, Benchmark>> {
     BENCHMARKS.borrow()

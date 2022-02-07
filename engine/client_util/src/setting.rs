@@ -4,9 +4,9 @@ pub use engine_macros::Settings;
 use wasm_bindgen::JsValue;
 
 /// Settings backed by local storage.
-pub trait Settings: Default {
+pub trait Settings: Sized {
     /// Loads all settings from local storage.
-    fn load(local_storage: &LocalStorage) -> Self;
+    fn load(l: &LocalStorage, default: Self) -> Self;
 
     /// Gets an arbitrary setting as JS. Returns `JsValue::NULL` if setting is unrecognized, to allow for
     /// multiple instances in parallel.
@@ -14,16 +14,16 @@ pub trait Settings: Default {
 
     /// Sets a arbitrary setting from JS. Does nothing if setting is unrecognized, to allow for
     /// multiple instances in parallel.
-    fn set(&mut self, key: &str, value: JsValue, local_storage: &mut LocalStorage);
+    fn set(&mut self, key: &str, value: JsValue, l: &mut LocalStorage);
 }
 
 // Useful if you don't want settings.
 impl Settings for () {
-    fn load(_local_storage: &LocalStorage) -> Self {}
-    fn get(&self, _key: &str) -> JsValue {
+    fn load(_: &LocalStorage, _: Self) -> Self {}
+    fn get(&self, _: &str) -> JsValue {
         JsValue::NULL
     }
-    fn set(&mut self, _key: &str, _value: JsValue, _local_storage: &mut LocalStorage) {}
+    fn set(&mut self, _: &str, _: JsValue, _: &mut LocalStorage) {}
 }
 
 /// Settings of the infrastructure, common to all games.
@@ -36,8 +36,17 @@ pub(crate) struct CommonSettings {
     #[setting(no_serde_wasm_bindgen)]
     pub session_id: Option<SessionId>,
     /// Whether to set antialias rendering option.
-    #[setting(default = "true")]
     pub antialias: bool,
+}
+
+impl Default for CommonSettings {
+    fn default() -> Self {
+        Self {
+            arena_id: None,
+            session_id: None,
+            antialias: true,
+        }
+    }
 }
 
 impl CommonSettings {

@@ -166,7 +166,7 @@ impl Arena {
     }
 
     /// Checks if arena is valid in trivial cases (where stopped/other_server arenas don't matter).
-    fn valid(&self) -> bool {
+    pub fn valid(&self) -> bool {
         self.date_stop.is_none() && !self.other_server
     }
 

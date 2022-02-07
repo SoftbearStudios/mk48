@@ -3,6 +3,9 @@
 
 #![feature(box_syntax)]
 #![feature(array_chunks)]
+#![feature(bool_to_option)]
+#![feature(result_into_ok_or_err)]
+#![feature(mixed_integer_ops)]
 
 pub mod altitude;
 pub mod angle;

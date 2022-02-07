@@ -85,7 +85,9 @@ pub enum MouseEvent {
     },
     Wheel(f32),
     /// Position in view space (-1..1).
-    Move(Vec2),
+    MoveViewSpace(Vec2),
+    /// Position in world space. Triggered by [`Self::MoveView`] or a change in world space.
+    MoveWorldSpace(Vec2),
 }
 
 /// The state of the mouse i.e. buttons and position.
@@ -93,7 +95,11 @@ pub enum MouseEvent {
 pub struct MouseState {
     states: [MouseButtonState; MouseButton::VARIANT_COUNT],
     /// Position in view space (-1..1).
-    pub position: Vec2,
+    /// None if mouse isn't on game.
+    pub view_position: Option<Vec2>,
+    /// Position in world space.
+    /// None if the mouse isn't on game.
+    pub world_position: Option<Vec2>,
     /// During a pinch to zoom gesture, stores last distance value.
     pub(crate) pinch_distance: Option<f32>,
 }
@@ -116,9 +122,10 @@ impl Apply<MouseEvent> for MouseState {
                     *self.state_mut(button) = MouseButtonState::Up;
                 }
             }
-            MouseEvent::Move(position) => {
-                self.position = position;
+            MouseEvent::MoveViewSpace(position) => {
+                self.view_position = Some(position);
             }
+            MouseEvent::MoveWorldSpace(position) => self.world_position = Some(position),
             _ => {}
         }
     }

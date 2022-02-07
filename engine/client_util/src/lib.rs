@@ -7,6 +7,9 @@
 #![feature(hash_raw_entry)]
 #![feature(hash_drain_filter)]
 #![feature(array_zip)]
+#![feature(bool_to_option)]
+#![feature(label_break_value)]
+#![feature(mixed_integer_ops)]
 
 pub mod apply;
 pub mod audio;
