@@ -13,7 +13,7 @@ use common::guidance::Guidance;
 use common::ticks::Ticks;
 use common::util::*;
 use common::velocity::Velocity;
-use game_server::context::PlayerTuple;
+use game_server::player::PlayerTuple;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
 use std::sync::Arc;
@@ -124,16 +124,16 @@ impl Mutation {
             Self::HitBy(other_player, weapon_type, damage) => {
                 let e = &mut entities[index];
                 if e.damage(damage) {
-                    let player_id = {
+                    let killer_alias = {
                         let mut other_player = other_player.borrow_player_mut();
                         other_player.score += kill_score(e.borrow_player().score);
-                        let player_id = other_player.player_id;
+                        let alias = other_player.alias();
                         drop(other_player);
-                        player_id
+                        alias
                     };
 
                     Self::boat_died(world, index, false);
-                    world.remove(index, DeathReason::Weapon(player_id, weapon_type));
+                    world.remove(index, DeathReason::Weapon(killer_alias, weapon_type));
 
                     return true;
                 }
@@ -146,21 +146,21 @@ impl Mutation {
             } => {
                 let entity = &mut entities[index];
                 if entity.damage(damage) {
-                    let player_id = {
+                    let killer_alias = {
                         let mut other_player = other_player.borrow_player_mut();
                         other_player.score += ram_score(entity.borrow_player().score);
-                        let player_id = other_player.player_id;
+                        let alias = other_player.alias();
                         drop(other_player);
-                        player_id
+                        alias
                     };
 
                     Self::boat_died(world, index, false);
                     world.remove(
                         index,
                         if ram {
-                            DeathReason::Ram(player_id)
+                            DeathReason::Ram(killer_alias)
                         } else {
-                            DeathReason::Boat(player_id)
+                            DeathReason::Boat(killer_alias)
                         },
                     );
                     return true;

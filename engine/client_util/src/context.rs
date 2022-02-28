@@ -1,18 +1,20 @@
 use crate::apply::Apply;
 use crate::game_client::GameClient;
-use crate::js_hooks::{host, invitation_id, is_https, referrer, ws_protocol};
+use crate::js_hooks::{domain_name_of, host, invitation_id, is_https, referrer, ws_protocol};
 use crate::keyboard::KeyboardState;
 use crate::local_storage::LocalStorage;
 use crate::mouse::MouseState;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::setting::CommonSettings;
-use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, PlayerDto, TeamDto};
-use core_protocol::id::{InvitationId, PeriodId, PlayerId, TeamId};
+use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, PlayerDto, ServerDto, TeamDto};
+use core_protocol::id::{InvitationId, PeriodId, PlayerId, ServerId, TeamId};
 use core_protocol::name::PlayerAlias;
-use core_protocol::rpc::{ClientRequest, ClientUpdate};
-use core_protocol::web_socket::WebSocketFormat;
+use core_protocol::rpc::{
+    ChatUpdate, ClientRequest, ClientUpdate, InvitationUpdate, LeaderboardUpdate, LiveboardUpdate,
+    PlayerUpdate, Request, SystemUpdate, TeamUpdate, Update, WebSocketQuery,
+};
 use serde::Serialize;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
@@ -20,10 +22,10 @@ use wasm_bindgen::JsValue;
 pub struct Context<G: GameClient + ?Sized> {
     /// General client state.
     pub client: ClientState,
-    /// Core websocket/state.
-    pub core_socket: ReconnWebSocket<ClientUpdate, ClientRequest, CoreState>,
-    /// Game websocket/state
-    pub game_socket: Option<ReconnWebSocket<G::Update, G::Command, G::State>>,
+    /// Server state
+    pub state: ServerState<G>,
+    /// Server websocket
+    pub socket: ReconnWebSocket<Update<G::Update>, Request<G::Command>, ServerState<G>>,
     /// Ui.
     pub ui: G::UiState,
     /// Keyboard input.
@@ -33,11 +35,9 @@ pub struct Context<G: GameClient + ?Sized> {
     /// Settings.
     pub settings: G::Settings,
     /// Common settings.
-    pub(crate) common_settings: CommonSettings,
+    pub common_settings: CommonSettings,
     /// Local storage.
     pub(crate) local_storage: LocalStorage,
-    /// Websocket info (host, protocol)
-    pub(crate) web_socket_info: (String, &'static str),
 }
 
 /// State common to all clients.
@@ -47,18 +47,37 @@ pub struct ClientState {
     pub update_seconds: f32,
 }
 
-/// Obtained from core server via websocket.
+/// Obtained from server via websocket.
+pub struct ServerState<G: GameClient> {
+    pub game: G::State,
+    pub core: CoreState,
+}
+
+/// Server state specific to core functions
 #[derive(Default)]
 pub struct CoreState {
     pub player_id: Option<PlayerId>,
     pub created_invitation_id: Option<InvitationId>,
-    pub joins: HashSet<TeamId>,
-    pub joiners: HashSet<PlayerId>,
+    /// Ordered, i.e. first is captain.
+    pub members: Box<[PlayerId]>,
+    pub joiners: Box<[PlayerId]>,
+    pub joins: Box<[TeamId]>,
     pub leaderboards: [Vec<LeaderboardDto>; PeriodId::VARIANT_COUNT],
     pub liveboard: Vec<LiveboardDto>,
     pub messages: VecDeque<MessageDto>,
     pub(crate) players: HashMap<PlayerId, PlayerDto>,
+    pub real_players: u32,
     pub teams: HashMap<TeamId, TeamDto>,
+    pub servers: HashMap<ServerId, ServerDto>,
+}
+
+impl<G: GameClient> Default for ServerState<G> {
+    fn default() -> Self {
+        Self {
+            game: G::State::default(),
+            core: CoreState::default(),
+        }
+    }
 }
 
 impl CoreState {
@@ -129,94 +148,153 @@ impl CoreState {
     }
 }
 
-impl Apply<ClientUpdate> for CoreState {
-    fn apply(&mut self, inbound: ClientUpdate) {
-        match inbound {
-            ClientUpdate::JoinersUpdated { added, removed } => {
-                for &team_id in added.iter() {
-                    self.joiners.insert(team_id);
-                }
-                for remove in removed.iter() {
-                    self.joiners.remove(remove);
-                }
-            }
-            ClientUpdate::JoinsUpdated { added, removed } => {
-                for &team_id in added.iter() {
-                    self.joins.insert(team_id);
-                }
-                for remove in removed.iter() {
-                    self.joins.remove(remove);
+impl<G: GameClient> Apply<Update<G::Update>> for ServerState<G> {
+    fn apply(&mut self, update: Update<G::Update>) {
+        match update {
+            Update::Chat(update) => {
+                match update {
+                    ChatUpdate::Received(received) => {
+                        for chat in received.iter() {
+                            if self.core.messages.len() >= 9 {
+                                // Keep at or below capacity of 10.
+                                self.core.messages.pop_front();
+                            }
+                            self.core.messages.push_back(MessageDto::clone(chat));
+                        }
+                    }
+                    _ => {}
                 }
             }
-            ClientUpdate::LeaderboardUpdated {
-                leaderboard,
-                period,
-            } => {
-                self.leaderboards[period as usize] = leaderboard.iter().cloned().collect();
+            Update::Client(update) => match update {
+                ClientUpdate::SessionCreated { player_id, .. } => {
+                    self.core.player_id = Some(player_id);
+                }
+                _ => {}
+            },
+            Update::Game(update) => {
+                self.game.apply(update);
             }
-            ClientUpdate::LiveboardUpdated { added, removed } => {
-                // Remove items first.
-                self.liveboard
-                    .drain_filter(|i| removed.contains(&i.player_id));
+            Update::Invitation(update) => match update {
+                InvitationUpdate::InvitationCreated(invitation_id) => {
+                    self.core.created_invitation_id = Some(invitation_id);
+                }
+            },
+            Update::Leaderboard(update) => match update {
+                LeaderboardUpdate::Updated(period_id, leaderboard) => {
+                    self.core.leaderboards[period_id as usize] =
+                        leaderboard.iter().cloned().collect();
+                }
+            },
+            Update::Liveboard(update) => {
+                match update {
+                    LiveboardUpdate::Updated { added, removed } => {
+                        // Remove items first.
+                        self.core
+                            .liveboard
+                            .drain_filter(|i| removed.contains(&i.player_id));
 
-                // Either update in place or add.
-                for new_item in added.iter() {
-                    if let Some(old_item) = self
-                        .liveboard
-                        .iter_mut()
-                        .find(|i| i.player_id == new_item.player_id)
-                    {
-                        *old_item = new_item.clone();
-                    } else {
-                        self.liveboard.push(new_item.clone());
+                        // Either update in place or add.
+                        for new_item in added.iter() {
+                            if let Some(old_item) = self
+                                .core
+                                .liveboard
+                                .iter_mut()
+                                .find(|i| i.player_id == new_item.player_id)
+                            {
+                                *old_item = new_item.clone();
+                            } else {
+                                self.core.liveboard.push(new_item.clone());
+                            }
+                        }
+
+                        // Sort because deltas may reorder. Subtract from max so that larger scores are on top.
+                        self.core
+                            .liveboard
+                            .sort_unstable_by_key(|dto| u32::MAX - dto.score);
                     }
                 }
-
-                // Sort because deltas may reorder.
-                self.liveboard.sort_unstable();
             }
-            ClientUpdate::MessagesUpdated { added } => {
-                for chat in added.iter() {
-                    if self.messages.len() >= 9 {
-                        // Keep at or below capacity of 10.
-                        self.messages.pop_front();
+            Update::Player(update) => match update {
+                PlayerUpdate::Updated {
+                    added,
+                    removed,
+                    real_players,
+                } => {
+                    for player in added.iter() {
+                        self.core.players.insert(player.player_id, player.clone());
                     }
-                    self.messages.push_back(chat.clone());
+                    for remove in removed.iter() {
+                        self.core.players.remove(remove);
+                    }
+                    self.core.real_players = real_players;
                 }
-            }
-            ClientUpdate::PlayersUpdated { added, removed } => {
-                for player in added.iter() {
-                    self.players.insert(player.player_id, player.clone());
+                _ => {}
+            },
+            Update::System(update) => match update {
+                SystemUpdate::Added(added) => {
+                    for server in added.iter() {
+                        self.core.servers.insert(server.server_id, server.clone());
+                    }
                 }
-                for remove in removed.iter() {
-                    self.players.remove(remove);
+                SystemUpdate::Removed(removed) => {
+                    for remove in removed.iter() {
+                        self.core.servers.remove(remove);
+                    }
                 }
-            }
-            ClientUpdate::SessionCreated { player_id, .. } => {
-                self.player_id = Some(player_id);
-            }
-            ClientUpdate::TeamsUpdated { added, removed } => {
-                for team in added.iter() {
-                    self.teams.insert(team.team_id, team.clone());
+            },
+            Update::Team(update) => match update {
+                TeamUpdate::Members(members) => {
+                    self.core.members = members[..].into();
                 }
-                for remove in removed.iter() {
-                    self.teams.remove(remove);
+                TeamUpdate::Joiners(joiners) => {
+                    self.core.joiners = joiners;
                 }
-            }
-            ClientUpdate::InvitationCreated { invitation_id } => {
-                self.created_invitation_id = Some(invitation_id);
-            }
-            _ => {}
+                TeamUpdate::Joins(joins) => {
+                    self.core.joins = joins;
+                }
+                TeamUpdate::AddedOrUpdated(added_or_updated) => {
+                    for team in added_or_updated.iter() {
+                        self.core.teams.insert(team.team_id, team.clone());
+                    }
+                }
+                TeamUpdate::Removed(removed) => {
+                    for remove in removed.iter() {
+                        self.core.teams.remove(remove);
+                    }
+                }
+                _ => {}
+            },
         }
     }
 }
 
 impl<G: GameClient> Context<G> {
     pub(crate) fn new(
-        local_storage: LocalStorage,
-        common_settings: CommonSettings,
+        mut local_storage: LocalStorage,
+        mut common_settings: CommonSettings,
         settings: G::Settings,
     ) -> Self {
+        let (host, server_id) = Self::compute_websocket_host(&common_settings, None);
+        let socket = ReconnWebSocket::new(host, common_settings.protocol, None);
+        common_settings.set_server_id(server_id, &mut local_storage);
+
+        Self {
+            client: ClientState::default(),
+            state: ServerState::default(),
+            socket,
+            ui: G::UiState::default(),
+            keyboard: KeyboardState::default(),
+            mouse: MouseState::default(),
+            settings,
+            common_settings,
+            local_storage,
+        }
+    }
+
+    pub(crate) fn compute_websocket_host(
+        common_settings: &CommonSettings,
+        override_server_id: Option<ServerId>,
+    ) -> (String, Option<ServerId>) {
         #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
         extern "C" {
             #[wasm_bindgen(js_name = "getRealHost", catch)]
@@ -224,77 +302,61 @@ impl<G: GameClient> Context<G> {
 
             #[wasm_bindgen(js_name = "getRealEncryption", catch)]
             pub fn get_real_encryption() -> Result<bool, JsValue>;
+
+            #[wasm_bindgen(js_name = "getIdealServerId", catch)]
+            pub fn get_ideal_server_id() -> Result<u8, JsValue>;
         }
 
-        let web_socket_info = (
-            get_real_host().unwrap_or(host()),
-            ws_protocol(get_real_encryption().unwrap_or(is_https())),
-        );
+        let scheme = ws_protocol(get_real_encryption().unwrap_or(is_https()));
+        let ideal_server_id =
+            override_server_id.or(get_ideal_server_id().ok().and_then(|u| ServerId::new(u)));
+        let host = get_real_host().unwrap_or(host());
 
-        let core = ReconnWebSocket::new(
-            &format!("{}://{}/client/ws/", web_socket_info.1, web_socket_info.0),
-            WebSocketFormat::Json,
-            Some(ClientRequest::CreateSession {
-                game_id: G::GAME_ID,
-                invitation_id: invitation_id(),
-                referrer: referrer(),
-                saved_session_tuple: common_settings.session_tuple(),
-            }),
-        );
+        let ideal_host = ideal_server_id
+            .map(|id| format!("{}.{}", id.0, domain_name_of(&host)))
+            .unwrap_or(host);
 
-        Self {
-            client: ClientState::default(),
-            core_socket: core,
-            game_socket: None,
-            ui: G::UiState::default(),
-            keyboard: KeyboardState::default(),
-            mouse: MouseState::default(),
-            settings,
-            common_settings,
-            local_storage,
-            web_socket_info,
-        }
-    }
+        // crate::console_log!("override={:?} ideal server={:?}, host={:?}, ideal_host={:?}", override_server_id, ideal_server_id, host, ideal_host);
 
-    /// Immutable reference to `CoreState`.
-    pub fn core(&self) -> &CoreState {
-        self.core_socket.state()
-    }
+        let web_socket_query = WebSocketQuery {
+            protocol: Some(common_settings.protocol),
+            arena_id: common_settings.arena_id,
+            session_id: common_settings.session_id,
+            invitation_id: invitation_id(),
+            referrer: referrer(),
+        };
 
-    /// Mutable reference to `CoreState`.
-    #[allow(dead_code)]
-    pub(crate) fn core_mut(&mut self) -> &mut CoreState {
-        self.core_socket.state_mut()
-    }
+        let web_socket_query_url = serde_urlencoded::to_string(&web_socket_query).unwrap();
 
-    /// Assumes that game state exists i.e. there once was a game server connection.
-    pub fn game(&self) -> &G::State {
-        self.game_socket.as_ref().unwrap().state()
-    }
-
-    /// Assumes that game state exists i.e. there once was a game server connection.
-    pub fn game_mut(&mut self) -> &mut G::State {
-        self.game_socket.as_mut().unwrap().state_mut()
-    }
-
-    /// Send a request on the core websocket.
-    pub fn send_to_core(&mut self, request: ClientRequest) {
-        self.core_socket.send(request)
+        (
+            format!("{}://{}/ws/?{}", scheme, ideal_host, web_socket_query_url),
+            ideal_server_id,
+        )
     }
 
     /// Whether the game websocket is closed or errored (not open, opening, or nonexistent).
-    pub fn game_connection_lost(&self) -> bool {
-        self.game_socket
-            .as_ref()
-            .map(|ws| ws.is_closed())
-            .unwrap_or(false)
+    pub fn connection_lost(&self) -> bool {
+        self.socket.is_closed()
     }
 
-    /// Send a request on the game websocket.
+    /// Send a game command on the socket.
     pub fn send_to_game(&mut self, request: G::Command) {
-        if let Some(ws) = self.game_socket.as_mut() {
-            ws.send(request);
-        }
+        self.send_to_server(Request::Game(request));
+    }
+
+    /// Send a request to set the player's alias.
+    pub fn send_set_alias(&mut self, alias: PlayerAlias) {
+        self.send_to_server(Request::Client(ClientRequest::SetAlias(alias)));
+    }
+
+    /// Send a request to log an error message.
+    pub fn send_trace(&mut self, message: String) {
+        self.send_to_server(Request::Client(ClientRequest::Trace { message }));
+    }
+
+    /// Send a request on the socket.
+    pub fn send_to_server(&mut self, request: Request<G::Command>) {
+        self.socket.send(request);
     }
 
     /// Set the props used to render the UI. Javascript must implement part of this.

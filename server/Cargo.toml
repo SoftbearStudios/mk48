@@ -28,7 +28,6 @@ noise = { version = "0.7", default-features = false }
 common = {path="../common", version="0.1", features=["server"]}
 game_server = {path="../engine/game_server"}
 core_protocol = {path="../engine/core_protocol"}
-core_server = {path="../engine/core_server"}
 server_util = {path="../engine/server_util"}
 rayon = "1.5"
 ringbuffer = "0.8"
@@ -36,6 +35,7 @@ log = {version = "0.4", features = [ "release_max_level_info" ] }
 env_logger = "0.9"
 lazy_static = "1"
 rustrict = {version = "0.3", features=["customize"], default-features=false}
+bitvec = "1.0.0"
 
 [dev-dependencies]
 image = { version = "0.23.14", features = [ "png" ] }

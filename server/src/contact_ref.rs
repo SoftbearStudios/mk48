@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
+use bitvec::prelude::*;
 use common::altitude::Altitude;
 use common::angle::Angle;
-use common::contact::{Contact, ContactTrait, ANGLE_ARRAY_ZERO, TICKS_ARRAY_ZERO};
+use common::contact::{
+    Contact, ContactTrait, ReloadsStorage, ANGLE_ARRAY_ZERO, RELOADS_ARRAY_ZERO,
+};
 use common::entity::EntityId;
 use common::entity::EntityType;
 use common::guidance::Guidance;
@@ -16,19 +19,30 @@ use std::sync::Arc;
 /// A contact that references world data to avoid additional allocation.
 pub struct ContactRef<'a> {
     entity: &'a Entity,
-    visible: bool,
-    known: bool,
     has_type: bool,
+    reloads: Option<BitArray<ReloadsStorage>>,
 }
 
 impl<'a> ContactRef<'a> {
     /// Creates a new `ContactRef`, referencing an entity, and having certain visibility parameters.
     pub fn new(entity: &'a Entity, visible: bool, known: bool, has_type: bool) -> Self {
+        let reloads = (has_type && entity.is_boat() && (visible || known)).then(|| {
+            let reloads = &*entity.extension().reloads;
+            let mut arr = BitArray::ZERO;
+            assert!(
+                reloads.len() <= ReloadsStorage::MAX.count_ones() as usize,
+                "not enough bits in reloads storage"
+            );
+            for (mut b, t) in arr.as_mut_bitslice().into_iter().zip(reloads.iter()) {
+                b.set(t == &Ticks::ZERO);
+            }
+            arr
+        });
+
         Self {
             entity,
-            visible,
-            known,
             has_type,
+            reloads,
         }
     }
 
@@ -41,18 +55,10 @@ impl<'a> ContactRef<'a> {
             *self.guidance(),
             self.id(),
             self.player_id(),
-            self.reloads_arc().cloned(),
+            self.reloads.clone(),
             *self.transform(),
             self.turrets_arc().cloned(),
         )
-    }
-
-    fn reloads_arc(&self) -> Option<&Arc<[Ticks]>> {
-        if self.reloads_known() {
-            Some(&self.entity.extension().reloads)
-        } else {
-            None
-        }
     }
 
     fn turrets_arc(&self) -> Option<&Arc<[Angle]>> {
@@ -108,13 +114,16 @@ impl<'a> ContactTrait for ContactRef<'a> {
     }
 
     #[inline]
-    fn reloads(&self) -> &[Ticks] {
-        self.reloads_arc().map_or(&TICKS_ARRAY_ZERO, |a| a.as_ref())
+    fn reloads(&self) -> &BitSlice<ReloadsStorage> {
+        self.reloads
+            .as_ref()
+            .map(|a| &a.as_bitslice()[0..self.entity.entity_type.data().armaments.len()])
+            .unwrap_or_else(|| &RELOADS_ARRAY_ZERO.as_bitslice())
     }
 
     #[inline]
     fn reloads_known(&self) -> bool {
-        self.has_type && self.entity.is_boat() && (self.visible || self.known)
+        self.reloads.is_some()
     }
 
     #[inline]

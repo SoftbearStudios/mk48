@@ -10,7 +10,7 @@ use crate::world::World;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
 use common::ticks::Ticks;
 use common::util::*;
-use game_server::context::PlayerTuple;
+use game_server::player::PlayerTuple;
 use glam::{vec2, Vec2};
 
 impl World {

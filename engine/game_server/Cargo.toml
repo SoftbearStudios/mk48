@@ -9,24 +9,37 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 actix = "0.12"
-actix-web = {version = "4.0.0-rc.1", features=["rustls"], default-features=false}
-actix-tls = "3.0.2"
-actix-files = "0.6.0-beta.16"
-actix-http = "3.0.0-rc.1"
-actix-web-actors = "4.0.0-beta.11"
+actix-web = {version = "4.0", features=["rustls"], default-features=false}
+actix-tls = "3.0"
+actix-files = "0.6"
+actix-http = "3.0"
+actix-web-actors = "4.0"
+awc = {version = "3.0.0-beta.21", features = ["rustls"]}
 actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
-actix-cors = "0.6.0-beta.8"
+actix-cors = "0.6.0-beta.10"
 include_dir = "0.6"
 arrayvec = { version = "0.7", features = ["serde"] }
 atomic_refcell = "0.1"
-core_server = {path="../core_server"}
 core_protocol = {path="../core_protocol", features=["server"]}
+heapless = "0.7"
 common_util = {path="../common_util"}
 server_util = {path="../server_util"}
 serde = {version = "1", features=["derive"]}
+serde_json = "1.0"
+rustrict = {version = "0.4.3", features=["context"], default-features=false}
 log = "0.4"
 rayon = "1.5"
 structopt = "0.3"
 futures = "0.3"
 env_logger = "0.9"
 idalloc = "0.1"
+constant_time_eq = "0.1"
+db_ip = "0.3"
+lazy_static = "1.4"
+csv = "1.1"
+rand = "0.8"
+tokio = "1"
+
+[build-dependencies]
+rand = "0.8"
+base64 = "0.13"

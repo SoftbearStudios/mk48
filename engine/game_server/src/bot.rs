@@ -1,20 +1,39 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::context::{BotData, PlayerData, PlayerTuple};
 use crate::game_service::{Bot, GameArenaService};
+use crate::player::{PlayerData, PlayerRepo, PlayerTuple};
 use common_util::ticks::Ticks;
 use core_protocol::id::PlayerId;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use std::sync::Arc;
+
+/// Data stored per bot.
+pub struct BotData<G: GameArenaService> {
+    player_tuple: Arc<PlayerTuple<G>>,
+    /// Only Some during an update cycle.
+    action_buffer: Option<G::Command>,
+    bot: G::Bot,
+}
+
+impl<G: GameArenaService> BotData<G> {
+    pub fn new(player_tuple: PlayerTuple<G>) -> Self {
+        Self {
+            bot: G::Bot::default(),
+            player_tuple: Arc::new(player_tuple),
+            action_buffer: None,
+        }
+    }
+}
 
 /// Manages the storage and updating of bots.
-pub struct BotZoo<G: GameArenaService> {
+pub struct BotRepo<G: GameArenaService> {
     bots: Vec<BotData<G>>,
     min_players: usize,
     bot_percent: usize,
 }
 
-impl<G: GameArenaService> BotZoo<G> {
+impl<G: GameArenaService> BotRepo<G> {
     /// Creates a new bot zoo.
     pub fn new(min_players: usize, bot_percent: usize) -> Self {
         Self {
@@ -54,13 +73,15 @@ impl<G: GameArenaService> BotZoo<G> {
     }
 
     /// Spawns/despawns bots based on number of (real) player clients.
-    pub fn update_count(&mut self, clients: usize, service: &mut G) {
-        let count = self.min_players.max((self.bot_percent * clients) / 100);
-        self.set_count(count, service);
+    pub fn update_count(&mut self, service: &mut G, players: &mut PlayerRepo<G>) {
+        let count = self
+            .min_players
+            .max((self.bot_percent * players.real_players_live) / 100);
+        self.set_count(count, service, players);
     }
 
     /// Changes number of bots by spawning/despawning.
-    fn set_count(&mut self, count: usize, service: &mut G) {
+    fn set_count(&mut self, count: usize, service: &mut G, players: &mut PlayerRepo<G>) {
         // Give server 3 seconds (50 ticks) to create all testing bots.
         let mut governor = 4.max(self.min_players / 50);
 
@@ -80,6 +101,8 @@ impl<G: GameArenaService> BotZoo<G> {
             if let Some(next_id) = PlayerId::nth_bot(self.bots.len()) {
                 debug_assert!(next_id.is_bot());
                 let bot = Self::bot_data(next_id);
+                // This player will never be forgotten by PlayerRepo.
+                players.insert(next_id, Arc::clone(&bot.player_tuple));
                 service.player_joined(&bot.player_tuple);
                 self.bots.push(bot);
             } else {
@@ -89,6 +112,7 @@ impl<G: GameArenaService> BotZoo<G> {
     }
 
     fn bot_data(player_id: PlayerId) -> BotData<G> {
-        BotData::new(PlayerTuple::new(PlayerData::new(player_id, None)))
+        let player_data = PlayerData::new(player_id, None);
+        BotData::new(PlayerTuple::new(player_data))
     }
 }

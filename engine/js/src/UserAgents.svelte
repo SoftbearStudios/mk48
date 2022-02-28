@@ -6,7 +6,7 @@
 
     async function load() {
         const result = await adminRequest('RequestUserAgents');
-        userAgents.set(result.UserAgentsRequested.user_agents);
+        userAgents.set(result.UserAgentsRequested);
     }
 
     load();

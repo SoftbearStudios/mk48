@@ -2,7 +2,7 @@
     import {adminRequest, game, round, wildcardToUndefined} from './util.js';
 
     const summaryBlacklist = [
-        "arenas_cached", "connections", "cpu", "fps", "ram", "retention", "sessions_cached", "ups", "uptime"
+        "arenas_cached", "retention", "sessions_cached", "uptime"
     ];
 
     export const filterSummaryBlacklist = function(list) {
@@ -20,14 +20,14 @@
 </script>
 
 <Nav>
-    <select on:change={event => replace(`/summary/${params.userAgent}/${event.target.value}`)} value={params.referrer || '*'}>
+    <select on:change={e => replace(`/summary/${e.target.value == "*" ? "*" : JSON.stringify({Referrer: e.target.value})}`)} value={'*'}>
         <option value={'*'}>Any</option>
         {#each $referrers as r}
             <option value={r[0]}>{r[0]}</option>
         {/each}
     </select>
 
-    <select on:change={event => replace(`/summary/${event.target.value}/${params.referrer}`)} value={params.userAgent || '*'}>
+    <select on:change={e => replace(`/summary/${e.target.value == "*" ? "*" : JSON.stringify({UserAgentId: e.target.value})}`)} value={'*'}>
         <option value={'*'}>Any</option>
         {#each $userAgents as u}
             <option value={u[0]}>{u[0]}</option>
@@ -36,10 +36,10 @@
 </Nav>
 
 <main>
-    {#await adminRequest({'RequestSummary': {game_id: $game, referrer: wildcardToUndefined(params.referrer), user_agent_id: wildcardToUndefined(params.userAgent), period_start: null, period_stop: null}})}
+    {#await adminRequest({'RequestSummary': {game_id: $game, filter: !params.filter || params.filter === '*' ? undefined : JSON.parse(params.filter)}})}
     {:then data}
         <table>
-            {#each Object.entries(data.SummaryRequested.metrics) as [key, value]}
+            {#each Object.entries(data.SummaryRequested) as [key, value]}
                 <tr>
                     <th>{key}</th>
                     <td class="value">

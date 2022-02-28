@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::rate_limiter::{RateLimiterProps, RateLimiterState};
+use crate::rate_limiter::{RateLimiterProps, RateLimiterState, Units};
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::ops::Div;
 use std::time::{Duration, Instant};
 
 /// Helps limit the rate that a particular IP can perform an action.
@@ -16,7 +17,7 @@ pub struct IpRateLimiter {
 impl IpRateLimiter {
     /// Rate limit must be at least one millisecond.
     /// Burst must be less than 255.
-    pub fn new(rate_limit: Duration, burst: u8) -> Self {
+    pub fn new(rate_limit: Duration, burst: Units) -> Self {
         Self {
             usage: HashMap::new(),
             props: RateLimiterProps::new(rate_limit, burst),
@@ -24,9 +25,21 @@ impl IpRateLimiter {
         }
     }
 
+    /// Uses [`Units`] to represent bytes, to limit bandwidth.
+    pub fn new_bandwidth_limiter(bytes_per_second: Units, bytes_burst: Units) -> Self {
+        let rate_limit = Duration::from_secs(1).div(bytes_per_second);
+        Self::new(rate_limit, bytes_burst)
+    }
+
     /// Marks the action as being performed by the ip address.
     /// Returns true if the action should be blocked (rate limited).
     pub fn should_limit_rate(&mut self, ip: IpAddr) -> bool {
+        self.should_limit_rate_with_usage(ip, 1)
+    }
+
+    /// Marks usage as being performed by the ip address.
+    /// Returns true if the action should be blocked (rate limited).
+    pub fn should_limit_rate_with_usage(&mut self, ip: IpAddr, usage: Units) -> bool {
         let now = Instant::now();
 
         let should_limit_rate = self
@@ -36,7 +49,7 @@ impl IpRateLimiter {
                 until: now,
                 burst_used: 0,
             })
-            .should_limit_rate_with_now(&self.props, now);
+            .should_limit_rate_with_now_and_usage(&self.props, now, usage);
 
         self.prune_counter = self.prune_counter.wrapping_add(1);
         if self.prune_counter == 0 {

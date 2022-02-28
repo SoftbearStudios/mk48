@@ -4,38 +4,43 @@
 //! The game server has authority over all game logic. Clients are served the client, which connects
 //! via websocket.
 
+use crate::admin::ParameterizedAdminRequest;
+use crate::client::Authenticate;
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
-use crate::protocol::Authenticate;
-use actix::prelude::*;
+use crate::status::StatusRequest;
+use crate::system::{SystemRepo, SystemRequest};
+use actix::{fut, Actor, Addr};
 use actix_cors::Cors;
+use actix_web::body::{BodySize, MessageBody};
 use actix_web::dev::{Service, ServiceResponse, Url};
 use actix_web::http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, LOCATION};
 use actix_web::http::uri::PathAndQuery;
-use actix_web::http::{Method, Uri};
+use actix_web::http::{header, Method, StatusCode, Uri};
+use actix_web::web::{get, post, resource, Json, Query};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use common_util::ticks::Ticks;
-use core_protocol::dto::InvitationDto;
 use core_protocol::id::*;
-use core_protocol::web_socket::WebSocketFormat;
-use core_server::app::core_services;
+use core_protocol::rpc::{Request, SystemQuery, Update, WebSocketQuery};
 use futures::TryFutureExt;
 use log::LevelFilter;
-use serde::Deserialize;
-use server_util::app::static_files;
+use log::{debug, warn};
+use server_util::app::{game_static_files_hash, static_files};
 use server_util::cloud::Cloud;
+use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::linode::Linode;
 use server_util::rate_limiter::RateLimiterProps;
 use server_util::ssl::{run_until_ssl_renewal, Ssl};
 use server_util::tcp::{
     max_connections_per_worker, on_connect_enable_nodelay, BACKLOG, KEEP_ALIVE, SHUTDOWN_TIMEOUT,
 };
-use server_util::watchdog;
+use server_util::user_agent::UserAgent;
 use server_util::web_socket::WebSocket;
+use std::net::IpAddr;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use structopt::StructOpt;
 
@@ -65,17 +70,27 @@ pub struct Options {
     #[cfg_attr(debug_assertions, structopt(long, default_value = "info"))]
     #[cfg_attr(not(debug_assertions), structopt(long, default_value = "warn"))]
     pub debug_watchdog: LevelFilter,
-    /// Log chats
+    /// Log chats here
     #[structopt(long)]
     pub chat_log: Option<String>,
+    /// Log client traces here
+    #[structopt(long)]
+    pub trace_log: Option<String>,
+    /// Linode personal access token for DNS configuration.
     #[structopt(long)]
     pub linode_personal_access_token: Option<String>,
-    // Don't write to the database.
+    /// Don't write to the database.
     #[structopt(long)]
     pub database_read_only: bool,
-    // Server id.
+    /// Server id.
     #[structopt(long, default_value = "0")]
     pub server_id: u8,
+    #[structopt(long)]
+    /// Override the server ip (currently used to detect the region).
+    pub ip_address: Option<IpAddr>,
+    /// Override the region id.
+    #[structopt(long)]
+    pub region_id: Option<RegionId>,
     /// Domain (without server id prepended).
     #[allow(dead_code)]
     #[structopt(long)]
@@ -88,39 +103,49 @@ pub struct Options {
     pub private_key_path: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct WebSocketFormatQuery {
-    pub format: Option<WebSocketFormat>,
-}
-
 /// 0 is no redirect.
 static REDIRECT_TO_SERVER_ID: AtomicU8 = AtomicU8::new(0);
+
+lazy_static::lazy_static! {
+    static ref HTTP_RATE_LIMITER: Mutex<IpRateLimiter> = Mutex::new(IpRateLimiter::new_bandwidth_limiter(500_000, 10_000_000));
+}
 
 /// ws_index routes incoming HTTP requests to WebSocket connections.
 async fn ws_index<G: GameArenaService>(
     r: HttpRequest,
     stream: web::Payload,
-    session_id: SessionId,
-    format: WebSocketFormat,
+    query: WebSocketQuery,
     srv: Addr<Infrastructure<G>>,
 ) -> Result<HttpResponse, Error> {
-    match srv.send(Authenticate { session_id }).await {
-        Ok(response) => match response {
-            Some((player_id, invitation)) => ws::start(
-                WebSocket::<
-                    G::Command,
-                    G::ClientUpdate,
-                    (SessionId, PlayerId, Option<InvitationDto>),
-                >::new(
+    let user_agent_id = r
+        .headers()
+        .get(header::USER_AGENT)
+        .and_then(|hv| hv.to_str().ok())
+        .map(UserAgent::new)
+        .and_then(UserAgent::into_id);
+
+    let authenticate = Authenticate {
+        ip_address: r.peer_addr().map(|addr| addr.ip()),
+        referrer: query.referrer,
+        user_agent_id,
+        arena_id_session_id: query.arena_id.zip(query.session_id),
+        invitation_id: query.invitation_id,
+    };
+
+    match srv.send(authenticate).await {
+        Ok(result) => match result {
+            Ok(player_id) => ws::start(
+                WebSocket::<Request<G::Command>, Update<G::ClientUpdate>, ()>::new(
                     srv.recipient(),
-                    format,
+                    query.protocol.unwrap_or_default(),
                     RateLimiterProps::new(Duration::from_secs_f32(Ticks::PERIOD_SECS * 0.9), 5),
-                    (session_id, player_id, invitation),
+                    player_id,
+                    (),
                 ),
                 &r,
                 stream,
             ),
-            None => Ok(HttpResponse::Unauthorized().body("invalid session id")),
+            Err(e) => Ok(HttpResponse::TooManyRequests().body(e.to_string())),
         },
         Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
     }
@@ -132,13 +157,12 @@ pub fn entry_point<G: GameArenaService>() {
     let mut logger = env_logger::builder();
     logger.format_timestamp(None);
     logger.filter_module("server", options.debug_game);
-    logger.filter_module(module_path!(), options.debug_game);
-    logger.filter_module("core_server", options.debug_core);
+    logger.filter_module("game_server", options.debug_game);
+    logger.filter_module("game_server::system", options.debug_watchdog);
     logger.filter_module("core_protocol", options.debug_core);
     logger.filter_module("server_util::web_socket", options.debug_sockets);
     logger.filter_module("actix_web", options.debug_http);
     logger.filter_module("actix_server", options.debug_http);
-    logger.filter_module("server_util::watchdog", options.debug_watchdog);
     logger.filter_module("server_util::linode", options.debug_watchdog);
     logger.filter_module("server_util::ssl", options.debug_watchdog);
     logger.init();
@@ -148,27 +172,40 @@ pub fn entry_point<G: GameArenaService>() {
             .linode_personal_access_token
             .map(|t| Box::new(Linode::new(&t)) as Box<dyn Cloud>);
 
-        let core = core_server::core::Core::start(
-            core_server::core::Core::new(
-                options.chat_log,
-                options.database_read_only,
+        let system = cloud
+            .zip(options.domain.clone())
+            .map(|(cloud, domain)| SystemRepo::<G>::new(cloud, domain));
+
+        let region_id = if let Some(region_id) = options.region_id {
+            Some(region_id)
+        } else {
+            let ip_address = if let Some(ip_address) = options.ip_address {
+                Some(ip_address)
+            } else {
+                SystemRepo::<G>::get_own_public_ip().await
+            };
+
+            ip_address.and_then(|ip| SystemRepo::<G>::ip_to_region_id(ip))
+        };
+
+        let (early_restart_send, mut early_restart_recv) = tokio::sync::mpsc::channel::<()>(1);
+
+        let srv = Infrastructure::<G>::start(
+            Infrastructure::new(
+                ServerId::new(options.server_id),
                 Some(&REDIRECT_TO_SERVER_ID),
+                early_restart_send,
+                system,
+                game_static_files_hash(),
+                region_id,
+                options.database_read_only,
+                options.min_players,
+                options.chat_log,
+                options.trace_log,
             )
             .await,
         );
-        let srv = Infrastructure::start(Infrastructure::new(
-            G::new(options.min_players),
-            ServerId::new(options.server_id),
-            options.min_players,
-            core.to_owned(),
-        ));
         let domain = Arc::new(options.domain.clone());
-        if let Some((cloud, domain)) = cloud.zip(options.domain) {
-            // Safety: Only happens once.
-            unsafe {
-                watchdog::Watchdog::start(watchdog::Watchdog::new(cloud, domain));
-            }
-        }
 
         let mut ssl = options
             .certificate_path
@@ -181,7 +218,6 @@ pub fn entry_point<G: GameArenaService>() {
         let use_ssl = ssl.is_some();
 
         loop {
-            let iter_core = core.to_owned();
             let iter_srv = srv.to_owned();
             let domain_clone = Arc::clone(&domain);
 
@@ -193,8 +229,10 @@ pub fn entry_point<G: GameArenaService>() {
 
             let mut server = HttpServer::new(move || {
                 // Rust let's you get away with cloning one closure deep, not all the way to a nested closure.
-                let core_clone = iter_core.to_owned();
                 let srv_clone = iter_srv.to_owned();
+                let srv_clone_admin = iter_srv.to_owned();
+                let srv_clone_status = iter_srv.to_owned();
+                let srv_clone_system = iter_srv.to_owned();
                 let domain_clone = Arc::clone(&domain_clone);
 
                 #[cfg(not(debug_assertions))]
@@ -234,6 +272,7 @@ pub fn entry_point<G: GameArenaService>() {
                         let dont_redirect = if let Some(before_hash) = req.path().split('#').next()
                         {
                             before_hash.starts_with("/admin")
+                                || before_hash.starts_with("/status")
                                 || before_hash.is_empty()
                                 || before_hash == "/"
                         } else {
@@ -278,6 +317,7 @@ pub fn entry_point<G: GameArenaService>() {
                                     "/sprites_webgl.png" => Some("/sprites_webgl.webp"),
                                     "/sand.png" => Some("/sand.webp"),
                                     "/grass.png" => Some("/grass.webp"),
+                                    "/snow.png" => Some("/snow.webp"),
                                     _ => None,
                                 } {
                                     let mut parts = req.uri().clone().into_parts();
@@ -293,6 +333,34 @@ pub fn entry_point<G: GameArenaService>() {
 
                         // Do the request.
                         Box::pin(srv.call(req).map_ok(|mut res| {
+                            let content_length = match res.response().body().size() {
+                                BodySize::Sized(n) => n as u32,
+                                _ => 0,
+                            }
+                            .max(1000);
+                            if let Some(ip) = res.request().peer_addr().map(|a| a.ip()) {
+                                let should_rate_limit = {
+                                    HTTP_RATE_LIMITER
+                                        .lock()
+                                        .unwrap()
+                                        .should_limit_rate_with_usage(ip, content_length)
+                                };
+
+                                if should_rate_limit {
+                                    warn!("Bandwidth limiting {}", ip);
+
+                                    let (request, mut response) = res.into_parts();
+
+                                    // Too many requests status.
+                                    *response.status_mut() = StatusCode::from_u16(429).unwrap();
+
+                                    // I changed my mind, I'm not actually going to send you all this data...
+                                    response = response.drop_body().map_into_boxed_body();
+
+                                    res = ServiceResponse::new(request, response)
+                                }
+                            }
+
                             // Add some universal default headers.
                             for (key, value) in [(CACHE_CONTROL, "no-cache")] {
                                 if !res.headers().contains_key(key.clone()) {
@@ -336,21 +404,85 @@ pub fn entry_point<G: GameArenaService>() {
                                 }
                             }),
                     )
-                    .service(web::resource("/ws/{session_id}/").route(web::get().to(
+                    .service(resource("/ws/").route(web::get().to(
                         move |r: HttpRequest,
                               stream: web::Payload,
-                              path: web::Path<SessionId>,
-                              query: web::Query<WebSocketFormatQuery>| {
-                            ws_index(
-                                r,
-                                stream,
-                                path.into_inner(),
-                                query.into_inner().format.unwrap_or_default(),
-                                srv_clone.to_owned(),
-                            )
+                              query: Query<WebSocketQuery>| {
+                            let query = query.into_inner();
+                            ws_index(r, stream, query, srv_clone.to_owned())
                         },
                     )))
-                    .configure(core_services(core_clone))
+                    .service(resource("/admin/").route(post().to(
+                        move |request: Json<ParameterizedAdminRequest>| {
+                            debug!("received admin request");
+
+                            let srv_clone_admin = srv_clone_admin.clone();
+
+                            async move {
+                                match srv_clone_admin.send(request.0).await {
+                                    Ok(result) => match result {
+                                        actix_web::Result::Ok(update) => {
+                                            let response = serde_json::to_vec(&update).unwrap();
+                                            HttpResponse::Ok()
+                                                .content_type("application/json")
+                                                .body(response)
+                                        }
+                                        Err(e) => HttpResponse::BadRequest().body(String::from(e)),
+                                    },
+                                    Err(e) => {
+                                        HttpResponse::InternalServerError().body(e.to_string())
+                                    }
+                                }
+                            }
+                        },
+                    )))
+                    .service(resource("/status/").route(get().to(move || {
+                        let srv = srv_clone_status.to_owned();
+                        debug!("received status request");
+
+                        async move {
+                            match srv.send(StatusRequest).await {
+                                Ok(status_response) => {
+                                    let response = serde_json::to_vec(&status_response).unwrap();
+                                    HttpResponse::Ok()
+                                        .content_type("application/json")
+                                        .body(response)
+                                }
+                                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+                            }
+                        }
+                    })))
+                    .service(resource("/system/").route(get().to(
+                        move |r: HttpRequest, query: Query<SystemQuery>| {
+                            let srv = srv_clone_system.to_owned();
+                            debug!("received system request");
+
+                            let ip = r.peer_addr().map(|addr| addr.ip());
+
+                            async move {
+                                match srv
+                                    .send(SystemRequest {
+                                        ip,
+                                        server_id: query.server_id,
+                                        region_id: query.region_id,
+                                        invitation_id: query.invitation_id,
+                                    })
+                                    .await
+                                {
+                                    Ok(system_response) => {
+                                        let response =
+                                            serde_json::to_vec(&system_response).unwrap();
+                                        HttpResponse::Ok()
+                                            .content_type("application/json")
+                                            .body(response)
+                                    }
+                                    Err(e) => {
+                                        HttpResponse::InternalServerError().body(e.to_string())
+                                    }
+                                }
+                            }
+                        },
+                    )))
                     .configure(static_files())
             })
             .on_connect(on_connect_enable_nodelay);
@@ -373,7 +505,7 @@ pub fn entry_point<G: GameArenaService>() {
                 .backlog(BACKLOG)
                 .run();
 
-            if run_until_ssl_renewal(running_server, immut_ssl)
+            if run_until_ssl_renewal(running_server, immut_ssl, &mut early_restart_recv)
                 .await
                 .is_err()
             {

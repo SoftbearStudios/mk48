@@ -7,14 +7,17 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 actix = "0.12"
-actix-web = {version = "4.0.0-rc.1", default-features=false}
-actix-tls = "3.0.2"
-actix-http = "3.0.0-rc.1"
-actix-files = "0.6.0-beta.16"
-actix-web-actors = "4.0.0-beta.11"
-awc = {version = "3.0.0-beta.20", features = ["rustls"]}
+actix-web = {version = "4.0", default-features=false}
+actix-tls = "3.0"
+actix-http = "3.0"
+actix-files = "0.6"
+actix-web-actors = "4.0"
+awc = {version = "3.0.0-beta.21", features = ["rustls"]}
 actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
 include_dir = "0.6"
+aws-config = "0.7.0"
+aws-sdk-dynamodb = "0.7"
+serde_dynamo = { git = "https://github.com/zenlist/serde_dynamo", tag = "3.0.0-alpha.5", default_features=false, features=["aws-sdk-dynamodb+0_7"]}
 async-trait = "0.1"
 arrayvec = { version = "0.7", features = ["serde"] }
 atomic_refcell = "0.1"
@@ -31,3 +34,8 @@ x509-parser = "0.12"
 log = "0.4"
 futures = "0.3"
 tokio = "1"
+woothee = "0.13"
+rand = "0.8"
+sysinfo = "0.21"
+variant_count = "1.1"
+derive_more = "0.99"

@@ -30,18 +30,18 @@
 <main>
     {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, '6 hours': 6, day: 24, week: 24 * 7}[params.resolution]}})}
     {:then data}
-        {#if data.SeriesRequested.series.length > 0}
+        {#if data.SeriesRequested.length > 0}
             <div class="charts">
-                {#each Object.keys(data.SeriesRequested.series[0][1]) as key}
+                {#each Object.keys(data.SeriesRequested[0][1]) as key}
                 <div class="chart">
                     <p>{key}</p>
                     <Chart
-                        data={data.SeriesRequested.series}
+                        data={data.SeriesRequested}
                         filterBounds={false}
                         logarithmic={false}
                         points={true}
                         x={point => point[0]}
-                        y={(typeof data.SeriesRequested.series[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested.series[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested.series[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
+                        y={(typeof data.SeriesRequested[0][1][key] === 'number') ? [point => point[1][key]] : (data.SeriesRequested[0][1][key].length === 2 ? [point => point[1][key][0]] : data.SeriesRequested[0][1][key].map((ignored, i) => (point => point[1][key][i])))}
                         fmtX={formatTimestamp}
                     />
                 </div>

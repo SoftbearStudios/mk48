@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::console_log;
-use core_protocol::web_socket::WebSocketFormat;
+use core_protocol::web_socket::WebSocketProtocol;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::cell::RefCell;
@@ -24,7 +24,7 @@ pub enum State {
 
 struct ProtoWebSocketInner<I, O> {
     socket: WebSocket,
-    format: WebSocketFormat,
+    protocol: WebSocketProtocol,
     state: State,
     outbound_buffer: Vec<O>,
     inbound_buffer: Vec<I>, // Only used in State::Opening.
@@ -41,13 +41,13 @@ where
     O: 'static + Serialize,
 {
     /// Opens a new websocket.
-    pub fn new(host: &str, format: WebSocketFormat) -> Self {
+    pub fn new(host: &str, protocol: WebSocketProtocol) -> Self {
         let ret = Self {
             inner: Rc::new(RefCell::new(ProtoWebSocketInner {
-                socket: WebSocket::new(&format!("{}?format={}", host, format.as_str())).unwrap(),
+                socket: WebSocket::new(host).unwrap(),
                 inbound_buffer: Vec::new(),
                 outbound_buffer: Vec::new(),
-                format,
+                protocol,
                 state: State::Opening,
             })),
         };
@@ -99,7 +99,7 @@ where
             let mut outbounds = Vec::new();
             mem::swap(&mut outbounds, &mut inner.outbound_buffer);
             for outbound in outbounds {
-                Self::do_send(&inner.socket, outbound, inner.format);
+                Self::do_send(&inner.socket, outbound, inner.protocol);
             }
         });
         local_inner
@@ -170,21 +170,21 @@ where
         let mut inner = self.inner.deref().borrow_mut();
         match inner.state {
             State::Opening => inner.outbound_buffer.push(msg),
-            State::Open => Self::do_send(&inner.socket, msg, inner.format),
+            State::Open => Self::do_send(&inner.socket, msg, inner.protocol),
             _ => console_log!("cannot send on closed websocket."),
         }
     }
 
     /// Sends a message or drop it on error.
-    fn do_send(socket: &WebSocket, msg: O, format: WebSocketFormat) {
-        match format {
-            WebSocketFormat::Binary => {
+    fn do_send(socket: &WebSocket, msg: O, protocol: WebSocketProtocol) {
+        match protocol {
+            WebSocketProtocol::Binary => {
                 let buf = bincode::serialize(&msg).unwrap();
                 if socket.send_with_u8_array(&buf).is_err() {
                     console_log!("error sending binary on ws");
                 }
             }
-            WebSocketFormat::Json => {
+            WebSocketProtocol::Json => {
                 let buf = serde_json::to_string(&msg).unwrap();
                 if socket.send_with_str(&buf).is_err() {
                     console_log!("error sending text on ws");
@@ -195,12 +195,12 @@ where
 }
 
 impl<I, O> ProtoWebSocket<I, O> {
-    pub fn format(&mut self) -> WebSocketFormat {
-        self.inner.borrow().format
+    pub fn protocol(&mut self) -> WebSocketProtocol {
+        self.inner.borrow().protocol
     }
 
-    pub fn set_format(&mut self, format: WebSocketFormat) {
-        self.inner.borrow_mut().format = format;
+    pub fn set_protocol(&mut self, protocol: WebSocketProtocol) {
+        self.inner.borrow_mut().protocol = protocol;
     }
 
     pub fn close(&mut self) {

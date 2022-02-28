@@ -9,26 +9,46 @@ pub struct RateLimiter {
     state: RateLimiterState,
 }
 
+/// A [`u64`] is chosen for being the widest type that doesn't increase the size of
+/// [`RateLimiterState`] or [`RateLimiterProps`] on a 64-bit system, and it is natively accepted
+/// by [`Duration::saturating_mul`].
+pub type Units = u32;
+
 /// The state of a rate limiter.
 pub struct RateLimiterState {
     pub(crate) until: Instant,
-    pub(crate) burst_used: u8,
+    pub(crate) burst_used: Units,
 }
 
 /// The (sharable) properties of a rate limiter.
 pub struct RateLimiterProps {
     rate_limit: Duration,
-    burst: u8,
+    burst: Units,
 }
 
 impl RateLimiterState {
     /// Returns true if the action exceeds the rate limit defined by the props and should be prevented.
     pub fn should_limit_rate(&mut self, props: &RateLimiterProps) -> bool {
-        self.should_limit_rate_with_now(props, Instant::now())
+        self.should_limit_rate_with_now_and_usage(props, Instant::now(), 1)
+    }
+
+    /// Returns true if the action exceeds the rate limit defined by the props and should be prevented.
+    pub fn should_limit_rate_with_usage(&mut self, props: &RateLimiterProps, usage: Units) -> bool {
+        self.should_limit_rate_with_now_and_usage(props, Instant::now(), usage)
+    }
+
+    /// Returns true if the action exceeds the rate limit defined by the props and should be prevented.
+    pub fn should_limit_rate_with_now(&mut self, props: &RateLimiterProps, now: Instant) -> bool {
+        self.should_limit_rate_with_now_and_usage(props, now, 1)
     }
 
     /// Like [`Self::should_rate_limit`] but more efficient if you already know the current time.
-    pub fn should_limit_rate_with_now(&mut self, props: &RateLimiterProps, now: Instant) -> bool {
+    pub fn should_limit_rate_with_now_and_usage(
+        &mut self,
+        props: &RateLimiterProps,
+        now: Instant,
+        usage: Units,
+    ) -> bool {
         if props.rate_limit == Duration::ZERO {
             return false;
         }
@@ -36,15 +56,18 @@ impl RateLimiterState {
         let ok = if now > self.until {
             self.burst_used = 0;
             true
-        } else if self.burst_used < props.burst {
-            self.burst_used = self.burst_used.saturating_add(1);
+        } else if self.burst_used.saturating_add(usage) <= props.burst {
+            self.burst_used = self.burst_used.saturating_add(usage);
             true
         } else {
             false
         };
 
         if ok {
-            if let Some(instant) = self.until.checked_add(props.rate_limit) {
+            if let Some(instant) = self
+                .until
+                .checked_add(props.rate_limit.saturating_mul(usage))
+            {
                 self.until = instant;
             }
         }
@@ -64,13 +87,13 @@ impl Default for RateLimiterState {
 
 impl RateLimiterProps {
     /// rate limit should be more than zero.
-    /// burst must be less than [`u8::MAX`].
-    pub fn new(rate_limit: Duration, burst: u8) -> Self {
+    /// burst must be less than [`Unit::MAX`], otherwise the limit is ineffectual.
+    pub fn new(rate_limit: Duration, burst: Units) -> Self {
         debug_assert!(
-            rate_limit.as_millis() != 0,
+            rate_limit != Duration::ZERO,
             "use RateLimiterProps::no_limit() to explicitly opt out of rate limiting"
         );
-        debug_assert!(burst < u8::MAX);
+        debug_assert!(burst < Units::MAX);
         Self { rate_limit, burst }
     }
 
@@ -85,7 +108,7 @@ impl RateLimiterProps {
 
 impl RateLimiter {
     /// Creates a new rate limiter with the specified properties.
-    pub fn new(rate_limit: Duration, burst: u8) -> Self {
+    pub fn new(rate_limit: Duration, burst: Units) -> Self {
         Self::from(RateLimiterProps::new(rate_limit, burst))
     }
 

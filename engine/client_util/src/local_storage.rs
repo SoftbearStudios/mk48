@@ -9,6 +9,7 @@ pub struct LocalStorage {
 }
 
 /// Errors that can occur with local storage.
+#[derive(Debug)]
 pub enum Error {
     /// Javascript error.
     Js(JsValue),

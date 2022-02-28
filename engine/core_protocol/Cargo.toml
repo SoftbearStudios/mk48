@@ -17,7 +17,7 @@ glam = { version = "0.18", features = ["serde"] }
 variant_count = "1.1"
 rand = "0.8"
 unicode_categories = "0.1"
-rustrict = {version = "0", default-features = false}
+rustrict = {version = "0", default-features = false, features=["censor"]}
 lazy_static = "1.4"
 
 [features]

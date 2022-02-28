@@ -13,7 +13,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 /// A modular game client-side.
-pub trait GameClient {
+pub trait GameClient: Sized {
     const GAME_ID: GameId;
 
     /// Game command to server.

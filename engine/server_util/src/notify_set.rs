@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
+#[derive(Debug)]
 pub struct NotifySet<T> {
     /// Items being added.
     pub add: HashSet<T>,

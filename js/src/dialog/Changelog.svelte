@@ -14,6 +14,18 @@
 
 	<h2>2021</h2>
 
+	<h3>2/27/2022</h3>
+
+	<ul>
+		<li>Reduce "Kirov" torpedo salvo size from 10 to 8, and surface-to-air missile salvo size from 8 to 6.</li>
+		<li>Oil rigs decay after 90 minutes.</li>
+		<li>Outside Arctic, upgraded oil rigs will decay to normal oil rigs.</li>
+		<li>Otherwise, decaying oil rigs are simply respawned elsewhere (according to the world size).</li>
+		<li>Add admin moderation system to combat abusive behavior.</li>
+		<li>Add "Asia" server region (experimental).</li>
+		<li>Reinstate "Bork" language.</li>
+	</ul>
+
 	<h3>2/6/2022</h3>
 
 	<ul>

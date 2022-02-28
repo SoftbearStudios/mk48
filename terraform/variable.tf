@@ -8,19 +8,17 @@ variable "domain" {
   default = "mk48.io"
 }
 
-variable "region" {
-  type = string
-  default = "us-east"
+variable "servers" {
+  type = map
+  default = {
+    3 = "us-east"
+    4 = "ap-west"
+  }
 }
 
 variable "aws_region" {
   type = string
   default = "us-east-1"
-}
-
-variable "servers" {
-  type = number
-  default = 2
 }
 
 variable "linode_token" {

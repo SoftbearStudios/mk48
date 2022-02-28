@@ -127,12 +127,24 @@ impl<'a> Ssl<'a> {
 }
 
 /// Returns when either the server has stopped (Err) or the SSL needs renewal (Ok).
-pub async fn run_until_ssl_renewal(server: Server, ssl: &Option<Ssl<'_>>) -> Result<(), ()> {
-    if let Some(ssl) = ssl {
-        // This handle can be sent the stop command, and it will stop the original server
-        // which has been moved by then.
-        let server_handle = server.handle();
+/// Sending on or dropping early will cause an early HTTP server restart.
+pub async fn run_until_ssl_renewal(
+    server: Server,
+    ssl: &Option<Ssl<'_>>,
+    early: &mut tokio::sync::mpsc::Receiver<()>,
+) -> Result<(), ()> {
+    info!("running until SSL renewal/early restart");
 
+    // This handle can be sent the stop command, and it will stop the original server
+    // which has been moved by then.
+    let server_handle = server.handle();
+
+    let fused_server = server.fuse();
+    let fused_early = early.recv().fuse();
+
+    pin_mut!(fused_server, fused_early);
+
+    if let Some(ssl) = ssl {
         let renewal = async move {
             let mut interval =
                 tokio::time::interval(tokio::time::Duration::from_secs(12 * 60 * 60));
@@ -153,11 +165,9 @@ pub async fn run_until_ssl_renewal(server: Server, ssl: &Option<Ssl<'_>>) -> Res
             }
         };
 
-        //let fused_server = (Box::new(running_server) as Box<dyn futures::Future<Output=Result<(), std::io::Error>>>);
-        let fused_server = server.fuse();
         let fused_renewal = renewal.fuse();
 
-        pin_mut!(fused_server, fused_renewal);
+        pin_mut!(fused_renewal);
 
         select! {
             res = fused_server => {
@@ -165,12 +175,24 @@ pub async fn run_until_ssl_renewal(server: Server, ssl: &Option<Ssl<'_>>) -> Res
                 Err(())
             },
             () = fused_renewal => {
-                server_handle.stop(true).await;
+                let _ = futures::join!(server_handle.stop(true), fused_server);
+                Ok(())
+            },
+            _ = fused_early => {
+                let _ = futures::join!(server_handle.stop(true), fused_server);
                 Ok(())
             }
         }
     } else {
-        let _ = server.await;
-        Err(())
+        select! {
+            res = fused_server => {
+                error!("server result: {:?}", res);
+                Err(())
+            },
+            _ = fused_early => {
+                let _ = futures::join!(server_handle.stop(true), fused_server);
+                Ok(())
+            }
+        }
     }
 }

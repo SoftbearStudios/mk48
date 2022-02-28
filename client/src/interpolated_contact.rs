@@ -93,10 +93,10 @@ impl InterpolatedContact {
                 && self.view.turrets_known()
             {
                 let model_reloads = self.model.reloads();
-                for (i, &old) in self.view.reloads().iter().enumerate() {
+                for (i, old) in self.view.reloads().iter().enumerate() {
                     let new = model_reloads[i];
 
-                    if new == Ticks::ZERO || old != Ticks::ZERO {
+                    if new || !old {
                         // Wasn't just fired
                         continue;
                     }
@@ -253,7 +253,7 @@ impl Mk48Game {
         let direction = Angle::from(position_diff);
         let inbound = (contact.transform().direction - direction + Angle::PI).abs() < Angle::PI_2;
 
-        let friendly = context.core().is_friendly(contact.player_id());
+        let friendly = context.state.core.is_friendly(contact.player_id());
         let volume = Mk48Game::volume_at(position_diff.length());
 
         if let Some(entity_type) = contact.entity_type() {
@@ -261,7 +261,7 @@ impl Mk48Game {
 
             match data.kind {
                 EntityKind::Boat => {
-                    if !friendly && inbound && context.game().entity_id.is_some() {
+                    if !friendly && inbound && context.state.game.entity_id.is_some() {
                         audio_layer.play_with_volume("alarm_slow", 0.25 * volume.max(0.5));
                     }
                 }
@@ -282,7 +282,7 @@ impl Mk48Game {
                     EntitySubKind::Missile | EntitySubKind::Rocket => {
                         if !friendly
                             && inbound
-                            && context.game().entity_id.is_some()
+                            && context.state.game.entity_id.is_some()
                             && self.alarm_fast_rate_limiter.ready()
                         {
                             audio_layer.play_with_volume("alarm_fast", volume.max(0.5));
@@ -294,7 +294,7 @@ impl Mk48Game {
                     }
                     EntitySubKind::DepthCharge | EntitySubKind::Mine => {
                         audio_layer.play_with_volume("splash", volume);
-                        if !friendly && context.game().entity_id.is_some() {
+                        if !friendly && context.state.game.entity_id.is_some() {
                             audio_layer.play_with_volume("alarm_slow", volume.max(0.5));
                         }
                     }

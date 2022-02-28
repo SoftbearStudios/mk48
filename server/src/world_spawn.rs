@@ -214,9 +214,9 @@ impl World {
 
         self.spawn_static_amount(
             |position| {
-                Some(if position.y >= common::world::ARCTIC {
+                Some(if position.y >= common::world::ARCTIC + 500.0 {
                     EntityType::Hq
-                } else if thread_rng().gen_bool(0.25) {
+                } else if position.y < common::world::ARCTIC && thread_rng().gen_bool(0.25) {
                     EntityType::OilPlatform
                 } else {
                     // Fail, to bias against ocean spawns, in favor of arctic.

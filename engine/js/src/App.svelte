@@ -14,8 +14,8 @@
 
     const routes = {
         '/': Summary,
-        '/summary/:userAgent/:referrer': Summary,
-        '/day/:userAgent/:referrer': Day,
+        '/summary/:filter': Summary,
+        '/day/:filter': Day,
         '/referrers': Referrers,
         '/userAgents': UserAgents,
         '/series/:period/:resolution': Series,

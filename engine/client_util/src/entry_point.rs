@@ -5,7 +5,7 @@
 #[macro_export]
 macro_rules! entry_point {
     ($G: ty) => {
-        use core_protocol::id::{PlayerId, TeamId};
+        use core_protocol::id::{PlayerId, ServerId, TeamId};
         use core_protocol::name::TeamName;
         use serde::de::DeserializeOwned;
         use std::cell::{RefCell, RefMut, UnsafeCell};
@@ -152,9 +152,14 @@ macro_rules! entry_point {
             }
         }
 
-        #[wasm_bindgen(js_name = "handleWebSocketFormat")]
-        pub fn handle_web_socket_format(format: String) {
-            with_infrastructure(move |mut i| i.web_socket_format(parse_enum(&format)));
+        #[wasm_bindgen(js_name = "handleWebSocketProtocol")]
+        pub fn handle_web_socket_protocol(protocol: String) {
+            with_infrastructure(move |mut i| i.web_socket_protocol(parse_enum(&protocol)));
+        }
+
+        #[wasm_bindgen(js_name = "handleTrace")]
+        pub fn handle_trace(message: String) {
+            with_infrastructure(move |mut i| i.trace(message));
         }
 
         #[wasm_bindgen(js_name = "getSetting")]
@@ -167,9 +172,15 @@ macro_rules! entry_point {
             with_infrastructure(move |mut i| i.set_setting(&key, value));
         }
 
-        #[wasm_bindgen(js_name = "simulateDropWebSockets")]
-        pub fn simulate_drop_web_sockets(core: bool, game: bool) {
-            with_infrastructure(move |mut i| i.simulate_drop_web_sockets(core, game));
+        #[wasm_bindgen(js_name = "handleChooseServerId")]
+        pub fn handle_choose_server_id(server_id: Option<u8>) {
+            let server_id = server_id.and_then(|server_id| ServerId::new(server_id));
+            with_infrastructure(move |mut i| i.choose_server_id(server_id));
+        }
+
+        #[wasm_bindgen(js_name = "simulateDropWebSocket")]
+        pub fn simulate_drop_web_socket() {
+            with_infrastructure(move |mut i| i.simulate_drop_web_socket());
         }
 
         /// parse_enum deserializes a string into an enum, panicking if it doesn't match any variant.

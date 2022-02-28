@@ -21,6 +21,7 @@ core_protocol = {path="../engine/core_protocol"}
 common_util = {path="../engine/common_util"}
 serde_bytes = "0.11"
 bincode = "1.3.3"
+bitvec = "1.0.0"
 
 [features]
 server = ["actix"]

@@ -1,5 +1,6 @@
 use crate::local_storage::LocalStorage;
-use core_protocol::id::{ArenaId, SessionId};
+use core_protocol::id::{ArenaId, ServerId, SessionId};
+use core_protocol::web_socket::WebSocketProtocol;
 pub use engine_macros::Settings;
 use wasm_bindgen::JsValue;
 
@@ -28,7 +29,9 @@ impl Settings for () {
 
 /// Settings of the infrastructure, common to all games.
 #[derive(Settings)]
-pub(crate) struct CommonSettings {
+pub struct CommonSettings {
+    /// Last-used/chosen [`ServerId`].
+    pub server_id: Option<ServerId>,
     /// Not manually set by the player.
     pub arena_id: Option<ArenaId>,
     /// Not manually set by the player. Not accessible via arbitrary getter/setter as doing so would
@@ -37,14 +40,19 @@ pub(crate) struct CommonSettings {
     pub session_id: Option<SessionId>,
     /// Whether to set antialias rendering option.
     pub antialias: bool,
+    /// Websocket protocol.
+    #[setting(no_serde_wasm_bindgen)]
+    pub protocol: WebSocketProtocol,
 }
 
 impl Default for CommonSettings {
     fn default() -> Self {
         Self {
+            server_id: None,
             arena_id: None,
             session_id: None,
             antialias: true,
+            protocol: WebSocketProtocol::default(),
         }
     }
 }

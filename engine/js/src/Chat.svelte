@@ -1,16 +1,65 @@
 <script>
     import {adminRequest} from './util.js';
     import Nav from './Nav.svelte';
+    import {onMount} from 'svelte';
 
     let alias = "Server";
     let message = "";
 
-    async function sendChat() {
+    let players = [];
+    onMount(async () => {
+        const response = await adminRequest('RequestPlayers');
+        if (response.PlayersRequested) {
+            players = response.PlayersRequested;
+        }
+    });
+
+    async function overrideAlias(playerId, previousAlias) {
+        const alias = prompt("Override alias to? (ok to confirm)", previousAlias);
+        const response = await adminRequest({OverridePlayerAlias: {player_id: playerId, alias}});
+        if (response.PlayerAliasOverridden) {
+            const player = players.find(p => p.player_id == playerId);
+            if (player != null) {
+                player.alias = response.PlayerAliasOverridden;
+
+                // Reactivity
+                players = players;
+            }
+        }
+    }
+
+    async function mute(playerId, minutes) {
+        const response = await adminRequest({MutePlayer: {player_id: playerId, minutes}});
+        if (typeof response.PlayerMuted === 'number') {
+            const player = players.find(p => p.player_id == playerId);
+            if (player != null) {
+                player.mute = response.PlayerMuted;
+
+                // Reactivity
+                players = players;
+            }
+        }
+    }
+
+    async function restrict(playerId, minutes) {
+        const response = await adminRequest({RestrictPlayer: {player_id: playerId, minutes}});
+        if (typeof response.PlayerRestricted === 'number') {
+            const player = players.find(p => p.player_id == playerId);
+            if (player != null) {
+                player.restriction = response.PlayerRestricted;
+
+                // Reactivity
+                players = players;
+            }
+        }
+    }
+
+    async function sendChat(player_id) {
         if (!alias || alias.length == 0 || !message || message.length == 0) {
             return;
         }
-        const response = await adminRequest({SendChat: {alias, message}});
-        if (response.ChatSent.sent) {
+        const response = await adminRequest({SendChat: {alias, message, player_id}});
+        if (response == "ChatSent") {
             message = "";
         }
     }
@@ -37,12 +86,17 @@
         "Feedback Noted": "Your feedback has been noted!",
         "Server Clarification": "The developers may or may not be here, but they asked me to send an automated message."
     }
+
+    /// Replaces null with question mark.
+    function maybe(val) {
+        return val == null ? '?' : val;
+    }
 </script>
 
 <Nav/>
 
 <main>
-    <form on:submit|preventDefault={sendChat}>
+    <form on:submit|preventDefault={() => sendChat()}>
         <input type="text" minlength="1" placeholder="Alias" bind:value={alias}/>
         <br/>
         <select on:change={event => message = PRESETS[event.target.value]}>
@@ -53,8 +107,78 @@
         <br/>
         <textarea type="text" minlength="1" placeholder="Message" bind:value={message}/>
         <br/>
-        <button>Send (to all arenas)</button>
+        <button>Send (to all players)</button>
     </form>
+
+    <br>
+    <br>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Alias</th>
+                <th>Team ID</th>
+                <th>Score</th>
+                <th>Plays</th>
+                <th>Region ID</th>
+                <th>FPS</th>
+                <th>RTT</th>
+                <th>Total Messages</th>
+                <th>Inappropriate</th>
+                <th>Reports</th>
+                <th>Restrict</th>
+                <th>Mute</th>
+                <th>Chat</th>
+                <th>Zeus</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each players as player}
+                <tr>
+                    <td>{player.player_id}</td>
+                    <td on:click={() => overrideAlias(player.player_id, player.alias)}>{player.alias}</td>
+                    <td>{player.team_id == null ? '-' : player.team_id}</td>
+                    <td>{player.score}</td>
+                    <td>{player.plays}</td>
+                    <td>{maybe(player.region_id)}</td>
+                    <td>{maybe(player.fps)}</td>
+                    <td>{maybe(player.rtt)}</td>
+                    <td>{player.messages}</td>
+                    <td>{player.inappropriate_messages}</td>
+                    <td>{player.abuse_reports}</td>
+                    <td>
+                        <select class="mod" on:change|preventDefault={e => restrict(player.player_id, parseInt(e.target.value))} value={player.restriction}>
+                            <option disabled>{player.restriction}</option>
+                            <option>0</option>
+                            <option>5</option>
+                            <option>10</option>
+                            <option>30</option>
+                            <option>60</option>
+                            <option>360</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="mod" on:change|preventDefault={e => mute(player.player_id, parseInt(e.target.value))} value={player.mute}>
+                            <option disabled>{player.mute}</option>
+                            <option>0</option>
+                            <option>5</option>
+                            <option>10</option>
+                            <option>30</option>
+                            <option>60</option>
+                            <option>360</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button on:click={() => sendChat(player.player_id)}>Send</button>
+                    </td>
+                    <td>
+                        <button>Smite</button>
+                    </td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
 </main>
 
 <style>
@@ -69,5 +193,9 @@
     select {
         background: initial;
         color: initial;
+    }
+
+    select.mod {
+        width: max-content;
     }
 </style>

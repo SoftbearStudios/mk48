@@ -27,8 +27,8 @@ export const BOAT_TYPE_COUNT = boatTypeCount;
 export const BOAT_LEVEL_MAX = boatLevelMax;
 export const WEAPON_SUB_KIND_COUNT = Object.keys(weaponSubKinds).length;
 
-function armamentConsumption(consumption, index) {
-	return (!consumption || consumption.length <= index) ? 0 : consumption[index]
+function reloaded(reloads, index) {
+	return (!reloads || reloads.length <= index) ? 0 : reloads[index]
 }
 
 export function availableShips(level, excludedType) {
@@ -63,17 +63,12 @@ export function groupArmaments(armaments, consumptions) {
 
 		let group = groups[type];
 		if (!group) {
-			group = {type: armament.type, ready: 0, deployed: 0, total: 0, reload: 0};
+			group = {type: armament.type, ready: 0, total: 0};
 			groups[type] = group;
 		}
 		group.total++;
 
-		let consumption = armamentConsumption(consumptions, i);
-		if (consumption >= 6553) {
-			group.deployed++;
-		} else if (consumption > 0) {
-			group.reload += consumption;
-		} else {
+		if (reloaded(consumptions, i)) {
 			group.ready++;
 		}
 	}
@@ -82,7 +77,7 @@ export function groupArmaments(armaments, consumptions) {
 }
 
 export function hasArmament(consumption, index) {
-	return armamentConsumption(consumption, index) < 0.001;
+	return reloaded(consumption, index)
 }
 
 export function hasUpgrades(type) {

@@ -342,7 +342,7 @@ impl FrameCache {
         );
     }
 
-    /// Trianglulates and buffers an iterator of rects to a render buffer.
+    /// Triangulates and buffers an iterator of rects to a render buffer.
     /// The generated triangles aren't necessarily in the same order as the iterator.
     /// Returns if any triangles were generated.
     fn buffer_scrolled_rects(

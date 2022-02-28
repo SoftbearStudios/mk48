@@ -3,6 +3,7 @@
 
 use crate::altitude::Altitude;
 use crate::angle::Angle;
+use crate::contact::ReloadsStorage;
 use crate::ticks;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
@@ -573,6 +574,10 @@ impl EntityType {
         sorted.sort_by_key(|(k, _)| *k as u8);
 
         vector.extend(sorted.into_iter().map(|(_, mut v)| {
+            assert!(
+                v.armaments.len() <= ReloadsStorage::BITS as usize,
+                "reload storage needs more bits"
+            );
             v.radius = Vec2::new(v.width, v.length).mul(0.5).length();
             v.inv_size = 1.0 / (v.radius * (1.0 / 30.0) * (1.0 - v.stealth).powi(2)).min(1.0);
             v

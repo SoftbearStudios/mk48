@@ -1,11 +1,11 @@
 import {writable} from 'svelte/store';
 
-while (localStorage.auth == null || localStorage.auth === "") {
+while (localStorage.auth == null || localStorage.auth == "null" || localStorage.auth === "") {
     localStorage.auth = prompt("Enter auth code");
 }
 
 export const DAY = 1000 * 60 * 60 * 24;
-export const params = {auth: localStorage.auth};
+export const auth = localStorage.auth;
 export const headers = {'Content-Type': 'application/json'};
 
 // Cache of promises.
@@ -13,7 +13,7 @@ const disableCache = true;
 const cache = {};
 
 export const adminRequest = async function(request) {
-    const body = JSON.stringify({params, request});
+    const body = JSON.stringify({auth, request});
     if (disableCache || !(body in cache)) {
         cache[body] = fetch("/admin/", {method: 'POST', body, headers}).then(res => res.json());
     }
@@ -25,7 +25,7 @@ export const game = writable(null);
 
 async function loadGames() {
     const result = await adminRequest('RequestGames');
-    const gameIds = result.GamesRequested.games.map(([gameId, usage]) => gameId);
+    const gameIds = result.GamesRequested.map(([gameId, usage]) => gameId);
     games.set(gameIds);
     if (gameIds.length > 0) {
         game.set(gameIds[0]);

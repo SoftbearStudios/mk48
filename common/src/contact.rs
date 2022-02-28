@@ -9,6 +9,7 @@ use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::util::make_mut_slice;
 use crate::velocity::Velocity;
+use bitvec::prelude::*;
 use core_protocol::id::*;
 use serde::de::{DeserializeSeed, SeqAccess, Visitor};
 use serde::ser::SerializeTuple;
@@ -17,6 +18,8 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::iter::repeat_with;
 use std::sync::Arc;
+
+pub type ReloadsStorage = u32;
 
 pub trait ContactTrait {
     fn altitude(&self) -> Altitude;
@@ -31,7 +34,7 @@ pub trait ContactTrait {
 
     fn player_id(&self) -> Option<PlayerId>;
 
-    fn reloads(&self) -> &[Ticks];
+    fn reloads(&self) -> &BitSlice<ReloadsStorage>;
 
     /// Whether reloads() will return real data or all zeroes.
     fn reloads_known(&self) -> bool;
@@ -64,7 +67,7 @@ pub struct Contact {
     entity_type: Option<EntityType>,
     id: EntityId,
     player_id: Option<PlayerId>,
-    reloads: Option<Arc<[Ticks]>>,
+    reloads: Option<BitArray<ReloadsStorage>>,
     turrets: Option<Arc<[Angle]>>,
 }
 
@@ -93,7 +96,7 @@ impl Contact {
         guidance: Guidance,
         id: EntityId,
         player_id: Option<PlayerId>,
-        reloads: Option<Arc<[Ticks]>>,
+        reloads: Option<BitArray<ReloadsStorage>>,
         transform: Transform,
         turrets: Option<Arc<[Angle]>>,
     ) -> Self {
@@ -159,7 +162,7 @@ impl Contact {
         self.altitude = self.altitude.lerp(model.altitude, lerp);
         self.damage = model.damage;
         self.player_id = model.player_id;
-        self.reloads = model.reloads.clone();
+        self.reloads = model.reloads;
         if interpolate_guidance {
             self.guidance = model.guidance;
         }
@@ -214,7 +217,7 @@ impl Contact {
 }
 
 pub static ANGLE_ARRAY_ZERO: [Angle; 0] = [Angle::ZERO; 0];
-pub static TICKS_ARRAY_ZERO: [Ticks; 0] = [Ticks::ZERO; 0];
+pub static RELOADS_ARRAY_ZERO: BitArray<ReloadsStorage> = BitArray::ZERO;
 
 impl ContactTrait for Contact {
     fn altitude(&self) -> Altitude {
@@ -247,10 +250,10 @@ impl ContactTrait for Contact {
     }
 
     #[inline]
-    fn reloads(&self) -> &[Ticks] {
-        self.reloads
-            .as_ref()
-            .map_or(&TICKS_ARRAY_ZERO, |a| a.as_ref())
+    fn reloads(&self) -> &BitSlice<ReloadsStorage> {
+        self.reloads.as_ref().map_or(&RELOADS_ARRAY_ZERO, |a| {
+            &a.as_bitslice()[0..self.entity_type.unwrap().data().armaments.len()]
+        })
     }
 
     #[inline]
@@ -415,11 +418,13 @@ impl<'a> Serialize for ContactSerializer<'a> {
             tup.serialize_element(&self.c.player_id)?;
         }
         if self.h.has_reloads {
-            let reloads = self.c.reloads.as_ref().unwrap();
+            // Round bits up to bytes.
+            let size: usize = (self.c.entity_type.unwrap().data().armaments.len() + 7) / 8;
+            let reloads = &self.c.reloads.unwrap().data.to_le_bytes()[..size];
             if reloads.is_empty() {
                 tup.serialize_element(&())?;
             } else {
-                tup.serialize_element(&KnownSizeSerializer::new(reloads))?;
+                tup.serialize_element(&ByteSerializer::new(reloads))?;
             }
         }
 
@@ -435,6 +440,31 @@ impl<'a> Serialize for ContactSerializer<'a> {
             tup.serialize_element(&())?;
         }
 
+        tup.end()
+    }
+}
+
+/// Serializes a slice of bytes without length (known size).
+struct ByteSerializer<'a> {
+    items: &'a [u8],
+}
+
+impl<'a> ByteSerializer<'a> {
+    fn new(items: &'a [u8]) -> Self {
+        debug_assert!(!items.is_empty());
+        Self { items }
+    }
+}
+
+impl<'a> Serialize for ByteSerializer<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut tup = serializer.serialize_tuple(self.items.len())?;
+        for item in self.items {
+            tup.serialize_element(item)?;
+        }
         tup.end()
     }
 }
@@ -556,15 +586,18 @@ impl<'de, 'a> Visitor<'de> for ContactDeserializer<'a> {
         }
         if self.h.has_reloads {
             // Must be after type is assigend.
-            let size = self.c.entity_type.unwrap().data().armaments.len();
+            // Round bits up to bytes.
+            let size: usize = (self.c.entity_type.unwrap().data().armaments.len() + 7) / 8;
             if size == 0 {
                 let _: () = seq.next_element()?.unwrap();
-                self.c.reloads = Some(Arc::new([]))
+                self.c.reloads = Some(BitArray::ZERO)
             } else {
-                self.c.reloads = Some(
-                    seq.next_element_seed(KnownSizeDeserializer::new(size))?
-                        .unwrap(),
-                );
+                let bytes = seq
+                    .next_element_seed(
+                        ByteDeserializer::<{ ReloadsStorage::BITS as usize / 8 }>::new(size),
+                    )?
+                    .unwrap();
+                self.c.reloads = Some(BitArray::from(ReloadsStorage::from_le_bytes(bytes)));
             }
         }
 
@@ -586,6 +619,52 @@ impl<'de, 'a> Visitor<'de> for ContactDeserializer<'a> {
         }
 
         Ok(())
+    }
+}
+
+struct ByteDeserializer<const MAX: usize> {
+    items: [u8; MAX],
+    size: usize,
+}
+
+impl<'de, const MAX: usize> ByteDeserializer<MAX> {
+    fn new(size: usize) -> Self {
+        debug_assert!(size != 0);
+        Self {
+            items: [0; MAX],
+            size,
+        }
+    }
+}
+
+impl<'de, const MAX: usize> DeserializeSeed<'de> for ByteDeserializer<MAX> {
+    type Value = [u8; MAX];
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_tuple(self.size, self)
+    }
+}
+
+impl<'de, const MAX: usize> Visitor<'de> for ByteDeserializer<MAX> {
+    type Value = [u8; MAX];
+
+    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+        formatter.write_str("an array of bytes")
+    }
+
+    fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let mut i = 0;
+        while let Some(v) = seq.next_element()? {
+            self.items[i] = v;
+            i += 1;
+        }
+        Ok(self.items)
     }
 }
 

@@ -86,7 +86,7 @@
 		{#each groupArmaments(armaments, alive.armamentConsumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
 				<Sprite title={`${entityData[group.type].label} (${summarizeType($t, group.type)})`} consumed={group.ready === 0} name={group.type}/>
-				<span class='consumption' title={(group.reload === 0 ? 'Fully reloaded' : `${Math.round(group.reload)}s to full reload`) + (group.deployed === 0 ? '' : ` (${group.deployed} still deployed)`)}>{group.ready}/{group.total}</span>
+				<span class='consumption'>{group.ready}/{group.total}</span>
 			</div>
 		{/each}
 		{#if entityData[alive.type].subkind === 'submarine'}

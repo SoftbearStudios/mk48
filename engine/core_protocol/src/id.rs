@@ -4,7 +4,9 @@
 use enum_iterator::IntoEnumIterator;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
+use std::str::FromStr;
 use variant_count::VariantCount;
 
 #[repr(transparent)]
@@ -15,6 +17,7 @@ pub struct ArenaId(pub NonZeroU32);
 pub enum GameId {
     Mazean,
     Mk48,
+    /// A placeholder for games we haven't released yet.
     Redacted,
 }
 
@@ -54,9 +57,10 @@ impl InvitationId {
 // StandardArabic,
 // Vietnamese,
 
+/// Currently unused.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum LanguageId {
-    #[serde(rename = "bork")]
+    #[serde(rename = "xx-bork")]
     Bork,
     #[serde(rename = "en")]
     English,
@@ -99,6 +103,12 @@ impl From<usize> for PeriodId {
     }
 }
 
+impl PeriodId {
+    pub fn iter() -> impl Iterator<Item = Self> {
+        Self::into_enum_iter()
+    }
+}
+
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub NonZeroU32);
@@ -138,23 +148,121 @@ impl PlayerId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+/// Mirrors [`db_ip::Region`]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum RegionId {
+    Africa,
     Asia,
     Europe,
-    Usa,
+    NorthAmerica,
+    Oceania,
+    SouthAmerica,
 }
 
 impl Default for RegionId {
     fn default() -> Self {
-        Self::Usa
+        Self::NorthAmerica
+    }
+}
+
+impl RegionId {
+    /// Returns a relative distance to another region.
+    /// It is not necessarily transitive.
+    pub fn distance(self, other: Self) -> u8 {
+        match self {
+            Self::Africa => match other {
+                Self::Africa => 0,
+                Self::Asia => 2,
+                Self::Europe => 1,
+                Self::NorthAmerica => 2,
+                Self::Oceania => 3,
+                Self::SouthAmerica => 3,
+            },
+            Self::Asia => match other {
+                Self::Africa => 2,
+                Self::Asia => 0,
+                Self::Europe => 2,
+                Self::NorthAmerica => 2,
+                Self::Oceania => 1,
+                Self::SouthAmerica => 3,
+            },
+            Self::Europe => match other {
+                Self::Africa => 1,
+                Self::Asia => 2,
+                Self::Europe => 0,
+                Self::NorthAmerica => 2,
+                Self::Oceania => 3,
+                Self::SouthAmerica => 3,
+            },
+            Self::NorthAmerica => match other {
+                Self::Africa => 3,
+                Self::Asia => 3,
+                Self::Europe => 2,
+                Self::NorthAmerica => 0,
+                Self::Oceania => 2,
+                Self::SouthAmerica => 1,
+            },
+            Self::Oceania => match other {
+                Self::Africa => 3,
+                Self::Asia => 1,
+                Self::Europe => 2,
+                Self::NorthAmerica => 2,
+                Self::Oceania => 0,
+                Self::SouthAmerica => 3,
+            },
+            Self::SouthAmerica => match other {
+                Self::Africa => 3,
+                Self::Asia => 2,
+                Self::Europe => 2,
+                Self::NorthAmerica => 1,
+                Self::Oceania => 2,
+                Self::SouthAmerica => 0,
+            },
+        }
+    }
+
+    pub fn as_human_readable_str(self) -> &'static str {
+        match self {
+            Self::Africa => "Africa",
+            Self::Asia => "Asia",
+            Self::Europe => "Europe",
+            Self::NorthAmerica => "North America",
+            Self::Oceania => "Oceania",
+            Self::SouthAmerica => "South America",
+        }
+    }
+}
+
+/// Wasn't a valid region string.
+#[derive(Debug)]
+pub struct InvalidRegionId;
+
+impl Display for InvalidRegionId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid region id string")
+    }
+}
+
+impl FromStr for RegionId {
+    type Err = InvalidRegionId;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "af" | "africa" => Self::Africa,
+            "as" | "asia" => Self::Asia,
+            "eu" | "europe" => Self::Europe,
+            "na" | "northamerica" => Self::NorthAmerica,
+            "oc" | "oceania" => Self::Oceania,
+            "sa" | "southamerica" => Self::SouthAmerica,
+            _ => return Err(InvalidRegionId),
+        })
     }
 }
 
 #[repr(transparent)]
 /// Symbolizes, for example: #.domain.com
 /// The meaning of Option::<ServerId>::None is often "localhost"
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct ServerId(pub NonZeroU8);
 
 impl ServerId {
@@ -166,10 +274,6 @@ impl ServerId {
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SessionId(pub NonZeroU64);
-
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct StarId(pub NonZeroU8);
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]

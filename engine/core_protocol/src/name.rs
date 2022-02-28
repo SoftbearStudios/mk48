@@ -121,8 +121,19 @@ impl TeamName {
             .take(6)
             .collect::<String>();
 
-        Self(slice_up_to_array_string(str))
+        Self(slice_up_to_array_string(
+            rustrict::trim_whitespace(str)
+                .trim_start_matches('[')
+                .trim_end_matches(']'),
+        ))
     }
+
+    /*
+    /// Creates a form optimized for uniqueness checking.
+    pub fn canonicalize(&self) -> Self {
+        Self(self.0.to_lowercase())
+    }
+     */
 
     pub fn as_str(&self) -> &str {
         &self.0
@@ -162,5 +173,8 @@ mod test {
     fn team_name() {
         assert_eq!(TeamName::new("1234567").as_str(), "123456");
         assert_eq!(TeamName::new("❮✰❯").as_str(), "❮✰❯");
+        assert_eq!(TeamName::new("❮✰❯").as_str(), "❮✰❯");
+        assert_eq!(TeamName::new("[foo").as_str(), "foo");
+        assert_eq!(TeamName::new("foo]]").as_str(), "foo");
     }
 }

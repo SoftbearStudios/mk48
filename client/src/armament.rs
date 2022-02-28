@@ -8,7 +8,6 @@ use client_util::renderer::particle::{Particle, ParticleLayer};
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
 use common::entity::{EntityData, EntityId, EntityKind, EntitySubKind};
-use common::ticks::Ticks;
 use common::util::gen_radius;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
@@ -39,7 +38,7 @@ impl Mk48Game {
                     continue;
                 }
 
-                if player_contact.reloads()[i] != Ticks::ZERO {
+                if !player_contact.reloads()[i] {
                     // Reloading; cannot fire.
                     continue;
                 }

@@ -3,21 +3,19 @@
 
 use crate::game::Mk48Game;
 use client_util::apply::Apply;
-use client_util::context::{Context, CoreState};
+use client_util::context::Context;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::{EntityKind, EntitySubKind, EntityType};
-use common::ticks::Ticks;
 use common::velocity::Velocity;
 use common::world::outside_area;
-use core_protocol::id::{InvitationId, PeriodId, PlayerId, TeamId};
+use core_protocol::id::{InvitationId, PeriodId, PlayerId, ServerId, TeamId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use glam::{vec2, Vec2};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// State of UI inputs.
 pub struct UiState {
@@ -84,10 +82,15 @@ pub struct UiProps {
     pub liveboard: Vec<LeaderboardItemModel>,
     pub leaderboards: HashMap<PeriodId, Vec<LeaderboardItemModel>>,
     pub team_captain: bool,
+    pub team_full: bool,
     pub team_members: Vec<TeamPlayerModel>,
     pub team_join_requests: Vec<TeamPlayerModel>,
     pub teams: Vec<TeamModel>,
     pub restrictions: Vec<EntityType>, // Entity types that can't be used.
+    /// Which server client is currently connected to.
+    pub server_id: Option<ServerId>,
+    /// All available (alive, compatible) servers.
+    pub servers: Vec<ServerModel>,
 }
 
 /// Mutually exclusive statuses.
@@ -105,7 +108,7 @@ pub enum UiStatus {
         position: Vec2Model,
         altitude: Altitude,
         #[serde(skip_serializing_if = "Option::is_none")]
-        armament_consumption: Option<Arc<[Ticks]>>,
+        armament_consumption: Option<Box<[bool]>>,
     },
     #[serde(rename_all = "camelCase")]
     Respawning {
@@ -140,6 +143,10 @@ pub struct TeamModel {
     pub team_id: TeamId,
     pub name: TeamName,
     pub joining: bool,
+    /// See TeamDto.
+    pub full: bool,
+    /// See TeamDto.
+    pub closed: bool,
 }
 
 #[derive(Serialize)]
@@ -158,10 +165,7 @@ pub struct DeathReasonModel {
 }
 
 impl DeathReasonModel {
-    pub fn from_death_reason(
-        reason: &DeathReason,
-        core_state: &CoreState,
-    ) -> Result<Self, &'static str> {
+    pub fn from_death_reason(reason: &DeathReason) -> Result<Self, &'static str> {
         Ok(match reason {
             DeathReason::Border => DeathReasonModel {
                 death_type: "border",
@@ -173,14 +177,9 @@ impl DeathReasonModel {
                 player: None,
                 entity: None,
             },
-            DeathReason::Boat(player_id) => DeathReasonModel {
+            &DeathReason::Boat(alias) => DeathReasonModel {
                 death_type: "collision",
-                player: Some(
-                    core_state
-                        .player_or_bot(*player_id)
-                        .map(|p| p.alias)
-                        .unwrap_or_else(|| PlayerAlias::new("???")),
-                ),
+                player: Some(alias),
                 entity: None,
             },
             DeathReason::Entity(entity_type) => DeathReasonModel {
@@ -188,32 +187,30 @@ impl DeathReasonModel {
                 player: None,
                 entity: Some(*entity_type),
             },
-            DeathReason::Ram(player_id) => DeathReasonModel {
+            &DeathReason::Ram(alias) => DeathReasonModel {
                 death_type: "ramming",
-                player: Some(
-                    core_state
-                        .player_or_bot(*player_id)
-                        .map(|p| p.alias)
-                        .unwrap_or_else(|| PlayerAlias::new("???")),
-                ),
+                player: Some(alias),
                 entity: None,
             },
-            DeathReason::Weapon(player_id, entity_type) => DeathReasonModel {
+            &DeathReason::Weapon(alias, entity_type) => DeathReasonModel {
                 death_type: "sinking",
-                player: Some(
-                    core_state
-                        .player_or_bot(*player_id)
-                        .map(|p| p.alias)
-                        .unwrap_or_else(|| PlayerAlias::new("???")),
-                ),
-                entity: Some(*entity_type),
+                player: Some(alias),
+                entity: Some(entity_type),
             },
             _ => return Err("invalid death reason for boat"),
         })
     }
 }
 
-// For serializing a vec2 as {"x": ..., "y": ...} instead of [..., ...]
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ServerModel {
+    server_id: ServerId,
+    region: &'static str,
+    players: usize,
+}
+
+/// For serializing a vec2 as {"x": ..., "y": ...} instead of [..., ...]
 #[derive(Serialize)]
 pub struct Vec2Model {
     x: f32,
@@ -236,15 +233,16 @@ impl Mk48Game {
         status: UiStatus,
         team_proximity: &HashMap<TeamId, f32>,
     ) {
-        let core_state = context.core();
         let props = UiProps {
-            player_id: core_state.player_id,
-            team_name: core_state.team().map(|t| t.team_name),
-            invitation_id: core_state.created_invitation_id,
-            score: context.game().score,
-            player_count: core_state.only_players().len(),
+            player_id: context.state.core.player_id,
+            team_name: context.state.core.team().map(|t| t.name),
+            invitation_id: context.state.core.created_invitation_id,
+            score: context.state.game.score,
+            player_count: context.state.core.real_players as usize,
             fps: self.fps_counter.last_sample().unwrap_or(0.0),
-            chats: core_state
+            chats: context
+                .state
+                .core
                 .messages
                 .iter()
                 .map(|message| ChatModel {
@@ -256,16 +254,17 @@ impl Mk48Game {
                 })
                 .collect(),
             liveboard: context
-                .core()
+                .state
+                .core
                 .liveboard
                 .iter()
                 .filter_map(|item| {
-                    let player = core_state.only_players().get(&item.player_id);
+                    let player = context.state.core.only_players().get(&item.player_id);
                     if let Some(player) = player {
                         let team_name = player
                             .team_id
-                            .and_then(|team_id| core_state.teams.get(&team_id))
-                            .map(|team| team.team_name);
+                            .and_then(|team_id| context.state.core.teams.get(&team_id))
+                            .map(|team| team.name);
                         Some(LeaderboardItemModel {
                             name: player.alias,
                             team: team_name,
@@ -277,7 +276,8 @@ impl Mk48Game {
                 })
                 .collect(),
             leaderboards: context
-                .core()
+                .state
+                .core
                 .leaderboards
                 .iter()
                 .enumerate()
@@ -296,32 +296,46 @@ impl Mk48Game {
                     )
                 })
                 .collect(),
-            team_members: if let Some(team_id) = core_state.team_id() {
-                core_state
-                    .only_players()
-                    .values()
-                    .filter(|p| p.team_id == Some(team_id))
+            team_members: if context.state.core.team_id().is_some() {
+                context
+                    .state
+                    .core
+                    .members
+                    .iter()
+                    .filter_map(|&player_id| context.state.core.player_or_bot(player_id))
                     .map(|p| TeamPlayerModel {
                         player_id: p.player_id,
                         name: p.alias,
                         captain: p.team_captain,
                     })
-                    .sorted_by(|a, b| b.captain.cmp(&a.captain).then(a.name.cmp(&b.name)))
                     .collect()
             } else {
                 vec![]
             },
-            team_captain: core_state.team_id().is_some()
-                && core_state.player().map(|p| p.team_captain).unwrap_or(false),
+            team_captain: context.state.core.team_id().is_some()
+                && context
+                    .state
+                    .core
+                    .player()
+                    .map(|p| p.team_captain)
+                    .unwrap_or(false),
+            team_full: context
+                .state
+                .core
+                .team_id()
+                .and_then(|team_id| context.state.core.teams.get(&team_id))
+                .map(|team| team.full)
+                .unwrap_or(false),
             team_join_requests: context
-                .core()
+                .state
+                .core
                 .joiners
                 .iter()
-                .filter_map(|id| {
+                .filter_map(|&id| {
                     context
-                        .core()
-                        .only_players()
-                        .get(id)
+                        .state
+                        .core
+                        .player_or_bot(id)
                         .map(|player| TeamPlayerModel {
                             player_id: player.player_id,
                             name: player.alias,
@@ -330,20 +344,29 @@ impl Mk48Game {
                 })
                 .collect(),
             teams: context
-                .core()
+                .state
+                .core
                 .teams
                 .iter()
-                .sorted_by(|&(a, _), &(b, _)| {
-                    team_proximity
-                        .get(a)
-                        .unwrap_or(&f32::INFINITY)
-                        .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
-                        .unwrap()
+                .sorted_by(|&(a, team_a), &(b, team_b)| {
+                    team_a
+                        .closed
+                        .cmp(&team_b.closed)
+                        .then(team_a.full.cmp(&team_b.full))
+                        .then_with(|| {
+                            team_proximity
+                                .get(a)
+                                .unwrap_or(&f32::INFINITY)
+                                .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
+                                .unwrap()
+                        })
                 })
                 .map(|(team_id, team)| TeamModel {
                     team_id: *team_id,
-                    name: team.team_name,
-                    joining: core_state.joins.contains(team_id),
+                    name: team.name,
+                    joining: context.state.core.joins.contains(team_id),
+                    full: team.full,
+                    closed: team.closed,
                 })
                 .take(5)
                 .collect(),
@@ -355,6 +378,19 @@ impl Mk48Game {
                         false
                     }
                 })
+                .collect(),
+            server_id: context.common_settings.server_id,
+            servers: context
+                .state
+                .core
+                .servers
+                .iter()
+                .map(|(&server_id, server_dto)| ServerModel {
+                    server_id,
+                    region: server_dto.region_id.as_human_readable_str(),
+                    players: server_dto.player_count as usize,
+                })
+                .sorted_by_key(|model| model.server_id)
                 .collect(),
             status,
         };

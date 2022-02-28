@@ -71,7 +71,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 3600,
+		"lifespan": 5400,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -82,6 +82,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
+		"lifespan": 5400,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -2391,18 +2392,6 @@
 				"angle": -1.5707963267948966
 			},
 			{
-				"type": "set65",
-				"positionForward": -52.5471,
-				"positionSide": 10,
-				"angle": 1.5707963267948966
-			},
-			{
-				"type": "set65",
-				"positionForward": -52.5471,
-				"positionSide": -10,
-				"angle": -1.5707963267948966
-			},
-			{
 				"type": "p700",
 				"positionForward": 41,
 				"positionSide": 3.5,
@@ -2449,18 +2438,6 @@
 				"positionForward": 41,
 				"positionSide": -3.5,
 				"hidden": true
-			},
-			{
-				"type": "s300",
-				"positionForward": 60,
-				"positionSide": 3,
-				"vertical": true
-			},
-			{
-				"type": "s300",
-				"positionForward": 60,
-				"positionSide": -3,
-				"vertical": true
 			},
 			{
 				"type": "s300",

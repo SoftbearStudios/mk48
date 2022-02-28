@@ -13,10 +13,9 @@ use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
-use core_protocol::dto::RulesDto;
 use core_protocol::id::*;
-use game_server::context::{CoreStatus, PlayerTuple};
 use game_server::game_service::GameArenaService;
+use game_server::player::PlayerTuple;
 use log::{info, warn};
 use server_util::benchmark;
 use server_util::benchmark::Timer;
@@ -32,7 +31,7 @@ pub struct Server {
 
 /// Stores a player, and metadata related to it. Data stored here may only be accessed when processing,
 /// this client (i.e. not when processing other entities). Bots don't use this.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ClientData {
     pub loaded_chunks: ChunkSet,
 }
@@ -49,6 +48,9 @@ impl GameArenaService for Server {
 
     /// How long a player can remain in limbo after they lose connection.
     const LIMBO: Duration = Duration::from_secs(6);
+
+    //const TEAM_MEMBERS_MAX: usize = 2;
+    //const TEAM_JOINERS_MAX: usize = 2;
 
     type Bot = Bot;
     type ClientData = ClientData;
@@ -67,14 +69,6 @@ impl GameArenaService for Server {
         }
     }
 
-    fn get_rules(&self) -> RulesDto {
-        RulesDto {
-            default_score: Some(0),
-            leaderboard_min_players: 10,
-            team_size_max: 6,
-        }
-    }
-
     #[cfg(debug_assertions)]
     fn player_joined(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
         use common::entity::EntityData;
@@ -83,10 +77,15 @@ impl GameArenaService for Server {
         player_tuple.borrow_player_mut().score = level_to_score(EntityData::MAX_BOAT_LEVEL);
     }
 
-    fn player_command(&mut self, update: Self::Command, player: &Arc<PlayerTuple<Self>>) {
+    fn player_command(
+        &mut self,
+        update: Self::Command,
+        player: &Arc<PlayerTuple<Self>>,
+    ) -> Option<Update> {
         if let Err(e) = update.as_command().apply(&mut self.world, player) {
             warn!("Command resulted in {}", e);
         }
+        None
     }
 
     fn player_changed_team(
@@ -137,24 +136,9 @@ impl GameArenaService for Server {
         self.world.get_player_complete(player)
     }
 
-    fn get_core_status(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> Option<CoreStatus> {
+    fn is_alive(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> bool {
         let player = player_tuple.borrow_player();
-
-        // Don't get player if it just left the game.
-        let player_entity = (!player.data.flags.left_game)
-            .then(|| ())
-            .and_then(|_| match &player.data.status {
-                Status::Alive { entity_index, .. } => {
-                    let entity = &self.world.entities[*entity_index];
-                    Some(entity)
-                }
-                _ => None,
-            });
-
-        player_entity.map(|e| CoreStatus {
-            location: e.transform.position.extend(0.0),
-            score: e.borrow_player().score,
-        })
+        !player.data.flags.left_game && player.data.status.is_alive()
     }
 
     /// update runs server ticks.

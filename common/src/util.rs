@@ -174,7 +174,7 @@ mod test {
         assert_eq!(respawn_score(5), 2);
         assert_eq!(
             respawn_score(100000),
-            level_to_score(EntityData::MAX_BOAT_LEVEL) / 2
+            level_to_score(EntityData::MAX_BOAT_LEVEL) / 5 * 2
         );
 
         /*

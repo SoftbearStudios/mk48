@@ -1,6 +1,9 @@
 resource "linode_domain" "main" {
   type = "master"
   domain = var.domain
+  refresh_sec = 300
+  retry_sec = 30
+  expire_sec = 604800
   soa_email = "finnbearone@gmail.com"
   tags = [var.name]
 }
@@ -18,10 +21,19 @@ resource "linode_domain_record" "home_ipv4" {
 */
 
 resource "linode_domain_record" "servers_ipv4" {
-  count = var.servers
+  count = 2
   domain_id = linode_domain.main.id
   name = count.index + 1
   record_type = "A"
   target = element(linode_instance.servers.*.ip_address, count.index)
-  ttl_sec = 30
+  ttl_sec = 120
+}
+
+resource "linode_domain_record" "servers_new_ipv4" {
+  for_each = var.servers
+  domain_id = linode_domain.main.id
+  name = each.key
+  record_type = "A"
+  target = linode_instance.servers_new[each.key].ip_address
+  ttl_sec = 120
 }

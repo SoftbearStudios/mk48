@@ -5,7 +5,7 @@
 
     async function load() {
         const result = await adminRequest('RequestReferrers');
-        referrers.set(result.ReferrersRequested.referrers);
+        referrers.set(result.ReferrersRequested);
     }
 
     load();

@@ -13,7 +13,7 @@ use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::level_to_score;
 use common::world::{outside_area, ARCTIC};
-use game_server::context::PlayerTuple;
+use game_server::player::PlayerTuple;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
 use rayon::iter::ParallelIterator;
@@ -110,17 +110,17 @@ impl CommandTrait for Spawn {
             _ => None,
         };
 
-        if player.team_id.is_some() || player.invitation.is_some() {
+        if player.team_id().is_some() || player.invitation_accepted().is_some() {
             // TODO: Inefficient to scan all entities; only need to scan all players. Unfortunately,
             // that data is not available here, currently.
             if let Some((_, team_boat)) = world.entities.par_iter().find_any(|(_, entity)| {
                 let data = entity.data();
                 if data.kind == EntityKind::Boat
-                    && ((player.team_id.is_some()
-                        && entity.borrow_player().team_id == player.team_id)
-                        || (player.invitation.is_some()
+                    && ((player.team_id().is_some()
+                        && entity.borrow_player().team_id() == player.team_id())
+                        || (player.invitation_accepted().is_some()
                             && entity.borrow_player().player_id
-                                == player.invitation.as_ref().unwrap().player_id))
+                                == player.invitation_accepted().as_ref().unwrap().player_id))
                 {
                     if let Some(exclusion_zone) = exclusion_zone {
                         if entity.transform.position.distance_squared(exclusion_zone)

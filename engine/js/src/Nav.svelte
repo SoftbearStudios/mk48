@@ -8,8 +8,8 @@
 </script>
 
 <nav>
-    <a class="navbtn" href="/summary/*/*" use:link use:active>Summary</a>
-    <a class="navbtn" href="/day/*/*" use:link use:active>Day</a>
+    <a class="navbtn" href="/summary/*" use:link use:active>Summary</a>
+    <a class="navbtn" href="/day/*" use:link use:active>Day</a>
     <a class="navbtn" href="/referrers" use:link use:active>Referrers</a>
     <a class="navbtn" href="/userAgents" use:link use:active>User Agents</a>
     <a class="navbtn" href="/series/{periods[0]}/{resolutions[0]}" use:link use:active={'/series/*/*'}>Series</a>

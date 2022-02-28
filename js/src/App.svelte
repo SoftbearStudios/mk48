@@ -13,9 +13,25 @@
 		state.set(value);
 	}
 
+	function parseInvitationId() {
+		try {
+			const s = window.location.hash.split('/');
+			const last = s[s.length - 1];
+			const invitationId = parseInt(last);
+			if (invitationId > 0) {
+				return invitationId;
+			} else {
+				return null;
+			}
+		} catch (err) {
+			return null;
+		}
+	}
+
 	// "real" host (that is to say, if the window.location.host redirected to some other host).
 	let realHost = null;
 	let realEncryption = null;
+	let idealServerId = null;
 
 	export function getRealHost() {
 		return realHost;
@@ -25,18 +41,28 @@
 		return realEncryption;
 	}
 
+	export function getIdealServerId() {
+		return idealServerId;
+	}
+
 	// Find and cache the above.
 	async function findRealHost() {
 		try {
-			// This url:
-			// 1) was preloaded in HTML
-			// 2) is needed later, so this has no additional network overhead
-			// 3) is small enough to not matter if 1-2 are false
-			// 4) Is simply used to trace any redirects that occur
-			const response = await fetch("/favicon.png");
+			// Serves two purposes: Tracing redirects, and getting ideal server id.
+			const params = {};
+			let invitationId = parseInvitationId();
+			if (invitationId != null) {
+				params.invitation_id = invitationId;
+			}
+			if (localStorage.serverId && !isNaN(localStorage.serverId)) {
+				params.server_id = localStorage.serverId;
+			}
+			const response = await fetch(`/system/?${new URLSearchParams(params).toString()}`);
 			const url = new URL(response.url);
 			realHost = url.host;
 			realEncryption = url.protocol != 'http:';
+			const body = await response.json();
+			idealServerId = body.server_id;
 		} catch (err) {
 			console.warn(err);
 		}
@@ -59,6 +85,7 @@
 	import XButton from './component/XButton.svelte';
 	import RespawnMenu from './overlay/RespawnMenu.svelte';
 	import Router from 'svelte-spa-router';
+	import {wrap} from 'svelte-spa-router/wrap'
 	import SettingsDialog from './dialog/SettingsDialog.svelte';
 	import ShipControls from './overlay/ShipControls.svelte';
 	import ShipsDialog from './dialog/ShipsDialog.svelte';
@@ -296,13 +323,7 @@
 		}
 		traces++;
 		const message = typeof event === 'string' ? event : (event.error ? `${event.error.message}: ${event.error.stack}` : (event.message || JSON.stringify(event.reason)));
-		const response = await fetch(`/client/`, {
-			method: 'POST',
-			body: JSON.stringify({request: {Trace: {message}}, params: {arena_id: null, session_id: null, newbie: false}}),
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
+		client && client.handleTrace(message);
 	}
 
 	function processWindowDimension(dim, res) {
@@ -358,11 +379,21 @@
 {/if}
 
 <ContextMenu/>
-<Router routes={{'/help': HelpDialog, '/about': AboutDialog, '/settings': SettingsDialog, '/privacy': PrivacyDialog, '/terms': TermsDialog, '/ships': ShipsDialog, '/levels': LevelsDialog, '/changelog': Changelog}}></Router>
+<Router routes={{
+		'/help': HelpDialog,
+		'/about': AboutDialog,
+		'/settings': wrap({
+			component: SettingsDialog,
+			props: {
+				state
+			}
+		}),
+		'/privacy': PrivacyDialog,
+		'/terms': TermsDialog,
+		'/ships': ShipsDialog,
+		'/levels': LevelsDialog,
+		'/changelog': Changelog}}></Router>
 
-<svelte:head>
-	<title>mk48.io</title>
-</svelte:head>
 <svelte:window
 	bind:innerWidth bind:innerHeight
 	on:keydown={onKey} on:keyup={onKey}

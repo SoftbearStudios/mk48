@@ -21,7 +21,6 @@
 	const MAX_NAME_LENGTH = 6;
 
 	let newTeamName = '';
-	$: myTeamFull = state.teamMembers && state.teamMembers.length >= 6;
 
 	async function copyInvite() {
 		const inviteLink = `${location.host.startsWith('localhost') ? 'http://localhost:3000' : 'https://mk48.io'}/#${teamInvite}`
@@ -56,7 +55,7 @@
 					{#each state.teamJoinRequests as {playerId, name}}
 						<tr>
 							<td class='name pending'>{name}</td>
-							<td><button class:disabled={myTeamFull} on:click={() => onAcceptJoinTeam(playerId)} title={$t('panel.team.action.accept.label')}>✔</button></td>
+							<td><button class:disabled={state.teamFull} on:click={() => onAcceptJoinTeam(playerId)} title={$t('panel.team.action.accept.label')}>✔</button></td>
 							<td><button on:click={() => onRejectJoinTeam(playerId)} title={$t('panel.team.action.deny.label')}>✘</button></td>
 						</tr>
 					{/each}
@@ -64,17 +63,17 @@
 			</table>
 			<button on:click={onLeaveTeam}>{$t('panel.team.action.leave.label')}</button>
 			{#if state.teamInvite}
-				<button on:click={copyInvite} disabled={myTeamFull} title={myTeamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>{$t('panel.team.action.invite.label')}</button>
+				<button on:click={copyInvite} disabled={state.teamFull} title={state.teamFull ? 'Team full' : 'Give this link to players who are not yet in game, to allow them to directly join your team'}>{$t('panel.team.action.invite.label')}</button>
 			{/if}
 		{:else}
 			<form on:submit|preventDefault={createTeam}>
 				<table>
 					{#if state.teams}
-						{#each state.teams as {teamId, name, joining}}
+						{#each state.teams as {teamId, name, joining, closed}}
 							<tr>
 								<td class='name'>{name}</td>
 								<td>
-									<button class:hidden={joining} on:click={() => onRequestJoinTeam(teamId)}>{$t('panel.team.action.request.label')}</button>
+									<button class:hidden={joining || closed} on:click={() => onRequestJoinTeam(teamId)}>{$t('panel.team.action.request.label')}</button>
 								</td>
 							</tr>
 						{/each}

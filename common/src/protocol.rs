@@ -99,17 +99,18 @@ pub struct Upgrade {
 mod tests {
     use super::*;
     use crate::altitude::Altitude;
+    use crate::contact::ReloadsStorage;
     use crate::entity::EntityId;
     use crate::guidance::Guidance;
     use crate::ticks::Ticks;
     use crate::transform::Transform;
     use crate::velocity::Velocity;
     use bincode::{DefaultOptions, Options};
+    use bitvec::array::BitArray;
     use core_protocol::id::PlayerId;
     use glam::vec2;
     use rand::prelude::*;
     use std::num::NonZeroU32;
-    use std::sync::Arc;
 
     #[test]
     fn serialize() {
@@ -138,13 +139,17 @@ mod tests {
                 rng.gen_bool(0.5)
                     .then(|| PlayerId(NonZeroU32::new(rng.gen_range(1..u32::MAX)).unwrap())),
                 (is_boat && rng.gen_bool(0.5)).then(|| {
-                    entity_type
+                    let mut arr = BitArray::<ReloadsStorage>::ZERO;
+                    for (_, mut r) in entity_type
                         .unwrap()
                         .data()
                         .armaments
                         .iter()
-                        .map(|_| Ticks::from_secs(rng.gen::<f32>() * 10.0))
-                        .collect::<Arc<[Ticks]>>()
+                        .zip(arr.iter_mut())
+                    {
+                        *r = rng.gen();
+                    }
+                    arr
                 }),
                 Transform {
                     position: vec2(

@@ -37,7 +37,6 @@ use common::world::area_border;
 use common_util::range::{gen_radius, map_ranges};
 use core_protocol::id::{GameId, TeamId};
 use core_protocol::name::PlayerAlias;
-use core_protocol::rpc::ClientRequest;
 use glam::{Mat2, UVec2, Vec2, Vec4};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
@@ -177,8 +176,8 @@ impl GameClient for Mk48Game {
             update.contacts.iter().map(|c| (c.id(), c)).collect();
 
         for (id, &contact) in updated.iter() {
-            if let Some(InterpolatedContact { model, .. }) = context.game().contacts.get(id) {
-                if Some(*id) == context.game().entity_id {
+            if let Some(InterpolatedContact { model, .. }) = context.state.game.contacts.get(id) {
+                if Some(*id) == context.state.game.entity_id {
                     let recent_damage = contact.damage().saturating_sub(model.damage());
                     if recent_damage > Ticks::ZERO {
                         layer.audio.play("damage");
@@ -193,7 +192,7 @@ impl GameClient for Mk48Game {
                 }
 
                 // Mutable borrow after immutable borrows.
-                let network_contact = context.game_mut().contacts.get_mut(id).unwrap();
+                let network_contact = context.state.game.contacts.get_mut(id).unwrap();
                 network_contact.model = contact.clone();
 
                 // Compensate for the fact that the data is a little old (second parameter is rough
@@ -201,11 +200,12 @@ impl GameClient for Mk48Game {
                 network_contact.model.simulate(0.1);
             } else {
                 self.new_contact(contact, renderer.camera_center(), &*context, &layer.audio);
-                if contact.player_id() == context.core().player_id && contact.is_boat() {
-                    context.game_mut().entity_id = Some(contact.id());
+                if contact.player_id() == context.state.core.player_id && contact.is_boat() {
+                    context.state.game.entity_id = Some(contact.id());
                 }
                 context
-                    .game_mut()
+                    .state
+                    .game
                     .contacts
                     .insert(contact.id(), InterpolatedContact::new(contact.clone()));
             }
@@ -213,9 +213,10 @@ impl GameClient for Mk48Game {
 
         // Contacts absent in the update are currently considered lost.
         // Borrow entity_id early to avoid use of self in closure.
-        let game_state = context.game_mut();
-        let entity_id = &mut game_state.entity_id;
-        for contact in game_state
+        let entity_id = &mut context.state.game.entity_id;
+        for contact in context
+            .state
+            .game
             .contacts
             .drain_filter(|id, InterpolatedContact { idle, view, .. }| {
                 if updated.contains_key(id) {
@@ -246,14 +247,15 @@ impl GameClient for Mk48Game {
                 renderer.camera_center(),
                 &contact,
                 &layer.audio,
-                &mut context.game_mut().animations,
+                &mut context.state.game.animations,
                 time_seconds,
             );
         }
 
         let player_position = renderer.camera_center();
         let player_altitude = context
-            .game()
+            .state
+            .game
             .player_contact()
             .map(|c| c.altitude())
             .unwrap_or(Altitude::ZERO);
@@ -262,7 +264,7 @@ impl GameClient for Mk48Game {
         let mut jet_volume: f32 = 0.0;
         let mut need_to_dodge: f32 = 0.0;
 
-        for (_, InterpolatedContact { view: contact, .. }) in context.game().contacts.iter() {
+        for (_, InterpolatedContact { view: contact, .. }) in context.state.game.contacts.iter() {
             if let Some(entity_type) = contact.entity_type() {
                 let data: &'static EntityData = entity_type.data();
                 let position_diff = contact.transform().position - player_position;
@@ -271,7 +273,7 @@ impl GameClient for Mk48Game {
                 let inbound =
                     (contact.transform().direction - direction + Angle::PI).abs() < Angle::PI_2;
 
-                let friendly = context.core().is_friendly(contact.player_id());
+                let friendly = context.state.core.is_friendly(contact.player_id());
                 let volume = Self::volume_at(distance);
 
                 if data.kind == EntityKind::Aircraft {
@@ -282,7 +284,7 @@ impl GameClient for Mk48Game {
                     }
                 }
 
-                if context.game().entity_id.is_some() && distance < 250.0 {
+                if context.state.game.entity_id.is_some() && distance < 250.0 {
                     let distance_scale = 1000.0 / (500.0 + distance);
                     match data.kind {
                         EntityKind::Boat => {
@@ -327,9 +329,9 @@ impl GameClient for Mk48Game {
             Self::play_music("dodge", &layer.audio);
         }
 
-        let score_delta = update.score.saturating_sub(context.game().score);
+        let score_delta = update.score.saturating_sub(context.state.game.score);
         if score_delta >= 10
-            && (score_delta >= 200 || score_delta as f32 / context.game().score as f32 > 0.5)
+            && (score_delta >= 200 || score_delta as f32 / context.state.game.score as f32 > 0.5)
         {
             Self::play_music("achievement", &layer.audio);
         }
@@ -357,20 +359,22 @@ impl GameClient for Mk48Game {
 
         // Temporary (will be recalculated after moving ships).
         self.update_camera(
-            context.game().player_contact(),
+            context.state.game.player_contact(),
             elapsed_seconds,
             layer.background.context.frame_cache_enabled(),
         );
-        let (camera, _) = self.camera(context.game().player_contact(), renderer.aspect_ratio());
+        let (camera, _) = self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
 
         // Cannot borrow entire context, do this instead.
-        let connection_lost = context.game_connection_lost();
-        let game_state = context.game_socket.as_mut().unwrap().state_mut();
-        let core_state = context.core_socket.state();
+        let connection_lost = context.connection_lost();
 
         // Update audio volume.
-        if Self::maybe_contact_mut(&mut game_state.contacts, game_state.entity_id).is_some()
-            || game_state.death_reason.is_some()
+        if Self::maybe_contact_mut(
+            &mut context.state.game.contacts,
+            context.state.game.entity_id,
+        )
+        .is_some()
+            || context.state.game.death_reason.is_some()
         {
             layer.audio.set_volume(context.settings.volume);
             if !layer.audio.is_playing("ocean") {
@@ -380,9 +384,13 @@ impl GameClient for Mk48Game {
             layer.audio.set_volume(0.0);
         }
 
-        let debug_latency_entity_id = if false { game_state.entity_id } else { None };
+        let debug_latency_entity_id = if false {
+            context.state.game.entity_id
+        } else {
+            None
+        };
         // A subset of game logic.
-        for interp in &mut game_state.contacts.values_mut() {
+        for interp in &mut context.state.game.contacts.values_mut() {
             if interp
                 .model
                 .entity_type()
@@ -391,10 +399,17 @@ impl GameClient for Mk48Game {
             {
                 // Update team_proximity.
                 if let Some(player_id) = interp.model.player_id() {
-                    if let Some(player) = core_state.only_players().get(&player_id) {
+                    if let Some(player) = context.state.core.only_players().get(&player_id) {
                         if let Some(team_id) = player.team_id {
-                            let distance =
+                            let mut distance =
                                 camera.distance_squared(interp.model.transform().position);
+
+                            if let Some(team) = context.state.core.teams.get(&team_id) {
+                                if team.closed {
+                                    distance *= 10.0;
+                                }
+                            }
+
                             team_proximity
                                 .entry(team_id)
                                 .and_modify(|dist| *dist = dist.min(distance))
@@ -406,14 +421,15 @@ impl GameClient for Mk48Game {
 
             interp.update_error_bound(elapsed_seconds, debug_latency_entity_id);
             interp.generate_particles(layer);
-            interp.interpolate(elapsed_seconds, game_state.entity_id);
+            interp.interpolate(elapsed_seconds, context.state.game.entity_id);
         }
 
         // May have changed due to the above.
-        let (camera, zoom) = self.camera(game_state.player_contact(), renderer.aspect_ratio());
+        let (camera, zoom) =
+            self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
 
         let (visual_range, visual_restriction, area) =
-            if let Some(player_contact) = game_state.player_contact() {
+            if let Some(player_contact) = context.state.game.player_contact() {
                 let alt_norm = player_contact.altitude().to_norm();
                 let entity_type = player_contact.entity_type().unwrap();
                 (
@@ -432,20 +448,20 @@ impl GameClient for Mk48Game {
             };
 
         // Prepare to sort sprites.
-        let mut sortable_sprites = Vec::with_capacity(game_state.contacts.len() * 5);
+        let mut sortable_sprites = Vec::with_capacity(context.state.game.contacts.len() * 5);
 
         // Update background and add vegetation sprites.
         sortable_sprites.extend(layer.background.context.update(
             camera,
             zoom,
-            &mut game_state.terrain,
+            &mut context.state.game.terrain,
             &*renderer,
         ));
 
         layer.overlay.context.update(
             visual_range,
             visual_restriction,
-            game_state.world_radius,
+            context.state.game.world_radius,
             area,
         );
 
@@ -453,13 +469,13 @@ impl GameClient for Mk48Game {
 
         // Update animations.
         let mut i = 0;
-        while i < game_state.animations.len() {
-            let animation = &mut game_state.animations[i];
+        while i < context.state.game.animations.len() {
+            let animation = &mut context.state.game.animations[i];
 
             let len = layer.sprites.animation_length(animation.name);
 
             if animation.frame(context.client.update_seconds) >= len {
-                game_state.animations.swap_remove(i);
+                context.state.game.animations.swap_remove(i);
             } else {
                 sortable_sprites.push(SortableSprite::new_animation(
                     animation,
@@ -470,10 +486,14 @@ impl GameClient for Mk48Game {
         }
 
         // Update trails.
-        game_state.trails.set_time(context.client.update_seconds);
+        context
+            .state
+            .game
+            .trails
+            .set_time(context.client.update_seconds);
 
-        for InterpolatedContact { view: contact, .. } in game_state.contacts.values() {
-            let friendly = core_state.is_friendly(contact.player_id());
+        for InterpolatedContact { view: contact, .. } in context.state.game.contacts.values() {
+            let friendly = context.state.core.is_friendly(contact.player_id());
 
             let color = if friendly {
                 rgb(58, 255, 140)
@@ -505,8 +525,8 @@ impl GameClient for Mk48Game {
                 {
                     anti_aircraft_volume += Self::simulate_anti_aircraft(
                         contact,
-                        &game_state.contacts,
-                        core_state,
+                        &context.state.game.contacts,
+                        &context.state.core,
                         renderer.camera_center(),
                         &mut layer.airborne_particles,
                     );
@@ -528,12 +548,7 @@ impl GameClient for Mk48Game {
                             *contact.transform() + data.armament_transform(contact.turrets(), i),
                             altitude + 0.02,
                             alpha
-                                * if contact
-                                    .reloads()
-                                    .get(i)
-                                    .map(|&r| r == Ticks::ZERO)
-                                    .unwrap_or(false)
-                                {
+                                * if contact.reloads().get(i).map(|r| *r).unwrap_or(false) {
                                     1.0
                                 } else {
                                     0.5
@@ -571,8 +586,8 @@ impl GameClient for Mk48Game {
                 match data.kind {
                     EntityKind::Boat => {
                         // Is this player's own boat?
-                        if core_state.player_id.is_some()
-                            && contact.player_id() == core_state.player_id
+                        if context.state.core.player_id.is_some()
+                            && contact.player_id() == context.state.core.player_id
                             && !context.ui.cinematic
                         {
                             // Radii
@@ -774,14 +789,16 @@ impl GameClient for Mk48Game {
                         }
 
                         // Name
-                        let text = if let Some(player) =
-                            core_state.player_or_bot(contact.player_id().unwrap())
+                        let text = if let Some(player) = context
+                            .state
+                            .core
+                            .player_or_bot(contact.player_id().unwrap())
                         {
                             if let Some(team) = player
                                 .team_id
-                                .and_then(|team_id| core_state.teams.get(&team_id))
+                                .and_then(|team_id| context.state.core.teams.get(&team_id))
                             {
-                                format!("[{}] {}", team.team_name, player.alias)
+                                format!("[{}] {}", team.name, player.alias)
                             } else {
                                 player.alias.as_str().to_owned()
                             }
@@ -829,7 +846,7 @@ impl GameClient for Mk48Game {
                 {
                     if data.sub_kind == EntitySubKind::Shell {
                         let t = contact.transform();
-                        game_state.trails.add_trail(
+                        context.state.game.trails.add_trail(
                             entity_id,
                             t.position,
                             t.direction.to_vec() * t.velocity.to_mps(),
@@ -905,7 +922,11 @@ impl GameClient for Mk48Game {
             }
         }
 
-        game_state.trails.update(&mut layer.airborne_graphics);
+        context
+            .state
+            .game
+            .trails
+            .update(&mut layer.airborne_graphics);
 
         // Play anti-aircraft sfx.
         if anti_aircraft_volume > 0.0 && !layer.audio.is_playing("aa") {
@@ -932,9 +953,10 @@ impl GameClient for Mk48Game {
         // Send command later, when lifetimes allow.
         let mut control: Option<Command> = None;
 
-        let status = if let Some(player_contact) =
-            Self::maybe_contact_mut(&mut game_state.contacts, game_state.entity_id)
-        {
+        let status = if let Some(player_contact) = Self::maybe_contact_mut(
+            &mut context.state.game.contacts,
+            context.state.game.entity_id,
+        ) {
             let mut guidance = None;
 
             {
@@ -1026,7 +1048,7 @@ impl GameClient for Mk48Game {
             }
 
             // Re-borrow as immutable.
-            let player_contact = game_state.player_contact().unwrap();
+            let player_contact = context.state.game.player_contact().unwrap();
 
             let status = UiStatus::Playing {
                 entity_type: player_contact.entity_type().unwrap(),
@@ -1034,7 +1056,7 @@ impl GameClient for Mk48Game {
                 direction: player_contact.transform().direction,
                 velocity: player_contact.transform().velocity,
                 altitude: player_contact.altitude(),
-                armament_consumption: Some(player_contact.reloads().into()), // TODO fix to clone arc
+                armament_consumption: Some(player_contact.reloads().iter().map(|b| *b).collect()),
             };
 
             if self.control_rate_limiter.update_ready(elapsed_seconds) {
@@ -1088,15 +1110,17 @@ impl GameClient for Mk48Game {
         } else {
             if connection_lost {
                 UiStatus::Offline
-            } else if let Some(death_reason) = game_state
+            } else if let Some(death_reason) = context
+                .state
+                .game
                 .death_reason
                 .as_ref()
                 .filter(|_| !self.respawn_overriden)
-                .and_then(|reason| DeathReasonModel::from_death_reason(reason, &*core_state).ok())
+                .and_then(|reason| DeathReasonModel::from_death_reason(reason).ok())
             {
                 UiStatus::Respawning {
                     death_reason,
-                    respawn_level: score_to_level(game_state.score),
+                    respawn_level: score_to_level(context.state.game.score),
                 }
             } else {
                 UiStatus::Spawning
@@ -1122,9 +1146,7 @@ impl GameClient for Mk48Game {
     ) {
         match event {
             UiEvent::Spawn { alias, entity_type } => {
-                context.send_to_core(ClientRequest::IdentifySession {
-                    alias: PlayerAlias::new(alias),
-                });
+                context.send_set_alias(PlayerAlias::new(alias));
                 context.send_to_game(Command::Spawn(Spawn {
                     entity_type: *entity_type,
                 }))
@@ -1136,7 +1158,7 @@ impl GameClient for Mk48Game {
                 }))
             }
             UiEvent::Active(active) => {
-                if let Some(contact) = context.game().player_contact() {
+                if let Some(contact) = context.state.game.player_contact() {
                     if *active && contact.data().sensors.sonar.range >= 0.0 {
                         layer.audio.play("sonar1")
                     }
@@ -1144,7 +1166,7 @@ impl GameClient for Mk48Game {
             }
             UiEvent::AltitudeTarget(altitude_norm) => {
                 let altitude = Altitude::from_norm(*altitude_norm);
-                if let Some(contact) = context.game().player_contact() {
+                if let Some(contact) = context.state.game.player_contact() {
                     if contact.data().sub_kind == EntitySubKind::Submarine {
                         if !context.ui.altitude_target.is_submerged() && altitude.is_submerged() {
                             layer.audio.play("dive");

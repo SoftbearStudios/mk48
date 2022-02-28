@@ -4,7 +4,7 @@
 use crate::server::*;
 use crate::world::World;
 use common::protocol::*;
-use game_server::context::PlayerTuple;
+use game_server::player::PlayerTuple;
 use std::sync::Arc;
 
 /// All client->server commands use this unified interface.

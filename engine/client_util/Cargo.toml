@@ -20,6 +20,7 @@ engine_macros = {path = "../engine_macros" }
 variant_count = "1.1"
 console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
+serde_urlencoded = "0.7"
 
 [dependencies.web-sys]
 version = "0.3.4"

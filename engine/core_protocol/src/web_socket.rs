@@ -3,23 +3,16 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Possible websocket protocols.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum WebSocketFormat {
+pub enum WebSocketProtocol {
+    /// Serde bincode.
     Binary,
+    /// Serde json.
     Json,
 }
 
-impl WebSocketFormat {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Binary => "binary",
-            Self::Json => "json",
-        }
-    }
-}
-
-impl Default for WebSocketFormat {
+impl Default for WebSocketProtocol {
     fn default() -> Self {
         Self::Binary
     }

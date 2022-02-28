@@ -119,7 +119,7 @@ ln -s /snap/bin/certbot /usr/bin/certbot
 snap set certbot trust-plugin-with-root=ok
 snap install certbot-dns-linode
 
-printf "certbot certonly --agree-tos --non-interactive --dns-linode --dns-linode-credentials /root/linode.ini --dns-linode-propagation-seconds 120 --no-eff-email --no-redirect --email finnbearone@gmail.com -d $DOMAIN_HOME -d *.$DOMAIN_HOME" > get_ssl_cert.sh
+printf "certbot certonly --agree-tos --non-interactive --dns-linode --dns-linode-credentials /root/linode.ini --dns-linode-propagation-seconds 180 --no-eff-email --no-redirect --email finnbearone@gmail.com -d $DOMAIN_HOME -d $DOMAIN" > get_ssl_cert.sh
 chmod u+x /root/get_ssl_cert.sh
 ./get_ssl_cert.sh
 
@@ -142,7 +142,7 @@ Group=root
 Restart=always
 RestartSec=3
 EnvironmentFile=/etc/environment
-ExecStart=/root/server --server-id $SERVER_ID --chat-log /root/chat.log --domain $DOMAIN_HOME --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
+ExecStart=/root/server --server-id $SERVER_ID --ip-address $IP_ADDRESS --domain $DOMAIN_HOME --chat-log /root/chat.log --trace-log /root/trace.log --linode-personal-access-token $LINODE_TOKEN --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
 
 [Install]
 WantedBy=multi-user.target

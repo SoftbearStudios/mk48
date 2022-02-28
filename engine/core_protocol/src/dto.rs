@@ -7,28 +7,37 @@ use crate::name::*;
 use crate::UnixTime;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-
-/// The Survey Data Transfer Object (DTO) collects user feedback.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct SurveyDto {
-    pub star_id: StarId,
-    pub detail: Option<SurveyDetail>,
-}
+use std::net::IpAddr;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InvitationDto {
+    /// Who sent it.
     pub player_id: PlayerId,
 }
 
 /// The Leaderboard Data Transfer Object (DTO) is a single line on a leaderboard.
-#[derive(Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LeaderboardDto {
     pub alias: PlayerAlias,
     pub score: u32,
 }
 
+impl PartialOrd for LeaderboardDto {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for LeaderboardDto {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.score
+            .cmp(&other.score)
+            .then_with(|| self.alias.cmp(&other.alias))
+    }
+}
+
 /// The Liveboard Data Transfer Object (DTO) is a single line on a liveboard.
-#[derive(Clone, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct LiveboardDto {
     pub player_id: PlayerId,
     pub score: u32,
@@ -42,10 +51,10 @@ impl PartialOrd for LiveboardDto {
     }
 }
 
+// NOTE: Recently changed so that larger scores are treated as greater.
 impl Ord for LiveboardDto {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Higher scores go first.
-        other.score.cmp(&self.score).then_with(|| {
+        self.score.cmp(&other.score).then_with(|| {
             self.player_id.cmp(&other.player_id).then_with(|| {
                 self.team_id
                     .cmp(&other.team_id)
@@ -66,12 +75,12 @@ mod test {
         assert!(
             LiveboardDto {
                 player_id: PlayerId(NonZeroU32::new(2).unwrap()),
-                score: 5,
+                score: 3,
                 team_captain: true,
                 team_id: Some(TeamId(NonZeroU32::new(1).unwrap())),
             } < LiveboardDto {
                 player_id: PlayerId(NonZeroU32::new(1).unwrap()),
-                score: 3,
+                score: 5,
                 team_captain: false,
                 team_id: None,
             }
@@ -87,7 +96,7 @@ pub struct MemberDto {
 }
 
 /// The Message Data Transfer Object (DTO) is used for chats.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessageDto {
     pub alias: PlayerAlias, // For display in case alias is changed or player quits.
     pub date_sent: UnixTime,
@@ -110,6 +119,7 @@ pub struct MetricsSummaryDto {
     pub flop: <RatioMetric as Metric>::Summary,
     pub fps: <ContinuousExtremaMetric as Metric>::Summary,
     pub invited: <RatioMetric as Metric>::Summary,
+    pub invitations_cached: <DiscreteMetric as Metric>::Summary,
     pub low_fps: <RatioMetric as Metric>::Summary,
     pub minutes_per_play: <ContinuousExtremaMetric as Metric>::Summary,
     pub minutes_per_session: <ContinuousExtremaMetric as Metric>::Summary,
@@ -120,7 +130,7 @@ pub struct MetricsSummaryDto {
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::Summary,
     pub plays_total: <DiscreteMetric as Metric>::Summary,
     pub ram: <ContinuousExtremaMetric as Metric>::Summary,
-    pub renewed: <DiscreteMetric as Metric>::Summary,
+    pub renews: <DiscreteMetric as Metric>::Summary,
     pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
     pub retention_histogram: <HistogramMetric as Metric>::Summary,
     pub rtt: <ContinuousExtremaMetric as Metric>::Summary,
@@ -144,6 +154,7 @@ pub struct MetricsDataPointDto {
     pub flop: <RatioMetric as Metric>::DataPoint,
     pub fps: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub invited: <RatioMetric as Metric>::DataPoint,
+    pub invitations_cached: <DiscreteMetric as Metric>::DataPoint,
     pub low_fps: <RatioMetric as Metric>::DataPoint,
     pub minutes_per_play: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub minutes_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
@@ -154,7 +165,7 @@ pub struct MetricsDataPointDto {
     pub plays_per_session: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub plays_total: <DiscreteMetric as Metric>::DataPoint,
     pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub renewed: <DiscreteMetric as Metric>::DataPoint,
+    pub renews: <DiscreteMetric as Metric>::DataPoint,
     pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub rtt: <ContinuousExtremaMetric as Metric>::DataPoint,
     pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
@@ -167,7 +178,7 @@ pub struct MetricsDataPointDto {
 }
 
 /// The Player Data Transfer Object (DTO) binds player ID to player data.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDto {
     pub alias: PlayerAlias,
     pub player_id: PlayerId,
@@ -175,47 +186,91 @@ pub struct PlayerDto {
     pub team_id: Option<TeamId>,
 }
 
-/// The Region Data Transfer Object (DTO) binds region ID to region data.
-#[derive(Clone, Serialize, Deserialize)]
-pub struct RegionDto {
-    pub player_count: u32,
+/// The Player Admin Data Transfer Object (DTO) binds player ID to admin player data.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AdminPlayerDto {
+    pub alias: PlayerAlias,
+    pub player_id: PlayerId,
+    pub team_id: Option<TeamId>,
+    pub region_id: Option<RegionId>,
+    pub score: u32,
+    pub plays: u32,
+    pub fps: Option<f32>,
+    pub rtt: Option<u16>,
+    pub messages: usize,
+    pub inappropriate_messages: usize,
+    pub abuse_reports: usize,
+    /// Remaining minutes muted.
+    pub mute: usize,
+    /// Remaining minutes restricted.
+    pub restriction: usize,
+}
+
+/// The Server Data Transfer Object (DTO) binds server ID to server data.
+/// It is assumed to be reachable, healthy, having an ip mapped to server_id via DNS, and having
+/// a compatible client version.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ServerDto {
+    pub server_id: ServerId,
     pub region_id: RegionId,
-    pub server_id: Option<ServerId>,
+    pub player_count: u32,
 }
 
-/// The Restart Data Transfer Object (DTO) contains restart parameters.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct RestartDto {
-    pub max_hour: u32,
-    pub max_players: Option<u32>,
-    pub max_score: Option<u32>,
-    pub min_hour: u32,
+impl PartialOrd for ServerDto {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
-/// The Rules Data Transfer Object (DTO) specifies arena rules.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct RulesDto {
-    /// Start play's score at this.
-    pub default_score: Option<u32>,
-    /// Leaderboard won't be touched if player count is below.
-    pub leaderboard_min_players: u32,
-    /// Maximum number of players in a team before no more can be accepted.
-    pub team_size_max: u32,
+impl Ord for ServerDto {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.server_id.cmp(&other.server_id)
+    }
 }
 
-impl Default for RulesDto {
-    fn default() -> Self {
-        Self {
-            default_score: None,
-            leaderboard_min_players: 0,
-            team_size_max: 6,
-        }
+/// Like [`ServerDto`] but more details.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AdminServerDto {
+    pub server_id: ServerId,
+    pub redirect_server_id: Option<ServerId>,
+    pub region_id: Option<RegionId>,
+    pub ip: IpAddr,
+    pub home: bool,
+    pub reachable: bool,
+    /// Round trip time in milliseconds.
+    pub rtt: u16,
+    pub healthy: bool,
+    pub client_hash: Option<u64>,
+    pub player_count: Option<u32>,
+}
+
+impl PartialOrd for AdminServerDto {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for AdminServerDto {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.server_id.cmp(&other.server_id)
     }
 }
 
 /// The Team Data Transfer Object (DTO) binds team ID to team name.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TeamDto {
     pub team_id: TeamId,
-    pub team_name: TeamName,
+    pub name: TeamName,
+    /// Maximum number of numbers reached.
+    pub full: bool,
+    /// Closed to additional requests.
+    pub closed: bool,
+}
+
+/// Filter daily metrics.
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum MetricFilterDto {
+    Referrer(Referrer),
+    RegionId(RegionId),
+    UserAgentId(UserAgentId),
 }

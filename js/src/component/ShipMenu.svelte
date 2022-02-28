@@ -89,7 +89,7 @@
 		grid-gap: 1.5rem 1.5rem;
 		grid-template-columns: repeat(1, 1fr);
 		margin: auto;
-		padding: 1.5rem;
+		padding-top: 1.5rem;
 		user-select: none;
 		width: min-content;
 		-webkit-user-drag: none;
@@ -97,6 +97,12 @@
 
 	@media(min-width: 1000px) {
 		div.ships.columns {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media(min-width: 600px) and (max-height: 500px) {
+		div.ships {
 			grid-template-columns: repeat(2, 1fr);
 		}
 	}

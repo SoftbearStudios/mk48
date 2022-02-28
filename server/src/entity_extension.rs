@@ -20,12 +20,16 @@ pub struct EntityExtension {
     active_cooldown: Ticks,
     /// Ticks of protection ticks remaining, zeroed if showing signs of aggression.
     spawn_protection_remaining: Ticks,
-    pub reloads: Arc<[Ticks]>,
+    pub reloads: Box<[Ticks]>,
     pub turrets: Arc<[Angle]>,
 }
 
 fn arc_default_n<T: Default>(n: usize) -> Arc<[T]> {
     Arc::from_iter((0..n).map(|_| T::default()))
+}
+
+fn box_default_n<T: Default>(n: usize) -> Box<[T]> {
+    Box::from_iter((0..n).map(|_| T::default()))
 }
 
 impl EntityExtension {
@@ -44,7 +48,7 @@ impl EntityExtension {
             } else {
                 Ticks::ZERO
             },
-            reloads: arc_default_n(data.armaments.len()),
+            reloads: box_default_n(data.armaments.len()),
             turrets: Arc::from_iter(data.turrets.iter().map(|t| t.angle)),
         }
     }
@@ -82,7 +86,7 @@ impl EntityExtension {
 
     /// reloads_mut returns a mutable reference to the reloads component of the extension.
     pub fn reloads_mut(&mut self) -> &mut [Ticks] {
-        make_mut_slice(&mut self.reloads)
+        &mut self.reloads
     }
 
     /// reloads_mut returns a mutable reference to the turret angles component of the extension.
@@ -99,7 +103,7 @@ impl Default for EntityExtension {
             active: true,
             spawn_protection_remaining: Self::SPAWN_PROTECTION_INITIAL,
             active_cooldown: Ticks::ZERO,
-            reloads: arc_default_n(0),
+            reloads: box_default_n(0),
             turrets: arc_default_n(0),
         }
     }

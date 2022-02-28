@@ -11,7 +11,6 @@ use common::guidance::Guidance;
 use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
-use common::ticks::Ticks;
 use common::util::gen_radius;
 use core_protocol::id::PlayerId;
 use game_server::game_service::GameArenaService;
@@ -198,7 +197,7 @@ impl Bot {
                 let reloads = boat.reloads();
                 let enemy_data = enemy.data();
                 for (i, armament) in data.armaments.iter().enumerate() {
-                    if reloads[i] > Ticks::ZERO {
+                    if !reloads[i] {
                         // Not yet reloaded.
                         continue;
                     }

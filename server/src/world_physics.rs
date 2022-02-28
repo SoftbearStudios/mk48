@@ -76,17 +76,17 @@ impl World {
 
                     // Downgrade or die when expired.
                     if entity.ticks > data.lifespan {
-                        if entity.entity_type == EntityType::Hq {
-                            // TODO find better way to stop HQs from downgrading in arctic.
+                        return if entity.entity_type == EntityType::Hq {
                             if entity.transform.position.y > ARCTIC {
-                                entity.ticks = Ticks::ZERO; // Reset counter.
+                                // Prevent excessive buildup of HQ's
+                                Some((index, Fate::Remove(DeathReason::Unknown)))
                             } else {
-                                return Some((index, Fate::DowngradeHq));
+                                Some((index, Fate::DowngradeHq))
                             }
                         } else {
                             potential_limited_reload(entity);
-                            return Some((index, Fate::Remove(DeathReason::Unknown)));
-                        }
+                            Some((index, Fate::Remove(DeathReason::Unknown)))
+                        };
                     }
                 }
 

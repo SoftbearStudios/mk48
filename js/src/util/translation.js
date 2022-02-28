@@ -20,9 +20,6 @@ export function getLanguage() {
 export function getLanguageList() {
 	let list = [];
 	for (let k of Object.keys(strings)) {
-		if (!debug && k.startsWith("xx-")) {
-			continue;
-		}
 		if (Object.keys(strings[k]).length > 0) {
 			list.push(k);
         }

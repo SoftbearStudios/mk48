@@ -29,6 +29,11 @@ impl DiscreteMetric {
     pub fn add_multiple(&mut self, amount: u32) {
         self.total = self.total.saturating_add(amount)
     }
+
+    /// Automatically converts to u32.
+    pub fn add_length(&mut self, amount: usize) {
+        self.add_multiple(amount.min(u32::MAX as usize) as u32)
+    }
 }
 
 impl Metric for DiscreteMetric {
@@ -334,6 +339,11 @@ impl ContinuousExtremaMetric {
             self.squared_total += (sample as f64).powi(2);
             self.count += 1;
         }
+    }
+
+    /// Automatically converts to float.
+    pub fn push_count(&mut self, sample: usize) {
+        self.push(sample as f32);
     }
 
     pub fn average(&self) -> f32 {

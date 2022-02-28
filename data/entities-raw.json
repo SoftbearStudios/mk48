@@ -56,7 +56,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 3600
+		"lifespan": 5400
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",
@@ -64,6 +64,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
+		"lifespan": 5400,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -1273,13 +1274,6 @@
 				"symmetrical": true
 			},
 			{
-				"type": "set65",
-				"positionForward": -52.5471,
-				"positionSide": 10,
-				"angle": 90,
-				"symmetrical": true
-			},
-			{
 				"type": "p700",
 				"positionForward": 41,
 				"positionSide": 3.5,
@@ -1291,7 +1285,7 @@
 				"type": "s300",
 				"positionForward": 60,
 				"positionSide": 3,
-				"count": 4,
+				"count": 3,
 				"symmetrical": true,
 				"vertical": true
 			},

@@ -26,5 +26,16 @@ new2: target/release/server
 	scp $(SCP_OPTS) target/release/server root@96.126.107.185:/root/server1
 	ssh $(SSH_OPTS) root@96.126.107.185 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
+new3: target/release/server
+	cargo build --release
+	scp $(SCP_OPTS) target/release/server root@173.255.225.233:/root/server1
+	ssh $(SSH_OPTS) root@173.255.225.233 'mv /root/server1 /root/server && ./restart-game-server.sh'
+
+new4: target/release/server
+	cargo build --release
+	scp $(SCP_OPTS) target/release/server root@194.195.115.239:/root/server1
+	ssh $(SSH_OPTS) root@194.195.115.239 'mv /root/server1 /root/server && ./restart-game-server.sh'
+
 ssh2:
 	ssh $(SSH_OPTS) root@96.126.107.185
+

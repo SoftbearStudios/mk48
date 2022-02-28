@@ -3,6 +3,7 @@
 
 use actix::prelude::*;
 use actix::Recipient;
+use core_protocol::id::PlayerId;
 
 #[derive(Message)]
 #[rtype(result = "()")]
@@ -13,19 +14,21 @@ where
     <O as actix::Message>::Result: std::marker::Send,
 {
     Request {
-        observer: Recipient<ObserverUpdate<O>>,
+        player_id: PlayerId,
         request: I,
     },
     RoundTripTime {
-        observer: Recipient<ObserverUpdate<O>>,
+        player_id: PlayerId,
         /// Unique measurement of the round trip time, in milliseconds.
         rtt: u16,
     },
     Register {
+        player_id: PlayerId,
         observer: Recipient<ObserverUpdate<O>>,
         payload: P,
     },
     Unregister {
+        player_id: PlayerId,
         observer: Recipient<ObserverUpdate<O>>,
     },
 }

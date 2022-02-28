@@ -6,6 +6,7 @@
 <script>
 	import {onMount} from 'svelte';
 	import t, {getLanguage, getLanguageList, setLanguage, translate} from '../util/translation.js';
+	import BorkFlag from '../flags/BorkFlag.svelte';
 	import ChineseFlag from '../flags/ChineseFlag.svelte';
 	import EnglishFlag from '../flags/EnglishFlag.svelte';
 	import FrenchFlag from '../flags/FrenchFlag.svelte';
@@ -56,7 +57,9 @@
 			{/each}
 		</select>
 	{:else}
-		{#if language == 'de'}
+		{#if language == 'xx-bork'}
+			<BorkFlag/>
+		{:else if language == 'de'}
 			<GermanFlag/>
 		{:else if language == 'es'}
 			<SpanishFlag/>

@@ -4,11 +4,14 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use crate::metrics::Metrics;
-use crate::session::Session;
+use crate::database_schema::{
+    GameIdScoreType, Metrics, MetricsItem, Score, ScoreItem, ScoreType, SessionItem,
+};
 use aws_config::default_provider::credentials::DefaultCredentialsChain;
+use aws_config::TimeoutConfig;
 use aws_sdk_dynamodb::model::AttributeValue;
 use aws_sdk_dynamodb::{Client, Region};
+use core_protocol::dto::{MetricsDataPointDto, MetricsSummaryDto};
 use core_protocol::id::*;
 use core_protocol::name::*;
 use core_protocol::serde_util::StrVisitor;
@@ -17,148 +20,11 @@ use serde::de::DeserializeOwned;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::mem;
-use variant_count::VariantCount;
+use std::time::Duration;
 
 /// A DynamoDB database.
 pub struct Database {
     client: Client,
-}
-
-/// The type of leaderboard score, for a particular game.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, VariantCount)]
-pub enum ScoreType {
-    #[serde(rename = "player/all")]
-    PlayerAllTime = 0,
-    #[serde(rename = "player/week")]
-    PlayerWeek = 1,
-    #[serde(rename = "player/day")]
-    PlayerDay = 2,
-    #[serde(rename = "team/all")]
-    TeamAllTime = 3,
-    #[serde(rename = "team/week")]
-    TeamWeek = 4,
-    #[serde(rename = "team/day")]
-    TeamDay = 5,
-}
-
-/// The type of leaderboard score, for any game. Serialized as "GameId/ScoreType".
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct GameIdScoreType {
-    game_id: GameId,
-    score_type: ScoreType,
-}
-
-impl Serialize for GameIdScoreType {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-    where
-        S: Serializer,
-    {
-        let av_game_id: AttributeValue =
-            serde_dynamo::generic::to_attribute_value(self.game_id).unwrap();
-        let av_game_score_type: AttributeValue =
-            serde_dynamo::generic::to_attribute_value(self.score_type).unwrap();
-        serializer.serialize_str(&format!(
-            "{}/{}",
-            av_game_id.as_s().unwrap(),
-            av_game_score_type.as_s().unwrap()
-        ))
-    }
-}
-
-impl<'de> Deserialize<'de> for GameIdScoreType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_str(StrVisitor).and_then(|s| {
-            let mut split = s.splitn(2, '/');
-            if let Some((s_game_id, s_game_score_type)) = split.next().zip(split.next()) {
-                let game_id_opt = serde_dynamo::generic::from_attribute_value(AttributeValue::S(
-                    String::from(s_game_id),
-                ))
-                .ok();
-                let game_score_type_opt = serde_dynamo::generic::from_attribute_value(
-                    AttributeValue::S(String::from(s_game_score_type)),
-                )
-                .ok();
-                return if let Some((game_id, game_score_type)) =
-                    game_id_opt.zip(game_score_type_opt)
-                {
-                    Ok(Self {
-                        game_id,
-                        score_type: game_score_type,
-                    })
-                } else {
-                    Err(de::Error::custom("parse error"))
-                };
-            }
-            Err(de::Error::custom("wrong format"))
-        })
-    }
-}
-
-impl ScoreType {
-    /// Returns corresponding period as unix timestamp seconds.
-    fn period(self) -> Option<u64> {
-        match self {
-            Self::PlayerAllTime | Self::TeamAllTime => None,
-            Self::PlayerWeek | Self::TeamWeek => Some(60 * 60 * 24 * 7),
-            Self::PlayerDay | Self::TeamDay => Some(60 * 60 * 24),
-        }
-    }
-}
-
-/// A score of known score type.
-#[derive(Debug, Clone)]
-pub struct Score {
-    pub alias: String,
-    pub score: u32,
-}
-
-/// A database row storing a score.
-#[derive(Serialize, Deserialize)]
-struct ScoreItem {
-    /// Hash key.
-    game_id_score_type: GameIdScoreType,
-    /// Range key.
-    alias: String,
-    score: u32,
-    /// Unix seconds when DynamoDB should expire.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    ttl: Option<u64>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SessionItem {
-    pub alias: PlayerAlias,
-    /// Hash key.
-    pub arena_id: ArenaId,
-    pub date_created: UnixTime,
-    pub date_previous: Option<UnixTime>,
-    pub date_renewed: UnixTime,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub date_terminated: Option<UnixTime>,
-    pub game_id: GameId,
-    pub player_id: PlayerId,
-    pub plays: u32,
-    pub previous_id: Option<SessionId>,
-    pub referrer: Option<Referrer>,
-    pub user_agent_id: Option<UserAgentId>,
-    /// Unlike RAM cache Session, not optional because storing localhost sessions in the database
-    /// makes no sense.
-    pub server_id: ServerId,
-    /// Range key.
-    pub session_id: SessionId,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct MetricsItem {
-    /// Hash key.
-    pub game_id: GameId,
-    /// Sort key.
-    pub timestamp: UnixTime,
-    #[serde(flatten)]
-    pub metrics: Metrics,
 }
 
 #[derive(Debug)]
@@ -182,6 +48,11 @@ impl Database {
         let shared_config = aws_config::from_env()
             .credentials_provider(credentials_provider)
             .region(Self::REGION)
+            .timeout_config(
+                TimeoutConfig::new()
+                    .with_api_call_timeout(Some(Duration::from_secs(10)))
+                    .with_api_call_attempt_timeout(Some(Duration::from_secs(5))),
+            )
             .load()
             .await;
         let client = Client::new(&shared_config);
@@ -275,7 +146,7 @@ impl Database {
     }
 
     async fn put<I: Serialize>(&self, item: I, table: &'static str) -> Result<(), Error> {
-        let ser = match serde_dynamo::generic::to_item(item) {
+        let ser = match serde_dynamo::to_item(item) {
             Ok(ser) => ser,
             Err(e) => return Err(Error::Serde(e)),
         };
@@ -301,13 +172,12 @@ impl Database {
         range_name: &'static str,
         range_value: RK,
     ) -> Result<Option<O>, Error> {
-        let hash_ser: AttributeValue = match serde_dynamo::generic::to_attribute_value(hash_value) {
+        let hash_ser: AttributeValue = match serde_dynamo::to_attribute_value(hash_value) {
             Err(e) => return Err(Error::Serde(e)),
             Ok(key_ser) => key_ser,
         };
 
-        let range_ser: AttributeValue = match serde_dynamo::generic::to_attribute_value(range_value)
-        {
+        let range_ser: AttributeValue = match serde_dynamo::to_attribute_value(range_value) {
             Err(e) => return Err(Error::Serde(e)),
             Ok(key_ser) => key_ser,
         };
@@ -326,7 +196,7 @@ impl Database {
         };
 
         if let Some(item) = mem::take(&mut get_item_output.item) {
-            match serde_dynamo::generic::from_item(item) {
+            match serde_dynamo::from_item(item) {
                 Err(e) => Err(Error::Serde(e)),
                 Ok(de) => Ok(Some(de)),
             }
@@ -354,7 +224,7 @@ impl Database {
 
         let mut ret = Vec::new();
         for item in scan_output.items.unwrap_or_default() {
-            match serde_dynamo::generic::from_item(item) {
+            match serde_dynamo::from_item(item) {
                 Err(e) => return Err(Error::Serde(e)),
                 Ok(de) => ret.push(de),
             }
@@ -433,7 +303,7 @@ impl Database {
 
         let mut ret = Vec::new();
         for item in scan_output.items.unwrap_or_default() {
-            match serde_dynamo::generic::from_item(item) {
+            match serde_dynamo::from_item(item) {
                 Err(e) => {
                     if !ignore_corrupt {
                         return Err(Error::Serde(e));
@@ -535,22 +405,18 @@ impl Database {
         Ok(ret)
     }
 
-    pub async fn update_metric(&self, metric: Metrics) -> Result<(), Error> {
-        self.put(metric, Self::METRICS_TABLE_NAME).await
-    }
-
     /// Updates a score, provided that the score is actually higher.
-    async fn update_score(&self, score_item: ScoreItem) -> Result<(), Error> {
-        let ser = match serde_dynamo::generic::to_item(&score_item) {
+    pub async fn update_score(&self, score_item: ScoreItem) -> Result<(), Error> {
+        let ser = match serde_dynamo::to_item(&score_item) {
             Ok(ser) => ser,
             Err(e) => return Err(Error::Serde(e)),
         };
 
-        let ser_threshold: AttributeValue =
-            match serde_dynamo::generic::to_attribute_value(score_item.score) {
-                Ok(ser) => ser,
-                Err(e) => return Err(Error::Serde(e)),
-            };
+        let ser_threshold: AttributeValue = match serde_dynamo::to_attribute_value(score_item.score)
+        {
+            Ok(ser) => ser,
+            Err(e) => return Err(Error::Serde(e)),
+        };
 
         if let Err(e) = self
             .client
@@ -579,12 +445,17 @@ impl Database {
         self.scan(Self::SCORES_TABLE_NAME).await
     }
 
-    async fn read_scores_by_type(
+    pub async fn read_scores_by_type(
         &self,
         score_type: GameIdScoreType,
     ) -> Result<Vec<ScoreItem>, Error> {
-        self.query(Self::SCORES_TABLE_NAME, "game_id_type", score_type, false)
-            .await
+        self.query(
+            Self::SCORES_TABLE_NAME,
+            "game_id_score_type",
+            score_type,
+            false,
+        )
+        .await
     }
 
     pub async fn get_session(
@@ -649,7 +520,7 @@ impl Database {
                 metrics_item.clone()
             };
 
-            let ser = match serde_dynamo::generic::to_item(&new_metrics_item) {
+            let ser = match serde_dynamo::to_item(&new_metrics_item) {
                 Ok(ser) => ser,
                 Err(e) => return Err(Error::Serde(e)),
             };
@@ -704,7 +575,7 @@ impl Database {
 }
 
 fn to_av<Tin: Serialize>(val: Tin) -> Result<AttributeValue, Error> {
-    match serde_dynamo::generic::to_attribute_value(val) {
+    match serde_dynamo::to_attribute_value(val) {
         Ok(ser) => Ok(ser),
         Err(e) => Err(Error::Serde(e)),
     }

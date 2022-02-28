@@ -17,7 +17,7 @@ use common::terrain::*;
 use common::ticks::{Ticks, TicksRepr};
 use common::transform::{DimensionTransform, Transform};
 use common::util::hash_u32_to_f32;
-use game_server::context::{PlayerData, PlayerTuple};
+use game_server::player::{PlayerData, PlayerTuple};
 use glam::Vec2;
 use std::ptr;
 use std::sync::Arc;
@@ -564,11 +564,11 @@ impl Entity {
         let player = player.borrow_player();
         let other_player = other_player.borrow_player();
 
-        if player.team_id.is_none() || other_player.team_id.is_none() {
+        if player.team_id().is_none() || other_player.team_id().is_none() {
             return false;
         }
 
-        player.team_id == other_player.team_id
+        player.team_id() == other_player.team_id()
     }
 
     /// Returns true if and only two entities have some, identical players.

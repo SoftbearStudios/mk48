@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::{EntityKind, EntityType};
-use core_protocol::id::*;
+use core_protocol::name::PlayerAlias;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -14,11 +14,11 @@ pub enum DeathReason {
     Unknown,
     Border,
     Terrain,
-    Boat(PlayerId),
+    Boat(PlayerAlias),
     // Applies to hitting stuff like structures, never boats.
     Entity(EntityType),
-    Ram(PlayerId),
-    Weapon(PlayerId, EntityType),
+    Ram(PlayerAlias),
+    Weapon(PlayerAlias, EntityType),
     // Allows code to convey a reason for killing an entity that is not necessarily a player's boat.
     // In release mode, Unknown is used instead.
     #[cfg(debug_assertions)]
@@ -49,9 +49,8 @@ impl DeathReason {
 }
 
 impl PartialOrd for DeathReason {
-    fn partial_cmp(&self, _: &Self) -> Option<Ordering> {
-        // All deaths are created equal (for the purposes of sorting mutations).
-        Some(Ordering::Equal)
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

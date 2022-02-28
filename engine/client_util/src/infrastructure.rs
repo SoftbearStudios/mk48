@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::apply::Apply;
-use crate::context::Context;
+use crate::context::{Context, ServerState};
 use crate::fps_monitor::FpsMonitor;
 use crate::game_client::GameClient;
-use crate::js_hooks::{canvas, domain_name_of};
+use crate::js_hooks::canvas;
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
 use crate::local_storage::LocalStorage;
 use crate::mouse::{MouseButton, MouseButtonState, MouseEvent as GameClientMouseEvent};
@@ -14,10 +14,13 @@ use crate::renderer::renderer::Renderer;
 use crate::setting::CommonSettings;
 use crate::setting::Settings;
 use common_util::range::map_ranges;
-use core_protocol::id::{PlayerId, TeamId};
+use core_protocol::id::{PlayerId, ServerId, TeamId};
 use core_protocol::name::TeamName;
-use core_protocol::rpc::{ClientRequest, ClientUpdate};
-use core_protocol::web_socket::WebSocketFormat;
+use core_protocol::rpc::{
+    ChatRequest, ClientRequest, ClientUpdate, InvitationRequest, PlayerRequest, Request,
+    TeamRequest, Update,
+};
+use core_protocol::web_socket::WebSocketProtocol;
 use glam::{IVec2, Vec2};
 use std::panic;
 use wasm_bindgen::{JsCast, JsValue};
@@ -63,96 +66,64 @@ impl<G: GameClient> Infrastructure<G> {
 
         self.sync_mouse_world_space();
 
-        for inbound in self.context.core_socket.update(time_seconds) {
-            if let &ClientUpdate::SessionCreated {
+        for inbound in self
+            .context
+            .socket
+            .update(&mut self.context.state, time_seconds)
+        {
+            if let &Update::Client(ClientUpdate::SessionCreated {
                 arena_id,
-                server_id,
                 session_id,
+                server_id,
                 ..
-            } = &inbound
+            }) = &inbound
             {
-                if self
-                    .context
-                    .game_socket
-                    .as_ref()
-                    .map(|s| s.is_closed())
-                    .unwrap_or(true)
+                // Create an invitation so that the player doesn't have to wait for one later.
+                self.context
+                    .send_to_server(Request::Invitation(InvitationRequest::CreateInvitation));
+
+                let (host, server_id) =
+                    Context::<G>::compute_websocket_host(&self.context.common_settings, server_id);
+                self.context.socket.reset_host(host);
+                self.context
+                    .common_settings
+                    .set_server_id(server_id, &mut self.context.local_storage);
+
+                if self.context.socket.is_closed()
                     || Some((arena_id, session_id)) != self.context.common_settings.session_tuple()
                 {
-                    // Create an invitation so that the user doesn't have to wait for one later.
-                    self.context.send_to_core(ClientRequest::CreateInvitation);
-
                     self.context
                         .common_settings
                         .set_arena_id(Some(arena_id), &mut self.context.local_storage);
                     self.context
                         .common_settings
                         .set_session_id(Some(session_id), &mut self.context.local_storage);
-
-                    // If the websocket gets dropped, the reconnection attempt should use the
-                    // updated value of saved_session_tuple.
-                    self.context
-                        .core_socket
-                        .reset_preamble(ClientRequest::CreateSession {
-                            game_id: G::GAME_ID,
-                            invitation_id: None,
-                            referrer: None,
-                            saved_session_tuple: self.context.common_settings.session_tuple(),
-                        });
-
-                    self.context.game_socket = Some(ReconnWebSocket::new(
-                        &format!(
-                            "{}://{}/ws/{}/",
-                            self.context.web_socket_info.1,
-                            if let Some(server_id) = server_id {
-                                format!(
-                                    "{}.{}",
-                                    server_id.0,
-                                    domain_name_of(&self.context.web_socket_info.0)
-                                )
-                            } else {
-                                self.context.web_socket_info.0.to_owned()
-                            },
-                            session_id.0
-                        ),
-                        WebSocketFormat::Binary,
-                        None,
-                    ));
                 }
             }
 
-            self.game.peek_core(&inbound, &mut self.context);
-            self.context.core_socket.state_mut().apply(inbound);
-        }
-
-        if let Some(game_web_socket) = self.context.game_socket.as_mut() {
-            for inbound in game_web_socket.update(time_seconds) {
+            if let Update::Game(update) = &inbound {
                 self.game.peek_game(
-                    &inbound,
+                    update,
                     &mut self.context,
                     &self.renderer,
                     &mut self.renderer_layer,
                 );
-                self.context
-                    .game_socket
-                    .as_mut()
-                    .unwrap()
-                    .state_mut()
-                    .apply(inbound);
             }
-
-            self.renderer.pre_prepare(&mut self.renderer_layer);
-            self.game.tick(
-                elapsed_seconds,
-                &mut self.context,
-                &mut self.renderer,
-                &mut self.renderer_layer,
-            );
-            self.renderer.render(&mut self.renderer_layer, time_seconds);
+            self.context.state.apply(inbound);
         }
 
+        self.renderer.pre_prepare(&mut self.renderer_layer);
+        self.game.tick(
+            elapsed_seconds,
+            &mut self.context,
+            &mut self.renderer,
+            &mut self.renderer_layer,
+        );
+        self.renderer.render(&mut self.renderer_layer, time_seconds);
+
         if let Some(fps) = self.statistic_fps_monitor.update(elapsed_seconds) {
-            self.context.send_to_core(ClientRequest::TallyFps { fps });
+            self.context
+                .send_to_server(Request::Client(ClientRequest::TallyFps(fps)));
         }
     }
 
@@ -377,74 +348,82 @@ impl<G: GameClient> Infrastructure<G> {
     /// Sends a command to the server to send a chat message.
     pub fn send_chat(&mut self, message: String, whisper: bool) {
         self.context
-            .core_socket
-            .send(ClientRequest::SendChat { message, whisper });
+            .socket
+            .send(Request::Chat(ChatRequest::Send { message, whisper }));
     }
 
     /// Sends a command to the server to create a new team.
     pub fn create_team(&mut self, team_name: TeamName) {
         self.context
-            .core_socket
-            .send(ClientRequest::CreateTeam { team_name });
+            .socket
+            .send(Request::Team(TeamRequest::Create(team_name)));
     }
 
     /// Sends a command to the server to request joining an
     /// existing team.
     pub fn request_join_team(&mut self, team_id: TeamId) {
         self.context
-            .core_socket
-            .send(ClientRequest::RequestJoin { team_id })
+            .socket
+            .send(Request::Team(TeamRequest::Join(team_id)))
     }
 
     /// Sends a command to the server to accept another player
     /// into a team of which the current player is the captain.
     pub fn accept_join_team(&mut self, player_id: PlayerId) {
         self.context
-            .core_socket
-            .send(ClientRequest::AcceptPlayer { player_id });
+            .socket
+            .send(Request::Team(TeamRequest::Accept(player_id)));
     }
 
     /// Sends a command to the server to reject another player
     /// from joining a team of which the current player is the captain.
     pub fn reject_join_team(&mut self, player_id: PlayerId) {
         self.context
-            .core_socket
-            .send(ClientRequest::RejectPlayer { player_id });
+            .socket
+            .send(Request::Team(TeamRequest::Reject(player_id)));
     }
 
     /// Sends a command to the server to kick another player from
     /// the team of which the current player is the captain.
     pub fn kick_from_team(&mut self, player_id: PlayerId) {
         self.context
-            .core_socket
-            .send(ClientRequest::KickPlayer { player_id });
+            .socket
+            .send(Request::Team(TeamRequest::Kick(player_id)));
     }
 
     /// Sends a command to the server to remove the current player from their current team.
     pub fn leave_team(&mut self) {
-        self.context.core_socket.send(ClientRequest::QuitTeam);
+        self.context.socket.send(Request::Team(TeamRequest::Leave));
     }
 
     /// Sends a command to the server to report another.
     pub fn report_player(&mut self, player_id: PlayerId) {
         self.context
-            .core_socket
-            .send(ClientRequest::ReportPlayer { player_id })
+            .socket
+            .send(Request::Player(PlayerRequest::Report(player_id)))
     }
 
     /// Sends a command to the server to mute or un-mute another player.
     pub fn mute_player(&mut self, player_id: PlayerId, mute: bool) {
-        self.context.core_socket.send(ClientRequest::MuteSender {
-            enable: mute,
-            player_id,
-        })
+        let req = if mute {
+            ChatRequest::Mute(player_id)
+        } else {
+            ChatRequest::Unmute(player_id)
+        };
+        self.context.socket.send(Request::Chat(req))
     }
 
-    /// Set the websocket format of future game socket messages (TODO: Extend to core socket).
-    pub fn web_socket_format(&mut self, format: WebSocketFormat) {
-        if let Some(socket) = self.context.game_socket.as_mut() {
-            socket.set_format(format);
-        }
+    /// Set the websocket protocol of future socket messages.
+    pub fn web_socket_protocol(&mut self, protocol: WebSocketProtocol) {
+        self.context.socket.set_protocol(protocol);
+        self.context
+            .common_settings
+            .set_protocol(protocol, &mut self.context.local_storage);
+    }
+
+    /// Send error message to server.
+    pub fn trace(&mut self, message: String) {
+        self.context.send_trace(message);
     }
 
     /// Gets a game or common setting.
@@ -466,15 +445,25 @@ impl<G: GameClient> Infrastructure<G> {
             .set(key, value, &mut self.context.local_storage);
     }
 
+    /// Connects to a different server.
+    pub fn choose_server_id(&mut self, server_id: Option<ServerId>) {
+        if server_id == self.context.common_settings.server_id {
+            return;
+        }
+        // Clear state from old server.
+        self.context.state = ServerState::default();
+
+        let (host, server_id) =
+            Context::<G>::compute_websocket_host(&self.context.common_settings, server_id);
+        self.context.socket =
+            ReconnWebSocket::new(host, self.context.common_settings.protocol, None);
+        self.context
+            .common_settings
+            .set_server_id(server_id, &mut self.context.local_storage);
+    }
+
     /// Simulates dropping of one or both websockets.
-    pub fn simulate_drop_web_sockets(&mut self, core: bool, game: bool) {
-        if core {
-            self.context.core_socket.simulate_drop();
-        }
-        if game {
-            if let Some(game_socket) = self.context.game_socket.as_mut() {
-                game_socket.simulate_drop();
-            }
-        }
+    pub fn simulate_drop_web_socket(&mut self) {
+        self.context.socket.simulate_drop();
     }
 }

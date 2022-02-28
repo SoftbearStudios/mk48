@@ -3,61 +3,23 @@
 
 use crate::observer::*;
 use crate::rate_limiter::{RateLimiter, RateLimiterProps};
-use crate::user_agent::UserAgent;
-use actix::dev::ToEnvelope;
 use actix::prelude::*;
-use actix_web::http::header;
-use actix_web::{web, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use actix_web_actors::ws::{CloseCode, CloseReason};
 use bincode::Options;
-use core_protocol::web_socket::WebSocketFormat;
+use core_protocol::id::PlayerId;
+use core_protocol::web_socket::WebSocketProtocol;
 use core_protocol::{get_unix_time_now, UnixTime};
 use log::{debug, info, warn};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::convert::TryInto;
-use std::net::IpAddr;
 use std::time::{Duration, Instant};
 
 const TIMER_SECONDS: u64 = 5;
 pub const TIMER_DURATION: Duration = Duration::from_secs(TIMER_SECONDS);
 pub const WEBSOCK_SOFT_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 4 / 5);
 pub const WEBSOCK_HARD_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 2);
-
-pub async fn sock_index<A, I, O>(
-    r: HttpRequest,
-    stream: web::Payload,
-    data: Addr<A>,
-) -> Result<HttpResponse, Error>
-where
-    A: Handler<ObserverMessage<I, O, (Option<IpAddr>, Option<UserAgent>)>>,
-    <A as Actor>::Context:
-        ToEnvelope<A, ObserverMessage<I, O, (Option<IpAddr>, Option<UserAgent>)>>,
-    I: 'static + Send + DeserializeOwned,
-    O: 'static + Message + Send + Serialize,
-    O: Message<Result = ()>,
-{
-    let ip_address = r.peer_addr().map(|addr| addr.ip());
-    let user_agent = r
-        .headers()
-        .get(header::USER_AGENT)
-        .and_then(|hv| hv.to_str().ok())
-        .map(UserAgent::new);
-
-    debug_assert!(ip_address.is_some());
-
-    ws::start(
-        WebSocket::<I, O, (Option<IpAddr>, Option<UserAgent>)>::new(
-            data.recipient(),
-            WebSocketFormat::Json,
-            RateLimiterProps::new(Duration::from_millis(90), 5),
-            (ip_address, user_agent),
-        ),
-        &r,
-        stream,
-    )
-}
 
 pub struct WebSocket<I, O, P = ()>
 where
@@ -66,11 +28,14 @@ where
     O: Message<Result = ()>,
     P: 'static + Clone + Send + Unpin,
 {
-    format: WebSocketFormat,
+    format: WebSocketProtocol,
     data: Recipient<ObserverMessage<I, O, P>>,
     date_last_activity: Instant,
+    player_id: PlayerId,
     payload: P,
     rate_limiter: RateLimiter,
+    // How many more pings to test rtt.
+    test_rtt: u8,
 }
 
 impl<I, O, P> WebSocket<I, O, P>
@@ -80,18 +45,23 @@ where
     O: Message<Result = ()>,
     P: 'static + Clone + Send + Unpin,
 {
+    const INBOUND_MESSAGE_MAX_BYTES: usize = 32 * 1024;
+
     pub fn new(
         data: Recipient<ObserverMessage<I, O, P>>,
-        format: WebSocketFormat,
+        format: WebSocketProtocol,
         rate_limiter_props: RateLimiterProps,
+        player_id: PlayerId,
         payload: P,
     ) -> Self {
         Self {
             format,
             data,
             date_last_activity: Instant::now(),
+            player_id,
             payload,
             rate_limiter: RateLimiter::from(rate_limiter_props),
+            test_rtt: 2,
         }
     }
 
@@ -109,8 +79,11 @@ where
                 );
                 ctx.close(None);
                 ctx.stop();
-            } else if elapsed > WEBSOCK_SOFT_TIMEOUT {
-                warn!("ping idle websocket {:?} {:?}", act.format, elapsed);
+            } else if elapsed > WEBSOCK_SOFT_TIMEOUT || act.test_rtt > 0 {
+                if elapsed > WEBSOCK_SOFT_TIMEOUT {
+                    warn!("ping idle websocket {:?} {:?}", act.format, elapsed);
+                }
+                act.test_rtt = act.test_rtt.saturating_sub(1);
                 ctx.ping(&get_unix_time_now().to_ne_bytes());
             } else {
                 info!("websocket is responsive {:?} {:?}", act.format, elapsed);
@@ -130,6 +103,7 @@ where
 
     fn started(&mut self, ctx: &mut Self::Context) {
         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Register {
+            player_id: self.player_id,
             observer: ctx.address().recipient(),
             payload: self.payload.clone(),
         });
@@ -141,6 +115,7 @@ where
 
     fn stopped(&mut self, ctx: &mut Self::Context) {
         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Unregister {
+            player_id: self.player_id,
             observer: ctx.address().recipient(),
         });
 
@@ -159,8 +134,8 @@ where
     fn handle(&mut self, update: ObserverUpdate<O>, ctx: &mut Self::Context) {
         match update {
             ObserverUpdate::Send { message } => match self.format {
-                WebSocketFormat::Binary => ctx.binary(bincode::serialize(&message).unwrap()),
-                WebSocketFormat::Json => ctx.text(serde_json::to_string(&message).unwrap()),
+                WebSocketProtocol::Binary => ctx.binary(bincode::serialize(&message).unwrap()),
+                WebSocketProtocol::Json => ctx.text(serde_json::to_string(&message).unwrap()),
             },
             ObserverUpdate::Close => ctx.close(Some(CloseReason::from(CloseCode::Normal))),
         }
@@ -190,15 +165,15 @@ where
                 }
 
                 match bincode::DefaultOptions::new()
-                    .with_limit(1024 * 1024)
+                    .with_limit(Self::INBOUND_MESSAGE_MAX_BYTES as u64)
                     .with_fixint_encoding()
                     .allow_trailing_bytes()
                     .deserialize(bin.as_ref())
                 {
                     Ok(request) => {
-                        self.format = WebSocketFormat::Binary;
+                        self.format = WebSocketProtocol::Binary;
                         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Request {
-                            observer: ctx.address().recipient(),
+                            player_id: self.player_id,
                             request,
                         });
                     }
@@ -235,7 +210,7 @@ where
                         let _ = self
                             .data
                             .do_send(ObserverMessage::<I, O, P>::RoundTripTime {
-                                observer: ctx.address().recipient(),
+                                player_id: self.player_id,
                                 rtt: rtt as u16,
                             });
                     }
@@ -252,14 +227,20 @@ where
                     return;
                 }
 
-                debug!("request {}", text);
+                if text.len() > Self::INBOUND_MESSAGE_MAX_BYTES {
+                    warn!(
+                        "client text message was {} bytes, exceeding limit",
+                        text.len()
+                    );
+                    return;
+                }
 
                 let result: Result<I, serde_json::Error> = serde_json::from_str(&text);
                 match result {
                     Ok(request) => {
-                        self.format = WebSocketFormat::Json;
+                        self.format = WebSocketProtocol::Json;
                         let _ = self.data.do_send(ObserverMessage::<I, O, P>::Request {
-                            observer: ctx.address().recipient(),
+                            player_id: self.player_id,
                             request,
                         });
                     }
@@ -267,6 +248,9 @@ where
                         warn!("parse err ignored {}", err);
                     }
                 } // match result
+            }
+            Ok(ws::Message::Nop) => {
+                // Ignore.
             }
             _ => {
                 warn!("websocket protocol error");

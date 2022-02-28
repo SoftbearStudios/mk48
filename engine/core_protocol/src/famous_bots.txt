@@ -1,6 +1,7 @@
 Alexa
 Android
 Ava
+A.X.L.
 Baymax
 Bender
 Bixby
@@ -33,10 +34,12 @@ MQ-9
 Otto
 R2-D2
 Rev-9
+Rex
 Robot
 Roomba
 Siri
 Speedy
+Spot
 T-1000
 T-800
 Talos

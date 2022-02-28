@@ -11,6 +11,9 @@
 
     import {animations, antialias, chatShown, cinematic, fpsShown, leaderboardShown, resolution, waveQuality} from '../util/settings.js';
 
+    // Passed via router props.
+    export let state;
+
     let pendingAntialias = undefined;
     let pendingAnimations = undefined;
     let pendingWaveQuality = undefined;
@@ -54,6 +57,19 @@
         <input type="checkbox" bind:checked={$cinematic}/>
         Cinematic Mode
     </label>
+
+    {#if $state && $state.servers}
+        {#key JSON.stringify($state.servers) + $state.serverId}
+            <select value={$state.serverId} on:change={e => window.rust && window.rust.handleChooseServerId(e.target.value == "null" ? null : parseInt(e.target.value))}>
+                {#if $state.serverId == null}
+                    <option value="null">Unknown Server</option>
+                {/if}
+                {#each $state.servers as {serverId, region, players}}
+                    <option value={serverId}>Server {serverId} - {region} ({players} players)</option>
+                {/each}
+            </select>
+        {/key}
+    {/if}
 
     <h3>Graphics</h3>
 

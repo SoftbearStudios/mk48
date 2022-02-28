@@ -7,7 +7,7 @@ use client_util::renderer::renderer::Renderer;
 use client_util::renderer::shader::{Shader, ShaderBinding};
 use client_util::renderer::texture::{Texture, TextureFormat};
 use common::entity::{EntityId, EntityType};
-use common::terrain::{ChunkSet, Coord, RelativeCoord, Terrain};
+use common::terrain::{Coord, RelativeCoord, Terrain};
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common::{terrain, world};
@@ -38,14 +38,6 @@ impl TerrainView {
             center,
             dimensions: uvec2(width, height),
         }
-    }
-
-    fn intersection(&self, set: &ChunkSet) -> ChunkSet {
-        let mask = ChunkSet::new_rect(
-            self.center.corner(),
-            self.dimensions.as_vec2() * terrain::SCALE,
-        );
-        set.and(&mask)
     }
 
     /// Returns a matrix that translates world space to terrain texture UV coordinates.
@@ -120,8 +112,8 @@ impl Mk48BackgroundContext {
         let view = TerrainView::new(camera, renderer.aspect_ratio(), zoom);
         let view_changed = view != self.last_view;
 
-        // Only if update happened in our current view.
-        let terrain_changed = !view.intersection(&terrain.updated).is_empty();
+        // TODO Only if update happened in our current view.
+        let terrain_changed = !terrain.updated.is_empty();
 
         // If terrain changed or view changed the bytes can change.
         if terrain_changed || view_changed {
@@ -149,13 +141,10 @@ impl Mk48BackgroundContext {
 
         // Only invalidate if terrain changed in the intersection of our current and last views.
         if self.frame_cache_enabled() {
-            let updated_in_view = self
-                .last_view
-                .intersection(&view.intersection(&terrain.updated));
-
-            if !updated_in_view.is_empty() {
+            let updated = terrain.updated.clone();
+            if !updated.is_empty() {
                 // Only invalidate the rects where pixels could have possibly changed.
-                let rects = updated_in_view
+                let rects = updated
                     .into_iter()
                     .flat_map(|chunk_id| {
                         let coord = chunk_id.as_coord();

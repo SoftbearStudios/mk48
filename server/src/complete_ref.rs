@@ -14,7 +14,7 @@ use common::terrain;
 use common::terrain::{ChunkSet, Terrain};
 use common::ticks::{Ticks, TicksRepr};
 use common::velocity::Velocity;
-use game_server::context::PlayerData;
+use game_server::player::PlayerData;
 use glam::Vec2;
 use std::ops::RangeInclusive;
 
