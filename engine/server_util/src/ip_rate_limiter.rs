@@ -18,11 +18,7 @@ impl IpRateLimiter {
     /// Rate limit must be at least one millisecond.
     /// Burst must be less than 255.
     pub fn new(rate_limit: Duration, burst: Units) -> Self {
-        Self {
-            usage: HashMap::new(),
-            props: RateLimiterProps::new(rate_limit, burst),
-            prune_counter: 0,
-        }
+        Self::from(RateLimiterProps::new(rate_limit, burst))
     }
 
     /// Uses [`Units`] to represent bytes, to limit bandwidth.
@@ -69,6 +65,16 @@ impl IpRateLimiter {
     /// Returns size of internal data-structure.
     pub fn len(&self) -> usize {
         self.usage.len()
+    }
+}
+
+impl From<RateLimiterProps> for IpRateLimiter {
+    fn from(props: RateLimiterProps) -> Self {
+        Self {
+            usage: HashMap::new(),
+            props,
+            prune_counter: 0,
+        }
     }
 }
 

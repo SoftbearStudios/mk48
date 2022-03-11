@@ -9,6 +9,9 @@ use crate::metric::MetricRepo;
 use common_util::ticks::Ticks;
 use core_protocol::dto::ServerDto;
 use core_protocol::id::{ArenaId, ServerId};
+use log::warn;
+use server_util::benchmark::{self, benchmark_scope, Timer};
+use server_util::rate_limiter::RateLimiterProps;
 use std::sync::Arc;
 
 /// Contains a [`GameArenaService`] and the corresponding [`Context`].
@@ -23,9 +26,16 @@ impl<G: GameArenaService> ContextService<G> {
         min_players: usize,
         chat_log: Option<String>,
         trace_log: Option<String>,
+        client_authenticate: RateLimiterProps,
     ) -> Self {
         Self {
-            context: Context::new(arena_id, min_players, chat_log, trace_log),
+            context: Context::new(
+                arena_id,
+                min_players,
+                chat_log,
+                trace_log,
+                client_authenticate,
+            ),
             service: G::new(min_players),
         }
     }
@@ -37,6 +47,8 @@ impl<G: GameArenaService> ContextService<G> {
         metrics: &mut MetricRepo<G>,
         server_delta: Option<(Arc<[ServerDto]>, Arc<[ServerId]>)>,
     ) {
+        benchmark_scope!("context_update");
+
         // Keep track of time.
         self.context.count_tick();
 
@@ -54,9 +66,11 @@ impl<G: GameArenaService> ContextService<G> {
 
         // Update game logic.
         self.service.update(Ticks::ONE, self.context.counter);
-        self.context
-            .players
-            .update_is_alive(&self.service, &mut self.context.teams, metrics);
+        self.context.players.update_is_alive_and_team_id(
+            &mut self.service,
+            &mut self.context.teams,
+            metrics,
+        );
 
         // Update clients and bots.
         self.context.clients.update(
@@ -76,5 +90,11 @@ impl<G: GameArenaService> ContextService<G> {
 
         // Post-update game logic.
         self.service.post_update();
+
+        if self.context.counter % Ticks::from_secs(5.0) == Ticks::ZERO {
+            warn!("{:?}", benchmark::borrow_all());
+
+            benchmark::reset_all();
+        }
     }
 }

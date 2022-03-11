@@ -10,6 +10,7 @@ use crate::player::PlayerRepo;
 use crate::team::TeamRepo;
 use common_util::ticks::Ticks;
 use core_protocol::id::ArenaId;
+use server_util::rate_limiter::RateLimiterProps;
 
 /// Things that go along with every instance of a [`GameArenaService`].
 pub struct Context<G: GameArenaService> {
@@ -30,11 +31,12 @@ impl<G: GameArenaService> Context<G> {
         min_players: usize,
         chat_log: Option<String>,
         trace_log: Option<String>,
+        client_authenticate: RateLimiterProps,
     ) -> Self {
         Context {
             arena_id,
             counter: Ticks::ZERO,
-            clients: ClientRepo::new(trace_log),
+            clients: ClientRepo::new(trace_log, client_authenticate),
             bots: BotRepo::new(min_players, if min_players == 0 { 0 } else { 80 }),
             players: PlayerRepo::new(),
             teams: TeamRepo::new(),

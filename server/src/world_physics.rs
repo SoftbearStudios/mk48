@@ -98,11 +98,9 @@ impl World {
                         // Remove limited entities when player is dead.
                         // Remove all oof player's entities when the player leaves.
                         return Some((index, Fate::Remove(DeathReason::Unknown)));
-                    } else if data.limited {
-                        // Delete limited armaments on upgrade.
-                        if player.data.flags.upgraded {
-                            return Some((index, Fate::Remove(DeathReason::Unknown)));
-                        }
+                    } else if data.limited && player.data.flags.upgraded {
+                        // Delete limited armaments on upgrade to avoid accumulating too many.
+                        return Some((index, Fate::Remove(DeathReason::Unknown)));
                     }
                 }
 

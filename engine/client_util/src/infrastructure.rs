@@ -4,6 +4,7 @@
 use crate::apply::Apply;
 use crate::context::{Context, ServerState};
 use crate::fps_monitor::FpsMonitor;
+use crate::frontend::Frontend;
 use crate::game_client::GameClient;
 use crate::js_hooks::canvas;
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
@@ -35,7 +36,7 @@ pub struct Infrastructure<G: GameClient> {
 }
 
 impl<G: GameClient> Infrastructure<G> {
-    pub fn new(mut game: G) -> Self {
+    pub fn new(mut game: G, frontend: Box<dyn Frontend<G::UiProps> + 'static>) -> Self {
         panic::set_hook(Box::new(console_error_panic_hook::hook));
 
         // First load local storage common settings.
@@ -48,7 +49,7 @@ impl<G: GameClient> Infrastructure<G> {
         let game_settings = G::Settings::load(&local_storage, game.init_settings(&mut renderer));
 
         // Finally create context with common and game settings.
-        let mut context = Context::new(local_storage, common_settings, game_settings);
+        let mut context = Context::new(local_storage, common_settings, game_settings, frontend);
         let renderer_layer = game.init_layer(&mut renderer, &mut context);
 
         Self {
@@ -82,8 +83,11 @@ impl<G: GameClient> Infrastructure<G> {
                 self.context
                     .send_to_server(Request::Invitation(InvitationRequest::CreateInvitation));
 
-                let (host, server_id) =
-                    Context::<G>::compute_websocket_host(&self.context.common_settings, server_id);
+                let (host, server_id) = Context::<G>::compute_websocket_host(
+                    &self.context.common_settings,
+                    server_id,
+                    &*self.context.frontend,
+                );
                 self.context.socket.reset_host(host);
                 self.context
                     .common_settings
@@ -453,8 +457,11 @@ impl<G: GameClient> Infrastructure<G> {
         // Clear state from old server.
         self.context.state = ServerState::default();
 
-        let (host, server_id) =
-            Context::<G>::compute_websocket_host(&self.context.common_settings, server_id);
+        let (host, server_id) = Context::<G>::compute_websocket_host(
+            &self.context.common_settings,
+            server_id,
+            &*self.context.frontend,
+        );
         self.context.socket =
             ReconnWebSocket::new(host, self.context.common_settings.protocol, None);
         self.context

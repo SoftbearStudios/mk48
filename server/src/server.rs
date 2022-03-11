@@ -16,8 +16,7 @@ use common::ticks::Ticks;
 use core_protocol::id::*;
 use game_server::game_service::GameArenaService;
 use game_server::player::PlayerTuple;
-use log::{info, warn};
-use server_util::benchmark;
+use log::warn;
 use server_util::benchmark::Timer;
 use server_util::benchmark_scope;
 use std::cell::UnsafeCell;
@@ -103,16 +102,22 @@ impl GameArenaService for Server {
     }
 
     fn player_left(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
-        let borrow = player_tuple.borrow_player();
-        if let Status::Alive { entity_index, .. } = borrow.data.status {
-            drop(borrow);
+        let mut player = player_tuple.borrow_player_mut();
+        if let Status::Alive { entity_index, .. } = player.data.status {
+            drop(player);
             Mutation::boat_died(&mut self.world, entity_index, true);
         } else {
-            drop(borrow);
+            player.data.status = Status::Spawning;
+            drop(player);
         }
 
+        let mut player = player_tuple.borrow_player_mut();
+
+        // Clear player's score.
+        player.score = 0;
+
         // Delete all player's entities (efficiently, in the next update cycle).
-        player_tuple.borrow_player_mut().data.flags.left_game = true;
+        player.data.flags.left_game = true;
     }
 
     fn get_client_update(
@@ -142,23 +147,13 @@ impl GameArenaService for Server {
     }
 
     /// update runs server ticks.
-    fn update(&mut self, ticks: Ticks, counter: Ticks) {
+    fn update(&mut self, ticks: Ticks, _counter: Ticks) {
         benchmark_scope!("tick");
 
         self.world.update(ticks);
 
         // Needs to be called before clients receive updates, but after World::update.
         self.world.terrain.pre_update();
-
-        if counter % Ticks::from_secs(5.0) == Ticks::ZERO {
-            info!(
-                "[{} entities]: {:?}",
-                self.world.arena.total(),
-                benchmark::borrow_all()
-            );
-
-            benchmark::reset_all();
-        }
     }
 
     fn post_update(&mut self) {

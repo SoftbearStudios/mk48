@@ -170,12 +170,17 @@ impl Entity {
 
     /// Set's player to dead, removing reference to self, if applicable.
     pub fn delete_index(&mut self, reason: DeathReason) {
-        if let Some(ref player) = self.player {
-            player.borrow_player_mut().data.status = Status::Dead {
-                reason,
-                position: self.transform.position,
-                time: Instant::now(),
-                visual_range: self.data().sensors.visual.range,
+        if let Some(ref player_tuple) = self.player {
+            let mut player = player_tuple.borrow_player_mut();
+            player.data.status = if player.data.flags.left_game {
+                Status::Spawning
+            } else {
+                Status::Dead {
+                    reason,
+                    position: self.transform.position,
+                    time: Instant::now(),
+                    visual_range: self.data().sensors.visual.range,
+                }
             }
         }
     }
@@ -551,22 +556,23 @@ impl Entity {
     }
 
     pub fn is_friendly_to_player(&self, other_player: Option<&PlayerTuple<Server>>) -> bool {
-        if self.player.is_none() || other_player.is_none() {
-            return false;
-        }
-        let player = self.player.as_ref().unwrap();
-        let other_player = other_player.unwrap();
+        let (player, other_player) = match (self.player.as_ref(), other_player) {
+            (Some(player), Some(other_player)) => (player, other_player),
+            _ => return false,
+        };
 
-        if &**player == other_player {
+        // This is very hot code, and we can't afford atomic shenanigans.
+        if std::ptr::eq(Arc::as_ptr(player), other_player as *const _) {
             return true;
         }
 
         let player = player.borrow_player();
-        let other_player = other_player.borrow_player();
 
-        if player.team_id().is_none() || other_player.team_id().is_none() {
+        if player.team_id().is_none() {
             return false;
         }
+
+        let other_player = other_player.borrow_player();
 
         player.team_id() == other_player.team_id()
     }

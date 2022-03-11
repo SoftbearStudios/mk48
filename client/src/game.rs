@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::armament::FireRateLimiter;
 use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
 use crate::interpolated_contact::InterpolatedContact;
 use crate::settings::Mk48Settings;
@@ -60,6 +61,9 @@ pub struct Mk48Game {
     pub ui_props_rate_limiter: RateLimiter,
     /// Playing the alarm fast sound too often is annoying.
     pub alarm_fast_rate_limiter: RateLimiter,
+    /// If a given index is present and non-zero, should avoid firing weapon (was fired recently,
+    /// and is probably consumed).
+    pub fire_rate_limiter: FireRateLimiter,
     /// FPS counter
     pub fps_counter: FpsMonitor,
 }
@@ -110,6 +114,7 @@ impl GameClient for Mk48Game {
             control_rate_limiter: RateLimiter::new(0.1),
             ui_props_rate_limiter: RateLimiter::new(0.25),
             alarm_fast_rate_limiter: RateLimiter::new(10.0),
+            fire_rate_limiter: FireRateLimiter::new(),
             fps_counter: FpsMonitor::new(1.0),
         }
     }
@@ -676,7 +681,7 @@ impl GameClient for Mk48Game {
                             // Pre-borrow to not borrow all of context (will be fixed eventually).
                             let ui_armament = context.ui.armament;
                             if let Some(i) = context.mouse.world_position.and_then(|mouse_pos| {
-                                Self::find_best_armament(contact, false, mouse_pos, ui_armament)
+                                self.find_best_armament(contact, false, mouse_pos, ui_armament)
                             }) {
                                 let armament = &data.armaments[i];
                                 if armament.entity_type != EntityType::Depositor {
@@ -841,8 +846,7 @@ impl GameClient for Mk48Game {
                 // Wake/thrust particles and shell trails.
                 if contact.transform().velocity != Velocity::ZERO
                     && (data.sub_kind != EntitySubKind::Submarine
-                        || contact.transform().velocity
-                            > Velocity::from_mps(EntityData::CAVITATION_VELOCITY))
+                        || contact.transform().velocity > data.cavitation_speed(contact.altitude()))
                 {
                     if data.sub_kind == EntitySubKind::Shell {
                         let t = contact.transform();
@@ -1087,14 +1091,18 @@ impl GameClient for Mk48Game {
                             .combined(context.keyboard.state(Key::E))
                             .is_down()
                     {
-                        Self::find_best_armament(
+                        self.find_best_armament(
                             player_contact,
                             true,
                             aim_target.unwrap_or_default(),
                             context.ui.armament,
                         )
-                        .map(|i| Fire {
-                            armament_index: i as u8,
+                        .map(|i| {
+                            self.fire_rate_limiter.fired(i as u8);
+
+                            Fire {
+                                armament_index: i as u8,
+                            }
                         })
                     } else {
                         None
@@ -1132,6 +1140,7 @@ impl GameClient for Mk48Game {
         }
 
         self.fps_counter.update(elapsed_seconds);
+        self.fire_rate_limiter.update(elapsed_seconds);
 
         if self.ui_props_rate_limiter.update_ready(elapsed_seconds) {
             self.update_ui_props(context, status, &team_proximity);
@@ -1146,7 +1155,7 @@ impl GameClient for Mk48Game {
     ) {
         match event {
             UiEvent::Spawn { alias, entity_type } => {
-                context.send_set_alias(PlayerAlias::new(alias));
+                context.send_set_alias(PlayerAlias::new_unsanitized(alias));
                 context.send_to_game(Command::Spawn(Spawn {
                     entity_type: *entity_type,
                 }))

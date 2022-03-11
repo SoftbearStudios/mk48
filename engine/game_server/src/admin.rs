@@ -5,7 +5,7 @@ use crate::client::ClientRepo;
 use crate::context::Context;
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
-use crate::metric::MetricRepo;
+use crate::metric::{MetricBundle, MetricRepo};
 use crate::player::PlayerRepo;
 use crate::system::{ServerStatus, SystemRepo};
 use actix::{fut, ActorFutureExt, Handler, Message, ResponseActFuture, WrapFuture};
@@ -16,18 +16,19 @@ use core_protocol::id::{PlayerId, ServerId};
 use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::{get_unix_time_now, UnixTime};
+use log::warn;
+use pprof::ProfilerGuard;
 use serde::Deserialize;
 use server_util::database_schema::Metrics;
+use std::fs::File;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::Sender;
 
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
-    pub redirect_server_id: Option<&'static AtomicU8>,
-    early_restart_send: Sender<()>,
+    pub(crate) redirect_server_id_preference: Option<ServerId>,
+    profile: Option<ProfilerGuard<'static>>,
     _spooky: PhantomData<G>,
 }
 
@@ -49,13 +50,10 @@ impl ParameterizedAdminRequest {
 }
 
 impl<G: GameArenaService> AdminRepo<G> {
-    pub fn new(
-        redirect_server_id: Option<&'static AtomicU8>,
-        early_restart_send: Sender<()>,
-    ) -> Self {
+    pub fn new() -> Self {
         Self {
-            redirect_server_id,
-            early_restart_send,
+            redirect_server_id_preference: None,
+            profile: None,
             _spooky: PhantomData,
         }
     }
@@ -110,7 +108,7 @@ impl<G: GameArenaService> AdminRepo<G> {
             .ok_or("nonexistent player")?;
         let client = player.client_mut().ok_or("not a real player")?;
         // We still censor, in case of unauthorized admin access.
-        let censored = PlayerAlias::new(alias.as_str());
+        let censored = PlayerAlias::new_sanitized(alias.as_str());
         client.alias = censored;
         Ok(AdminUpdate::PlayerAliasOverridden(censored))
     }
@@ -133,14 +131,6 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::PlayerMuted(seconds_ceil(
             client.chat.context.muted_for(),
         )))
-    }
-
-    /// Issues an early http server restart.
-    fn restart_http_server(&mut self) -> Result<AdminUpdate, &'static str> {
-        match self.early_restart_send.try_send(()) {
-            Ok(_) => Ok(AdminUpdate::HttpServerRestarting),
-            Err(_) => Err("temporary/permanent error with http server restart"),
-        }
     }
 
     /// Restrict a given real player's chat to safe phrases for a configurable amount of minutes
@@ -213,9 +203,26 @@ impl<G: GameArenaService> AdminRepo<G> {
         infrastructure: &mut Infrastructure<G>,
         filter: Option<MetricFilterDto>,
     ) -> Result<AdminUpdate, &'static str> {
-        Ok(AdminUpdate::SummaryRequested(
-            MetricRepo::get_metrics(infrastructure, filter).summarize(),
-        ))
+        let current = MetricRepo::get_metrics(infrastructure, filter);
+
+        // One hour.
+        // MetricRepo::get_metrics(infrastructure, filter).summarize(),
+        let mut summary = infrastructure
+            .metrics
+            .history
+            .oldest_ordered()
+            .map(|bundle: &MetricBundle| bundle.metric(filter))
+            .chain(std::iter::once(current.clone()))
+            .sum::<Metrics>()
+            .summarize();
+
+        // TODO: Make special [`DiscreteMetric`] that handles data that is not necessarily unique.
+        summary.arenas_cached.total = current.arenas_cached.total;
+        summary.invitations_cached.total = current.invitations_cached.total;
+        summary.players_cached.total = current.players_cached.total;
+        summary.sessions_cached.total = current.sessions_cached.total;
+
+        Ok(AdminUpdate::SummaryRequested(summary))
     }
 
     /// Request metric data points for the last 24 calendar hours (excluding the current hour, in
@@ -291,31 +298,56 @@ impl<G: GameArenaService> AdminRepo<G> {
 
     /// Requests the currently-set server to redirect to.
     fn request_redirect(&self) -> Result<AdminUpdate, &'static str> {
-        let redirect_server_id = self
-            .redirect_server_id
-            .ok_or("unable to request redirect")?;
-        Ok(AdminUpdate::RedirectRequested(ServerId::new(
-            redirect_server_id.load(Ordering::Relaxed),
-        )))
+        Ok(AdminUpdate::RedirectRequested(
+            self.redirect_server_id_preference,
+        ))
     }
 
     /// Changes the server to redirect to. Must not redirect to self.
+    ///
+    /// Only has an effect if the [`SystemRepo`] is configured.
     fn set_redirect(
-        &self,
+        &mut self,
         redirect: Option<ServerId>,
         server_id: Option<ServerId>,
+        system: Option<&mut SystemRepo<G>>,
     ) -> Result<AdminUpdate, &'static str> {
-        let redirect_server_id = self.redirect_server_id.ok_or("unable to set redirect")?;
         if let Some(server_id) = server_id {
             if redirect == Some(server_id) {
                 return Err("cannot redirect to self");
             }
         }
-        redirect_server_id.store(
-            redirect.map(|id| id.0.get()).unwrap_or(0),
-            Ordering::Relaxed,
-        );
+        self.redirect_server_id_preference = redirect;
+
+        if let Some(system) = system {
+            system.set_redirect(self.redirect_server_id_preference);
+        } else {
+            warn!("no system configured, cannot actually set redirect.");
+        }
+
         Ok(AdminUpdate::RedirectSet(redirect))
+    }
+
+    fn set_profiler(&mut self, enabled: bool) -> Result<AdminUpdate, &'static str> {
+        if let Some(profile) = self.profile.as_mut() {
+            if let Ok(report) = profile.report().build() {
+                self.profile = None;
+                let file =
+                    File::create("pprof.svg").map_err(|_| "error creating profiler flamegraph")?;
+                report
+                    .flamegraph(file)
+                    .map_err(|_| "error writing profiler flamegraph")?;
+            };
+        }
+
+        if enabled {
+            self.profile =
+                Some(pprof::ProfilerGuard::new(1000).map_err(|_| "failed to enable profiler")?);
+        } else {
+            self.profile = None;
+        }
+
+        Ok(AdminUpdate::ProfilerSet(enabled))
     }
 }
 
@@ -391,9 +423,6 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 self.admin
                     .mute_player(player_id, minutes, &self.context_service.context.players),
             )),
-            AdminRequest::RestartHttpServer => {
-                Box::pin(fut::ready(self.admin.restart_http_server()))
-            }
             AdminRequest::RequestServers => {
                 Box::pin(fut::ready(AdminRepo::request_servers(&self.system)))
             }
@@ -419,9 +448,14 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 &mut self.context_service.context,
             ))),
             AdminRequest::RequestRedirect => Box::pin(fut::ready(self.admin.request_redirect())),
-            AdminRequest::SetRedirect(server_id) => Box::pin(fut::ready(
-                self.admin.set_redirect(server_id, self.server_id),
-            )),
+            AdminRequest::SetRedirect(server_id) => Box::pin(fut::ready(self.admin.set_redirect(
+                server_id,
+                self.server_id,
+                self.system.as_mut(),
+            ))),
+            AdminRequest::SetProfiler(enabled) => {
+                Box::pin(fut::ready(self.admin.set_profiler(enabled)))
+            }
         }
     }
 }

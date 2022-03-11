@@ -32,7 +32,7 @@ lazy_static! {
 /// A player's alias (not their real name).
 impl PlayerAlias {
     /// Converts the string into a valid alias, which is never empty when done on the server.
-    pub fn new(str: &str) -> Self {
+    pub fn new_sanitized(str: &str) -> Self {
         #[cfg(feature = "server")]
         {
             let mut string = rustrict::Censor::from_str(str)
@@ -59,10 +59,21 @@ impl PlayerAlias {
         Self(slice_up_to_array_string(str))
     }
 
+    /// Good for known-good names.
+    pub fn new_unsanitized(str: &str) -> Self {
+        let unsanitized = Self(slice_up_to_array_string(str));
+        debug_assert_eq!(
+            unsanitized,
+            Self::new_sanitized(str),
+            "should have sanitized"
+        );
+        unsanitized
+    }
+
     pub fn from_bot_player_id(player_id: PlayerId) -> Self {
         //debug_assert!(player_id.is_bot());
         let names = &BOT_NAMES;
-        Self::new(names[player_id.0.get() as usize % names.len()])
+        Self::new_unsanitized(names[player_id.0.get() as usize % names.len()])
     }
 
     pub fn as_str(&self) -> &str {

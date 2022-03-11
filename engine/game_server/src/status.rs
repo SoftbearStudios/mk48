@@ -4,10 +4,8 @@
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
 use actix::{Handler, Message};
-use core_protocol::id::ServerId;
 use core_protocol::rpc::StatusResponse;
 use server_util::health::Health;
-use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 /// Manages updating and reporting of server status.
@@ -44,12 +42,7 @@ impl<G: GameArenaService> Handler<StatusRequest> for Infrastructure<G> {
         StatusResponse {
             healthy: self.status.health.healthy(),
             region_id: self.region_id,
-            redirect_server_id: self
-                .admin
-                .redirect_server_id
-                .and_then(|redirect_server_id| {
-                    ServerId::new(redirect_server_id.load(Ordering::Relaxed))
-                }),
+            redirect_server_id: self.admin.redirect_server_id_preference,
             client_hash: Some(self.status.client_hash),
             // TODO: In the future, this will sum players for all arenas.
             player_count: Some(self.context_service.context.players.real_players_live as u32),

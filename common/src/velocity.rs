@@ -11,7 +11,7 @@ type VelocityRepr = i16;
 
 // Note: pub(crate) is intentional.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Velocity(pub(crate) VelocityRepr);
+pub struct Velocity(pub VelocityRepr);
 
 /// Velocity efficiently stores a signed speed.
 #[allow(dead_code)]
@@ -46,9 +46,14 @@ impl Velocity {
         Self((mps * (1.0 / Self::SCALE)) as VelocityRepr)
     }
 
-    /// to_mps returns an amount of knots corresponding to the Velocity.
+    /// to_knots returns an amount of knots corresponding to the Velocity.
     pub fn to_knots(self) -> f32 {
         self.0 as f32 * Self::KNOTS_SCALE
+    }
+
+    /// from_knots returns a velocity from a given amount of knots.
+    pub fn from_knots(knots: f32) -> Self {
+        Self((knots * (1.0 / Self::KNOTS_SCALE)) as VelocityRepr)
     }
 
     /// clamp returns the velocity, clamped between min and max.

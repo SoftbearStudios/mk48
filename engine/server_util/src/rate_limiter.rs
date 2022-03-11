@@ -97,6 +97,11 @@ impl RateLimiterProps {
         Self { rate_limit, burst }
     }
 
+    /// Like [`new`] but const and no runtime checks are performed.
+    pub const fn const_new(rate_limit: Duration, burst: Units) -> Self {
+        Self { rate_limit, burst }
+    }
+
     /// Properties of a rate limiter that allow infinite rate.
     pub fn no_limit() -> Self {
         Self {

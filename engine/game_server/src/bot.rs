@@ -6,6 +6,7 @@ use crate::player::{PlayerData, PlayerRepo, PlayerTuple};
 use common_util::ticks::Ticks;
 use core_protocol::id::PlayerId;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use server_util::benchmark::{benchmark_scope, Timer};
 use std::sync::Arc;
 
 /// Data stored per bot.
@@ -45,6 +46,8 @@ impl<G: GameArenaService> BotRepo<G> {
 
     /// Updates all bots.
     pub fn update(&mut self, counter: Ticks, service: &mut G) {
+        benchmark_scope!("update_bots");
+
         {
             let service = &service;
 
@@ -74,6 +77,7 @@ impl<G: GameArenaService> BotRepo<G> {
 
     /// Spawns/despawns bots based on number of (real) player clients.
     pub fn update_count(&mut self, service: &mut G, players: &mut PlayerRepo<G>) {
+        benchmark_scope!("update_bot_count");
         let count = self
             .min_players
             .max((self.bot_percent * players.real_players_live) / 100);

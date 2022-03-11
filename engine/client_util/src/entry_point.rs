@@ -193,8 +193,10 @@ macro_rules! entry_point {
         pub fn start() -> Result<(), wasm_bindgen::JsValue> {
             use client_util::game_client::GameClient;
 
-            let infrastructure =
-                RefCell::new(client_util::infrastructure::Infrastructure::new(<$G>::new()));
+            let infrastructure = RefCell::new(client_util::infrastructure::Infrastructure::new(
+                <$G>::new(),
+                Box::new(client_util::frontend::Svelte),
+            ));
 
             unsafe {
                 // SAFETY: This is the very first thing to run.

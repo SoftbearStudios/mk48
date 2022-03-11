@@ -2,47 +2,48 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 //! The game server has authority over all game logic. Clients are served the client, which connects
-//! via websocket.
+//! via web_socket.
 
 use crate::admin::ParameterizedAdminRequest;
 use crate::client::Authenticate;
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
+use crate::static_files::{static_handler, static_hash};
 use crate::status::StatusRequest;
 use crate::system::{SystemRepo, SystemRequest};
-use actix::{fut, Actor, Addr};
-use actix_cors::Cors;
-use actix_web::body::{BodySize, MessageBody};
-use actix_web::dev::{Service, ServiceResponse, Url};
-use actix_web::http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, LOCATION};
-use actix_web::http::uri::PathAndQuery;
-use actix_web::http::{header, Method, StatusCode, Uri};
-use actix_web::web::{get, post, resource, Json, Query};
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws;
-use common_util::ticks::Ticks;
+use actix::Actor;
+use axum::body::HttpBody;
+use axum::extract::ws::{CloseCode, CloseFrame, Message};
+use axum::extract::{ConnectInfo, Query, TypedHeader, WebSocketUpgrade};
+use axum::http::uri::Scheme;
+use axum::http::{StatusCode, Uri};
+use axum::response::{IntoResponse, Redirect};
+use axum::routing::get;
+use axum::Router;
+use bincode::{self, Options as _};
 use core_protocol::id::*;
 use core_protocol::rpc::{Request, SystemQuery, Update, WebSocketQuery};
-use futures::TryFutureExt;
-use log::LevelFilter;
-use log::{debug, warn};
-use server_util::app::{game_static_files_hash, static_files};
+use core_protocol::web_socket::WebSocketProtocol;
+use core_protocol::{get_unix_time_now, UnixTime};
+use futures::pin_mut;
+use futures::SinkExt;
+use log::{debug, error, warn, LevelFilter};
+use rust_embed::RustEmbed;
 use server_util::cloud::Cloud;
 use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::linode::Linode;
-use server_util::rate_limiter::RateLimiterProps;
-use server_util::ssl::{run_until_ssl_renewal, Ssl};
-use server_util::tcp::{
-    max_connections_per_worker, on_connect_enable_nodelay, BACKLOG, KEEP_ALIVE, SHUTDOWN_TIMEOUT,
-};
+use server_util::observer::{ObserverMessage, ObserverUpdate};
+use server_util::rate_limiter::{RateLimiterProps, RateLimiterState};
 use server_util::user_agent::UserAgent;
-use server_util::web_socket::WebSocket;
-use std::net::IpAddr;
-use std::pin::Pin;
+use std::convert::TryInto;
+use std::net::{IpAddr, SocketAddr};
+use std::str::FromStr;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use structopt::StructOpt;
+use tower::ServiceBuilder;
+use tower_http::cors::CorsLayer;
 
 /// Server options, to be specified as arguments.
 #[derive(Debug, StructOpt)]
@@ -95,61 +96,42 @@ pub struct Options {
     #[allow(dead_code)]
     #[structopt(long)]
     pub domain: Option<String>,
-    // Certificate chain path
+    /// Certificate chain path.
     #[structopt(long)]
     pub certificate_path: Option<String>,
-    // Private key path
+    /// Private key path.
     #[structopt(long)]
     pub private_key_path: Option<String>,
+    /// HTTP request bandwidth limiting (in bytes per second).
+    #[structopt(long, default_value = "500000")]
+    pub http_bandwidth_limit: u32,
+    /// HTTP request rate limiting burst (in bytes).
+    #[structopt(long, default_value = "10000000")]
+    pub http_bandwidth_burst: u32,
+    /// Client authenticate rate limiting period (in seconds).
+    #[structopt(long, default_value = "30")]
+    pub client_authenticate_rate_limit: u64,
+    /// Client authenticate rate limiting burst.
+    #[structopt(long, default_value = "16")]
+    pub client_authenticate_burst: u32,
 }
 
 /// 0 is no redirect.
 static REDIRECT_TO_SERVER_ID: AtomicU8 = AtomicU8::new(0);
 
 lazy_static::lazy_static! {
-    static ref HTTP_RATE_LIMITER: Mutex<IpRateLimiter> = Mutex::new(IpRateLimiter::new_bandwidth_limiter(500_000, 10_000_000));
+    // Will be overwritten first thing.
+    static ref HTTP_RATE_LIMITER: Mutex<IpRateLimiter> = Mutex::new(IpRateLimiter::new_bandwidth_limiter(1, 0));
 }
 
-/// ws_index routes incoming HTTP requests to WebSocket connections.
-async fn ws_index<G: GameArenaService>(
-    r: HttpRequest,
-    stream: web::Payload,
-    query: WebSocketQuery,
-    srv: Addr<Infrastructure<G>>,
-) -> Result<HttpResponse, Error> {
-    let user_agent_id = r
-        .headers()
-        .get(header::USER_AGENT)
-        .and_then(|hv| hv.to_str().ok())
-        .map(UserAgent::new)
-        .and_then(UserAgent::into_id);
+#[derive(RustEmbed)]
+#[folder = "../../client_static/"]
+struct GameClient;
 
-    let authenticate = Authenticate {
-        ip_address: r.peer_addr().map(|addr| addr.ip()),
-        referrer: query.referrer,
-        user_agent_id,
-        arena_id_session_id: query.arena_id.zip(query.session_id),
-        invitation_id: query.invitation_id,
-    };
-
-    match srv.send(authenticate).await {
-        Ok(result) => match result {
-            Ok(player_id) => ws::start(
-                WebSocket::<Request<G::Command>, Update<G::ClientUpdate>, ()>::new(
-                    srv.recipient(),
-                    query.protocol.unwrap_or_default(),
-                    RateLimiterProps::new(Duration::from_secs_f32(Ticks::PERIOD_SECS * 0.9), 5),
-                    player_id,
-                    (),
-                ),
-                &r,
-                stream,
-            ),
-            Err(e) => Ok(HttpResponse::TooManyRequests().body(e.to_string())),
-        },
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    }
-}
+#[derive(RustEmbed)]
+#[folder = "../js/public/"]
+#[prefix = "admin/"]
+struct AdminClient;
 
 pub fn entry_point<G: GameArenaService>() {
     let options = Options::from_args();
@@ -161,21 +143,25 @@ pub fn entry_point<G: GameArenaService>() {
     logger.filter_module("game_server::system", options.debug_watchdog);
     logger.filter_module("core_protocol", options.debug_core);
     logger.filter_module("server_util::web_socket", options.debug_sockets);
-    logger.filter_module("actix_web", options.debug_http);
-    logger.filter_module("actix_server", options.debug_http);
     logger.filter_module("server_util::linode", options.debug_watchdog);
     logger.filter_module("server_util::ssl", options.debug_watchdog);
     logger.init();
 
-    let _ = actix_web::rt::System::new().block_on(async move {
+    *HTTP_RATE_LIMITER.lock().unwrap() = IpRateLimiter::new_bandwidth_limiter(
+        options.http_bandwidth_limit,
+        options.http_bandwidth_burst,
+    );
+
+    let _ = actix::System::new().block_on(async move {
         let cloud = options
             .linode_personal_access_token
             .map(|t| Box::new(Linode::new(&t)) as Box<dyn Cloud>);
 
         let system = cloud
             .zip(options.domain.clone())
-            .map(|(cloud, domain)| SystemRepo::<G>::new(cloud, domain));
+            .map(|(cloud, domain)| SystemRepo::<G>::new(cloud, domain, &REDIRECT_TO_SERVER_ID));
 
+        let server_id = ServerId::new(options.server_id);
         let region_id = if let Some(region_id) = options.region_id {
             Some(region_id)
         } else {
@@ -188,328 +174,485 @@ pub fn entry_point<G: GameArenaService>() {
             ip_address.and_then(|ip| SystemRepo::<G>::ip_to_region_id(ip))
         };
 
-        let (early_restart_send, mut early_restart_recv) = tokio::sync::mpsc::channel::<()>(1);
-
         let srv = Infrastructure::<G>::start(
             Infrastructure::new(
-                ServerId::new(options.server_id),
-                Some(&REDIRECT_TO_SERVER_ID),
-                early_restart_send,
+                server_id,
                 system,
-                game_static_files_hash(),
+                static_hash::<GameClient>(),
                 region_id,
                 options.database_read_only,
                 options.min_players,
                 options.chat_log,
                 options.trace_log,
+                RateLimiterProps::new(
+                    Duration::from_secs(options.client_authenticate_rate_limit),
+                    options.client_authenticate_burst,
+                ),
             )
             .await,
         );
-        let domain = Arc::new(options.domain.clone());
+        let domain = &*Box::leak(Box::new(options.domain.clone()));
 
-        let mut ssl = options
+        #[cfg(not(debug_assertions))]
+        let certificate_paths = options
             .certificate_path
             .as_ref()
-            .zip(options.private_key_path.as_ref())
-            .map(|(certificate_file, private_key_file)| {
-                Ssl::new(certificate_file, private_key_file).unwrap()
-            });
+            .zip(options.private_key_path.as_ref());
 
-        let use_ssl = ssl.is_some();
+        let ws_srv = srv.to_owned();
+        let admin_srv = srv.to_owned();
+        let status_srv = srv.to_owned();
+        let system_srv = srv.to_owned();
 
-        loop {
-            let iter_srv = srv.to_owned();
-            let domain_clone = Arc::clone(&domain);
+        #[cfg(not(debug_assertions))]
+        let domain_clone_cors = domain.as_ref().map(|d| {
+            [
+                format!("://{}", d),
+                format!(".{}", d),
+                String::from("http://localhost:8000"),
+                String::from("https://localhost:8001"),
+                String::from("http://localhost:80"),
+                String::from("https://localhost:443"),
+            ]
+        });
 
-            // If ssl exists, safe to assume whatever certificates exist are now installed.
-            if let Some(ssl) = ssl.as_mut() {
-                ssl.set_renewed();
-            }
-            let immut_ssl = &ssl;
+        let app = Router::new()
+            .fallback(get(static_handler::<GameClient>))
+            .route("/ws/", axum::routing::get(async move |upgrade: WebSocketUpgrade, addr: Option<ConnectInfo<SocketAddr>>, user_agent: Option<TypedHeader<axum::headers::UserAgent>>, query: Query<WebSocketQuery>| {
+                let user_agent_id = user_agent
+                    .map(|h| UserAgent::new(h.as_str()))
+                    .and_then(UserAgent::into_id);
 
-            let mut server = HttpServer::new(move || {
-                // Rust let's you get away with cloning one closure deep, not all the way to a nested closure.
-                let srv_clone = iter_srv.to_owned();
-                let srv_clone_admin = iter_srv.to_owned();
-                let srv_clone_status = iter_srv.to_owned();
-                let srv_clone_system = iter_srv.to_owned();
-                let domain_clone = Arc::clone(&domain_clone);
+                let authenticate = Authenticate {
+                    ip_address: addr.map(|addr| addr.0.ip()),
+                    referrer: query.referrer,
+                    user_agent_id,
+                    arena_id_session_id: query.arena_id.zip(query.session_id),
+                    invitation_id: query.invitation_id,
+                };
 
-                #[cfg(not(debug_assertions))]
-                let domain_clone_cors = domain_clone.as_ref().as_ref().map(|d| {
-                    [
-                        format!("://{}", d),
-                        format!(".{}", d),
-                        String::from("http://localhost:8000"),
-                    ]
-                });
+                const MAX_MESSAGE_SIZE: usize = 32768;
+                const TIMER_SECONDS: u64 = 10;
+                const TIMER_DURATION: Duration = Duration::from_secs(TIMER_SECONDS);
+                const WEBSOCK_HARD_TIMEOUT: Duration = Duration::from_secs(TIMER_SECONDS * 2);
 
-                App::new()
-                    // Compile times are O(3^n) on middlewares, so consolidate tasks into as few
-                    // middlewares as possible.
-                    .wrap_fn(move |mut req, srv| {
-                        // Redirect HTTP to HTTPS.
-                        if use_ssl && req.connection_info().scheme() != "https" {
-                            let url =
-                                format!("https://{}{}", req.connection_info().host(), req.uri());
-                            let response = req.into_response(
-                                HttpResponse::MovedPermanently()
-                                    .insert_header((LOCATION, url))
-                                    .finish(),
-                            );
-                            return Box::pin(fut::ready(Ok(response)))
-                                as Pin<
-                                    Box<
-                                        dyn std::future::Future<
-                                            Output = Result<ServiceResponse, actix_web::Error>,
-                                        >,
-                                    >,
-                                >;
+                match ws_srv.send(authenticate).await {
+                    Ok(result) => match result {
+                        Ok(player_id) => Ok(upgrade
+                            .max_frame_size(MAX_MESSAGE_SIZE)
+                            .max_message_size(MAX_MESSAGE_SIZE)
+                            .max_send_queue(32)
+                            .on_upgrade(async move |mut web_socket| {
+                            let mut protocol = query.protocol.unwrap_or_default();
+
+                            let (server_sender, mut server_receiver) = tokio::sync::mpsc::unbounded_channel::<ObserverUpdate<Update<G::ClientUpdate>>>();
+
+                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Register {
+                                player_id,
+                                observer: server_sender.clone(),
+                            });
+
+                            let keep_alive = tokio::time::sleep(TIMER_DURATION);
+                            let mut last_activity = Instant::now();
+                            let mut rate_limiter = RateLimiterState::default();
+                            const RATE: RateLimiterProps = RateLimiterProps::const_new(Duration::from_millis(80), 5);
+
+                            pin_mut!(keep_alive);
+
+                            // For signaling what type of close frame should be sent, if any.
+                            const NORMAL_CLOSURE: Option<CloseCode> = Some(1000);
+                            const PROTOCOL_ERROR: Option<CloseCode> = Some(1002);
+                            const SILENT_CLOSURE: Option<CloseCode> = None;
+
+                            let closure = loop {
+                                tokio::select! {
+                                    web_socket_update = web_socket.recv() => {
+                                        match web_socket_update {
+                                            Some(result) => match result {
+                                                Ok(message) => {
+                                                    last_activity = Instant::now();
+                                                    keep_alive.as_mut().reset((last_activity + TIMER_DURATION).into());
+
+                                                    match message {
+                                                        Message::Binary(binary) => {
+                                                            if rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
+                                                                continue;
+                                                            }
+
+                                                            match bincode::DefaultOptions::new()
+                                                                .with_limit(MAX_MESSAGE_SIZE as u64)
+                                                                .with_fixint_encoding()
+                                                                .allow_trailing_bytes()
+                                                                .deserialize(binary.as_ref())
+                                                            {
+                                                                Ok(request) => {
+                                                                    protocol = WebSocketProtocol::Binary;
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Request {
+                                                                        player_id,
+                                                                        request,
+                                                                    });
+                                                                }
+                                                                Err(err) => {
+                                                                    warn!("deserialize binary err ignored {}", err);
+                                                                }
+                                                            }
+                                                        }
+                                                        Message::Text(text) => {
+                                                            if rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
+                                                                continue;
+                                                            }
+
+                                                            let result: Result<Request<G::Command>, serde_json::Error> = serde_json::from_str(&text);
+                                                            match result {
+                                                                Ok(request) => {
+                                                                    protocol = WebSocketProtocol::Json;
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Request {
+                                                                        player_id,
+                                                                        request,
+                                                                    });
+                                                                }
+                                                                Err(err) => {
+                                                                    warn!("parse err ignored {}", err);
+                                                                }
+                                                            }
+                                                        }
+                                                        Message::Ping(_) => {
+                                                            // Axum spec days that automatic Pong will be sent.
+                                                        }
+                                                        Message::Pong(pong_data) => {
+                                                            if rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
+                                                                continue;
+                                                            }
+
+                                                            if let Ok(bytes) = pong_data.try_into() {
+                                                                let now = get_unix_time_now();
+                                                                let timestamp = UnixTime::from_ne_bytes(bytes);
+                                                                let rtt = now.saturating_sub(timestamp);
+                                                                if rtt < u16::MAX as UnixTime {
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::RoundTripTime {
+                                                                        player_id,
+                                                                        rtt: rtt as u16,
+                                                                    });
+                                                                }
+                                                            } else {
+                                                                debug!("received invalid pong data");
+                                                            }
+                                                        },
+                                                        Message::Close(_) => {
+                                                            debug!("recieved close from client");
+                                                            // tungstenite will echo close frame if necessary.
+                                                            break SILENT_CLOSURE;
+                                                        },
+                                                    }
+                                                }
+                                                Err(error) => {
+                                                    debug!("web socket error: {:?}", error);
+                                                    break PROTOCOL_ERROR;
+                                                }
+                                            }
+                                            None => {
+                                                // web socket closed already.
+                                                break SILENT_CLOSURE;
+                                            }
+                                        }
+                                    },
+                                    maybe_observer_update = server_receiver.recv() => {
+                                        let observer_update = match maybe_observer_update {
+                                            Some(observer_update) => observer_update,
+                                            None => {
+                                                // infrastructure wants websocket closed.
+                                                break NORMAL_CLOSURE
+                                            }
+                                        };
+                                        match observer_update {
+                                            ObserverUpdate::Send{message} => {
+                                                let web_socket_message = match protocol {
+                                                    WebSocketProtocol::Binary => Message::Binary(bincode::serialize(&message).unwrap()),
+                                                    WebSocketProtocol::Json => Message::Text(serde_json::to_string(&message).unwrap()),
+                                                };
+                                                if web_socket.send(web_socket_message).await.is_err() {
+                                                    break NORMAL_CLOSURE;
+                                                }
+                                            }
+                                            ObserverUpdate::Close => {
+                                                break NORMAL_CLOSURE;
+                                            }
+                                        }
+                                    },
+                                    _ = keep_alive.as_mut() => {
+                                        if last_activity.elapsed() < WEBSOCK_HARD_TIMEOUT {
+                                            if web_socket.send(Message::Ping(get_unix_time_now().to_ne_bytes().into())).await.is_err() {
+                                                break NORMAL_CLOSURE;
+                                            }
+                                            keep_alive.as_mut().reset((Instant::now() + TIMER_DURATION).into());
+                                        } else {
+                                            debug!("closing unresponsive");
+                                            break PROTOCOL_ERROR;
+                                        }
+                                    }
+                                }
+                            };
+
+                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Unregister {
+                                player_id,
+                                observer: server_sender,
+                            });
+
+                            if let Some(code) = closure {
+                                let _ = web_socket.send(Message::Close(Some(CloseFrame{code, reason: "".into()}))).await;
+                            } else {
+                                let _ = web_socket.flush().await;
+                            }
+                        })),
+                        Err(_) => Err(StatusCode::TOO_MANY_REQUESTS.into_response()),
+                    },
+                    Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()),
+                }
+            }))
+            .route("/system/", axum::routing::get(move |addr: Option<ConnectInfo<SocketAddr>>, query: Query<SystemQuery>| {
+                let srv = system_srv.to_owned();
+                debug!("received system request");
+
+                let ip = addr.map(|addr| addr.0.ip());
+
+                async move {
+                    match srv
+                        .send(SystemRequest {
+                            ip,
+                            server_id: query.server_id,
+                            region_id: query.region_id,
+                            invitation_id: query.invitation_id,
+                        })
+                        .await
+                    {
+                        Ok(system_response) => {
+                            Ok(axum::Json(system_response))
+                        }
+                        Err(e) => {
+                            Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
+                        }
+                    }
+                }
+            }))
+            .layer(ServiceBuilder::new()
+                .layer(CorsLayer::new()
+                    .allow_origin(tower_http::cors::Origin::predicate(move |origin, _parts| {
+                        #[cfg(debug_assertions)]
+                        {
+                            let _ = origin;
+                            true
                         }
 
-                        // Don't redirect index so the url remains intact.
-                        // Don't redirect admin, so the server remains controllable.
-                        let dont_redirect = if let Some(before_hash) = req.path().split('#').next()
-                        {
-                            before_hash.starts_with("/admin")
-                                || before_hash.starts_with("/status")
-                                || before_hash.is_empty()
-                                || before_hash == "/"
+                        #[cfg(not(debug_assertions))]
+                        if let Some(domains) = domain_clone_cors.as_ref() {
+                            domains.iter().any(|domain| {
+                                origin.as_bytes().ends_with(domain.as_bytes())
+                            })
                         } else {
                             true
-                        };
-                        if !dont_redirect {
-                            if let Some((domain, server_id)) = domain_clone
-                                .as_ref()
-                                .as_ref()
-                                .zip(ServerId::new(REDIRECT_TO_SERVER_ID.load(Ordering::Relaxed)))
-                            {
-                                let redirect = format!(
-                                    "{}://{}.{}{}",
-                                    req.uri().scheme_str().unwrap_or("https"),
-                                    server_id.0.get(),
-                                    domain,
-                                    req.path()
-                                );
-                                let response = req.into_response(
-                                    HttpResponse::TemporaryRedirect()
-                                        .insert_header((LOCATION, redirect))
-                                        .finish(),
-                                );
-                                return Box::pin(fut::ready(Ok(response)))
-                                    as Pin<
-                                        Box<
-                                            dyn std::future::Future<
-                                                Output = Result<ServiceResponse, actix_web::Error>,
-                                            >,
-                                        >,
-                                    >;
-                            }
                         }
+                    }))
+                    .allow_headers(tower_http::cors::Any)
+                    .allow_methods([axum::http::method::Method::GET, axum::http::method::Method::HEAD, axum::http::method::Method::POST, axum::http::method::Method::OPTIONS]))
+                .layer(axum::middleware::from_fn(async move |request: axum::http::Request<_>, next: axum::middleware::Next<_>| {
+                    // Don't redirect index so the url remains intact.
+                    // Don't redirect admin or status, so the server remains controllable.
+                    let dont_redirect = if let Some(before_hash) = request.uri().path().split('#').next()
+                    {
+                        before_hash.starts_with("/admin")
+                            || before_hash.starts_with("/status")
+                            || before_hash.is_empty()
+                            || before_hash == "/"
+                    } else {
+                        true
+                    };
 
-                        // Some hard-coded redirections.
-                        if let Some(accepted) =
-                            req.headers().get(ACCEPT).and_then(|v| v.to_str().ok())
+                    if !dont_redirect {
+                        if let Some((domain, server_id)) = domain
+                            .as_ref()
+                            .zip(ServerId::new(REDIRECT_TO_SERVER_ID.load(Ordering::Relaxed)))
                         {
-                            if accepted.contains("image/webp") {
-                                if let Some(redirect) = match req.path() {
-                                    "/sprites_css.png" => Some("/sprites_css.webp"),
-                                    "/sprites_webgl.png" => Some("/sprites_webgl.webp"),
-                                    "/sand.png" => Some("/sand.webp"),
-                                    "/grass.png" => Some("/grass.webp"),
-                                    "/snow.png" => Some("/snow.webp"),
-                                    _ => None,
-                                } {
-                                    let mut parts = req.uri().clone().into_parts();
-                                    parts.path_and_query =
-                                        Some(PathAndQuery::from_static(redirect));
-                                    if let Ok(uri) = Uri::from_parts(parts) {
-                                        req.head_mut().uri = uri.clone();
-                                        req.match_info_mut().set(Url::new(uri));
-                                    }
-                                }
+                            let scheme = request.uri().scheme().cloned().unwrap_or(Scheme::HTTPS);
+                            if let Ok(uri) = Uri::builder()
+                                .scheme(scheme)
+                                .path_and_query(format!("{}.{}{}", server_id.0.get(), domain, request.uri().path()))
+                                .build(){
+                                return Err(Redirect::temporary(uri));
                             }
                         }
+                    }
 
-                        // Do the request.
-                        Box::pin(srv.call(req).map_ok(|mut res| {
-                            let content_length = match res.response().body().size() {
-                                BodySize::Sized(n) => n as u32,
-                                _ => 0,
-                            }
-                            .max(1000);
-                            if let Some(ip) = res.request().peer_addr().map(|a| a.ip()) {
-                                let should_rate_limit = {
-                                    HTTP_RATE_LIMITER
-                                        .lock()
-                                        .unwrap()
-                                        .should_limit_rate_with_usage(ip, content_length)
-                                };
+                    let ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ci| ci.0.ip());
 
-                                if should_rate_limit {
-                                    warn!("Bandwidth limiting {}", ip);
+                    let mut response = next.run(request).await;
 
-                                    let (request, mut response) = res.into_parts();
+                    let content_length = response
+                        .headers()
+                        .get(axum::http::header::CONTENT_LENGTH)
+                        .and_then(|h| h.to_str().ok())
+                        .and_then(|s| u32::from_str(s).ok())
+                        .unwrap_or(response.body().size_hint().lower() as u32)
+                        .max(500);
 
-                                    // Too many requests status.
-                                    *response.status_mut() = StatusCode::from_u16(429).unwrap();
+                    if let Some(ip) = ip {
+                        let should_rate_limit = {
+                            HTTP_RATE_LIMITER
+                                .lock()
+                                .unwrap()
+                                .should_limit_rate_with_usage(ip, content_length)
+                        };
 
-                                    // I changed my mind, I'm not actually going to send you all this data...
-                                    response = response.drop_body().map_into_boxed_body();
+                        if should_rate_limit {
+                            warn!("Bandwidth limiting {}", ip);
 
-                                    res = ServiceResponse::new(request, response)
+                            *response.status_mut() = StatusCode::TOO_MANY_REQUESTS;
+
+                            // I changed my mind, I'm not actually going to send you all this data...
+                            response = response.map(|_| {
+                                axum::body::boxed(axum::body::Empty::new())
+                            });
+                        }
+                    }
+
+                    Ok(response)
+                }))
+            )
+            .route("/status/", axum::routing::get(move || {
+                let srv = status_srv.to_owned();
+                debug!("received status request");
+
+                async move {
+                    match srv.send(StatusRequest).await {
+                        Ok(status_response) => {
+                            Ok(axum::Json(status_response))
+                        }
+                        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()),
+                    }
+                }
+            }))
+            .route("/admin/*path", axum::routing::get(static_handler::<AdminClient>).post(
+                move |request: axum::extract::Json<ParameterizedAdminRequest>| {
+                    let srv_clone_admin = admin_srv.clone();
+
+                    async move {
+                        match srv_clone_admin.send(request.0).await {
+                            Ok(result) => match result {
+                                Ok(update) => {
+                                    Ok(axum::Json(update))
                                 }
+                                Err(e) => Err((axum::http::status::StatusCode::BAD_REQUEST, String::from(e)).into_response()),
+                            },
+                            Err(e) => {
+                                Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
                             }
+                        }
+                    }
+                }
+            ));
 
-                            // Add some universal default headers.
-                            for (key, value) in [(CACHE_CONTROL, "no-cache")] {
-                                if !res.headers().contains_key(key.clone()) {
-                                    res.headers_mut()
-                                        .insert(key, HeaderValue::from_static(value));
-                                }
-                            }
-                            res
-                        }))
-                            as Pin<
-                                Box<
-                                    dyn std::future::Future<
-                                        Output = Result<ServiceResponse, actix_web::Error>,
-                                    >,
-                                >,
-                            >
-                    })
-                    .wrap(
-                        Cors::default()
-                            .allow_any_header()
-                            .allowed_methods([
-                                Method::GET,
-                                Method::HEAD,
-                                Method::POST,
-                                Method::OPTIONS,
-                            ])
-                            .allowed_origin_fn(move |origin, _head| {
-                                #[cfg(debug_assertions)]
-                                {
-                                    let _ = origin;
-                                    true
-                                }
+        let addr_incoming_config = axum_server::AddrIncomingConfig::new()
+            .tcp_keepalive(Some(Duration::from_secs(32)))
+            .tcp_nodelay(true)
+            .tcp_sleep_on_accept_errors(true)
+            .build();
 
-                                #[cfg(not(debug_assertions))]
-                                if let Some(domains) = domain_clone_cors.as_ref() {
-                                    domains.iter().any(|domain| {
-                                        origin.as_bytes().ends_with(domain.as_bytes())
-                                    })
+        let http_config = axum_server::HttpConfig::new()
+            .http2_max_concurrent_streams(Some(8))
+            .http2_keep_alive_interval(Some(Duration::from_secs(4)))
+            .http2_keep_alive_timeout(Duration::from_secs(10))
+            .build();
+
+        let ports = if nix::unistd::Uid::effective().is_root() {
+            (80, 443)
+        } else {
+            (8000, 8001)
+        };
+
+        #[cfg(not(debug_assertions))]
+        let http_app = Router::new()
+            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>| {
+                let mut parts = uri.into_parts();
+                parts.scheme = Some(Scheme::HTTPS);
+                let authority_str = format!("{}:{}", host.0.hostname(), ports.1);
+                let authority = axum::http::uri::Authority::from_str(&authority_str)
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())?;
+                parts.authority = Some(authority);
+                Uri::from_parts(parts)
+                    .map(|uri| Redirect::permanent(uri))
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
+            }));
+
+        #[cfg(debug_assertions)]
+        let http_app = app;
+
+        let http_server = axum_server::bind(SocketAddr::from(([0, 0, 0, 0], ports.0)))
+            .addr_incoming_config(addr_incoming_config.clone())
+            .http_config(http_config.clone())
+            .serve(http_app.into_make_service_with_connect_info::<SocketAddr, _>());
+
+        #[cfg(debug_assertions)]
+        error!("http server stopped: {:?}", http_server.await);
+
+        #[cfg(not(debug_assertions))]
+        let rustls_config = if let Some((certificate_path, private_key_path)) = certificate_paths {
+            let rustls_config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
+                certificate_path,
+                private_key_path,
+            ).await.unwrap();
+
+            let renewal_rustls_config = rustls_config.clone();
+            let certificate_path = certificate_path.to_owned();
+            let private_key_path = private_key_path.to_owned();
+
+            tokio::spawn(async move {
+                let mut old_expiry = server_util::ssl::certificate_expiry(&certificate_path).unwrap();
+
+                const CHECK_PERIOD: Duration = Duration::from_secs(24 * 3600);
+                let mut governor = tokio::time::interval(CHECK_PERIOD);
+
+                loop {
+                    governor.tick().await;
+
+                    match server_util::ssl::certificate_expiry(&certificate_path) {
+                        Ok(new_expiry) => {
+                            if new_expiry > old_expiry {
+                                warn!("renewing SSL certificate...");
+                                if let Err(e) = renewal_rustls_config.reload_from_pem_file(&certificate_path, &private_key_path).await {
+                                    error!("failed to renew SSL certificate: {}", e);
                                 } else {
-                                    true
+                                    old_expiry = new_expiry;
                                 }
-                            }),
-                    )
-                    .service(resource("/ws/").route(web::get().to(
-                        move |r: HttpRequest,
-                              stream: web::Payload,
-                              query: Query<WebSocketQuery>| {
-                            let query = query.into_inner();
-                            ws_index(r, stream, query, srv_clone.to_owned())
-                        },
-                    )))
-                    .service(resource("/admin/").route(post().to(
-                        move |request: Json<ParameterizedAdminRequest>| {
-                            debug!("received admin request");
-
-                            let srv_clone_admin = srv_clone_admin.clone();
-
-                            async move {
-                                match srv_clone_admin.send(request.0).await {
-                                    Ok(result) => match result {
-                                        actix_web::Result::Ok(update) => {
-                                            let response = serde_json::to_vec(&update).unwrap();
-                                            HttpResponse::Ok()
-                                                .content_type("application/json")
-                                                .body(response)
-                                        }
-                                        Err(e) => HttpResponse::BadRequest().body(String::from(e)),
-                                    },
-                                    Err(e) => {
-                                        HttpResponse::InternalServerError().body(e.to_string())
-                                    }
-                                }
-                            }
-                        },
-                    )))
-                    .service(resource("/status/").route(get().to(move || {
-                        let srv = srv_clone_status.to_owned();
-                        debug!("received status request");
-
-                        async move {
-                            match srv.send(StatusRequest).await {
-                                Ok(status_response) => {
-                                    let response = serde_json::to_vec(&status_response).unwrap();
-                                    HttpResponse::Ok()
-                                        .content_type("application/json")
-                                        .body(response)
-                                }
-                                Err(e) => HttpResponse::InternalServerError().body(e.to_string()),
+                            } else {
+                                log::info!("SSL certificate not in need of renewal.");
                             }
                         }
-                    })))
-                    .service(resource("/system/").route(get().to(
-                        move |r: HttpRequest, query: Query<SystemQuery>| {
-                            let srv = srv_clone_system.to_owned();
-                            debug!("received system request");
+                        Err(e) => error!("failed to get SSL certificate expiry: {}", e)
+                    }
+                }
+            });
 
-                            let ip = r.peer_addr().map(|addr| addr.ip());
+            rustls_config
+        } else {
+            warn!("Using self-signed certificate in place of trusted certificate.");
+            axum_server::tls_rustls::RustlsConfig::from_pem(
+                include_bytes!("certificate.pem").as_slice().into(),
+                include_bytes!("private_key.pem").as_slice().into(),
+            ).await.unwrap()
+        };
 
-                            async move {
-                                match srv
-                                    .send(SystemRequest {
-                                        ip,
-                                        server_id: query.server_id,
-                                        region_id: query.region_id,
-                                        invitation_id: query.invitation_id,
-                                    })
-                                    .await
-                                {
-                                    Ok(system_response) => {
-                                        let response =
-                                            serde_json::to_vec(&system_response).unwrap();
-                                        HttpResponse::Ok()
-                                            .content_type("application/json")
-                                            .body(response)
-                                    }
-                                    Err(e) => {
-                                        HttpResponse::InternalServerError().body(e.to_string())
-                                    }
-                                }
-                            }
-                        },
-                    )))
-                    .configure(static_files())
-            })
-            .on_connect(on_connect_enable_nodelay);
+        #[cfg(not(debug_assertions))]
+        let https_server = axum_server::bind_rustls(SocketAddr::from(([0, 0, 0, 0], ports.1)), rustls_config)
+            .addr_incoming_config(addr_incoming_config.clone())
+            .http_config(http_config)
+            .serve(app.into_make_service_with_connect_info::<SocketAddr, _>());
 
-            if let Some(ssl) = immut_ssl {
-                server = server
-                    .bind_rustls("0.0.0.0:443", ssl.rustls_config())
-                    .expect("could not listen (https)");
-                server = server.bind("0.0.0.0:80").expect("could not listen (http)");
-            } else {
-                server = server
-                    .bind("0.0.0.0:8000")
-                    .expect("could not listen (http)");
+        #[cfg(not(debug_assertions))]
+        tokio::select! {
+            result = http_server => {
+                error!("http server stopped: {:?}", result);
             }
-
-            let running_server = server
-                .keep_alive(KEEP_ALIVE)
-                .shutdown_timeout(SHUTDOWN_TIMEOUT)
-                .max_connections(max_connections_per_worker())
-                .backlog(BACKLOG)
-                .run();
-
-            if run_until_ssl_renewal(running_server, immut_ssl, &mut early_restart_recv)
-                .await
-                .is_err()
-            {
-                break;
+            result = https_server => {
+                error!("https server stopped: {:?}", result);
             }
         }
     });

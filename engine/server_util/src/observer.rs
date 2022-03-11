@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use actix::prelude::*;
-use actix::Recipient;
 use core_protocol::id::PlayerId;
+use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Message)]
 #[rtype(result = "()")]
-pub enum ObserverMessage<I, O, P = ()>
+pub enum ObserverMessage<I, O>
 where
     O: actix::Message + std::marker::Send,
-    P: Clone,
     <O as actix::Message>::Result: std::marker::Send,
 {
     Request {
@@ -24,12 +23,11 @@ where
     },
     Register {
         player_id: PlayerId,
-        observer: Recipient<ObserverUpdate<O>>,
-        payload: P,
+        observer: UnboundedSender<ObserverUpdate<O>>,
     },
     Unregister {
         player_id: PlayerId,
-        observer: Recipient<ObserverUpdate<O>>,
+        observer: UnboundedSender<ObserverUpdate<O>>,
     },
 }
 

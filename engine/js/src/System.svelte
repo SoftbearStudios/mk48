@@ -32,9 +32,14 @@
         }
     }
 
-    async function restartHttpServer() {
-        alert("Are you sure?");
-        const response = await adminRequest("RestartHttpServer");
+    // TODO: This is a potentially incorrect assumption.
+    let profiler = false;
+
+    async function setProfiler(enabled) {
+        const response = await adminRequest({SetProfiler: enabled});
+        if (response.ProfilerSet !== undefined) {
+            profiler = response.ProfilerSet;
+        }
     }
 
     function checkmark(bool) {
@@ -87,7 +92,11 @@
     {#if redirect}
         <button on:click={setRedirect.bind(null, null)}>Clear Redirect {redirect}</button>
     {/if}
-    <button on:click={restartHttpServer}>Restart Http Server</button>
+    {#if profiler}
+        <button on:click={() => setProfiler(false)}>Disengage Profiler</button>
+    {:else}
+        <button on:click={() => setProfiler(true)}>Engage Profiler</button>
+    {/if}
 </main>
 
 <style>

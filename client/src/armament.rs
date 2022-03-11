@@ -4,6 +4,7 @@
 use crate::game::Mk48Game;
 use crate::interpolated_contact::InterpolatedContact;
 use client_util::context::CoreState;
+use client_util::rate_limiter::RateLimiter;
 use client_util::renderer::particle::{Particle, ParticleLayer};
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
@@ -17,6 +18,7 @@ impl Mk48Game {
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).
     /// Armaments are scored by a combination of distance and angle to target.
     pub fn find_best_armament(
+        &self,
         player_contact: &Contact,
         angle_limit: bool,
         mouse_position: Vec2,
@@ -40,6 +42,11 @@ impl Mk48Game {
 
                 if !player_contact.reloads()[i] {
                     // Reloading; cannot fire.
+                    continue;
+                }
+
+                if !self.fire_rate_limiter.is_ready(i as u8) {
+                    // Recently fired, shouldn't try to fire again (server will just block).
                     continue;
                 }
 
@@ -170,5 +177,48 @@ impl Mk48Game {
         }
 
         volume
+    }
+}
+
+/// This is useful for avoiding firing the same weapon twice, which reduces fire rate in a high
+/// latency environment.
+#[derive(Debug)]
+pub struct FireRateLimiter {
+    counters: Vec<u8>,
+    update_rate_limiter: RateLimiter,
+}
+
+impl FireRateLimiter {
+    pub fn new() -> Self {
+        Self {
+            counters: Vec::with_capacity(32),
+            update_rate_limiter: RateLimiter::new(0.1),
+        }
+    }
+
+    pub fn is_ready(&self, armament_index: u8) -> bool {
+        self.counters
+            .get(armament_index as usize)
+            .map(|&v| v == 0)
+            .unwrap_or(true)
+    }
+
+    pub fn are_all_ready(&self) -> bool {
+        self.counters.iter().all(|&v| v == 0)
+    }
+
+    pub fn fired(&mut self, armament_index: u8) {
+        while armament_index as usize >= self.counters.len() {
+            self.counters.push(0);
+        }
+        self.counters[armament_index as usize] = 3;
+    }
+
+    pub fn update(&mut self, elapsed_seconds: f32) {
+        if self.update_rate_limiter.update_ready(elapsed_seconds) {
+            for counter in &mut self.counters {
+                *counter = counter.saturating_sub(((elapsed_seconds * 10.0) as u8).max(1));
+            }
+        }
     }
 }

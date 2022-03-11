@@ -10,9 +10,6 @@ use actix::{
     ActorFutureExt, ActorStreamExt, Context as ActorContext, ContextFutureSpawner, Handler,
     Message, WrapFuture, WrapStream,
 };
-use actix_web::http::header::CONNECTION;
-use actix_web::http::Version;
-use awc::Client;
 use core_protocol::dto::ServerDto;
 use core_protocol::id::{InvitationId, RegionId, ServerId};
 use core_protocol::rpc::{StatusResponse, SystemResponse, SystemUpdate};
@@ -20,6 +17,9 @@ use db_ip::{include_region_database, DbIpDatabase, Region};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{error, info, warn};
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::redirect::Policy;
+use reqwest::Client;
 use serde::Deserialize;
 use server_util::cloud::{Cloud, DnsUpdate};
 use server_util::rate_limiter::RateLimiter;
@@ -27,6 +27,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -40,6 +41,7 @@ pub struct SystemRepo<G: GameArenaService> {
     /// For diffing. Always sorted in ascending order of [`ServerId`].
     previous: Arc<[ServerDto]>,
     cloud: &'static dyn Cloud,
+    redirect_server_id: &'static AtomicU8,
     update_rate_limiter: RateLimiter,
     _spooky: PhantomData<G>,
 }
@@ -153,16 +155,36 @@ impl<G: GameArenaService> SystemRepo<G> {
     /// If a server that does not report its client hash is considered compatible by default.
     const MISSING_HASH_IS_COMPATIBLE: bool = false;
 
-    pub fn new(cloud: Box<dyn Cloud>, domain: String) -> Self {
+    pub fn new(
+        cloud: Box<dyn Cloud>,
+        domain: String,
+        redirect_server_id: &'static AtomicU8,
+    ) -> Self {
         Self {
             // Only happens once, helps async code later.
             cloud: Box::leak(cloud),
             domain: Arc::new(domain),
+            redirect_server_id,
             servers: HashMap::new(),
             previous: Vec::new().into(),
             update_rate_limiter: RateLimiter::new(Self::RATE, 0),
             _spooky: PhantomData,
         }
+    }
+
+    /// Get the current actual redirect.
+    /*
+    pub(crate) fn get_redirect(&self) -> Option<ServerId> {
+        ServerId::new(self.redirect_server_id.load(Ordering::Relaxed))
+    }
+     */
+
+    /// Set the actual redirect immediately.
+    pub(crate) fn set_redirect(&mut self, server_id: Option<ServerId>) {
+        self.redirect_server_id.store(
+            server_id.map(|id| id.0.get()).unwrap_or(0),
+            Ordering::Relaxed,
+        );
     }
 
     pub(crate) fn initializer(&self) -> Option<SystemUpdate> {
@@ -253,12 +275,23 @@ impl<G: GameArenaService> SystemRepo<G> {
             }
         };
 
-        let client = Client::builder()
+        let mut default_headers = HeaderMap::new();
+
+        default_headers.insert(
+            reqwest::header::CONNECTION,
+            HeaderValue::from_str("close").unwrap(),
+        );
+
+        let client = match Client::builder()
             .timeout(Self::PING_TIMEOUT)
-            .max_http_version(Version::HTTP_11)
-            .add_default_header((CONNECTION, "close"))
-            .disable_redirects()
-            .finish();
+            .http1_only()
+            .default_headers(default_headers)
+            .redirect(Policy::none())
+            .build()
+        {
+            Ok(client) => client,
+            Err(_) => return,
+        };
 
         let home_ip_addresses: HashSet<IpAddr> = records
             .remove(Self::HOME)
@@ -285,20 +318,22 @@ impl<G: GameArenaService> SystemRepo<G> {
                     None
                 }
             })
-            .map(|(server_id, ip)| {
+            .filter_map(|(server_id, ip)| {
                 expire.remove(&server_id);
 
                 let home = home_ip_addresses.contains(&ip);
 
-                let result_future = client
+                let client = client.clone();
+                let request = client
                     .get(format!("https://{}.{}/status/", server_id.0, system.domain))
-                    .send();
+                    .build()
+                    .ok()?;
 
-                async move {
-                    let mut response = match result_future.await {
+                Some(async move {
+                    let response = match client.execute(request).await {
                         Ok(response) => response,
                         Err(e) => {
-                            warn!("watchdog send request error with {:?}: {:?}", server_id, e);
+                            warn!("watchdog send request error with {:?}: {}", server_id, e);
                             return PingResult {
                                 server_id,
                                 ip,
@@ -309,10 +344,10 @@ impl<G: GameArenaService> SystemRepo<G> {
                         }
                     };
 
-                    let body = match response.body().await {
+                    let body = match response.text().await {
                         Ok(b) => b,
                         Err(e) => {
-                            warn!("watchdog response error with {:?}: {:?}", server_id, e);
+                            warn!("watchdog response error with {:?}: {}", server_id, e);
                             return PingResult {
                                 server_id,
                                 ip,
@@ -366,7 +401,7 @@ impl<G: GameArenaService> SystemRepo<G> {
                         rtt: now.elapsed(),
                         status,
                     }
-                }
+                })
             })
             .collect();
 
@@ -468,12 +503,35 @@ impl<G: GameArenaService> SystemRepo<G> {
         let infrastructure_region_id = infrastructure.region_id;
         let system = unwrap_or_return!(infrastructure.system.as_mut());
 
+        // Update redirect based on whether desired server is ok.
+        system.set_redirect(infrastructure.admin.redirect_server_id_preference.filter(
+            |server_id| {
+                let ok = system
+                    .servers
+                    .get(server_id)
+                    .map(|s| {
+                        matches!(
+                            s.status,
+                            ServerStatus::Healthy { .. } | ServerStatus::Incompatible
+                        )
+                    })
+                    .unwrap_or(false);
+                if !ok {
+                    warn!(
+                        "ignoring redirect {:?} due to unhealthy/unreachable status.",
+                        server_id
+                    );
+                }
+                ok
+            },
+        ));
+
         let mut home = Vec::new();
         let mut alive = Vec::new();
         // How many other servers think this server is dying.
         let mut dying_corroboration = HashMap::<ServerId, u32>::new();
 
-        for (&server_id, server) in &mut system.servers {
+        for (&server_id, server) in &system.servers {
             if server.home {
                 home.push(server_id);
             }
@@ -487,11 +545,28 @@ impl<G: GameArenaService> SystemRepo<G> {
                 dying_server_ids, ..
             } = &server.status
             {
-                if infrastructure.server_id != Some(server_id)
-                    && infrastructure.region_id != server.region_id
-                {
+                if infrastructure.server_id != Some(server_id) {
+                    // We trust the corroboration of a server in a different region than ourselves.
+                    let other_region_agrees = infrastructure.region_id != server.region_id;
+
                     for &dying_server_id in dying_server_ids {
-                        *dying_corroboration.entry(dying_server_id).or_default() += 1;
+                        let dying_server_region_id = system
+                            .servers
+                            .get(&dying_server_id)
+                            .and_then(|s| s.region_id);
+
+                        // We trust the corroboration of a server in the same reason as the server
+                        // that is supposedly dying.
+                        let same_region_agrees = dying_server_region_id.is_some()
+                            && dying_server_region_id == server.region_id;
+
+                        // The only servers this excludes are servers in our region in the case that
+                        // the dying server is in a different region. For example, two servers
+                        // in NorthAmerica can't terminate a server in SouthAmerica without
+                        // corroboration from a server outside of NorthAmerica.
+                        if same_region_agrees || other_region_agrees {
+                            *dying_corroboration.entry(dying_server_id).or_default() += 1;
+                        }
                     }
                 }
             }
@@ -610,11 +685,19 @@ impl<G: GameArenaService> SystemRepo<G> {
 
     /// Gets public ip by consulting various 3rd party APIs.
     pub async fn get_own_public_ip() -> Option<IpAddr> {
+        let mut default_headers = HeaderMap::new();
+
+        default_headers.insert(
+            reqwest::header::CONNECTION,
+            HeaderValue::from_str("close").unwrap(),
+        );
+
         let client = Client::builder()
             .timeout(Duration::from_secs(1))
-            .max_http_version(Version::HTTP_11)
-            .add_default_header((CONNECTION, "close"))
-            .finish();
+            .http1_only()
+            .default_headers(default_headers)
+            .build()
+            .ok()?;
 
         let checkers = [
             "https://v4.ident.me/",
@@ -629,10 +712,14 @@ impl<G: GameArenaService> SystemRepo<G> {
         let mut checks: FuturesUnordered<_> = checkers
             .iter()
             .map(move |&checker| {
-                let fut = client.get(checker).send();
+                let client = client.clone();
+                let request_result = client.get(checker).build();
 
                 async move {
-                    let mut response = match fut.await {
+                    let request = request_result.ok()?;
+                    let fut = client.execute(request);
+
+                    let response = match fut.await {
                         Ok(response) => response,
                         Err(e) => {
                             info!("checker {} returned {:?}", checker, e);
@@ -640,23 +727,15 @@ impl<G: GameArenaService> SystemRepo<G> {
                         }
                     };
 
-                    let body = match response.body().await {
-                        Ok(body) => body,
+                    let string = match response.text().await {
+                        Ok(string) => string,
                         Err(e) => {
                             info!("checker {} returned {:?}", checker, e);
                             return None;
                         }
                     };
 
-                    let string = match std::str::from_utf8(&body) {
-                        Ok(string) => string.trim(),
-                        Err(e) => {
-                            info!("checker {} returned {:?}", checker, e);
-                            return None;
-                        }
-                    };
-
-                    match IpAddr::from_str(string) {
+                    match IpAddr::from_str(&string) {
                         Ok(ip) => Some(ip),
                         Err(e) => {
                             info!("checker {} returned {:?}", checker, e);

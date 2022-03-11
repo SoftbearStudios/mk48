@@ -190,7 +190,6 @@ dependencies = [
  "core_protocol",
  "enum-iterator",
  "fast_hilbert",
- "getrandom",
  "glam",
  "lazy_static",
  "macros",

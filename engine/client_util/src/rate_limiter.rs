@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /// For rate-limiting tasks on the client (where durations are expressed in seconds).
+#[derive(Debug)]
 pub struct RateLimiter {
     elapsed: f32,
     period: f32,
@@ -31,7 +32,7 @@ impl RateLimiter {
         self.elapsed += elapsed;
     }
 
-    /// Returns whether it is time to do the rate limited action, cleari
+    /// Returns whether it is time to do the rate limited action, clearing the elapsed time.
     pub fn ready(&mut self) -> bool {
         let ret = self.elapsed >= self.period;
         self.elapsed = 0.0;

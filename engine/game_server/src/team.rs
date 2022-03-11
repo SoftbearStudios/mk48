@@ -81,6 +81,8 @@ impl<G: GameArenaService> TeamData<G> {
 #[derive(Debug, Default)]
 pub struct PlayerTeamData {
     status: PlayerTeamStatus,
+    /// The last [`TeamId`] the game service was informed of via [`GameArenaService::player_changed_team`].
+    pub(crate) previous_team_id: Option<TeamId>,
 }
 
 /// Data related to team, stored in client.

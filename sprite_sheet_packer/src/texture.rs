@@ -301,11 +301,13 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
         println!("Writing {}...", png_texture_path);
         fs::write(&png_texture_path, optimized).unwrap();
 
+        /*
         let webp_image = webp::Encoder::from_rgba(packed.as_raw(), size, size).encode(WEBP_QUALITY);
 
         let webp_texture_path = format!("{}.webp", output_texture);
         println!("Writing {}...", webp_texture_path);
         fs::write(&webp_texture_path, &*webp_image).unwrap();
+         */
 
         let json = if uv_spritesheet {
             serde_json::to_string(&data.to_uv_spritesheet())

@@ -15,7 +15,7 @@ use crate::unwrap_or_return;
 use actix::WrapStream;
 use actix::{
     fut, ActorFutureExt, ActorStreamExt, Context as ActorContext, ContextFutureSpawner, Handler,
-    Message, Recipient, ResponseActFuture, WrapFuture,
+    Message, ResponseActFuture, WrapFuture,
 };
 use atomic_refcell::AtomicRefCell;
 use common_util::ticks::Ticks;
@@ -30,11 +30,12 @@ use core_protocol::rpc::{
 use futures::stream::FuturesUnordered;
 use log::{error, info, warn};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use server_util::benchmark::{benchmark_scope, Timer};
 use server_util::database_schema::SessionItem;
 use server_util::generate_id::{generate_id, generate_id_64};
 use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::observer::{ObserverMessage, ObserverUpdate};
-use server_util::rate_limiter::RateLimiter;
+use server_util::rate_limiter::{RateLimiter, RateLimiterProps};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fs::OpenOptions;
@@ -45,9 +46,11 @@ use std::net::IpAddr;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc::UnboundedSender;
 
 /// The message recipient of an actix actor corresponding to a client.
-pub type ClientAddr<G> = Recipient<ObserverUpdate<Update<<G as GameArenaService>::ClientUpdate>>>;
+pub type ClientAddr<G> =
+    UnboundedSender<ObserverUpdate<Update<<G as GameArenaService>::ClientUpdate>>>;
 
 /// Keeps track of clients a.k.a. real players a.k.a. websockets.
 pub struct ClientRepo<G: GameArenaService> {
@@ -59,9 +62,9 @@ pub struct ClientRepo<G: GameArenaService> {
 }
 
 impl<G: GameArenaService> ClientRepo<G> {
-    pub fn new(trace_log: Option<String>) -> Self {
+    pub fn new(trace_log: Option<String>, authenticate: RateLimiterProps) -> Self {
         Self {
-            authenticate_rate_limiter: IpRateLimiter::new(Duration::from_secs(30), 16),
+            authenticate_rate_limiter: authenticate.into(),
             database_rate_limiter: RateLimiter::new(Duration::from_secs(30), 0),
             trace_log,
             _spooky: PhantomData,
@@ -175,7 +178,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         };
 
         // Welcome the client in.
-        let _ = register_observer.do_send(ObserverUpdate::Send {
+        let _ = register_observer.send(ObserverUpdate::Send {
             message: Update::Client(ClientUpdate::SessionCreated {
                 arena_id,
                 server_id,
@@ -200,7 +203,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         match old_status {
             ClientStatus::Connected { observer } => {
                 // If it still exists, old client is now retired.
-                let _ = observer.do_send(ObserverUpdate::Close);
+                let _ = observer.send(ObserverUpdate::Close);
             }
             ClientStatus::Limbo { .. } => {
                 info!("player {:?} restored from limbo", player_id);
@@ -213,30 +216,30 @@ impl<G: GameArenaService> ClientRepo<G> {
 
         // Send initial data.
         for initializer in leaderboards.initializers() {
-            let _ = register_observer.do_send(ObserverUpdate::Send {
+            let _ = register_observer.send(ObserverUpdate::Send {
                 message: Update::Leaderboard(initializer),
             });
         }
 
-        let _ = register_observer.do_send(ObserverUpdate::Send {
+        let _ = register_observer.send(ObserverUpdate::Send {
             message: Update::Liveboard(liveboard.initializer()),
         });
 
         chat.initialize_client(player_id, players);
 
-        let _ = register_observer.do_send(ObserverUpdate::Send {
+        let _ = register_observer.send(ObserverUpdate::Send {
             message: Update::Player(players.initializer()),
         });
 
         if let Some(initializer) = teams.initializer() {
-            let _ = register_observer.do_send(ObserverUpdate::Send {
+            let _ = register_observer.send(ObserverUpdate::Send {
                 message: Update::Team(initializer),
             });
         }
 
         if let Some(system) = system {
             if let Some(initializer) = system.initializer() {
-                let _ = register_observer.do_send(ObserverUpdate::Send {
+                let _ = register_observer.send(ObserverUpdate::Send {
                     message: Update::System(initializer),
                 });
             }
@@ -267,7 +270,7 @@ impl<G: GameArenaService> ClientRepo<G> {
 
         match &client.status {
             ClientStatus::Connected { observer } => {
-                if observer == &unregister_observer {
+                if observer.same_channel(&unregister_observer) {
                     client.status = ClientStatus::Limbo {
                         expiry: Instant::now() + G::LIMBO,
                     };
@@ -289,12 +292,22 @@ impl<G: GameArenaService> ClientRepo<G> {
         server_delta: Option<(Arc<[ServerDto]>, Arc<[ServerId]>)>,
         counter: Ticks,
     ) {
+        benchmark_scope!("update_clients");
+
         let player_update = players.delta(&*teams);
         let team_update = teams.delta();
         let immut_players = &*players;
         let player_chat_team_updates: HashMap<PlayerId, _> = players
             .iter_player_ids()
-            .filter(|id| !id.is_bot())
+            .filter(|&id| {
+                !id.is_bot()
+                    && immut_players
+                        .borrow_player(id)
+                        .unwrap()
+                        .client()
+                        .map(|c| matches!(c.status, ClientStatus::Connected { .. }))
+                        .unwrap_or(false)
+            })
             .map(|player_id| {
                 (
                     player_id,
@@ -324,15 +337,13 @@ impl<G: GameArenaService> ClientRepo<G> {
                         player_tuple,
                         &mut *client_data.data.borrow_mut(),
                     ) {
-                        if let Err(e) = observer.do_send(ObserverUpdate::Send {
+                        let _ = observer.send(ObserverUpdate::Send {
                             message: Update::Game(update),
-                        }) {
-                            warn!("Error sending update to client: {}", e); // TODO: drop_session() !
-                        }
+                        });
                     }
 
                     if let Some((added, removed, real_players)) = player_update.as_ref() {
-                        let _ = observer.do_send(ObserverUpdate::Send {
+                        let _ = observer.send(ObserverUpdate::Send {
                             message: Update::Player(PlayerUpdate::Updated {
                                 added: Arc::clone(added),
                                 removed: Arc::clone(removed),
@@ -343,55 +354,61 @@ impl<G: GameArenaService> ClientRepo<G> {
 
                     if let Some((added, removed)) = team_update.as_ref() {
                         if !added.is_empty() {
-                            let _ = observer.do_send(ObserverUpdate::Send {
+                            let _ = observer.send(ObserverUpdate::Send {
                                 message: Update::Team(TeamUpdate::AddedOrUpdated(Arc::clone(
                                     added,
                                 ))),
                             });
                         }
                         if !removed.is_empty() {
-                            let _ = observer.do_send(ObserverUpdate::Send {
+                            let _ = observer.send(ObserverUpdate::Send {
                                 message: Update::Team(TeamUpdate::Removed(Arc::clone(removed))),
                             });
                         }
                     }
 
-                    let (chat_update, (members, joiners, joins)) =
-                        player_chat_team_updates.get(&player_id).unwrap();
+                    if let Some((chat_update, (members, joiners, joins))) =
+                        player_chat_team_updates.get(&player_id)
+                    {
+                        if let Some(chat_update) = chat_update {
+                            let _ = observer.send(ObserverUpdate::Send {
+                                message: Update::Chat(chat_update.clone()),
+                            });
+                        }
 
-                    if let Some(chat_update) = chat_update {
-                        let _ = observer.do_send(ObserverUpdate::Send {
-                            message: Update::Chat(chat_update.clone()),
-                        });
-                    }
+                        // TODO: We could get members on a per team basis.
+                        if let Some(members) = members {
+                            let _ = observer.send(ObserverUpdate::Send {
+                                message: Update::Team(TeamUpdate::Members(
+                                    members.deref().clone().into(),
+                                )),
+                            });
+                        }
 
-                    // TODO: We could get members on a per team basis.
-                    if let Some(members) = members {
-                        let _ = observer.do_send(ObserverUpdate::Send {
-                            message: Update::Team(TeamUpdate::Members(
-                                members.deref().clone().into(),
-                            )),
-                        });
-                    }
+                        if let Some(joiners) = joiners {
+                            let _ = observer.send(ObserverUpdate::Send {
+                                message: Update::Team(TeamUpdate::Joiners(
+                                    joiners.deref().clone().into(),
+                                )),
+                            });
+                        }
 
-                    if let Some(joiners) = joiners {
-                        let _ = observer.do_send(ObserverUpdate::Send {
-                            message: Update::Team(TeamUpdate::Joiners(
-                                joiners.deref().clone().into(),
-                            )),
-                        });
-                    }
-
-                    if let Some(joins) = joins {
-                        let _ = observer.do_send(ObserverUpdate::Send {
-                            message: Update::Team(TeamUpdate::Joins(
-                                joins.iter().cloned().collect(),
-                            )),
-                        });
+                        if let Some(joins) = joins {
+                            let _ = observer.send(ObserverUpdate::Send {
+                                message: Update::Team(TeamUpdate::Joins(
+                                    joins.iter().cloned().collect(),
+                                )),
+                            });
+                        }
+                    } else {
+                        debug_assert!(
+                            false,
+                            "not possible, all connected clients should have an entry"
+                        );
                     }
 
                     for &(period_id, leaderboard) in &leaderboard_update {
-                        let _ = observer.do_send(ObserverUpdate::Send {
+                        let _ = observer.send(ObserverUpdate::Send {
                             message: Update::Leaderboard(LeaderboardUpdate::Updated(
                                 period_id,
                                 Arc::clone(&leaderboard),
@@ -400,7 +417,7 @@ impl<G: GameArenaService> ClientRepo<G> {
                     }
 
                     if let Some((added, removed)) = liveboard_update.as_ref() {
-                        let _ = observer.do_send(ObserverUpdate::Send {
+                        let _ = observer.send(ObserverUpdate::Send {
                             message: Update::Liveboard(LiveboardUpdate::Updated {
                                 added: Arc::clone(added),
                                 removed: Arc::clone(removed),
@@ -410,12 +427,12 @@ impl<G: GameArenaService> ClientRepo<G> {
 
                     if let Some((added, removed)) = server_delta.as_ref() {
                         if !added.is_empty() {
-                            let _ = observer.do_send(ObserverUpdate::Send {
+                            let _ = observer.send(ObserverUpdate::Send {
                                 message: Update::System(SystemUpdate::Added(Arc::clone(added))),
                             });
                         }
                         if !removed.is_empty() {
-                            let _ = observer.do_send(ObserverUpdate::Send {
+                            let _ = observer.send(ObserverUpdate::Send {
                                 message: Update::System(SystemUpdate::Removed(Arc::clone(removed))),
                             });
                         }
@@ -434,6 +451,8 @@ impl<G: GameArenaService> ClientRepo<G> {
         invitations: &mut InvitationRepo<G>,
         metrics: &mut MetricRepo<G>,
     ) {
+        benchmark_scope!("prune_clients");
+
         let now = Instant::now();
         let to_forget: Vec<PlayerId> = players
             .players
@@ -535,7 +554,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         }
 
         let client = player.client_mut().ok_or("only clients can set alias")?;
-        let censored_alias = PlayerAlias::new(alias.as_str());
+        let censored_alias = PlayerAlias::new_sanitized(alias.as_str());
         client.alias = censored_alias;
         Ok(ClientUpdate::AliasSet(censored_alias))
     }
@@ -753,14 +772,14 @@ impl<G: GameArenaService> PlayerClientData<G> {
 }
 
 /// Handle client messages.
-impl<G: GameArenaService> Handler<ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>, ()>>
+impl<G: GameArenaService> Handler<ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>>>
     for Infrastructure<G>
 {
     type Result = ();
 
     fn handle(
         &mut self,
-        msg: ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>, ()>,
+        msg: ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>>,
         _ctx: &mut Self::Context,
     ) {
         match msg {
@@ -822,7 +841,7 @@ impl<G: GameArenaService> Handler<ObserverMessage<Request<G::Command>, Update<G:
                         };
 
                         if let ClientStatus::Connected { observer } = &client.status {
-                            let _ = observer.do_send(ObserverUpdate::Send { message });
+                            let _ = observer.send(ObserverUpdate::Send { message });
                         } else {
                             debug_assert!(false, "impossible due to synchronous nature of code");
                         }

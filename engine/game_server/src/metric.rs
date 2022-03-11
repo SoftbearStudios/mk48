@@ -17,6 +17,7 @@ use core_protocol::{get_unix_time_now, UnixTime};
 use heapless::HistoryBuffer;
 use log::{error, warn};
 use server_util::database_schema::{Metrics, MetricsItem, SessionItem};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::time::{Duration, Instant};
@@ -114,7 +115,17 @@ impl<T: Default> Bundle<T> {
     ) {
         mutation(&mut self.total);
         if let Some(referrer) = referrer {
-            mutation(self.by_referrer.entry(referrer).or_default());
+            // We cap at the first few referrers we see to avoid unbounded memory.
+            let referrers_full = self.by_referrer.len() >= 128;
+
+            match self.by_referrer.entry(referrer) {
+                Entry::Occupied(occupied) => mutation(occupied.into_mut()),
+                Entry::Vacant(vacant) => {
+                    if !referrers_full {
+                        mutation(vacant.insert(T::default()))
+                    }
+                }
+            }
         }
         if let Some(region_id) = region_id {
             mutation(self.by_region_id.entry(region_id).or_default());
@@ -175,6 +186,13 @@ impl MetricBundle {
             start,
             bundle: Bundle::default(),
         }
+    }
+
+    pub fn metric(&self, filter: Option<MetricFilterDto>) -> Metrics {
+        self.bundle
+            .get(filter)
+            .cloned()
+            .unwrap_or_else(|| Metrics::default())
     }
 
     pub fn data_point(&self, filter: Option<MetricFilterDto>) -> MetricsDataPointDto {
@@ -485,16 +503,22 @@ impl<G: GameArenaService> MetricRepo<G> {
             if infrastructure.database_read_only {
                 warn!("would have written metrics to database but was inhibited");
             } else {
-                infrastructure
-                    .database()
-                    .update_metrics(metrics_item)
-                    .into_actor(infrastructure)
-                    .map(|res, _, _| {
-                        if let Err(e) = res {
-                            error!("error putting metrics: {:?}", e)
-                        }
-                    })
-                    .spawn(ctx)
+                let server_number = infrastructure.server_id.map(|id| id.0.get()).unwrap_or(0);
+                let database = infrastructure.database();
+
+                async move {
+                    // Don't hammer the database row from multiple servers simultaneously, which
+                    // wouldn't compromise correctness, but would affect performance.
+                    tokio::time::sleep(Duration::from_secs(server_number as u64 * 5 + 1)).await;
+                    database.update_metrics(metrics_item).await
+                }
+                .into_actor(infrastructure)
+                .map(|res, _, _| {
+                    if let Err(e) = res {
+                        error!("error putting metrics: {:?}", e)
+                    }
+                })
+                .spawn(ctx)
             }
         }
     }

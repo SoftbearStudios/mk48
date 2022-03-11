@@ -10,6 +10,7 @@ use crate::transform::Transform;
 use crate::util::{level_to_score, natural_death_coins};
 use crate::velocity::Velocity;
 use arrayvec::ArrayVec;
+use common_util::range::map_ranges;
 use core_protocol::serde_util::{StrVisitor, U8Visitor};
 use enum_iterator::IntoEnumIterator;
 use glam::Vec2;
@@ -152,9 +153,6 @@ impl EntityData {
     /// horizontally (very fast) until they reach the surface.
     pub const SURFACING_PROJECTILE_SPEED_LIMIT: f32 = 0.5;
 
-    /// Travelling at a speed (in mps) above this will cause more noise to be produced (12 knots).
-    pub const CAVITATION_VELOCITY: f32 = 6.17333;
-
     /// Constant used for checking whether a depth charge should explode.
     pub const DEPTH_CHARGE_PROXIMITY: f32 = 30.0;
 
@@ -209,6 +207,20 @@ impl EntityData {
             EntitySubKind::Torpedo => self.torpedo_resistance,
             _ => 0.0,
         }
+    }
+
+    /// Returns minimum cavitation (making noisy bubbles) speed.
+    pub fn cavitation_speed(&self, altitude: Altitude) -> Velocity {
+        let lo = Velocity::from_knots(8.0);
+        let hi = Velocity::from_knots(12.0);
+        Velocity::from_mps(
+            map_ranges(
+                altitude.to_norm(),
+                0.0..-1.0,
+                lo.to_mps()..hi.to_mps(),
+                true,
+            ) * (1.0 + self.stealth),
+        )
     }
 
     /// armament_transform returns the entity-relative transform of a given armament.

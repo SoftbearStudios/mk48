@@ -16,6 +16,7 @@ pub mod audio;
 pub mod context;
 pub mod entry_point;
 pub mod fps_monitor;
+pub mod frontend;
 pub mod game_client;
 pub mod infrastructure;
 pub mod joystick;

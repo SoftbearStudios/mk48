@@ -162,7 +162,6 @@ pub enum AdminRequest {
         player_id: PlayerId,
         minutes: usize,
     },
-    RestartHttpServer,
     RestrictPlayer {
         player_id: PlayerId,
         minutes: usize,
@@ -188,6 +187,7 @@ pub enum AdminRequest {
     },
     RequestRedirect,
     SetRedirect(Option<ServerId>),
+    SetProfiler(bool),
 }
 
 /// Admin related responses from the server.
@@ -209,6 +209,7 @@ pub enum AdminUpdate {
     SeriesRequested(Arc<[(UnixTime, MetricsDataPointDto)]>),
     SummaryRequested(MetricsSummaryDto),
     UserAgentsRequested(Box<[(UserAgentId, f32)]>),
+    ProfilerSet(bool),
 }
 
 /// Team related requests from the client to the server.

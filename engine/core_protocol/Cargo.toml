@@ -8,7 +8,7 @@ license = "AGPL-3.0-or-later"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix = {version="0.12", optional = true}
+actix = {version="0.13", optional = true}
 arrayvec = { version = "0.7", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 enum-iterator = "0.7"

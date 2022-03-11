@@ -15,10 +15,11 @@ use actix::{Actor, Context as ActorContext};
 use common_util::ticks::Ticks;
 use core_protocol::id::{ArenaId, RegionId, ServerId};
 use log::{error, info};
+use server_util::benchmark::{benchmark_scope, Timer};
 use server_util::database::Database;
+use server_util::rate_limiter::RateLimiterProps;
 use std::num::NonZeroU32;
 use std::process;
-use std::sync::atomic::AtomicU8;
 
 /// An entire game server.
 pub struct Infrastructure<G: GameArenaService> {
@@ -71,8 +72,6 @@ impl<G: GameArenaService> Infrastructure<G> {
     /// new returns a game server with the specified parameters.
     pub async fn new(
         server_id: Option<ServerId>,
-        redirect_server_id: Option<&'static AtomicU8>,
-        early_restart_send: tokio::sync::mpsc::Sender<()>,
         system: Option<SystemRepo<G>>,
         client_hash: u64,
         region_id: Option<RegionId>,
@@ -80,6 +79,7 @@ impl<G: GameArenaService> Infrastructure<G> {
         min_players: usize,
         chat_log: Option<String>,
         trace_log: Option<String>,
+        client_authenticate: RateLimiterProps,
     ) -> Self {
         // TODO: If multiple arenas, generate randomly.
         let arena_id = ArenaId(
@@ -94,8 +94,14 @@ impl<G: GameArenaService> Infrastructure<G> {
             database: Box::leak(Box::new(Database::new().await)),
             database_read_only,
             system,
-            admin: AdminRepo::new(redirect_server_id, early_restart_send),
-            context_service: ContextService::new(arena_id, min_players, chat_log, trace_log),
+            admin: AdminRepo::new(),
+            context_service: ContextService::new(
+                arena_id,
+                min_players,
+                chat_log,
+                trace_log,
+                client_authenticate,
+            ),
             invitations: InvitationRepo::new(),
             leaderboard: LeaderboardRepo::new(),
             metrics: MetricRepo::new(),
@@ -105,6 +111,8 @@ impl<G: GameArenaService> Infrastructure<G> {
 
     /// Call once every tick.
     pub fn update(&mut self, ctx: &mut <Infrastructure<G> as Actor>::Context) {
+        benchmark_scope!("infrastructure_update");
+
         let status = &self.status;
         let server_delta = self.system.as_mut().and_then(|system| system.delta(status));
         self.context_service.update(

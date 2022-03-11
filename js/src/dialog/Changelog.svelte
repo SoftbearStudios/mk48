@@ -14,6 +14,19 @@
 
 	<h2>2021</h2>
 
+	<h3>3/6/2022</h3>
+
+	<ul>
+		<li>Different submarines now cavitate at different speeds/depths.</li>
+		<li>Fix mechanics related to leaving teams, such as destruction of mines.</li>
+		<li>Fix leaderboard and team GUI issue after switching servers.</li>
+		<li>Improve fire rate in the presence of high latency.</li>
+		<li>Discontinue "Asia" server due to lower player counts, until a better server-switching solution is implemented.</li>
+		<li>Fix score-retention bug reported by El Pepe and IcyBun.</li>
+		<li>Fix crash due to poor WebAudio support.</li>
+		<li>Attempt to fix bug that randomly kicks you back to the splash screen.</li>
+	</ul>
+
 	<h3>2/27/2022</h3>
 
 	<ul>

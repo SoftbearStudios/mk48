@@ -33,4 +33,5 @@ pub mod status;
 pub mod team;
 #[macro_use]
 pub mod util;
+mod static_files;
 pub mod system;

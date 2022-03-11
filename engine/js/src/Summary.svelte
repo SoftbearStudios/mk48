@@ -2,7 +2,7 @@
     import {adminRequest, game, round, wildcardToUndefined} from './util.js';
 
     const summaryBlacklist = [
-        "arenas_cached", "retention", "sessions_cached", "uptime"
+        "arenas_cached", "uptime"
     ];
 
     export const filterSummaryBlacklist = function(list) {

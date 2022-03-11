@@ -267,7 +267,13 @@ pub struct ServerId(pub NonZeroU8);
 
 impl ServerId {
     pub fn new(val: u8) -> Option<Self> {
-        NonZeroU8::new(val).map(|nz| Self(nz))
+        NonZeroU8::new(val).map(Self)
+    }
+}
+
+impl Display for ServerId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

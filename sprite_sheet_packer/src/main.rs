@@ -14,9 +14,9 @@ use common::util::map_ranges;
 fn main() {
     unsafe { EntityType::init() };
 
-    webpify("../js/public/sand.png");
-    webpify("../js/public/grass.png");
-    webpify("../js/public/snow.png");
+    //webpify("../js/public/sand.png");
+    //webpify("../js/public/grass.png");
+    //webpify("../js/public/snow.png");
 
     pack_audio_sprite_sheet(
         1,

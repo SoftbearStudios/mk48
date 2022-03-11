@@ -11,6 +11,8 @@ variable "domain" {
 variable "servers" {
   type = map
   default = {
+    1 = "us-east"
+    2 = "us-east"
     3 = "us-east"
     4 = "ap-west"
   }

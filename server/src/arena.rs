@@ -66,6 +66,7 @@ impl Arena {
     }
 
     /// total returns the total number of entities.
+    #[allow(dead_code)]
     pub fn total(&self) -> usize {
         self.counts.iter().sum::<u32>() as usize
     }

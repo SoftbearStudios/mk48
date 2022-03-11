@@ -8,14 +8,17 @@ use crate::util::diff_small_n;
 use core_protocol::dto::LiveboardDto;
 use core_protocol::id::PlayerId;
 use core_protocol::rpc::LiveboardUpdate;
+use server_util::rate_limiter::RateLimiter;
 use std::collections::BinaryHeap;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Manages the live leaderboard of an arena.
 pub struct LiveboardRepo<G: GameArenaService> {
     /// Stores previous liveboard for diffing.
     previous: Arc<[LiveboardDto]>,
+    update_rate_limiter: RateLimiter,
     _spooky: PhantomData<G>,
 }
 
@@ -23,6 +26,7 @@ impl<G: GameArenaService> LiveboardRepo<G> {
     pub fn new() -> Self {
         Self {
             previous: Vec::new().into(),
+            update_rate_limiter: RateLimiter::new(Duration::from_secs(1), 0),
             _spooky: PhantomData,
         }
     }
@@ -80,6 +84,10 @@ impl<G: GameArenaService> LiveboardRepo<G> {
         players: &PlayerRepo<G>,
         teams: &TeamRepo<G>,
     ) -> Option<(Arc<[LiveboardDto]>, Arc<[PlayerId]>)> {
+        if self.update_rate_limiter.should_limit_rate() {
+            return None;
+        }
+
         let current_liveboard = Self::compute(players, teams);
 
         if let Some((added, removed)) =

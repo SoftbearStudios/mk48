@@ -1,1 +1,3 @@
 terrain_test/
+flamegraph*
+*.svg

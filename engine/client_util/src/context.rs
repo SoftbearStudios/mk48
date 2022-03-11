@@ -1,4 +1,5 @@
 use crate::apply::Apply;
+use crate::frontend::Frontend;
 use crate::game_client::GameClient;
 use crate::js_hooks::{domain_name_of, host, invitation_id, is_https, referrer, ws_protocol};
 use crate::keyboard::KeyboardState;
@@ -13,10 +14,7 @@ use core_protocol::rpc::{
     ChatUpdate, ClientRequest, ClientUpdate, InvitationUpdate, LeaderboardUpdate, LiveboardUpdate,
     PlayerUpdate, Request, SystemUpdate, TeamUpdate, Update, WebSocketQuery,
 };
-use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
-use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen::JsValue;
 
 /// The context (except rendering) of a game.
 pub struct Context<G: GameClient + ?Sized> {
@@ -38,6 +36,7 @@ pub struct Context<G: GameClient + ?Sized> {
     pub common_settings: CommonSettings,
     /// Local storage.
     pub(crate) local_storage: LocalStorage,
+    pub(crate) frontend: Box<dyn Frontend<G::UiProps> + 'static>,
 }
 
 /// State common to all clients.
@@ -273,8 +272,9 @@ impl<G: GameClient> Context<G> {
         mut local_storage: LocalStorage,
         mut common_settings: CommonSettings,
         settings: G::Settings,
+        frontend: Box<dyn Frontend<G::UiProps> + 'static>,
     ) -> Self {
-        let (host, server_id) = Self::compute_websocket_host(&common_settings, None);
+        let (host, server_id) = Self::compute_websocket_host(&common_settings, None, &*frontend);
         let socket = ReconnWebSocket::new(host, common_settings.protocol, None);
         common_settings.set_server_id(server_id, &mut local_storage);
 
@@ -288,31 +288,21 @@ impl<G: GameClient> Context<G> {
             settings,
             common_settings,
             local_storage,
+            frontend,
         }
     }
 
     pub(crate) fn compute_websocket_host(
         common_settings: &CommonSettings,
         override_server_id: Option<ServerId>,
+        frontend: &dyn Frontend<G::UiProps>,
     ) -> (String, Option<ServerId>) {
-        #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
-        extern "C" {
-            #[wasm_bindgen(js_name = "getRealHost", catch)]
-            pub fn get_real_host() -> Result<String, JsValue>;
-
-            #[wasm_bindgen(js_name = "getRealEncryption", catch)]
-            pub fn get_real_encryption() -> Result<bool, JsValue>;
-
-            #[wasm_bindgen(js_name = "getIdealServerId", catch)]
-            pub fn get_ideal_server_id() -> Result<u8, JsValue>;
-        }
-
-        let scheme = ws_protocol(get_real_encryption().unwrap_or(is_https()));
-        let ideal_server_id =
-            override_server_id.or(get_ideal_server_id().ok().and_then(|u| ServerId::new(u)));
-        let host = get_real_host().unwrap_or(host());
+        let scheme = ws_protocol(frontend.get_real_encryption().unwrap_or(is_https()));
+        let ideal_server_id = override_server_id.or(frontend.get_ideal_server_id());
+        let host = frontend.get_real_host().unwrap_or(host());
 
         let ideal_host = ideal_server_id
+            .filter(|_| !host.starts_with("localhost"))
             .map(|id| format!("{}.{}", id.0, domain_name_of(&host)))
             .unwrap_or(host);
 
@@ -361,14 +351,6 @@ impl<G: GameClient> Context<G> {
 
     /// Set the props used to render the UI. Javascript must implement part of this.
     pub fn set_ui_props(&mut self, props: G::UiProps) {
-        #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
-        extern "C" {
-            // props must be a JsValue corresponding to a US instance.
-            #[wasm_bindgen(js_name = "setProps")]
-            pub fn set_props(props: JsValue);
-        }
-
-        let ser = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
-        set_props(props.serialize(&ser).unwrap());
+        self.frontend.set_ui_props(props);
     }
 }

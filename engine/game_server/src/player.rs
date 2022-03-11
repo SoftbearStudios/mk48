@@ -12,6 +12,7 @@ use core_protocol::dto::{InvitationDto, PlayerDto};
 use core_protocol::id::{PlayerId, TeamId};
 use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{PlayerRequest, PlayerUpdate};
+use server_util::benchmark::{benchmark_scope, Timer};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
@@ -32,6 +33,40 @@ pub struct PlayerRepo<G: GameArenaService> {
 
 impl<G: GameArenaService> PlayerRepo<G> {
     pub fn new() -> Self {
+        // For testing performance impact of stale clients.
+        /*
+        use server_util::generate_id::{generate_id, generate_id_64};
+        use core_protocol::id::{SessionId};
+        use crate::metric::{ClientMetricData};
+        use crate::client::{Authenticate};
+
+        let mut players: HashMap<PlayerId, Arc<PlayerTuple<G>>> = HashMap::new();
+
+        for _ in 0..100000 {
+            let pid = PlayerId(generate_id());
+            if !players.contains_key(&pid) {
+                players.insert(
+                    pid,
+                    Arc::new(PlayerTuple::new(PlayerData::new(
+                        pid,
+                        Some(Box::new(PlayerClientData::new(
+                            SessionId(generate_id_64()),
+                            ClientMetricData::from(&Authenticate {
+                                ip_address: None,
+                                user_agent_id: None,
+                                referrer: None,
+                                arena_id_session_id: None,
+                                invitation_id: None,
+                            }),
+                            None,
+                        ))),
+                    ))),
+                );
+                players.get(&pid).as_ref().unwrap().borrow_player_mut().client_mut().unwrap().status = crate::client::ClientStatus::Stale{expiry: Instant::now() + Duration::from_secs(3600)};
+            }
+        }
+         */
+
         Self {
             players: HashMap::new(),
             real_players: 0,
@@ -133,15 +168,19 @@ impl<G: GameArenaService> PlayerRepo<G> {
     }
 
     /// Updates cache of whether players are alive, tallying metrics in the process.
-    pub(crate) fn update_is_alive(
+    pub(crate) fn update_is_alive_and_team_id(
         &self,
-        service: &G,
+        service: &mut G,
         teams: &mut TeamRepo<G>,
         metrics: &mut MetricRepo<G>,
     ) {
+        benchmark_scope!("update_alive");
+
         for pt in self.iter() {
             let is_alive = service.is_alive(pt);
             let mut p = pt.borrow_player_mut();
+            let player_id = p.player_id;
+
             if is_alive != p.was_alive {
                 if is_alive {
                     // Play started.
@@ -156,14 +195,26 @@ impl<G: GameArenaService> PlayerRepo<G> {
                 p.was_alive_timestamp = Instant::now();
             }
             let is_out_of_game = p.is_out_of_game();
-            let was_out_of_game = &mut p.was_out_of_game;
-            if is_out_of_game != *was_out_of_game {
-                *was_out_of_game = is_out_of_game;
-                if is_out_of_game {
-                    let player_id = p.player_id;
-                    drop(p);
-                    teams.cleanup_player(player_id, self);
-                }
+            let was_out_of_game = p.was_out_of_game;
+            p.was_out_of_game = is_out_of_game;
+
+            drop(p);
+
+            if is_out_of_game && !was_out_of_game {
+                teams.cleanup_player(player_id, self);
+            }
+
+            p = pt.borrow_player_mut();
+
+            let current_team_id = p.team_id();
+            let previous_team_id = p.team.previous_team_id;
+            // We will inform the game service later in this function call.
+            p.team.previous_team_id = current_team_id;
+
+            drop(p);
+
+            if current_team_id != previous_team_id {
+                service.player_changed_team(pt, previous_team_id);
             }
         }
     }

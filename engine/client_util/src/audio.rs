@@ -192,13 +192,16 @@ impl Inner {
                         let event: Event = value.dyn_into().unwrap();
                         if let Some(inner) = cloned_rc.borrow_mut().as_mut() {
                             if let Some(playing) = inner.playing.get_mut(name) {
-                                playing.drain_filter(|p| {
+                                for source in playing.drain_filter(|p| {
                                     *p == event
                                         .target()
                                         .unwrap()
                                         .dyn_into::<AudioBufferSourceNode>()
                                         .unwrap()
-                                });
+                                }) {
+                                    // Ensure no double-invocation.
+                                    source.set_onended(None);
+                                }
                             }
                         }
                     });

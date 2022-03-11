@@ -168,7 +168,7 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
                         let heap: BinaryHeap<LeaderboardDto> = scores
                             .into_iter()
                             .map(|score| LeaderboardDto {
-                                alias: PlayerAlias::new(score.alias.as_str()),
+                                alias: PlayerAlias::new_sanitized(score.alias.as_str()),
                                 score: score.score,
                             })
                             .collect();

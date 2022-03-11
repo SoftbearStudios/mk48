@@ -5,7 +5,6 @@ use crate::player::PlayerTuple;
 use common_util::ticks::Ticks;
 use core_protocol::id::{GameId, PlayerId, TeamId};
 use core_protocol::name::PlayerAlias;
-use core_protocol::rpc::Request;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
@@ -38,7 +37,7 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
 
     type Bot: 'static + Bot<Self>;
     type ClientData: 'static + Default + Debug + Unpin + Send + Sync;
-    type ClientUpdate: 'static + Send + Serialize;
+    type ClientUpdate: 'static + Sync + Send + Serialize;
     type Command: 'static + DeserializeOwned + Send + Unpin;
     type PlayerData: 'static + Default + Unpin + Send + Sync + Debug;
     type PlayerExtension: 'static + Default + Unpin + Send + Sync;
@@ -50,12 +49,12 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
 
     /// Get alias of authority figure (that, for example, sends chat moderation warnings).
     fn authority_alias() -> PlayerAlias {
-        PlayerAlias::new("Server")
+        PlayerAlias::new_unsanitized("Server")
     }
 
     /// Generate a default player alias. It may be the same or different (e.g. random) each time.
     fn default_alias() -> PlayerAlias {
-        PlayerAlias::new("Guest")
+        PlayerAlias::new_unsanitized("Guest")
     }
 
     /// Called when a player joins the game.
@@ -76,11 +75,10 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     ) {
     }
 
-    /// Called when a player leaves the game.
+    /// Called when a player leaves the game. Responsible for clearing player data as necessary.
     fn player_left(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
-    // TODO: this leaves the timing of updates to the infrastructure.
     fn get_client_update(
         &self,
         counter: Ticks,
@@ -88,8 +86,7 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
         client_data: &mut Self::ClientData,
     ) -> Option<Self::ClientUpdate>;
 
-    /// An [`AtomicRef`] is provided as, due to parallelism, mutation is not permitted.
-    /// If None, bot quits.
+    /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
     fn get_bot_update<'a>(
         &'a self,
         counter: Ticks,
@@ -97,8 +94,6 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     ) -> Self::BotUpdate<'a>;
     /// Returns true iff the player is considered to be "alive" i.e. they cannot change their alias.
     fn is_alive(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> bool;
-    /// Peek at incoming request from client.
-    fn peek_request(&mut self, _request: &Request<Self::Command>) {}
     /// Before sending.
     fn update(&mut self, ticks: Ticks, counter: Ticks);
     /// After sending.

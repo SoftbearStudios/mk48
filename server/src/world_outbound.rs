@@ -7,7 +7,7 @@ use crate::entity::Entity;
 use crate::player::Status;
 use crate::server::Server;
 use crate::world::World;
-use common::entity::{EntityData, EntityKind, EntitySubKind};
+use common::entity::{EntityKind, EntitySubKind};
 use common::ticks::Ticks;
 use common::util::*;
 use game_server::player::PlayerTuple;
@@ -196,7 +196,8 @@ impl World {
                         // Beyond this point, sonar_ratio means passive sonar ratio.
 
                         // Always-on passive sonar:
-                        let mut noise = 2f32.max(entity_abs_vel - EntityData::CAVITATION_VELOCITY);
+                        let mut noise = 2f32
+                            .max(entity_abs_vel - data.cavitation_speed(entity.altitude).to_mps());
 
                         if data.kind == EntityKind::Boat
                             || data.kind == EntityKind::Weapon
