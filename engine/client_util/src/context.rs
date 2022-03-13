@@ -326,7 +326,7 @@ impl<G: GameClient> Context<G> {
 
     /// Whether the game websocket is closed or errored (not open, opening, or nonexistent).
     pub fn connection_lost(&self) -> bool {
-        self.socket.is_closed()
+        self.socket.is_terminated()
     }
 
     /// Send a game command on the socket.

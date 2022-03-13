@@ -12,14 +12,15 @@ use crate::static_files::{static_handler, static_hash};
 use crate::status::StatusRequest;
 use crate::system::{SystemRepo, SystemRequest};
 use actix::Actor;
-use axum::body::HttpBody;
+use axum::body::{boxed, HttpBody};
 use axum::extract::ws::{CloseCode, CloseFrame, Message};
 use axum::extract::{ConnectInfo, Query, TypedHeader, WebSocketUpgrade};
-use axum::http::uri::Scheme;
-use axum::http::{StatusCode, Uri};
+use axum::http::header::CACHE_CONTROL;
+use axum::http::uri::{Authority, Scheme};
+use axum::http::{HeaderValue, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Redirect};
 use axum::routing::get;
-use axum::Router;
+use axum::{Json, Router};
 use bincode::{self, Options as _};
 use core_protocol::id::*;
 use core_protocol::rpc::{Request, SystemQuery, Update, WebSocketQuery};
@@ -122,6 +123,12 @@ static REDIRECT_TO_SERVER_ID: AtomicU8 = AtomicU8::new(0);
 lazy_static::lazy_static! {
     // Will be overwritten first thing.
     static ref HTTP_RATE_LIMITER: Mutex<IpRateLimiter> = Mutex::new(IpRateLimiter::new_bandwidth_limiter(1, 0));
+
+    static ref CONNECTION_LEAK_DETECTOR: Mutex<connection_leak_detector::ConnectionLeakDetector> = Mutex::new({
+        let mut cld = connection_leak_detector::ConnectionLeakDetector::new();
+        cld.set_log_path("/tmp/cld.csv");
+        cld
+    });
 }
 
 #[derive(RustEmbed)]
@@ -339,7 +346,7 @@ pub fn entry_point<G: GameArenaService>() {
                                                             }
                                                         },
                                                         Message::Close(_) => {
-                                                            debug!("recieved close from client");
+                                                            debug!("received close from client");
                                                             // tungstenite will echo close frame if necessary.
                                                             break SILENT_CLOSURE;
                                                         },
@@ -426,7 +433,7 @@ pub fn entry_point<G: GameArenaService>() {
                         .await
                     {
                         Ok(system_response) => {
-                            Ok(axum::Json(system_response))
+                            Ok(Json(system_response))
                         }
                         Err(e) => {
                             Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
@@ -453,8 +460,34 @@ pub fn entry_point<G: GameArenaService>() {
                         }
                     }))
                     .allow_headers(tower_http::cors::Any)
-                    .allow_methods([axum::http::method::Method::GET, axum::http::method::Method::HEAD, axum::http::method::Method::POST, axum::http::method::Method::OPTIONS]))
+                    .allow_methods([Method::GET, Method::HEAD, Method::POST, Method::OPTIONS]))
                 .layer(axum::middleware::from_fn(async move |request: axum::http::Request<_>, next: axum::middleware::Next<_>| {
+                    let addr = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ci| ci.0);
+
+                    if let Some(addr) = addr {
+                        use connection_leak_detector::{Protocol, Encryption};
+                        use axum::http::Version;
+                        let mut protocol = match request.version() {
+                            Version::HTTP_09 => Protocol::Http09,
+                            Version::HTTP_10 => Protocol::Http10,
+                            Version::HTTP_11 => Protocol::Http11,
+                            Version::HTTP_2 => Protocol::Http2,
+                            Version::HTTP_3 => Protocol::Http2,
+                            _ => Protocol::Tcp,
+                        };
+                        if let Some(upgrade) = request.headers().get("upgrade") {
+                            if upgrade == "websocket" {
+                                protocol = Protocol::WebSocket;
+                            }
+                        }
+                        CONNECTION_LEAK_DETECTOR.lock().unwrap().mark_connection(
+                            &addr,
+                            Some(protocol),
+                            Some(Encryption::Tls),
+                            None,
+                        );
+                    }
+
                     // Don't redirect index so the url remains intact.
                     // Don't redirect admin or status, so the server remains controllable.
                     let dont_redirect = if let Some(before_hash) = request.uri().path().split('#').next()
@@ -482,9 +515,16 @@ pub fn entry_point<G: GameArenaService>() {
                         }
                     }
 
-                    let ip = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ci| ci.0.ip());
-
+                    let ip = addr.map(|addr| addr.ip());
                     let mut response = next.run(request).await;
+
+                    // Add some universal default headers.
+                    for (key, value) in [(CACHE_CONTROL, "no-cache")] {
+                        if !response.headers().contains_key(key.clone()) {
+                            response.headers_mut()
+                                .insert(key, HeaderValue::from_static(value));
+                        }
+                    }
 
                     let content_length = response
                         .headers()
@@ -509,7 +549,7 @@ pub fn entry_point<G: GameArenaService>() {
 
                             // I changed my mind, I'm not actually going to send you all this data...
                             response = response.map(|_| {
-                                axum::body::boxed(axum::body::Empty::new())
+                                boxed(axum::body::Empty::new())
                             });
                         }
                     }
@@ -517,30 +557,30 @@ pub fn entry_point<G: GameArenaService>() {
                     Ok(response)
                 }))
             )
-            .route("/status/", axum::routing::get(move || {
+            .route("/status/", get(move || {
                 let srv = status_srv.to_owned();
                 debug!("received status request");
 
                 async move {
                     match srv.send(StatusRequest).await {
                         Ok(status_response) => {
-                            Ok(axum::Json(status_response))
+                            Ok(Json(status_response))
                         }
                         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()),
                     }
                 }
             }))
-            .route("/admin/*path", axum::routing::get(static_handler::<AdminClient>).post(
-                move |request: axum::extract::Json<ParameterizedAdminRequest>| {
+            .route("/admin/*path", get(static_handler::<AdminClient>).post(
+                move |request: Json<ParameterizedAdminRequest>| {
                     let srv_clone_admin = admin_srv.clone();
 
                     async move {
                         match srv_clone_admin.send(request.0).await {
                             Ok(result) => match result {
                                 Ok(update) => {
-                                    Ok(axum::Json(update))
+                                    Ok(Json(update))
                                 }
-                                Err(e) => Err((axum::http::status::StatusCode::BAD_REQUEST, String::from(e)).into_response()),
+                                Err(e) => Err((StatusCode::BAD_REQUEST, String::from(e)).into_response()),
                             },
                             Err(e) => {
                                 Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
@@ -557,25 +597,36 @@ pub fn entry_point<G: GameArenaService>() {
             .build();
 
         let http_config = axum_server::HttpConfig::new()
+            .http1_keep_alive(true)
+            .http1_header_read_timeout(Duration::from_secs(5))
             .http2_max_concurrent_streams(Some(8))
             .http2_keep_alive_interval(Some(Duration::from_secs(4)))
             .http2_keep_alive_timeout(Duration::from_secs(10))
             .build();
 
+        const STANDARD_PORTS: (u16, u16) = (80, 443);
+
+        #[cfg(unix)]
         let ports = if nix::unistd::Uid::effective().is_root() {
-            (80, 443)
+            STANDARD_PORTS
         } else {
             (8000, 8001)
         };
+
+        #[cfg(not(unix))]
+        let ports = STANDARD_PORTS;
 
         #[cfg(not(debug_assertions))]
         let http_app = Router::new()
             .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>| {
                 let mut parts = uri.into_parts();
                 parts.scheme = Some(Scheme::HTTPS);
-                let authority_str = format!("{}:{}", host.0.hostname(), ports.1);
-                let authority = axum::http::uri::Authority::from_str(&authority_str)
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())?;
+                let authority = if ports.1 == STANDARD_PORTS.1 {
+                    Authority::from_str(host.0.hostname())
+                } else {
+                    // non-standard port.
+                    Authority::from_str(&format!("{}:{}", host.0.hostname(), ports.1))
+                }.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())?;
                 parts.authority = Some(authority);
                 Uri::from_parts(parts)
                     .map(|uri| Redirect::permanent(uri))
@@ -607,26 +658,59 @@ pub fn entry_point<G: GameArenaService>() {
             tokio::spawn(async move {
                 let mut old_expiry = server_util::ssl::certificate_expiry(&certificate_path).unwrap();
 
-                const CHECK_PERIOD: Duration = Duration::from_secs(24 * 3600);
-                let mut governor = tokio::time::interval(CHECK_PERIOD);
+                let mut governor = tokio::time::interval(Duration::from_secs(60));
+                let mut i = 0;
 
                 loop {
                     governor.tick().await;
 
-                    match server_util::ssl::certificate_expiry(&certificate_path) {
-                        Ok(new_expiry) => {
-                            if new_expiry > old_expiry {
-                                warn!("renewing SSL certificate...");
-                                if let Err(e) = renewal_rustls_config.reload_from_pem_file(&certificate_path, &private_key_path).await {
-                                    error!("failed to renew SSL certificate: {}", e);
-                                } else {
-                                    old_expiry = new_expiry;
+                    i += 1;
+
+                    {
+                        let mut cld = CONNECTION_LEAK_DETECTOR.lock().unwrap();
+                        if let Err(e) = cld.update() {
+                            error!("cld: {:?}", e);
+                        }
+
+                        if i % 60 == 5 {
+                            let leaked: Vec<_> = cld.iter_leaked_connections().collect();
+                            match serde_json::to_string(&leaked) {
+                                Ok(serialized) => {
+                                    match std::fs::OpenOptions::new()
+                                        .create(true)
+                                        .write(true)
+                                        .open(format!("/tmp/dat_cld_{}.json", get_unix_time_now()))
+                                    {
+                                        Ok(mut file) => {
+                                            use std::io::Write;
+                                            let _ = write!(file, "{}", serialized);
+                                        }
+                                        Err(e) => error!("couldn't open CLD data file: {:?}", e),
+                                    }
                                 }
-                            } else {
-                                log::info!("SSL certificate not in need of renewal.");
+                                Err(e) => error!("couldn't serialize CLD data: {:?}", e),
                             }
                         }
-                        Err(e) => error!("failed to get SSL certificate expiry: {}", e)
+                    }
+
+                    if i > 24 * 3600 {
+                        match server_util::ssl::certificate_expiry(&certificate_path) {
+                            Ok(new_expiry) => {
+                                if new_expiry > old_expiry {
+                                    warn!("renewing SSL certificate...");
+                                    if let Err(e) = renewal_rustls_config.reload_from_pem_file(&certificate_path, &private_key_path).await {
+                                        error!("failed to renew SSL certificate: {}", e);
+                                    } else {
+                                        old_expiry = new_expiry;
+                                    }
+                                } else {
+                                    log::info!("SSL certificate not in need of renewal.");
+                                }
+                            }
+                            Err(e) => error!("failed to get SSL certificate expiry: {}", e)
+                        }
+
+                        i = 0;
                     }
                 }
             });

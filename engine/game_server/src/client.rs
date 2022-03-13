@@ -72,7 +72,7 @@ impl<G: GameArenaService> ClientRepo<G> {
     }
 
     /// Updates sessions to database (internally rate-limited).
-    pub fn update_to_database(
+    pub(crate) fn update_to_database(
         infrastructure: &mut Infrastructure<G>,
         ctx: &mut ActorContext<Infrastructure<G>>,
     ) {
@@ -145,7 +145,7 @@ impl<G: GameArenaService> ClientRepo<G> {
     }
 
     /// Client websocket (re)connected.
-    pub fn register(
+    pub(crate) fn register(
         &mut self,
         player_id: PlayerId,
         register_observer: ClientAddr<G>,
@@ -154,6 +154,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         chat: &ChatRepo<G>,
         leaderboards: &LeaderboardRepo<G>,
         liveboard: &LiveboardRepo<G>,
+        metrics: &mut MetricRepo<G>,
         system: Option<&SystemRepo<G>>,
         arena_id: ArenaId,
         server_id: Option<ServerId>,
@@ -162,7 +163,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let player_tuple = match players.get(player_id) {
             Some(player_tuple) => player_tuple,
             None => {
-                warn!("client gone in register");
+                debug_assert!(false, "client gone in register");
                 return;
             }
         };
@@ -172,7 +173,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let client = match player.client_mut() {
             Some(client) => client,
             None => {
-                warn!("register wasn't a client");
+                debug_assert!(false, "register wasn't a client");
                 return;
             }
         };
@@ -197,18 +198,23 @@ impl<G: GameArenaService> ClientRepo<G> {
             observer: register_observer.clone(),
         };
         let old_status = std::mem::replace(&mut client.status, new_status);
-
-        drop(player);
+        let was_stale = matches!(old_status, ClientStatus::Stale { .. });
 
         match old_status {
             ClientStatus::Connected { observer } => {
                 // If it still exists, old client is now retired.
                 let _ = observer.send(ObserverUpdate::Close);
+                drop(player);
             }
             ClientStatus::Limbo { .. } => {
                 info!("player {:?} restored from limbo", player_id);
+                drop(player);
             }
             ClientStatus::Pending { .. } | ClientStatus::Stale { .. } => {
+                metrics.start_visit(&client, was_stale);
+
+                drop(player);
+
                 // We previously left the game, so now we have to rejoin.
                 game.player_joined(player_tuple);
             }
@@ -247,7 +253,7 @@ impl<G: GameArenaService> ClientRepo<G> {
     }
 
     /// Client websocket disconnected.
-    pub fn unregister(
+    pub(crate) fn unregister(
         &mut self,
         player_id: PlayerId,
         unregister_observer: ClientAddr<G>,
@@ -282,7 +288,7 @@ impl<G: GameArenaService> ClientRepo<G> {
     }
 
     /// Update all clients with game state.
-    pub fn update(
+    pub(crate) fn update(
         &mut self,
         game: &G,
         players: &mut PlayerRepo<G>,
@@ -470,6 +476,7 @@ impl<G: GameArenaService> ClientRepo<G> {
                                 client_data.status = ClientStatus::Stale {
                                     expiry: Instant::now() + ClientStatus::<G>::STALE_EXPIRY,
                                 };
+                                metrics.stop_visit(&mut *player);
                                 drop(player);
                                 service.player_left(player_tuple);
                                 info!("player_id {:?} expired from limbo", player_id);
@@ -489,7 +496,7 @@ impl<G: GameArenaService> ClientRepo<G> {
             .collect();
 
         for player_id in to_forget {
-            players.forget(player_id, teams, invitations, metrics);
+            players.forget(player_id, teams, invitations);
         }
     }
 
@@ -685,7 +692,10 @@ impl<G: GameArenaService> ClientRepo<G> {
 
         let client = match player.client_mut() {
             Some(client) => client,
-            None => return,
+            None => {
+                debug_assert!(false);
+                return;
+            }
         };
 
         client.metrics.rtt = Some(rtt);
@@ -795,6 +805,7 @@ impl<G: GameArenaService> Handler<ObserverMessage<Request<G::Command>, Update<G:
                 &self.context_service.context.chat,
                 &self.leaderboard,
                 &self.context_service.context.liveboard,
+                &mut self.metrics,
                 self.system.as_ref(),
                 self.context_service.context.arena_id,
                 self.server_id,
@@ -935,47 +946,45 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
 
                 let mut client_metric_data = ClientMetricData::from(&msg);
 
-                act.metrics.start_session(
-                    &msg,
-                    invitation_dto.is_some(),
-                    db_result.as_ref().map(|r| r.is_some()).unwrap_or(false),
-                    &client_metric_data,
-                );
+                let restore_session_id_player_id = if let Ok(Some(session_item)) = db_result {
+                    client_metric_data.supplement(&session_item);
+                    (session_item.arena_id == arena_id)
+                        .then_some((session_item.session_id, session_item.player_id))
+                } else {
+                    None
+                };
 
-                let (session_id, player_id) =
-                    if let Some(cached_session_id_player_id) = cached_session_id_player_id {
-                        cached_session_id_player_id
-                    } else if let Ok(Some(session_item)) = db_result {
-                        client_metric_data.supplement(&session_item);
-                        (session_item.session_id, session_item.player_id)
-                    } else {
-                        // TODO: O(n) on players.
-                        let mut session_ids = HashSet::with_capacity(
-                            act.context_service.context.players.real_players_live,
-                        );
+                let (session_id, player_id) = if let Some(existing) =
+                    cached_session_id_player_id.or(restore_session_id_player_id)
+                {
+                    existing
+                } else {
+                    let mut session_ids =
+                        HashSet::with_capacity(act.context_service.context.players.real_players);
 
-                        for player in act.context_service.context.players.iter_borrow() {
-                            if let Some(client_data) = player.client() {
-                                session_ids.insert(client_data.session_id);
-                            }
+                    // TODO: O(n) on players.
+                    for player in act.context_service.context.players.iter_borrow() {
+                        if let Some(client_data) = player.client() {
+                            session_ids.insert(client_data.session_id);
                         }
+                    }
 
-                        let new_session_id = loop {
-                            let session_id = SessionId(generate_id_64());
-                            if !session_ids.contains(&session_id) {
-                                break session_id;
-                            }
-                        };
-
-                        let new_player_id = loop {
-                            let player_id = PlayerId(generate_id());
-                            if !act.context_service.context.players.contains(player_id) {
-                                break player_id;
-                            }
-                        };
-
-                        (new_session_id, new_player_id)
+                    let new_session_id = loop {
+                        let session_id = SessionId(generate_id_64());
+                        if !session_ids.contains(&session_id) {
+                            break session_id;
+                        }
                     };
+
+                    let new_player_id = loop {
+                        let player_id = PlayerId(generate_id());
+                        if !act.context_service.context.players.contains(player_id) {
+                            break player_id;
+                        }
+                    };
+
+                    (new_session_id, new_player_id)
+                };
 
                 match act.context_service.context.players.players.entry(player_id) {
                     Entry::Occupied(mut occupied) => {

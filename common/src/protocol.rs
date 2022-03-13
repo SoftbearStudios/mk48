@@ -40,7 +40,7 @@ pub enum Command {
 }
 
 /// Generic command to control one's ship.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
 pub struct Control {
     /// Steering commands.
     pub guidance: Option<Guidance>,
@@ -59,7 +59,7 @@ pub struct Control {
 }
 
 /// Fire/use a single weapon.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Fire {
     /// The index of the weapon to fire/use, relative to `EntityData.armaments`.
     pub armament_index: u8,
@@ -79,19 +79,20 @@ impl Default for Hint {
     }
 }
 
-/// Pay one coin.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+/// Pay one coin. TODO: Can't use Option<empty struct>, as serde_json serializes both [`None`] and
+/// [`Some`] to `"null"`.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Pay;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Spawn {
-    /// What to spawn as. Must be a level 1 boat.
+    /// What to spawn as. Must be an affordable boat.
     pub entity_type: EntityType,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Upgrade {
-    /// What to upgrade to. Must be affordable.
+    /// What to upgrade to. Must be an affordable boat of higher level.
     pub entity_type: EntityType,
 }
 

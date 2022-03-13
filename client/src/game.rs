@@ -55,6 +55,8 @@ pub struct Mk48Game {
     pub interpolated_zoom: f32,
     /// 1 = normal.
     pub zoom_input: f32,
+    /// Last control, for diffing.
+    pub last_control: Option<Control>,
     /// Rate limit control websocket messages.
     pub control_rate_limiter: RateLimiter,
     /// Rate limit ui props messages.
@@ -111,6 +113,7 @@ impl GameClient for Mk48Game {
             zoom_input: Self::DEFAULT_ZOOM_INPUT,
             saved_camera: None,
             respawn_overriden: false,
+            last_control: None,
             control_rate_limiter: RateLimiter::new(0.1),
             ui_props_rate_limiter: RateLimiter::new(0.25),
             alarm_fast_rate_limiter: RateLimiter::new(10.0),
@@ -387,6 +390,7 @@ impl GameClient for Mk48Game {
             }
         } else {
             layer.audio.set_volume(0.0);
+            self.last_control = None;
         }
 
         let debug_latency_entity_id = if false {
@@ -954,6 +958,12 @@ impl GameClient for Mk48Game {
 
         renderer.set_camera(camera, zoom);
 
+        // After the above line, mouse world position state may be out-of-date. Recalculate it here.
+        let aim_target = context
+            .mouse
+            .view_position
+            .map(|p| renderer.to_world_position(p));
+
         // Send command later, when lifetimes allow.
         let mut control: Option<Command> = None;
 
@@ -994,9 +1004,9 @@ impl GameClient for Mk48Game {
                         .is_down_not_click(MouseButton::Left, context.client.update_seconds)
                 {
                     let current_dir = player_contact.transform().direction;
-                    let mouse_position = context.mouse.world_position.unwrap_or_default();
-                    let mut direction_target =
-                        Angle::from(mouse_position - player_contact.transform().position);
+                    let mut direction_target = Angle::from(
+                        aim_target.unwrap_or_default() - player_contact.transform().position,
+                    );
 
                     // Only do when start holding.
                     if !self.holding {
@@ -1029,7 +1039,9 @@ impl GameClient for Mk48Game {
                             Velocity::ZERO
                         } else {
                             let mut velocity = Velocity::from_mps(map_ranges(
-                                mouse_position.distance(player_contact.transform().position),
+                                aim_target
+                                    .unwrap_or_default()
+                                    .distance(player_contact.transform().position),
                                 player_contact.data().radii(),
                                 0.0..max_speed,
                                 true,
@@ -1066,15 +1078,12 @@ impl GameClient for Mk48Game {
             if self.control_rate_limiter.update_ready(elapsed_seconds) {
                 let left_click = context.mouse.take_click(MouseButton::Left);
 
-                // Pre-borrow context data for use in closure.
-                let aim_target = context.mouse.world_position;
-
                 // Get hint before borrow of player_contact().
                 let hint = Some(Hint {
                     aspect: renderer.aspect_ratio(),
                 });
 
-                control = Some(Command::Control(Control {
+                let current_control = Control {
                     guidance: Some(*player_contact.guidance()), // TODO don't send if hasn't changed.
                     altitude_target: if player_contact.data().sub_kind == EntitySubKind::Submarine {
                         Some(context.ui.altitude_target)
@@ -1108,7 +1117,24 @@ impl GameClient for Mk48Game {
                         None
                     },
                     hint,
-                }));
+                };
+
+                // Some things are not idempotent.
+                fn is_significant(control: &Control) -> bool {
+                    control.fire.is_some() || control.pay.is_some()
+                }
+
+                if Some(&current_control) != self.last_control.as_ref()
+                    || is_significant(&current_control)
+                    || self
+                        .last_control
+                        .as_ref()
+                        .map(is_significant)
+                        .unwrap_or(false)
+                {
+                    self.last_control = Some(current_control.clone());
+                    control = Some(Command::Control(current_control));
+                }
             }
 
             // Playing, so reset respawn override for next time.

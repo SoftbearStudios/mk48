@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::client::Authenticate;
+use crate::client::{Authenticate, PlayerClientData};
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
 use crate::player::PlayerData;
@@ -9,7 +9,6 @@ use crate::system::SystemRepo;
 use crate::unwrap_or_return;
 use actix::Context as ActorContext;
 use actix::{ActorFutureExt, ContextFutureSpawner, WrapFuture};
-use atomic_refcell::AtomicRefMut;
 use core_protocol::dto::{MetricFilterDto, MetricsDataPointDto};
 use core_protocol::id::{RegionId, SessionId, UserAgentId};
 use core_protocol::name::Referrer;
@@ -243,31 +242,28 @@ impl<G: GameArenaService> MetricRepo<G> {
     }
 
     /// Call when a websocket connects.
-    pub fn start_session(
-        &mut self,
-        auth: &Authenticate,
-        invited: bool,
-        renewed: bool,
-        client_metric_data: &ClientMetricData<G>,
-    ) {
+    pub fn start_visit(&mut self, client: &PlayerClientData<G>, was_stale: bool) {
+        let renewed = client.metrics.session_id_previous.is_some() || was_stale;
+
         self.mutate_with(
             |m| {
                 m.visits.increment();
-                m.invited.push(invited);
+                m.invited
+                    .push(client.invitation.invitation_accepted.is_some());
                 if renewed {
                     m.renews.increment();
                 }
                 // Here, we trust the client to send valid data. If it sent invalid an invalid
                 // id, we will under-count new. However, we can't really stop the client from
                 // forcing us to over-count new (by not sending a session despite having it).
-                m.new.push(auth.arena_id_session_id.is_none());
-                m.no_referrer.push(auth.referrer.is_none());
+                m.new.push(!renewed);
+                m.no_referrer.push(client.metrics.referrer.is_none());
             },
-            &client_metric_data,
+            &client.metrics,
         );
     }
 
-    pub fn start_play(&mut self, player: &mut AtomicRefMut<PlayerData<G>>) {
+    pub fn start_play(&mut self, player: &mut PlayerData<G>) {
         let client = unwrap_or_return!(player.client_mut());
 
         debug_assert!(client.metrics.play_started.is_none(), "already started");
@@ -289,7 +285,7 @@ impl<G: GameArenaService> MetricRepo<G> {
         self.mutate_with(|m| m.plays_total.increment(), &client.metrics)
     }
 
-    pub fn stop_play(&mut self, player: &mut AtomicRefMut<PlayerData<G>>) {
+    pub fn stop_play(&mut self, player: &mut PlayerData<G>) {
         let teamed = player.team_id().is_some();
         let client = unwrap_or_return!(player.client_mut());
 
@@ -317,7 +313,7 @@ impl<G: GameArenaService> MetricRepo<G> {
         client.metrics.play_stopped = Some(now);
     }
 
-    pub fn forget_session(&mut self, player: &mut AtomicRefMut<PlayerData<G>>) {
+    pub fn stop_visit(&mut self, player: &mut PlayerData<G>) {
         let mut client = unwrap_or_return!(player.client_mut());
 
         if client.metrics.play_started.is_some() {
@@ -340,9 +336,15 @@ impl<G: GameArenaService> MetricRepo<G> {
             |m| {
                 m.bounce.push(client.metrics.plays == 0);
                 if client.metrics.plays > 0 {
-                    m.flop.push(
-                        client.metrics.plays == 1 && session_duration < Duration::from_secs(60),
-                    );
+                    let peek_flop =
+                        client.metrics.plays == 1 && session_duration < Duration::from_secs(60);
+                    if client.metrics.date_previous.is_some() {
+                        // Returning player left promptly.
+                        m.peek.push(peek_flop);
+                    } else {
+                        // New player left promptly.
+                        m.flop.push(peek_flop);
+                    }
                     m.minutes_per_session
                         .push(session_duration.as_secs_f32() * (1.0 / 60.0));
                     m.plays_per_session.push(client.metrics.plays as f32);

@@ -29,6 +29,14 @@ impl CommandTrait for Spawn {
     ) -> Result<(), &'static str> {
         let player = player_tuple.borrow_player();
 
+        if player.data.flags.left_game {
+            debug_assert!(
+                false,
+                "should never happen, since messages should not be accepted"
+            );
+            return Err("cannot spawn after left game");
+        }
+
         if player.data.status.is_alive() {
             return Err("cannot spawn while already alive");
         }

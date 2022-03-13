@@ -14,6 +14,14 @@
 
 	<h2>2021</h2>
 
+	<h3>3/12/2022</h3>
+
+	<ul>
+		<li>Fix throttle vibrating at low FPS.</li>
+		<li>Resolve server CPU usage which resulted in lag.</li>
+		<li>Lower client-to-server bandwidth.</li>
+	</ul>
+
 	<h3>3/6/2022</h3>
 
 	<ul>

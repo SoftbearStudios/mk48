@@ -665,7 +665,7 @@ dependencies = [
 [[package]]
 name = "axum-server"
 version = "0.3.3"
-source = "git+https://github.com/finnbear/axum-server.git?branch=handshake-timeout#ade5a60b953ce3c2eb65421df59c9eed4964c031"
+source = "git+https://github.com/finnbear/axum-server.git?branch=custom#f02343da8d061d960edf3879770a956a8985dfe3"
 dependencies = [
  "arc-swap",
  "bytes",
@@ -907,6 +907,16 @@ dependencies = [
  "core_protocol",
  "glam",
  "rand 0.8.5",
+ "serde",
+]
+
+[[package]]
+name = "connection_leak_detector"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b7aee8e934ad5b8633edcf993e6ca3c47b385c069869694a50088c3463fc768"
+dependencies = [
+ "enum-iterator",
  "serde",
 ]
 
@@ -1501,6 +1511,7 @@ dependencies = [
  "bincode",
  "bytes",
  "common_util",
+ "connection_leak_detector",
  "constant_time_eq",
  "core_protocol",
  "csv",
@@ -1510,6 +1521,7 @@ dependencies = [
  "futures",
  "heapless",
  "hex",
+ "hyper",
  "idalloc",
  "image 0.24.1",
  "include_dir",

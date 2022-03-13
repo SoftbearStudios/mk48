@@ -107,10 +107,8 @@ impl<G: GameArenaService> PlayerRepo<G> {
         player_id: PlayerId,
         teams: &mut TeamRepo<G>,
         invitations: &mut InvitationRepo<G>,
-        metrics: &mut MetricRepo<G>,
     ) {
         if let Some(mut player) = self.borrow_player_mut(player_id) {
-            metrics.forget_session(&mut player);
             invitations.forget_player_invitation(&mut player);
         } else {
             debug_assert!(false, "forgetting non-existent player");
@@ -187,7 +185,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
                     metrics.start_play(&mut p);
                 } else {
                     // Play stopped.
-                    metrics.stop_play(&mut p);
+                    metrics.stop_play(&mut *p);
                 }
 
                 p.was_alive = is_alive;
