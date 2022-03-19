@@ -10,6 +10,7 @@ pub mod database;
 pub mod database_schema;
 pub mod generate_id;
 pub mod health;
+pub mod http;
 pub mod ip_rate_limiter;
 pub mod linode;
 pub mod notify_set;

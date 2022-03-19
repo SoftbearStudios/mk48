@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::renderer::attribute::Attribs;
+use crate::renderer::index::Index;
 use crate::renderer::vertex::Vertex;
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -11,24 +12,23 @@ use web_sys::{
     WebGlVertexArrayObject,
 };
 
-pub type Index = u16;
-pub type Quad = [Index; 4];
+pub type Quad<I> = [I; 4];
 
 /// MeshBuffer allows building a mesh in RAM.
 #[derive(Debug)]
-pub struct MeshBuffer<V: Vertex> {
+pub struct MeshBuffer<V: Vertex, I: Index = u16> {
     pub vertices: Vec<V>,
-    pub indices: Vec<Index>,
+    pub indices: Vec<I>,
     default_indices: bool,
 }
 
-impl<V: Vertex> Default for MeshBuffer<V> {
+impl<V: Vertex, I: Index> Default for MeshBuffer<V, I> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<V: Vertex> MeshBuffer<V> {
+impl<V: Vertex, I: Index> MeshBuffer<V, I> {
     /// Create an empty mesh buffer.
     pub fn new() -> Self {
         Self {
@@ -44,7 +44,7 @@ impl<V: Vertex> MeshBuffer<V> {
     }
 
     /// Pushes a single Quad which indexes 4 vertices.
-    pub fn push_quad(&mut self, quad: Quad) {
+    pub fn push_quad(&mut self, quad: Quad<I>) {
         self.indices
             .extend_from_slice(&[quad[0], quad[1], quad[2], quad[1], quad[3], quad[2]]);
     }
@@ -71,8 +71,13 @@ impl<V: Vertex> MeshBuffer<V> {
         let quads = n / 4;
 
         for quad in 0..quads {
-            let i = quad as Index * 4;
-            self.push_quad([i, i + 1, i + 2, i + 3]);
+            let i = quad * 4;
+            self.push_quad([
+                I::from_usize(i),
+                I::from_usize(i + 1),
+                I::from_usize(i + 2),
+                I::from_usize(i + 3),
+            ]);
         }
     }
 
@@ -86,18 +91,19 @@ impl<V: Vertex> MeshBuffer<V> {
 
 /// RenderBuffer facilitates buffering a mesh to the GPU.
 /// TODO find a better name because it's too similar to WebGlRenderBuffer.
-pub struct RenderBuffer<V: Vertex> {
+pub struct RenderBuffer<V: Vertex, I: Index = u16> {
     vertices: WebGlBuffer,
     vertices_capacity: usize, // The amount of capacity in vertices that is available in the buffer.
     indices: WebGlBuffer,
     indices_capacity: usize, // The amount of capacity in indices that is available in the buffer.
     vao: WebGlVertexArrayObject,
     index_count: u32,
-    vertex_count: Index,
+    vertex_count: u32,
     vertex: PhantomData<V>,
+    index: PhantomData<I>,
 }
 
-impl<V: Vertex> RenderBuffer<V> {
+impl<V: Vertex, I: Index> RenderBuffer<V, I> {
     pub fn new(gl: &Gl, oes: &OesVAO) -> Self {
         let buffer = Self {
             vertices: gl.create_buffer().unwrap(),
@@ -108,6 +114,7 @@ impl<V: Vertex> RenderBuffer<V> {
             index_count: 0,
             vertex_count: 0,
             vertex: PhantomData,
+            index: PhantomData,
         };
 
         // Make sure array was unbound.
@@ -146,13 +153,13 @@ impl<V: Vertex> RenderBuffer<V> {
         buffer
     }
 
-    pub(crate) fn bind<'a>(&'a self, gl: &'a Gl, oes: &'a OesVAO) -> RenderBufferBinding<'a, V> {
+    pub(crate) fn bind<'a>(&'a self, gl: &'a Gl, oes: &'a OesVAO) -> RenderBufferBinding<'a, V, I> {
         RenderBufferBinding::new(gl, oes, self)
     }
 
     /// Copies a whole mesh into the render buffer.
     /// The mesh must have indices.
-    pub fn buffer_mesh(&mut self, gl: &Gl, mesh: &MeshBuffer<V>) {
+    pub fn buffer_mesh(&mut self, gl: &Gl, mesh: &MeshBuffer<V, I>) {
         assert!(
             mesh.default_indices || !mesh.indices.is_empty(),
             "mesh has no indices"
@@ -162,11 +169,11 @@ impl<V: Vertex> RenderBuffer<V> {
 
     /// Copies vertices and indices into the render buffer.
     /// If indices is empty it performs array based rendering.
-    pub fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[Index]) {
+    pub fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[I]) {
         assert!(!vertices.is_empty(), "buffering no vertices");
 
         self.index_count = indices.len() as u32;
-        self.vertex_count = vertices.len() as Index;
+        self.vertex_count = vertices.len() as u32;
 
         // This can easily mess up the bind_buffer calls.
         debug_assert!(gl
@@ -220,7 +227,7 @@ impl<V: Vertex> RenderBuffer<V> {
         if new_cap > self.indices_capacity {
             gl.buffer_data_with_i32(
                 Gl::ELEMENT_ARRAY_BUFFER,
-                (new_cap * size_of::<Index>()) as i32,
+                (new_cap * size_of::<I>()) as i32,
                 Gl::DYNAMIC_DRAW,
             );
             self.indices_capacity = new_cap;
@@ -229,7 +236,7 @@ impl<V: Vertex> RenderBuffer<V> {
         if self.index_count > 0 {
             unsafe {
                 // Points to raw rust memory so can't allocate while in use.
-                let elem_array = js_sys::Uint16Array::view(indices);
+                let elem_array = I::view(indices);
                 gl.buffer_sub_data_with_i32_and_array_buffer_view(
                     Gl::ELEMENT_ARRAY_BUFFER,
                     0,
@@ -244,14 +251,14 @@ impl<V: Vertex> RenderBuffer<V> {
     }
 }
 
-pub struct RenderBufferBinding<'a, V: Vertex> {
+pub struct RenderBufferBinding<'a, V: Vertex, I: Index> {
     gl: &'a Gl,
     oes_vao: &'a OesVAO,
-    buffer: &'a RenderBuffer<V>,
+    buffer: &'a RenderBuffer<V, I>,
 }
 
-impl<'a, V: Vertex> RenderBufferBinding<'a, V> {
-    fn new(gl: &'a Gl, oes_vao: &'a OesVAO, buffer: &'a RenderBuffer<V>) -> Self {
+impl<'a, V: Vertex, I: Index> RenderBufferBinding<'a, V, I> {
+    fn new(gl: &'a Gl, oes_vao: &'a OesVAO, buffer: &'a RenderBuffer<V, I>) -> Self {
         // Make sure buffer was unbound.
         debug_assert!(gl
             .get_parameter(OesVAO::VERTEX_ARRAY_BINDING_OES)
@@ -271,7 +278,7 @@ impl<'a, V: Vertex> RenderBufferBinding<'a, V> {
             self.gl.draw_elements_with_i32(
                 primitive,
                 self.buffer.index_count as i32,
-                Gl::UNSIGNED_SHORT,
+                I::gl_enum(),
                 0,
             );
         } else if self.buffer.vertex_count != 0 {
@@ -281,7 +288,7 @@ impl<'a, V: Vertex> RenderBufferBinding<'a, V> {
     }
 }
 
-impl<'a, V: Vertex> Drop for RenderBufferBinding<'a, V> {
+impl<'a, V: Vertex, I: Index> Drop for RenderBufferBinding<'a, V, I> {
     fn drop(&mut self) {
         // Unbind ALWAYS required (unlike all other render unbinds).
         self.oes_vao.bind_vertex_array_oes(None);

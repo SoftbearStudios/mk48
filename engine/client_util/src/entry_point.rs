@@ -102,7 +102,7 @@ macro_rules! entry_point {
 
         #[wasm_bindgen(js_name = "handleCreateTeam")]
         pub fn handle_create_team(name: String) {
-            with_infrastructure(move |mut i| i.create_team(TeamName::new(&name)));
+            with_infrastructure(move |mut i| i.create_team(TeamName::new_unsanitized(&name)));
         }
 
         #[wasm_bindgen(js_name = "handleRequestJoinTeam")]

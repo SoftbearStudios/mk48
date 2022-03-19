@@ -90,7 +90,11 @@ impl<G: GameArenaService> From<&Authenticate> for ClientMetricData<G> {
 impl<G: GameArenaService> ClientMetricData<G> {
     pub(crate) fn supplement(&mut self, session_item: &SessionItem) {
         self.session_id_previous = Some(session_item.session_id);
-        self.date_previous = session_item.date_previous;
+        self.date_previous = Some(
+            session_item
+                .date_previous
+                .unwrap_or(session_item.date_created),
+        );
         self.previous_plays = session_item.plays;
     }
 }

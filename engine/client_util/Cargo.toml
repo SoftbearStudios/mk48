@@ -50,6 +50,7 @@ features = [
     'HtmlInputElement',
     'HtmlImageElement',
     'KeyboardEvent',
+    'OesElementIndexUint',
     'OesVertexArrayObject',
     'OesStandardDerivatives',
     'Location',

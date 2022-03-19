@@ -11,7 +11,8 @@ use std::cell::Cell;
 use std::mem;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    HtmlCanvasElement, OesStandardDerivatives, OesVertexArrayObject, WebGlRenderingContext as Gl,
+    HtmlCanvasElement, OesElementIndexUint, OesStandardDerivatives, OesVertexArrayObject,
+    WebGlRenderingContext as Gl,
 };
 
 /// For compiling shaders in parallel.
@@ -35,6 +36,7 @@ pub trait Layer {
 }
 
 use crate::renderer::camera::Camera;
+use crate::renderer::index::Index;
 pub use engine_macros::Layer;
 
 /// A general WebGL renderer, focused on 2d for now.
@@ -160,6 +162,18 @@ impl Renderer {
         mem::forget(oes_standard_derivatives);
     }
 
+    /// Allow using u32 as index in WebGl1.
+    pub fn enable_oes_element_index_uint(&self) {
+        let oes_element_index_uint = self
+            .gl
+            .get_extension("OES_element_index_uint")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<OesElementIndexUint>();
+
+        mem::forget(oes_element_index_uint);
+    }
+
     /// Creates a new shader from vertex and fragment GLSL.
     pub fn create_shader(&self, vertex_source: &str, fragment_source: &str) -> Shader {
         Shader::new(&self.gl, vertex_source, fragment_source)
@@ -228,10 +242,10 @@ impl Renderer {
     }
 
     /// Lower level function to bind a buffer.
-    pub fn bind_buffer<'a, V: Vertex>(
+    pub fn bind_buffer<'a, V: Vertex, I: Index>(
         &'a self,
-        buffer: &'a RenderBuffer<V>,
-    ) -> RenderBufferBinding<'a, V> {
+        buffer: &'a RenderBuffer<V, I>,
+    ) -> RenderBufferBinding<'a, V, I> {
         buffer.bind(&self.gl, &self.oes_vao)
     }
 

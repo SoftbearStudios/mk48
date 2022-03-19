@@ -3079,9 +3079,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.4.7"
+version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a03d2f0c3a6b84f6ad5a41408a38cb16075a40be303139e18ae61649fd770577"
+checksum = "692f162c3a5162652dc60653ef30f6deeed7d7c72f2fd8483dc7589f769a0d05"
 dependencies = [
  "bitflags",
  "doc-comment",
@@ -3293,6 +3293,7 @@ dependencies = [
  "atomic_refcell",
  "aws-config",
  "aws-sdk-dynamodb",
+ "axum",
  "bincode",
  "common_util",
  "core_protocol",

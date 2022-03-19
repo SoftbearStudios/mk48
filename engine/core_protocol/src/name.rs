@@ -32,36 +32,34 @@ lazy_static! {
 /// A player's alias (not their real name).
 impl PlayerAlias {
     /// Converts the string into a valid alias, which is never empty when done on the server.
+    #[cfg(feature = "server")]
     pub fn new_sanitized(str: &str) -> Self {
-        #[cfg(feature = "server")]
-        {
-            let mut string = rustrict::Censor::from_str(str)
-                .with_censor_first_character_threshold(rustrict::Type::INAPPROPRIATE)
-                .censor();
+        let mut string = rustrict::Censor::from_str(str)
+            .with_censor_first_character_threshold(rustrict::Type::INAPPROPRIATE)
+            .censor();
 
-            let trimmed = rustrict::trim_whitespace(&string);
+        let trimmed = rustrict::trim_whitespace(&string);
 
-            if trimmed.starts_with('[') && trimmed.contains(']') {
-                // Prevent alias confused with team name.
-                string = string.replace('[', "<").replace(']', ">");
-            }
-
-            let ret = Self(slice_up_to_array_string(&string));
-
-            return if ret.0.is_empty() {
-                Self::default()
-            } else {
-                ret
-            };
+        if trimmed.starts_with('[') && trimmed.contains(']') {
+            // Prevent alias confused with team name.
+            string = string.replace('[', "<").replace(']', ">");
         }
 
-        #[cfg(not(feature = "server"))]
-        Self(slice_up_to_array_string(str))
+        let ret = Self(slice_up_to_array_string(rustrict::trim_to_width(
+            &string, 14,
+        )));
+
+        return if ret.0.is_empty() {
+            Self::default()
+        } else {
+            ret
+        };
     }
 
     /// Good for known-good names.
     pub fn new_unsanitized(str: &str) -> Self {
         let unsanitized = Self(slice_up_to_array_string(str));
+        #[cfg(feature = "server")]
         debug_assert_eq!(
             unsanitized,
             Self::new_sanitized(str),
@@ -125,18 +123,22 @@ impl Referrer {
 }
 
 impl TeamName {
-    pub fn new(str: &str) -> Self {
-        #[cfg(feature = "server")]
-        let str = &rustrict::Censor::from_str(str)
+    pub fn new_unsanitized(str: &str) -> Self {
+        Self(slice_up_to_array_string(str))
+    }
+
+    #[cfg(feature = "server")]
+    pub fn new_sanitized(str: &str) -> Self {
+        let string = rustrict::Censor::from_str(str)
             .with_censor_first_character_threshold(rustrict::Type::INAPPROPRIATE)
             .take(6)
             .collect::<String>();
 
-        Self(slice_up_to_array_string(
-            rustrict::trim_whitespace(str)
-                .trim_start_matches('[')
-                .trim_end_matches(']'),
-        ))
+        let str = rustrict::trim_whitespace(rustrict::trim_to_width(&string, 8))
+            .trim_start_matches('[')
+            .trim_end_matches(']');
+
+        Self::new_unsanitized(str)
     }
 
     /*

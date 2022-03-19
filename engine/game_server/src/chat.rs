@@ -16,6 +16,7 @@ use rustrict::{BlockReason, ContextProcessingOptions, ContextRateLimitOptions};
 use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::marker::PhantomData;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 /// Component of [`Context`] dedicated to chat.
@@ -145,6 +146,7 @@ impl<G: GameArenaService> ChatRepo<G> {
         debug_assert_eq!(req_player.team_id().is_some(), team.is_some());
 
         let options = ContextProcessingOptions {
+            character_limit: NonZeroUsize::new(150),
             rate_limit: if whisper {
                 None
             } else {

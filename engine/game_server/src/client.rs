@@ -465,6 +465,7 @@ impl<G: GameArenaService> ClientRepo<G> {
             .iter()
             .filter(|&(player_id, player_tuple)| {
                 let mut player = player_tuple.borrow_player_mut();
+                let was_alive = player.was_alive;
                 if let Some(client_data) = player.client_mut() {
                     match &client_data.status {
                         ClientStatus::Connected { .. } => {
@@ -473,13 +474,20 @@ impl<G: GameArenaService> ClientRepo<G> {
                         }
                         ClientStatus::Limbo { expiry } => {
                             if &now >= expiry {
-                                client_data.status = ClientStatus::Stale {
-                                    expiry: Instant::now() + ClientStatus::<G>::STALE_EXPIRY,
-                                };
-                                metrics.stop_visit(&mut *player);
-                                drop(player);
-                                service.player_left(player_tuple);
-                                info!("player_id {:?} expired from limbo", player_id);
+                                if was_alive {
+                                    // postpone for one more tick but not forever!
+                                    debug_assert!(expiry.elapsed() < Duration::from_secs(1));
+                                    drop(player);
+
+                                    service.player_left(player_tuple);
+                                } else {
+                                    client_data.status = ClientStatus::Stale {
+                                        expiry: Instant::now() + ClientStatus::<G>::STALE_EXPIRY,
+                                    };
+                                    metrics.stop_visit(&mut *player);
+                                    drop(player);
+                                    info!("player_id {:?} expired from limbo", player_id);
+                                }
                             }
                             false
                         }

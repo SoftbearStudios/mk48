@@ -8,6 +8,7 @@ pub mod camera;
 mod deque;
 pub mod framebuffer;
 pub mod graphic;
+mod index;
 pub mod particle;
 pub mod renderer;
 pub mod shader;

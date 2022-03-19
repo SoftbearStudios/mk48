@@ -324,7 +324,7 @@ impl<G: GameArenaService> TeamRepo<G> {
             return Err("already in team");
         }
 
-        let censored_team_name = TeamName::new(team_name.as_str());
+        let censored_team_name = TeamName::new_sanitized(team_name.as_str());
 
         if censored_team_name.is_empty() {
             return Err("cannot use empty team name");

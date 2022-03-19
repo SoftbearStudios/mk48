@@ -187,6 +187,7 @@ pub enum AdminRequest {
     },
     RequestRedirect,
     SetRedirect(Option<ServerId>),
+    #[cfg(unix)]
     SetProfiler(bool),
 }
 

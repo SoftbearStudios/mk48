@@ -12,7 +12,7 @@ use crate::static_files::{static_handler, static_hash};
 use crate::status::StatusRequest;
 use crate::system::{SystemRepo, SystemRequest};
 use actix::Actor;
-use axum::body::{boxed, HttpBody};
+use axum::body::{boxed, Empty, HttpBody};
 use axum::extract::ws::{CloseCode, CloseFrame, Message};
 use axum::extract::{ConnectInfo, Query, TypedHeader, WebSocketUpgrade};
 use axum::http::header::CACHE_CONTROL;
@@ -29,8 +29,10 @@ use core_protocol::{get_unix_time_now, UnixTime};
 use futures::pin_mut;
 use futures::SinkExt;
 use log::{debug, error, warn, LevelFilter};
+use reqwest::header::HeaderMap;
 use rust_embed::RustEmbed;
 use server_util::cloud::Cloud;
+use server_util::http::limit_content_length;
 use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::linode::Linode;
 use server_util::observer::{ObserverMessage, ObserverUpdate};
@@ -441,14 +443,80 @@ pub fn entry_point<G: GameArenaService>() {
                     }
                 }
             }))
+            .layer(axum::middleware::from_fn(async move |request: axum::http::Request<_>, next: axum::middleware::Next<_>| {
+                // Don't redirect index so the url remains intact.
+                // Don't redirect admin or status, so the server remains controllable.
+                let dont_redirect = if let Some(before_hash) = request.uri().path().split('#').next()
+                {
+                    before_hash.is_empty() || before_hash == "/"
+                } else {
+                    true
+                };
+
+                if !dont_redirect {
+                    if let Some((domain, server_id)) = domain
+                        .as_ref()
+                        .zip(ServerId::new(REDIRECT_TO_SERVER_ID.load(Ordering::Relaxed)))
+                    {
+                        let scheme = request.uri().scheme().cloned().unwrap_or(Scheme::HTTPS);
+                        if let Ok(authority) = Authority::from_str(&format!("{}.{}", server_id.0.get(), domain)) {
+                            let mut builder =  Uri::builder()
+                                .scheme(scheme)
+                                .authority(authority);
+
+                            if let Some(path_and_query) = request.uri().path_and_query() {
+                                builder = builder.path_and_query(path_and_query.clone());
+                            }
+
+                            if let Ok(uri) = builder.build() {
+                                return Err(Redirect::temporary(uri));
+                            }
+                        }
+                    }
+                }
+
+                Ok(next.run(request).await)
+            }))
+            .route("/status/", get(move || {
+                let srv = status_srv.to_owned();
+                debug!("received status request");
+
+                async move {
+                    match srv.send(StatusRequest).await {
+                        Ok(status_response) => {
+                            Ok(Json(status_response))
+                        }
+                        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()),
+                    }
+                }
+            }))
+            .route("/admin/*path", get(static_handler::<AdminClient>).post(
+                move |request: Json<ParameterizedAdminRequest>| {
+                    let srv_clone_admin = admin_srv.clone();
+
+                    async move {
+                        match srv_clone_admin.send(request.0).await {
+                            Ok(result) => match result {
+                                Ok(update) => {
+                                    Ok(Json(update))
+                                }
+                                Err(e) => Err((StatusCode::BAD_REQUEST, String::from(e)).into_response()),
+                            },
+                            Err(e) => {
+                                Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
+                            }
+                        }
+                    }
+                }
+            ))
             .layer(ServiceBuilder::new()
                 .layer(CorsLayer::new()
                     .allow_origin(tower_http::cors::Origin::predicate(move |origin, _parts| {
                         #[cfg(debug_assertions)]
-                        {
-                            let _ = origin;
-                            true
-                        }
+                            {
+                                let _ = origin;
+                                true
+                            }
 
                         #[cfg(not(debug_assertions))]
                         if let Some(domains) = domain_clone_cors.as_ref() {
@@ -488,31 +556,8 @@ pub fn entry_point<G: GameArenaService>() {
                         );
                     }
 
-                    // Don't redirect index so the url remains intact.
-                    // Don't redirect admin or status, so the server remains controllable.
-                    let dont_redirect = if let Some(before_hash) = request.uri().path().split('#').next()
-                    {
-                        before_hash.starts_with("/admin")
-                            || before_hash.starts_with("/status")
-                            || before_hash.is_empty()
-                            || before_hash == "/"
-                    } else {
-                        true
-                    };
-
-                    if !dont_redirect {
-                        if let Some((domain, server_id)) = domain
-                            .as_ref()
-                            .zip(ServerId::new(REDIRECT_TO_SERVER_ID.load(Ordering::Relaxed)))
-                        {
-                            let scheme = request.uri().scheme().cloned().unwrap_or(Scheme::HTTPS);
-                            if let Ok(uri) = Uri::builder()
-                                .scheme(scheme)
-                                .path_and_query(format!("{}.{}{}", server_id.0.get(), domain, request.uri().path()))
-                                .build(){
-                                return Err(Redirect::temporary(uri));
-                            }
-                        }
+                    if let Err(response) = limit_content_length(request.headers(), 16384) {
+                        return Err(response);
                     }
 
                     let ip = addr.map(|addr| addr.ip());
@@ -549,46 +594,14 @@ pub fn entry_point<G: GameArenaService>() {
 
                             // I changed my mind, I'm not actually going to send you all this data...
                             response = response.map(|_| {
-                                boxed(axum::body::Empty::new())
+                                boxed(Empty::new())
                             });
                         }
                     }
 
                     Ok(response)
                 }))
-            )
-            .route("/status/", get(move || {
-                let srv = status_srv.to_owned();
-                debug!("received status request");
-
-                async move {
-                    match srv.send(StatusRequest).await {
-                        Ok(status_response) => {
-                            Ok(Json(status_response))
-                        }
-                        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()),
-                    }
-                }
-            }))
-            .route("/admin/*path", get(static_handler::<AdminClient>).post(
-                move |request: Json<ParameterizedAdminRequest>| {
-                    let srv_clone_admin = admin_srv.clone();
-
-                    async move {
-                        match srv_clone_admin.send(request.0).await {
-                            Ok(result) => match result {
-                                Ok(update) => {
-                                    Ok(Json(update))
-                                }
-                                Err(e) => Err((StatusCode::BAD_REQUEST, String::from(e)).into_response()),
-                            },
-                            Err(e) => {
-                                Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
-                            }
-                        }
-                    }
-                }
-            ));
+            );
 
         let addr_incoming_config = axum_server::AddrIncomingConfig::new()
             .tcp_keepalive(Some(Duration::from_secs(32)))
@@ -599,6 +612,7 @@ pub fn entry_point<G: GameArenaService>() {
         let http_config = axum_server::HttpConfig::new()
             .http1_keep_alive(true)
             .http1_header_read_timeout(Duration::from_secs(5))
+            .max_buf_size(32768)
             .http2_max_concurrent_streams(Some(8))
             .http2_keep_alive_interval(Some(Duration::from_secs(4)))
             .http2_keep_alive_timeout(Duration::from_secs(10))
@@ -618,7 +632,11 @@ pub fn entry_point<G: GameArenaService>() {
 
         #[cfg(not(debug_assertions))]
         let http_app = Router::new()
-            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>| {
+            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>, headers: HeaderMap| {
+                if let Err(response) = limit_content_length(&headers, 16384) {
+                    return Err(response);
+                }
+
                 let mut parts = uri.into_parts();
                 parts.scheme = Some(Scheme::HTTPS);
                 let authority = if ports.1 == STANDARD_PORTS.1 {

@@ -7,6 +7,7 @@ license = "AGPL-3.0-or-later"
 
 [dependencies]
 actix = "0.13"
+axum = "0"
 reqwest = {version = "0.11.9", features=["json"]}
 actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
 aws-config = "0.7.0"

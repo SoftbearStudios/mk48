@@ -17,7 +17,6 @@ use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::{get_unix_time_now, UnixTime};
 use log::warn;
-use pprof::ProfilerGuard;
 use serde::Deserialize;
 use server_util::database_schema::Metrics;
 use std::fs::File;
@@ -28,7 +27,8 @@ use std::time::Duration;
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
     pub(crate) redirect_server_id_preference: Option<ServerId>,
-    profile: Option<ProfilerGuard<'static>>,
+    #[cfg(unix)]
+    profile: Option<pprof::ProfilerGuard<'static>>,
     _spooky: PhantomData<G>,
 }
 
@@ -53,6 +53,7 @@ impl<G: GameArenaService> AdminRepo<G> {
     pub fn new() -> Self {
         Self {
             redirect_server_id_preference: None,
+            #[cfg(unix)]
             profile: None,
             _spooky: PhantomData,
         }
@@ -328,6 +329,7 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::RedirectSet(redirect))
     }
 
+    #[cfg(unix)]
     fn set_profiler(&mut self, enabled: bool) -> Result<AdminUpdate, &'static str> {
         if let Some(profile) = self.profile.as_mut() {
             if let Ok(report) = profile.report().build() {
@@ -453,6 +455,7 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 self.server_id,
                 self.system.as_mut(),
             ))),
+            #[cfg(unix)]
             AdminRequest::SetProfiler(enabled) => {
                 Box::pin(fut::ready(self.admin.set_profiler(enabled)))
             }

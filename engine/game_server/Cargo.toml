@@ -25,7 +25,6 @@ webp = "0.2"
 image = "0"
 flate2 = "1"
 hex = "0.4"
-pprof = {version = "0.6.2", features=["flamegraph"]}
 actix = "0.13"
 include_dir = "0.6"
 arrayvec = { version = "0.7", features = ["serde"] }
@@ -36,7 +35,7 @@ common_util = {path="../common_util"}
 server_util = {path="../server_util"}
 serde = {version = "1", features=["derive"]}
 serde_json = "1.0"
-rustrict = {version = "0.4.7", features=["context"], default-features=false}
+rustrict = {version = "0.4.9", features=["context"], default-features=false}
 log = "0.4"
 rayon = "1.5"
 structopt = "0.3"
@@ -52,6 +51,7 @@ tokio = "1"
 
 [target.'cfg(unix)'.dependencies]
 nix = "0.23"
+pprof = {version = "0.6.2", features=["flamegraph"]}
 
 [build-dependencies]
 rand = "0.8"

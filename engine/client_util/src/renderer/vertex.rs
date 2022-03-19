@@ -57,6 +57,7 @@ impl Vertex for PosUvAlpha {
 }
 
 /// PosColor stores a vertex with (only) a given position and color.
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub struct PosColor {
     pub pos: Vec2,

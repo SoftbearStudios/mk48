@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::renderer::buffer::{Index, MeshBuffer, RenderBuffer};
+use crate::renderer::buffer::{MeshBuffer, RenderBuffer};
+use crate::renderer::index::Index;
 use crate::renderer::renderer::Layer;
 use crate::renderer::renderer::Renderer;
 use crate::renderer::shader::Shader;
@@ -12,14 +13,14 @@ use std::ops::Range;
 use web_sys::WebGlRenderingContext as Gl;
 
 /// Renders solid color polygons, known as graphics.
-pub struct GraphicLayer {
-    mesh: MeshBuffer<PosColor>,
-    buffer: RenderBuffer<PosColor>,
+pub struct GraphicLayer<I: Index = u16> {
+    mesh: MeshBuffer<PosColor, I>,
+    buffer: RenderBuffer<PosColor, I>,
     /// Cached in pre_prepare.
     zoom: f32,
 }
 
-impl GraphicLayer {
+impl<I: Index> GraphicLayer<I> {
     pub fn new(renderer: &mut Renderer) -> Self {
         let gl = &renderer.gl;
         renderer.graphic_shader.get_or_insert_with(|| {
@@ -37,14 +38,25 @@ impl GraphicLayer {
         }
     }
 
+    /// Adds arbitrary triangle(s), starting at index 0.
+    pub fn add_triangles(&mut self, vertices: &[PosColor], indices: &[u16]) {
+        let start = self.mesh.vertices.len();
+        self.mesh.vertices.extend_from_slice(vertices);
+        self.mesh.indices.extend(
+            indices
+                .iter()
+                .map(|&idx| I::from_usize(start + idx as usize)),
+        );
+    }
+
     /// add_triangle_graphic adds a transformed equilateral triangle to the graphics queue, pointing
     /// upward if angle is zero.
     pub fn add_triangle(&mut self, center: Vec2, scale: Vec2, angle: f32, color: Vec4) {
         let index = self.mesh.vertices.len();
         self.mesh.indices.extend_from_slice(&[
-            index as Index,
-            index as Index + 1,
-            index as Index + 2,
+            I::from_usize(index),
+            I::from_usize(index + 1),
+            I::from_usize(index + 2),
         ]);
 
         let rot = Mat2::from_angle(angle);
@@ -74,10 +86,10 @@ impl GraphicLayer {
     ) {
         let index = self.mesh.vertices.len();
         self.mesh.push_quad([
-            index as Index,
-            index as Index + 1,
-            index as Index + 2,
-            index as Index + 3,
+            Index::from_usize(index),
+            Index::from_usize(index + 1),
+            Index::from_usize(index + 2),
+            Index::from_usize(index + 3),
         ]);
 
         let half_scale = scale * 0.5;
@@ -138,7 +150,7 @@ impl GraphicLayer {
             * (200.0 / (std::f32::consts::PI * 2.0))) as i32;
 
         // Set maximum to prevent indices from overflowing.
-        let segments = segments.clamp(6, 100) as u32;
+        let segments = segments.clamp(6, 100) as usize;
 
         // Algorithm: Build a circle outline segment by segment, going counterclockwise. Vertices
         // are reused for maximum efficiency (except the original A and B which are duplicated at the
@@ -170,13 +182,20 @@ impl GraphicLayer {
 
         // Use extend instead of loop to allow pre-allocation.
         // Calculate index before extending vertices.
-        let starting_index = vertices.len() as u32;
+        let starting_index = vertices.len();
         self.mesh
             .indices
             .extend((0..segments).into_iter().flat_map(|i| {
-                let index = (starting_index + i * 2) as Index;
+                let index = starting_index + i * 2;
                 // Triangles are [A, D, B] and [A, C, D].
-                array::IntoIter::new([index, index + 3, index + 1, index, index + 2, index + 3])
+                array::IntoIter::new([
+                    I::from_usize(index),
+                    I::from_usize(index + 3),
+                    I::from_usize(index + 1),
+                    I::from_usize(index),
+                    I::from_usize(index + 2),
+                    I::from_usize(index + 3),
+                ])
             }));
 
         // Use extend instead of loop to allow pre-allocation.
@@ -214,7 +233,7 @@ impl GraphicLayer {
     }
 }
 
-impl Layer for GraphicLayer {
+impl<I: Index> Layer for GraphicLayer<I> {
     fn pre_prepare(&mut self, renderer: &Renderer) {
         self.zoom = renderer.camera.zoom();
     }
