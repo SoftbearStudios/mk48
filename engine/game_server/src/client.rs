@@ -11,7 +11,6 @@ use crate::metric::{ClientMetricData, MetricRepo};
 use crate::player::{PlayerData, PlayerRepo, PlayerTuple};
 use crate::system::SystemRepo;
 use crate::team::{ClientTeamData, TeamRepo};
-use crate::unwrap_or_return;
 use actix::WrapStream;
 use actix::{
     fut, ActorFutureExt, ActorStreamExt, Context as ActorContext, ContextFutureSpawner, Handler,
@@ -48,14 +47,16 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
 
-/// The message recipient of an actix actor corresponding to a client.
+/// Directed to a websocket future corresponding to a client.
 pub type ClientAddr<G> =
-    UnboundedSender<ObserverUpdate<Update<<G as GameArenaService>::ClientUpdate>>>;
+    UnboundedSender<ObserverUpdate<Update<<G as GameArenaService>::GameUpdate>>>;
 
 /// Keeps track of clients a.k.a. real players a.k.a. websockets.
 pub struct ClientRepo<G: GameArenaService> {
     authenticate_rate_limiter: IpRateLimiter,
+    prune_rate_limiter: RateLimiter,
     database_rate_limiter: RateLimiter,
+    pending_session_write: Vec<SessionItem>,
     /// Where to log traces to.
     trace_log: Option<String>,
     _spooky: PhantomData<G>,
@@ -65,13 +66,17 @@ impl<G: GameArenaService> ClientRepo<G> {
     pub fn new(trace_log: Option<String>, authenticate: RateLimiterProps) -> Self {
         Self {
             authenticate_rate_limiter: authenticate.into(),
+            prune_rate_limiter: RateLimiter::new(Duration::from_secs(1), 0),
             database_rate_limiter: RateLimiter::new(Duration::from_secs(30), 0),
+            pending_session_write: Vec::new(),
             trace_log,
             _spooky: PhantomData,
         }
     }
 
     /// Updates sessions to database (internally rate-limited).
+    ///
+    /// Note: Sessions also get updated to database when they are being dropped.
     pub(crate) fn update_to_database(
         infrastructure: &mut Infrastructure<G>,
         ctx: &mut ActorContext<Infrastructure<G>>,
@@ -87,11 +92,26 @@ impl<G: GameArenaService> ClientRepo<G> {
         }
 
         // Mocker server id if read only, so we can still proceed.
-        let server_id = unwrap_or_return!(infrastructure.server_id.or(infrastructure
-            .database_read_only
-            .then_some(ServerId::new(200).unwrap())));
+        #[cfg(debug_assertions)]
+        let server_id = infrastructure
+            .server_id
+            .unwrap_or(ServerId::new(200).unwrap());
+        #[cfg(not(debug_assertions))]
+        let server_id = crate::unwrap_or_return!(infrastructure.server_id);
+        let arena_id = infrastructure.context_service.context.arena_id;
 
         let queue = FuturesUnordered::new();
+
+        // Backlog from leaving sessions.
+        for pending in infrastructure
+            .context_service
+            .context
+            .clients
+            .pending_session_write
+            .drain(..)
+        {
+            queue.push(infrastructure.database.put_session(pending));
+        }
 
         for mut player in infrastructure
             .context_service
@@ -101,34 +121,10 @@ impl<G: GameArenaService> ClientRepo<G> {
         {
             let player_id = player.player_id;
             if let Some(client) = player.client_mut() {
-                let session_item = SessionItem {
-                    alias: client.alias,
-                    arena_id: infrastructure.context_service.context.arena_id,
-                    date_created: client.metrics.date_created,
-                    date_previous: client.metrics.date_previous,
-                    date_renewed: client.metrics.date_renewed,
-                    date_terminated: None,
-                    game_id: G::GAME_ID,
-                    player_id,
-                    plays: client.metrics.plays + client.metrics.previous_plays,
-                    previous_id: client.metrics.session_id_previous,
-                    referrer: client.metrics.referrer,
-                    user_agent_id: client.metrics.user_agent_id,
-                    server_id,
-                    session_id: client.session_id,
-                };
-
-                if client.session_item.as_ref() != Some(&session_item) {
-                    client.session_item = Some(session_item.clone());
-                    if infrastructure.database_read_only {
-                        warn!(
-                            "would have written session item {:?} but was inhibited",
-                            session_item
-                        );
-                    } else {
-                        let database = infrastructure.database;
-                        queue.push(database.put_session(session_item))
-                    }
+                if let Some(session_item) =
+                    Self::db_session_item(server_id, arena_id, player_id, client)
+                {
+                    queue.push(infrastructure.database.put_session(session_item))
                 }
             }
         }
@@ -142,6 +138,39 @@ impl<G: GameArenaService> ClientRepo<G> {
             })
             .finish()
             .spawn(ctx);
+    }
+
+    /// If the session is dirty with respect to the database, creates a session item to overwrite
+    /// the database version.
+    fn db_session_item(
+        server_id: ServerId,
+        arena_id: ArenaId,
+        player_id: PlayerId,
+        client: &mut PlayerClientData<G>,
+    ) -> Option<SessionItem> {
+        let session_item = SessionItem {
+            alias: client.alias,
+            arena_id,
+            date_created: client.metrics.date_created,
+            date_previous: client.metrics.date_previous,
+            date_renewed: client.metrics.date_renewed,
+            date_terminated: None,
+            game_id: G::GAME_ID,
+            player_id,
+            plays: client.metrics.plays + client.metrics.previous_plays,
+            previous_id: client.metrics.session_id_previous,
+            referrer: client.metrics.referrer,
+            user_agent_id: client.metrics.user_agent_id,
+            server_id,
+            session_id: client.session_id,
+        };
+
+        if client.session_item.as_ref() != Some(&session_item) {
+            client.session_item = Some(session_item.clone());
+            Some(session_item)
+        } else {
+            None
+        }
     }
 
     /// Client websocket (re)connected.
@@ -198,7 +227,6 @@ impl<G: GameArenaService> ClientRepo<G> {
             observer: register_observer.clone(),
         };
         let old_status = std::mem::replace(&mut client.status, new_status);
-        let was_stale = matches!(old_status, ClientStatus::Stale { .. });
 
         match old_status {
             ClientStatus::Connected { observer } => {
@@ -210,9 +238,15 @@ impl<G: GameArenaService> ClientRepo<G> {
                 info!("player {:?} restored from limbo", player_id);
                 drop(player);
             }
-            ClientStatus::Pending { .. } | ClientStatus::Stale { .. } => {
-                metrics.start_visit(&client, was_stale);
+            ClientStatus::Pending { .. } => {
+                metrics.start_visit(client);
 
+                drop(player);
+
+                // We previously left the game, so now we have to rejoin.
+                game.player_joined(player_tuple);
+            }
+            ClientStatus::LeavingLimbo { .. } => {
                 drop(player);
 
                 // We previously left the game, so now we have to rejoin.
@@ -338,7 +372,7 @@ impl<G: GameArenaService> ClientRepo<G> {
 
                 // In limbo or will be soon (not connected, cannot send an update).
                 if let ClientStatus::Connected { observer } = &client_data.status {
-                    if let Some(update) = game.get_client_update(
+                    if let Some(update) = game.get_game_update(
                         counter,
                         player_tuple,
                         &mut *client_data.data.borrow_mut(),
@@ -448,7 +482,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         );
     }
 
-    /// Cleans up old clients.
+    /// Cleans up old clients. Rate limited internally.
     pub(crate) fn prune(
         &mut self,
         service: &mut G,
@@ -456,14 +490,21 @@ impl<G: GameArenaService> ClientRepo<G> {
         teams: &mut TeamRepo<G>,
         invitations: &mut InvitationRepo<G>,
         metrics: &mut MetricRepo<G>,
+        server_id: Option<ServerId>,
+        arena_id: ArenaId,
     ) {
         benchmark_scope!("prune_clients");
 
         let now = Instant::now();
+
+        if self.prune_rate_limiter.should_limit_rate_with_now(now) {
+            return;
+        }
+
         let to_forget: Vec<PlayerId> = players
             .players
             .iter()
-            .filter(|&(player_id, player_tuple)| {
+            .filter(|&(&player_id, player_tuple)| {
                 let mut player = player_tuple.borrow_player_mut();
                 let was_alive = player.was_alive;
                 if let Some(client_data) = player.client_mut() {
@@ -474,25 +515,37 @@ impl<G: GameArenaService> ClientRepo<G> {
                         }
                         ClientStatus::Limbo { expiry } => {
                             if &now >= expiry {
-                                if was_alive {
-                                    // postpone for one more tick but not forever!
-                                    debug_assert!(expiry.elapsed() < Duration::from_secs(1));
-                                    drop(player);
-
-                                    service.player_left(player_tuple);
-                                } else {
-                                    client_data.status = ClientStatus::Stale {
-                                        expiry: Instant::now() + ClientStatus::<G>::STALE_EXPIRY,
-                                    };
-                                    metrics.stop_visit(&mut *player);
-                                    drop(player);
-                                    info!("player_id {:?} expired from limbo", player_id);
-                                }
+                                client_data.status = ClientStatus::LeavingLimbo { since: now };
+                                drop(player);
+                                service.player_left(player_tuple);
                             }
                             false
                         }
-                        // Not actually in game, so no cleanup required.
-                        ClientStatus::Pending { expiry } | ClientStatus::Stale { expiry } => {
+                        ClientStatus::LeavingLimbo { since } => {
+                            if was_alive {
+                                debug_assert!(since.elapsed() < Duration::from_secs(1));
+                                false
+                            } else {
+                                metrics.stop_visit(&mut *player);
+                                // Unfortunately, the above makes finishing touches to metrics, but
+                                // borrows the entire player. Must therefore re-borrow client.
+                                let client_data = player.client_mut().unwrap();
+                                if let Some(server_id) = server_id {
+                                    if let Some(session_item) = Self::db_session_item(
+                                        server_id,
+                                        arena_id,
+                                        player_id,
+                                        client_data,
+                                    ) {
+                                        self.pending_session_write.push(session_item);
+                                    }
+                                }
+                                info!("player_id {:?} expired from limbo", player_id);
+                                true
+                            }
+                        }
+                        ClientStatus::Pending { expiry } => {
+                            // Not actually in game, so no cleanup required.
                             &now > expiry
                         }
                     }
@@ -537,10 +590,10 @@ impl<G: GameArenaService> ClientRepo<G> {
     /// Handles [`G::Command`]'s.
     fn handle_game_command(
         player_id: PlayerId,
-        command: G::Command,
+        command: G::GameRequest,
         service: &mut G,
         players: &PlayerRepo<G>,
-    ) -> Result<Option<G::ClientUpdate>, &'static str> {
+    ) -> Result<Option<G::GameUpdate>, &'static str> {
         if let Some(player_data) = players.get(player_id) {
             // Game updates for all players are usually processed at once, but we also allow
             // one-off responses.
@@ -605,9 +658,17 @@ impl<G: GameArenaService> ClientRepo<G> {
             .ok_or("player doesn't exist")?;
         let client = player.client_mut().ok_or("only clients can trace")?;
 
+        #[cfg(debug_assertions)]
+        let trace_limit = None;
+        #[cfg(not(debug_assertions))]
+        let trace_limit = Some(25);
+
         if message.len() > 2048 {
             Err("trace too long")
-        } else if client.traces < 25 {
+        } else if trace_limit
+            .map(|limit| client.traces < limit)
+            .unwrap_or(true)
+        {
             if let Some(trace_log) = trace_log {
                 match OpenOptions::new().create(true).append(true).open(trace_log) {
                     Ok(mut file) => {
@@ -657,7 +718,7 @@ impl<G: GameArenaService> ClientRepo<G> {
     fn handle_observer_request(
         &mut self,
         player_id: PlayerId,
-        request: Request<G::Command>,
+        request: Request<G::GameRequest>,
         service: &mut G,
         arena_id: ArenaId,
         server_id: Option<ServerId>,
@@ -666,7 +727,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         chat: &mut ChatRepo<G>,
         invitations: &mut InvitationRepo<G>,
         metrics: &mut MetricRepo<G>,
-    ) -> Result<Option<Update<G::ClientUpdate>>, &'static str> {
+    ) -> Result<Option<Update<G::GameUpdate>>, &'static str> {
         match request {
             // Goes first (fast path).
             Request::Game(command) => {
@@ -740,29 +801,18 @@ pub(crate) struct PlayerClientData<G: GameArenaService> {
 
 #[derive(Debug)]
 pub(crate) enum ClientStatus<G: GameArenaService> {
-    /// Pending: Initial state. Can be forgotten after expiry.
+    /// Pending: Initial state. Visit not started yet. Can be forgotten after expiry.
     Pending { expiry: Instant },
     /// Connected and in game. Transitions to limbo if the connection is lost.
     Connected { observer: ClientAddr<G> },
-    /// Disconnected but still in game.
+    /// Disconnected but still in game (and visit still in progress).
     /// - Transitions to connected if a new connection is established.
-    /// - Transitions to stale after expiry.
+    /// - Transitions to leaving limbo after expiry.
     Limbo { expiry: Instant },
-    /// Disconnected and out of game.
+    /// Disconnected and not in game (but visit still in progress).
     /// - Transitions to connected if a new connection is established.
-    /// - Client can be forgotten after expiry.
-    Stale { expiry: Instant },
-}
-
-impl<G: GameArenaService> ClientStatus<G> {
-    /// How long into the future to set stale expiry when a client expires from limbo. In debug mode,
-    /// this is shorter to facilitate testing.
-    #[cfg(debug_assertions)]
-    pub const STALE_EXPIRY: Duration = Duration::from_secs(75);
-    /// How long into the future to set stale expiry when a client expires from limbo. In release mode,
-    /// this is longer to reduce expensive database lookups.
-    #[cfg(not(debug_assertions))]
-    pub const STALE_EXPIRY: Duration = Duration::from_secs(48 * 3600);
+    /// - Transitions to stale after finished leaving game.
+    LeavingLimbo { since: Instant },
 }
 
 impl<G: GameArenaService> PlayerClientData<G> {
@@ -790,14 +840,14 @@ impl<G: GameArenaService> PlayerClientData<G> {
 }
 
 /// Handle client messages.
-impl<G: GameArenaService> Handler<ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>>>
+impl<G: GameArenaService> Handler<ObserverMessage<Request<G::GameRequest>, Update<G::GameUpdate>>>
     for Infrastructure<G>
 {
     type Result = ();
 
     fn handle(
         &mut self,
-        msg: ObserverMessage<Request<G::Command>, Update<G::ClientUpdate>>,
+        msg: ObserverMessage<Request<G::GameRequest>, Update<G::GameUpdate>>,
         _ctx: &mut Self::Context,
     ) {
         match msg {

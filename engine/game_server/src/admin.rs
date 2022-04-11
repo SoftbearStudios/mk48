@@ -27,6 +27,8 @@ use std::time::Duration;
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
     pub(crate) redirect_server_id_preference: Option<ServerId>,
+    /// Route players to other available servers.
+    pub(crate) distribute_load: bool,
     #[cfg(unix)]
     profile: Option<pprof::ProfilerGuard<'static>>,
     _spooky: PhantomData<G>,
@@ -53,6 +55,7 @@ impl<G: GameArenaService> AdminRepo<G> {
     pub fn new() -> Self {
         Self {
             redirect_server_id_preference: None,
+            distribute_load: false,
             #[cfg(unix)]
             profile: None,
             _spooky: PhantomData,
@@ -297,6 +300,17 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::ChatSent)
     }
 
+    /// Responds with the current status of load distribution.
+    fn request_distribute_load(&self) -> Result<AdminUpdate, &'static str> {
+        Ok(AdminUpdate::DistributeLoadRequested(self.distribute_load))
+    }
+
+    /// Changes the load distribution setting.
+    fn set_distribute_load(&mut self, distribute_load: bool) -> Result<AdminUpdate, &'static str> {
+        self.distribute_load = distribute_load;
+        Ok(AdminUpdate::DistributeLoadSet(distribute_load))
+    }
+
     /// Requests the currently-set server to redirect to.
     fn request_redirect(&self) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::RedirectRequested(
@@ -356,7 +370,7 @@ impl<G: GameArenaService> AdminRepo<G> {
 impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<G> {
     type Result = ResponseActFuture<Self, Result<AdminUpdate, &'static str>>;
 
-    fn handle(&mut self, msg: ParameterizedAdminRequest, _ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ParameterizedAdminRequest, ctx: &mut Self::Context) -> Self::Result {
         if !msg.is_authentic() {
             return Box::pin(fut::ready(Err("invalid auth")));
         }
@@ -449,6 +463,12 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 message,
                 &mut self.context_service.context,
             ))),
+            AdminRequest::RequestDistributeLoad => {
+                Box::pin(fut::ready(self.admin.request_distribute_load()))
+            }
+            AdminRequest::SetDistributeLoad(distribute_load) => {
+                Box::pin(fut::ready(self.admin.set_distribute_load(distribute_load)))
+            }
             AdminRequest::RequestRedirect => Box::pin(fut::ready(self.admin.request_redirect())),
             AdminRequest::SetRedirect(server_id) => Box::pin(fut::ready(self.admin.set_redirect(
                 server_id,
@@ -457,6 +477,14 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
             ))),
             #[cfg(unix)]
             AdminRequest::SetProfiler(enabled) => {
+                use actix::ContextFutureSpawner;
+                // Runaway profiles could crash the server, so impose a time limit.
+                tokio::time::sleep(Duration::from_secs(10))
+                    .into_actor(self)
+                    .map(|_, act, _| {
+                        let _ = act.admin.set_profiler(false);
+                    })
+                    .spawn(ctx);
                 Box::pin(fut::ready(self.admin.set_profiler(enabled)))
             }
         }

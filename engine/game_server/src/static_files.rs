@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports))]
+
 use axum::body::{boxed, Empty, Full};
 use axum::headers::HeaderMap;
 use axum::http::header::{ACCEPT, ACCEPT_ENCODING, IF_NONE_MATCH};
@@ -51,13 +53,20 @@ pub async fn static_handler<E: RustEmbed>(uri: Uri, headers: HeaderMap) -> impl 
 
     let cached_map: &'static RwLock<HashMap<String, CachedFile>> = &*CACHED;
 
-    if let Some(cached_response) = lookup_cached(
+    #[cfg(not(debug_assertions))]
+    let cached = lookup_cached(
         path,
         if_none_match,
         accepting_gzip,
         accepting_webp,
         cached_map,
-    ) {
+    );
+
+    // Load from disk every time, in case it changed.
+    #[cfg(debug_assertions)]
+    let cached: Option<Response> = None;
+
+    if let Some(cached_response) = cached {
         cached_response
     } else {
         let true_path = if path.is_empty() || path.ends_with('/') {
@@ -173,6 +182,7 @@ impl CachedFile {
         let etag = hex::encode(embedded.metadata.sha256_hash());
 
         let compressed = match mime.essence_str() {
+            #[cfg(not(debug_assertions))]
             "image/png" | "image/jpeg" => {
                 let cursor = Cursor::new(embedded.data.as_ref());
                 let mut reader = image::io::Reader::new(cursor);
@@ -198,6 +208,7 @@ impl CachedFile {
                     }
                 }
             }
+            #[cfg(not(debug_assertions))]
             _ if embedded.data.as_ref().len() > 1000 => {
                 let mut encoder = GzEncoder::new(Vec::new(), Compression::best());
                 encoder.write_all(embedded.data.as_ref()).unwrap();
@@ -221,12 +232,18 @@ impl CachedFile {
     }
 }
 
-pub fn static_hash<E: RustEmbed>() -> u64 {
+/// Returns the size in bytes of all client files, followed by a collective hash of them.
+pub fn static_size_and_hash<E: RustEmbed>() -> (usize, u64) {
+    let mut size = 0;
     let mut hash = 0u64;
 
     for path in E::iter() {
-        let mut hasher = DefaultHasher::new();
         let file = E::get(path.as_ref()).unwrap();
+        size += match &file.data {
+            Cow::Owned(owned) => owned.len(),
+            &Cow::Borrowed(borrowed) => borrowed.len(),
+        };
+        let mut hasher = DefaultHasher::new();
         path.hash(&mut hasher);
         file.metadata.sha256_hash().hash(&mut hasher);
         // println!("{:?} -> {}", path, hasher.finish());
@@ -234,5 +251,5 @@ pub fn static_hash<E: RustEmbed>() -> u64 {
         hash ^= hasher.finish();
     }
 
-    hash
+    (size, hash)
 }

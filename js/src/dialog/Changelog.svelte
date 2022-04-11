@@ -14,11 +14,22 @@
 
 	<h2>2021</h2>
 
+	<h3>4/10/2022</h3>
+
+	<ul>
+		<li>Remove health regeneration when upgrading to below your full potential.</li>
+		<li>Fix some rare graphical glitches.</li>
+		<li>Fix daily/weekly leaderboard issue (pending database maintenance).</li>
+		<li>Fix bug affecting incognito/private browsing mode.</li>
+		<li>Resolve server CPU usage which resulted in lag (part 2).</li>
+		<li>Working towards multiple servers in same region (experimental).</li>
+	</ul>
+
 	<h3>3/12/2022</h3>
 
 	<ul>
 		<li>Fix throttle vibrating at low FPS.</li>
-		<li>Resolve server CPU usage which resulted in lag.</li>
+		<li>Resolve server CPU usage which resulted in lag (part 1).</li>
 		<li>Lower client-to-server bandwidth.</li>
 	</ul>
 

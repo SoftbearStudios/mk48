@@ -34,7 +34,7 @@
 		<li>The textures were modeled and rendered in <Link href="https://www.blender.org/">Blender</Link>, except for the <Link href="https://opengameart.org/content/simple-seamless-tiles-of-dirt-and-sand-sand2png">sand</Link>, <Link href="https://opengameart.org/content/grass-textureseamless-2d">grass</Link>, and <Link href="https://opengameart.org/content/seamless-snow-texture-0">snow</Link>.</li>
 		<li>The title-screen logo was designed by <Link href="https://www.fiverr.com/skydesigner">skydesigner</Link>.</li>
 		<li>The sounds are from <Link href='https://github.com/SoftbearStudios/mk48/blob/main/assets/sounds/README.md'>these sources.</Link></li>
-		<li>IP Geolocation by <Link href='https://db-ip.com'>DB-IP</Link></li>.
+		<li>IP Geolocation by <Link href='https://db-ip.com'>DB-IP</Link>.</li>
 		<li>You can contribute to the translations at <Link href="https://crowdl.io/mk48/entries">crowdl.io</Link>.</li>
 	</ul>
 

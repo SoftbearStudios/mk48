@@ -9,6 +9,30 @@ pub fn _default<T: Default + PartialEq>(x: &T) -> bool {
     x == &T::default()
 }
 
+/// Serialize [`struct Typ(Fmt)`] as [`Fmt`].
+#[macro_export]
+macro_rules! serde_transparent_tuple {
+    ($typ: ident, $fmt: expr) => {
+        impl serde::Serialize for $typ {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.0.serialize(serializer)
+            }
+        }
+
+        impl<'de> serde::Deserialize<'de> for $typ {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                serde::Deserialize::deserialize(deserializer).map($typ)
+            }
+        }
+    };
+}
+
 pub struct F32Visitor;
 
 impl<'de> Visitor<'de> for F32Visitor {

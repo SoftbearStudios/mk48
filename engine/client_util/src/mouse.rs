@@ -6,7 +6,7 @@ use glam::Vec2;
 use variant_count::VariantCount;
 
 /// Identifies a mouse button (left, middle, or right).
-#[derive(Copy, Clone, Eq, PartialEq, VariantCount)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, VariantCount)]
 pub enum MouseButton {
     Left,
     Middle,
@@ -77,6 +77,7 @@ impl MouseButtonState {
 }
 
 /// Any type of mouse event. `Self::Wheel` may be emulated by any zooming intent.
+#[derive(Debug)]
 pub enum MouseEvent {
     Button {
         button: MouseButton,

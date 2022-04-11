@@ -184,7 +184,7 @@ impl Mutation {
             Self::ClearSpawnProtection => entities[index].extension_mut().clear_spawn_protection(),
             Self::UpgradeHq => {
                 let entity = &mut entities[index];
-                entity.change_entity_type(EntityType::Hq, &mut world.arena);
+                entity.change_entity_type(EntityType::Hq, &mut world.arena, false);
                 entity.ticks = Ticks::ZERO;
             }
             Self::Repair(amount) => {

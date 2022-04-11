@@ -14,7 +14,8 @@ debug_bots:
 	RUST_BACKTRACE=1 cargo run --release -- -p 50000 --database-read-only
 
 target/release/server:
-	RUSTFLAGS="-Ctarget-feature=-retpoline,+mmx,+aes,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+popcnt" cargo build --release
+	#RUSTFLAGS="-Ctarget-feature=-retpoline,+mmx,+aes,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+popcnt" cargo build --release
+	cargo build --release
 
 ssh:
 	ssh $(SSH_OPTS) root@mk48.io

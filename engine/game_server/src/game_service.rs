@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::context::Context;
 use crate::player::PlayerTuple;
 use common_util::ticks::Ticks;
 use core_protocol::id::{GameId, PlayerId, TeamId};
@@ -37,13 +38,10 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
 
     type Bot: 'static + Bot<Self>;
     type ClientData: 'static + Default + Debug + Unpin + Send + Sync;
-    type ClientUpdate: 'static + Sync + Send + Serialize;
-    type Command: 'static + DeserializeOwned + Send + Unpin;
+    type GameUpdate: 'static + Sync + Send + Serialize;
+    type GameRequest: 'static + DeserializeOwned + Send + Unpin;
     type PlayerData: 'static + Default + Unpin + Send + Sync + Debug;
     type PlayerExtension: 'static + Default + Unpin + Send + Sync;
-    type BotUpdate<'a>
-    where
-        Self: 'a;
 
     fn new(min_players: usize) -> Self;
 
@@ -63,9 +61,9 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     /// Called when a player issues a command.
     fn player_command(
         &mut self,
-        command: Self::Command,
+        command: Self::GameRequest,
         player_tuple: &Arc<PlayerTuple<Self>>,
-    ) -> Option<Self::ClientUpdate>;
+    ) -> Option<Self::GameUpdate>;
 
     /// Called when a player's [`TeamId`] changes.
     fn player_changed_team(
@@ -79,31 +77,40 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     fn player_left(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
-    fn get_client_update(
+    fn get_game_update(
         &self,
         counter: Ticks,
         player_tuple: &Arc<PlayerTuple<Self>>,
         client_data: &mut Self::ClientData,
-    ) -> Option<Self::ClientUpdate>;
+    ) -> Option<Self::GameUpdate>;
 
-    /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
-    fn get_bot_update<'a>(
-        &'a self,
-        counter: Ticks,
-        player_tuple: &'a Arc<PlayerTuple<Self>>,
-    ) -> Self::BotUpdate<'a>;
     /// Returns true iff the player is considered to be "alive" i.e. they cannot change their alias.
     fn is_alive(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> bool;
     /// Before sending.
-    fn update(&mut self, ticks: Ticks, counter: Ticks);
+    fn tick(&mut self, context: &Context<Self>);
     /// After sending.
     fn post_update(&mut self) {}
 }
 
 /// Implemented by game bots.
 pub trait Bot<G: GameArenaService>: Default + Unpin + Sized + Send {
+    type Input<'a>
+    where
+        G: 'a;
+
+    /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
+    fn get_input<'a>(
+        game: &'a G,
+        counter: Ticks,
+        player_tuple: &'a Arc<PlayerTuple<G>>,
+    ) -> Self::Input<'a>;
+
     /// None indicates quitting.
-    fn update<'a>(&mut self, update: G::BotUpdate<'a>, player_id: PlayerId) -> Option<G::Command>;
+    fn update<'a>(
+        &mut self,
+        update: Self::Input<'a>,
+        player_id: PlayerId,
+    ) -> Option<G::GameRequest>;
 }
 
 // What follows is testing related code.
@@ -116,11 +123,21 @@ pub struct MockGameBot;
 
 #[cfg(test)]
 impl Bot<MockGame> for MockGameBot {
+    type BotUpdate<'a> = ();
+
+    fn get_input<'a>(
+        game: &'a MockGame,
+        _counter: Ticks,
+        _player_tuple: &'a Arc<PlayerTuple<Self>>,
+    ) -> Self::BotUpdate<'a> {
+        ()
+    }
+
     fn update<'a>(
         &mut self,
         _update: <MockGame as GameArenaService>::BotUpdate<'_>,
         _player_id: PlayerId,
-    ) -> Option<<MockGame as GameArenaService>::Command> {
+    ) -> Option<<MockGame as GameArenaService>::GameRequest> {
         Some(())
     }
 }
@@ -135,12 +152,10 @@ impl GameArenaService for MockGame {
 
     type Bot = MockGameBot;
     type ClientData = ();
-    type ClientUpdate = ();
-    type Command = ();
+    type GameUpdate = ();
+    type GameRequest = ();
     type PlayerData = ();
     type PlayerExtension = ();
-
-    type BotUpdate<'a> = ();
 
     fn new(_min_players: usize) -> Self {
         Self
@@ -148,32 +163,24 @@ impl GameArenaService for MockGame {
 
     fn player_command(
         &mut self,
-        _command: Self::Command,
+        _command: Self::GameRequest,
         _player_tuple: &Arc<PlayerTuple<Self>>,
-    ) -> Option<Self::ClientUpdate> {
+    ) -> Option<Self::GameUpdate> {
         None
     }
 
-    fn get_client_update(
+    fn get_game_update(
         &self,
         _counter: Ticks,
         _player: &Arc<PlayerTuple<Self>>,
         _player_tuple: &mut Self::ClientData,
-    ) -> Option<Self::ClientUpdate> {
+    ) -> Option<Self::GameUpdate> {
         Some(())
-    }
-
-    fn get_bot_update<'a>(
-        &'a self,
-        _counter: Ticks,
-        _player_tuple: &'a Arc<PlayerTuple<Self>>,
-    ) -> Self::BotUpdate<'a> {
-        ()
     }
 
     fn is_alive(&self, _player_tuple: &Arc<PlayerTuple<Self>>) -> bool {
         false
     }
 
-    fn update(&mut self, _ticks: Ticks, _counter: Ticks) {}
+    fn tick(&mut self, _context: &Context<Self>) {}
 }

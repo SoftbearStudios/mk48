@@ -54,8 +54,8 @@
 			if (invitationId != null) {
 				params.invitation_id = invitationId;
 			}
-			if (localStorage.serverId && !isNaN(localStorage.serverId)) {
-				params.server_id = localStorage.serverId;
+			if (storage.serverId && !isNaN(storage.serverId)) {
+				params.server_id = storage.serverId;
 			}
 			const response = await fetch(`/system/?${new URLSearchParams(params).toString()}`);
 			const url = new URL(response.url);

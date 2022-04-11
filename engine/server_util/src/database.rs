@@ -25,6 +25,8 @@ use std::time::Duration;
 /// A DynamoDB database.
 pub struct Database {
     client: Client,
+    /// Whether to abort and return [`Ok`] right before writing anything to the database.
+    read_only: bool,
 }
 
 #[derive(Debug)]
@@ -39,7 +41,7 @@ impl Database {
     const SCORES_TABLE_NAME: &'static str = "core_scores";
     const METRICS_TABLE_NAME: &'static str = "core_metrics";
 
-    pub async fn new() -> Self {
+    pub async fn new(read_only: bool) -> Self {
         let credentials_provider = DefaultCredentialsChain::builder()
             .region(Region::new(Self::REGION))
             .profile_name("core")
@@ -55,8 +57,10 @@ impl Database {
             )
             .load()
             .await;
-        let client = Client::new(&shared_config);
-        Self { client }
+        Self {
+            client: Client::new(&shared_config),
+            read_only,
+        }
     }
 
     /// Call with current scores. Result is all leaderboards, including a prediction of how new
@@ -151,14 +155,13 @@ impl Database {
             Err(e) => return Err(Error::Serde(e)),
         };
 
-        match self
-            .client
-            .put_item()
-            .table_name(table)
-            .set_item(Some(ser))
-            .send()
-            .await
-        {
+        let req = self.client.put_item().table_name(table).set_item(Some(ser));
+
+        if self.read_only {
+            return Ok(());
+        }
+
+        match req.send().await {
             Err(e) => Err(Error::Dynamo(e.into())),
             Ok(_) => Ok(()),
         }
@@ -418,17 +421,20 @@ impl Database {
             Err(e) => return Err(Error::Serde(e)),
         };
 
-        if let Err(e) = self
+        let req = self
             .client
             .put_item()
             .table_name(Self::SCORES_TABLE_NAME)
             .set_item(Some(ser))
             .set_condition_expression(Some(String::from("attribute_not_exists(#s) OR #s < :s")))
             .expression_attribute_names("#s", "score")
-            .expression_attribute_values(":s", ser_threshold)
-            .send()
-            .await
-        {
+            .expression_attribute_values(":s", ser_threshold);
+
+        if self.read_only {
+            return Ok(());
+        }
+
+        if let Err(e) = req.send().await {
             let compat = e.into();
             // Don't raise error if score wasn't high enough to persist.
             if !matches!(
@@ -551,6 +557,10 @@ impl Database {
                     )
                     .expression_attribute_names("#game_id", "game_id")
                     .expression_attribute_names("#timestamp", "timestamp");
+            }
+
+            if self.read_only {
+                return Ok(());
             }
 
             return match request.send().await {

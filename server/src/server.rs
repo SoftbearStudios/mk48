@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::bot::*;
-use crate::complete_ref::CompleteRef;
-use crate::contact_ref::ContactRef;
 use crate::entity_extension::EntityExtension;
 use crate::player::*;
 use crate::protocol::*;
@@ -14,6 +12,7 @@ use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
 use core_protocol::id::*;
+use game_server::context::Context;
 use game_server::game_service::GameArenaService;
 use game_server::player::PlayerTuple;
 use log::warn;
@@ -53,11 +52,10 @@ impl GameArenaService for Server {
 
     type Bot = Bot;
     type ClientData = ClientData;
-    type ClientUpdate = Update;
-    type Command = Command;
+    type GameUpdate = Update;
+    type GameRequest = Command;
     type PlayerData = Player;
     type PlayerExtension = PlayerExtension;
-    type BotUpdate<'a> = CompleteRef<'a, impl Iterator<Item = ContactRef<'a>>>;
 
     /// new returns a game server with the specified parameters.
     fn new(min_players: usize) -> Self {
@@ -81,7 +79,7 @@ impl GameArenaService for Server {
 
     fn player_command(
         &mut self,
-        update: Self::Command,
+        update: Self::GameRequest,
         player: &Arc<PlayerTuple<Self>>,
     ) -> Option<Update> {
         if let Err(e) = update.as_command().apply(&mut self.world, player) {
@@ -123,25 +121,17 @@ impl GameArenaService for Server {
         player.data.flags.left_game = true;
     }
 
-    fn get_client_update(
+    fn get_game_update(
         &self,
         counter: Ticks,
         player: &Arc<PlayerTuple<Self>>,
         client_data: &mut Self::ClientData,
-    ) -> Option<Self::ClientUpdate> {
+    ) -> Option<Self::GameUpdate> {
         Some(
             self.world
                 .get_player_complete(player)
                 .into_update(counter, &mut client_data.loaded_chunks),
         )
-    }
-
-    fn get_bot_update<'a>(
-        &'a self,
-        _counter: Ticks,
-        player: &'a Arc<PlayerTuple<Self>>,
-    ) -> Self::BotUpdate<'a> {
-        self.world.get_player_complete(player)
     }
 
     fn is_alive(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> bool {
@@ -150,10 +140,10 @@ impl GameArenaService for Server {
     }
 
     /// update runs server ticks.
-    fn update(&mut self, ticks: Ticks, _counter: Ticks) {
+    fn tick(&mut self, _context: &Context<Self>) {
         benchmark_scope!("tick");
 
-        self.world.update(ticks);
+        self.world.update(Ticks::ONE);
 
         // Needs to be called before clients receive updates, but after World::update.
         self.world.terrain.pre_update();

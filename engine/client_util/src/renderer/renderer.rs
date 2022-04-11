@@ -230,6 +230,7 @@ impl Renderer {
     }
 
     /// Defines the view matrix.
+    /// MUST be called before any layers are updated.
     pub fn set_camera(&mut self, center: Vec2, zoom: f32) {
         let viewport = self.canvas_size();
         self.camera.update(center, zoom, viewport);

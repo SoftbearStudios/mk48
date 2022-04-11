@@ -46,7 +46,8 @@ impl<G: GameClient> Infrastructure<G> {
 
         // Next create renderer and load game settings with it.
         let mut renderer = Renderer::new(common_settings.antialias);
-        let game_settings = G::Settings::load(&local_storage, game.init_settings(&mut renderer));
+        let game_settings =
+            G::GameSettings::load(&local_storage, game.init_settings(&mut renderer));
 
         // Finally create context with common and game settings.
         let mut context = Context::new(local_storage, common_settings, game_settings, frontend);
@@ -196,7 +197,7 @@ impl<G: GameClient> Infrastructure<G> {
                         down,
                         time: self.context.client.update_seconds,
                     };
-                    self.game.peek_mouse(&e, &mut self.context);
+                    self.game.peek_mouse(&e, &mut self.context, &self.renderer);
                     self.context.mouse.apply(e);
                 }
             }
@@ -234,7 +235,7 @@ impl<G: GameClient> Infrastructure<G> {
                         down,
                         time: self.context.client.update_seconds,
                     };
-                    self.game.peek_mouse(&e, &mut self.context);
+                    self.game.peek_mouse(&e, &mut self.context, &self.renderer);
                     self.context.mouse.apply(e);
                 } else if self.context.mouse.is_down(MouseButton::Left) {
                     *self.context.mouse.state_mut(MouseButton::Left) = MouseButtonState::Up;
@@ -288,7 +289,7 @@ impl<G: GameClient> Infrastructure<G> {
     /// Creates a mouse wheel event with the given delta.
     pub fn raw_zoom(&mut self, delta: f32) {
         let e = GameClientMouseEvent::Wheel(delta);
-        self.game.peek_mouse(&e, &mut self.context);
+        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
         self.context.mouse.apply(e);
     }
 
@@ -323,13 +324,13 @@ impl<G: GameClient> Infrastructure<G> {
         let view_position = Self::client_coordinate_to_view(x, y);
 
         let e = GameClientMouseEvent::MoveViewSpace(view_position);
-        self.game.peek_mouse(&e, &mut self.context);
+        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
         self.context.mouse.apply(e);
 
         // If the mouse moves in view space, it also moves in world space.
         let e2 =
             GameClientMouseEvent::MoveWorldSpace(self.renderer.to_world_position(view_position));
-        self.game.peek_mouse(&e2, &mut self.context);
+        self.game.peek_mouse(&e2, &mut self.context, &self.renderer);
         self.context.mouse.apply(e2);
     }
 
@@ -339,7 +340,7 @@ impl<G: GameClient> Infrastructure<G> {
             let world_position = self.renderer.to_world_position(view_position);
             if self.context.mouse.world_position != Some(world_position) {
                 let e = GameClientMouseEvent::MoveWorldSpace(world_position);
-                self.game.peek_mouse(&e, &mut self.context);
+                self.game.peek_mouse(&e, &mut self.context, &self.renderer);
                 self.context.mouse.apply(e);
             }
         }

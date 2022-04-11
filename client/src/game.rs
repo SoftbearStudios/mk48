@@ -91,14 +91,14 @@ pub fn wind() -> Vec2 {
 impl GameClient for Mk48Game {
     const GAME_ID: GameId = GameId::Mk48;
 
-    type Command = Command;
+    type GameRequest = Command;
     type RendererLayer = RendererLayer;
-    type State = Mk48State;
+    type GameState = Mk48State;
     type UiEvent = UiEvent;
     type UiState = UiState;
     type UiProps = UiProps;
-    type Update = Update;
-    type Settings = Mk48Settings;
+    type GameUpdate = Update;
+    type GameSettings = Mk48Settings;
 
     fn new() -> Self {
         unsafe {
@@ -122,7 +122,7 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::Settings {
+    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::GameSettings {
         let animations = !renderer.fragment_uses_mediump();
         let wave_quality = renderer.fragment_has_highp() as u8;
 
@@ -345,7 +345,12 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn peek_mouse(&mut self, event: &MouseEvent, _context: &mut Context<Self>) {
+    fn peek_mouse(
+        &mut self,
+        event: &MouseEvent,
+        _context: &mut Context<Self>,
+        _renderer: &Renderer,
+    ) {
         if let MouseEvent::Wheel(delta) = event {
             self.zoom(delta);
         }
@@ -436,6 +441,10 @@ impl GameClient for Mk48Game {
         // May have changed due to the above.
         let (camera, zoom) =
             self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
+
+        // Set camera before update layers so they don't get last frame's camera.
+        // TODO decouple update and render.
+        renderer.set_camera(camera, zoom);
 
         let (visual_range, visual_restriction, area) =
             if let Some(player_contact) = context.state.game.player_contact() {
@@ -955,8 +964,6 @@ impl GameClient for Mk48Game {
                 s.alpha,
             );
         }
-
-        renderer.set_camera(camera, zoom);
 
         // After the above line, mouse world position state may be out-of-date. Recalculate it here.
         let aim_target = context

@@ -77,7 +77,12 @@ impl Entity {
     }
 
     /// change_entity_type is the only valid way to change an entity's type.
-    pub fn change_entity_type(&mut self, entity_type: EntityType, arena: &mut Arena) {
+    pub fn change_entity_type(
+        &mut self,
+        entity_type: EntityType,
+        arena: &mut Arena,
+        boat_below_full_potential: bool,
+    ) {
         let old_data = self.data();
         debug_assert_eq!(old_data.kind, entity_type.data().kind);
 
@@ -93,10 +98,15 @@ impl Entity {
 
         let new_data = self.data();
 
-        // Regen half of damage (as a fraction). Get original damage fraction before changing
+        // Regen a fraction of damage. Get original damage fraction before changing
         // entity type. Never result in boat being dead.
         let damage_fraction = self.ticks.to_secs() / old_data.max_health().to_secs();
-        let new_damage_fraction = damage_fraction * 0.75;
+        let new_damage_fraction = if boat_below_full_potential {
+            // See https://github.com/SoftbearStudios/mk48/issues/168
+            damage_fraction
+        } else {
+            damage_fraction * 0.75
+        };
         let max_health = new_data.max_health();
         self.ticks = (max_health * new_damage_fraction).min(max_health - Ticks::ONE);
 

@@ -386,7 +386,7 @@ impl<G: GameArenaService> TeamRepo<G> {
     }
 
     /// Call when a player requests to quit their team.
-    pub fn quit_team(
+    pub(crate) fn quit_team(
         &mut self,
         req_player_id: PlayerId,
         players: &PlayerRepo<G>,
@@ -440,7 +440,7 @@ impl<G: GameArenaService> TeamRepo<G> {
         Ok(TeamUpdate::Left)
     }
 
-    pub fn request_join(
+    pub(crate) fn request_join(
         &mut self,
         req_player_id: PlayerId,
         join_team_id: TeamId,
@@ -500,7 +500,7 @@ impl<G: GameArenaService> TeamRepo<G> {
         Ok(TeamUpdate::Joining(join_team_id))
     }
 
-    pub fn handle_team_request(
+    pub(crate) fn handle_team_request(
         &mut self,
         req_player_id: PlayerId,
         request: TeamRequest,
@@ -524,7 +524,7 @@ impl<G: GameArenaService> TeamRepo<G> {
     }
 
     /// Gets initializer for new client.
-    pub fn initializer(&self) -> Option<TeamUpdate> {
+    pub(crate) fn initializer(&self) -> Option<TeamUpdate> {
         (!self.previous.is_empty()).then(|| TeamUpdate::AddedOrUpdated(Arc::clone(&self.previous)))
     }
 
@@ -542,7 +542,7 @@ impl<G: GameArenaService> TeamRepo<G> {
     }
 
     /// Computes a diff, and updates cached dtos.
-    pub fn delta(&mut self) -> Option<(Arc<[TeamDto]>, Arc<[TeamId]>)> {
+    pub(crate) fn delta(&mut self) -> Option<(Arc<[TeamDto]>, Arc<[TeamId]>)> {
         let current_players = self.compute_team_dtos();
 
         if let Some((added, removed)) =
@@ -557,7 +557,7 @@ impl<G: GameArenaService> TeamRepo<G> {
 
     /// Return delta in members, joiners, and joins for a given player.
     /// Only returns [`None`] at the outer level if the player doesn't exist or isn't a real player.
-    pub fn player_delta(
+    pub(crate) fn player_delta(
         &mut self,
         player_id: PlayerId,
         players: &PlayerRepo<G>,
@@ -625,7 +625,7 @@ impl<G: GameArenaService> TeamRepo<G> {
     ///
     /// This must be called at least once before the player is forgotten, but may be called earlier
     /// than that.
-    pub fn cleanup_player(&mut self, player_id: PlayerId, players: &PlayerRepo<G>) {
+    pub(crate) fn cleanup_player(&mut self, player_id: PlayerId, players: &PlayerRepo<G>) {
         let _ = self.quit_team(player_id, players);
         for team in self.teams.values_mut() {
             team.joiners.remove(player_id);

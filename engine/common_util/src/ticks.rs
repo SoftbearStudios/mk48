@@ -25,6 +25,11 @@ impl Ticks {
         Self((secs * Self::FREQUENCY_HZ.0 as f32) as TicksRepr)
     }
 
+    /// Converts whole seconds to a duration.
+    pub const fn from_whole_secs(secs: u16) -> Self {
+        Self(secs * Self::FREQUENCY_HZ.0)
+    }
+
     /// Returns the duration as fractional seconds.
     pub fn to_secs(self) -> f32 {
         self.0 as f32 * Self::PERIOD_SECS
@@ -45,6 +50,10 @@ impl Ticks {
 
     pub fn wrapping_add(self, rhs: Self) -> Self {
         Self(self.0.wrapping_add(rhs.0))
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        self.0.checked_add(rhs.0).map(Self)
     }
 }
 

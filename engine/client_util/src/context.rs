@@ -23,7 +23,7 @@ pub struct Context<G: GameClient + ?Sized> {
     /// Server state
     pub state: ServerState<G>,
     /// Server websocket
-    pub socket: ReconnWebSocket<Update<G::Update>, Request<G::Command>, ServerState<G>>,
+    pub socket: ReconnWebSocket<Update<G::GameUpdate>, Request<G::GameRequest>, ServerState<G>>,
     /// Ui.
     pub ui: G::UiState,
     /// Keyboard input.
@@ -31,7 +31,7 @@ pub struct Context<G: GameClient + ?Sized> {
     /// Mouse input.
     pub mouse: MouseState,
     /// Settings.
-    pub settings: G::Settings,
+    pub settings: G::GameSettings,
     /// Common settings.
     pub common_settings: CommonSettings,
     /// Local storage.
@@ -48,7 +48,7 @@ pub struct ClientState {
 
 /// Obtained from server via websocket.
 pub struct ServerState<G: GameClient> {
-    pub game: G::State,
+    pub game: G::GameState,
     pub core: CoreState,
 }
 
@@ -73,7 +73,7 @@ pub struct CoreState {
 impl<G: GameClient> Default for ServerState<G> {
     fn default() -> Self {
         Self {
-            game: G::State::default(),
+            game: G::GameState::default(),
             core: CoreState::default(),
         }
     }
@@ -147,8 +147,8 @@ impl CoreState {
     }
 }
 
-impl<G: GameClient> Apply<Update<G::Update>> for ServerState<G> {
-    fn apply(&mut self, update: Update<G::Update>) {
+impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
+    fn apply(&mut self, update: Update<G::GameUpdate>) {
         match update {
             Update::Chat(update) => {
                 match update {
@@ -271,7 +271,7 @@ impl<G: GameClient> Context<G> {
     pub(crate) fn new(
         mut local_storage: LocalStorage,
         mut common_settings: CommonSettings,
-        settings: G::Settings,
+        settings: G::GameSettings,
         frontend: Box<dyn Frontend<G::UiProps> + 'static>,
     ) -> Self {
         let (host, server_id) = Self::compute_websocket_host(&common_settings, None, &*frontend);
@@ -330,7 +330,7 @@ impl<G: GameClient> Context<G> {
     }
 
     /// Send a game command on the socket.
-    pub fn send_to_game(&mut self, request: G::Command) {
+    pub fn send_to_game(&mut self, request: G::GameRequest) {
         self.send_to_server(Request::Game(request));
     }
 
@@ -345,7 +345,7 @@ impl<G: GameClient> Context<G> {
     }
 
     /// Send a request on the socket.
-    pub fn send_to_server(&mut self, request: Request<G::Command>) {
+    pub fn send_to_server(&mut self, request: Request<G::GameRequest>) {
         self.socket.send(request);
     }
 

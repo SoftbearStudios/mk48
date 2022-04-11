@@ -175,9 +175,9 @@ pub struct Metrics {
     /// Minutes per completed play (a measure of engagement).
     #[serde(default)]
     pub minutes_per_play: ContinuousExtremaMetric,
-    /// Minutes played, per session, during the metrics period.
+    /// Minutes played, per visit, during the metrics period.
     #[serde(default)]
-    pub minutes_per_session: ContinuousExtremaMetric,
+    pub minutes_per_visit: ContinuousExtremaMetric,
     /// Ratio of unique players that are new to players that are not.
     #[serde(default)]
     pub new: RatioMetric,
@@ -190,9 +190,9 @@ pub struct Metrics {
     /// How many players (for now, [`PlayerId`]) are in memory cache.
     #[serde(default)]
     pub players_cached: DiscreteMetric,
-    /// Plays per session (a measure of engagement).
+    /// Plays per visit (a measure of engagement).
     #[serde(default)]
-    pub plays_per_session: ContinuousExtremaMetric,
+    pub plays_per_visit: ContinuousExtremaMetric,
     /// Plays total (aka impressions).
     #[serde(default)]
     pub plays_total: DiscreteMetric,
@@ -223,9 +223,9 @@ pub struct Metrics {
     /// Ratio of inappropriate messages to total.
     #[serde(default)]
     pub toxicity: RatioMetric,
-    /// Server updates per second.
+    /// Server ticks per second.
     #[serde(default)]
-    pub ups: ContinuousExtremaMetric,
+    pub tps: ContinuousExtremaMetric,
     /// Uptime in (fractional) days.
     #[serde(default)]
     pub uptime: ContinuousExtremaMetric,
@@ -249,12 +249,12 @@ impl Metrics {
             invitations_cached: self.invitations_cached.summarize(),
             low_fps: self.low_fps.summarize(),
             minutes_per_play: self.minutes_per_play.summarize(),
-            minutes_per_session: self.minutes_per_session.summarize(),
+            minutes_per_visit: self.minutes_per_visit.summarize(),
             new: self.new.summarize(),
             no_referrer: self.no_referrer.summarize(),
             peek: self.peek.summarize(),
             players_cached: self.players_cached.summarize(),
-            plays_per_session: self.plays_per_session.summarize(),
+            plays_per_visit: self.plays_per_visit.summarize(),
             plays_total: self.plays_total.summarize(),
             ram: self.ram.summarize(),
             renews: self.renews.summarize(),
@@ -265,7 +265,7 @@ impl Metrics {
             sessions_cached: self.sessions_cached.summarize(),
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
-            ups: self.ups.summarize(),
+            tps: self.tps.summarize(),
             uptime: self.uptime.summarize(),
             visits: self.visits.summarize(),
         }
@@ -285,12 +285,12 @@ impl Metrics {
             invitations_cached: self.invitations_cached.data_point(),
             low_fps: self.low_fps.data_point(),
             minutes_per_play: self.minutes_per_play.data_point(),
-            minutes_per_session: self.minutes_per_session.data_point(),
+            minutes_per_visit: self.minutes_per_visit.data_point(),
             new: self.new.data_point(),
             no_referrer: self.no_referrer.data_point(),
             peek: self.peek.data_point(),
             players_cached: self.players_cached.data_point(),
-            plays_per_session: self.plays_per_session.data_point(),
+            plays_per_visit: self.plays_per_visit.data_point(),
             plays_total: self.plays_total.data_point(),
             ram: self.ram.data_point(),
             renews: self.renews.data_point(),
@@ -300,7 +300,7 @@ impl Metrics {
             sessions_cached: self.sessions_cached.data_point(),
             teamed: self.teamed.data_point(),
             toxicity: self.toxicity.data_point(),
-            ups: self.ups.data_point(),
+            tps: self.tps.data_point(),
             uptime: self.uptime.data_point(),
             visits: self.visits.data_point(),
         }

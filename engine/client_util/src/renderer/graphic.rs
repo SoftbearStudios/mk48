@@ -9,6 +9,7 @@ use crate::renderer::shader::Shader;
 use crate::renderer::vertex::PosColor;
 use glam::{Mat2, Vec2, Vec4};
 use std::array;
+use std::cmp::Ordering;
 use std::ops::Range;
 use web_sys::WebGlRenderingContext as Gl;
 
@@ -39,13 +40,17 @@ impl<I: Index> GraphicLayer<I> {
     }
 
     /// Adds arbitrary triangle(s), starting at index 0.
-    pub fn add_triangles(&mut self, vertices: &[PosColor], indices: &[u16]) {
+    pub fn add_triangles<VI: IntoIterator<Item = PosColor>, II: IntoIterator<Item = u16>>(
+        &mut self,
+        vertices: VI,
+        indices: II,
+    ) {
         let start = self.mesh.vertices.len();
-        self.mesh.vertices.extend_from_slice(vertices);
+        self.mesh.vertices.extend(vertices);
         self.mesh.indices.extend(
             indices
-                .iter()
-                .map(|&idx| I::from_usize(start + idx as usize)),
+                .into_iter()
+                .map(|idx| I::from_usize(start + idx as usize)),
         );
     }
 
@@ -135,7 +140,11 @@ impl<I: Index> GraphicLayer<I> {
         thickness: f32,
         color: Vec4,
     ) {
-        assert!(radius > 0.0, "radius must be positive");
+        match radius.partial_cmp(&0.0).unwrap() {
+            Ordering::Greater => {}
+            Ordering::Equal => return,
+            Ordering::Less => panic!("radius can't be negative"),
+        }
 
         let angle_span = angle_range.end - angle_range.start;
         if angle_span <= 0.0 {

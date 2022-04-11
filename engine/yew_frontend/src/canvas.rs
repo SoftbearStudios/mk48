@@ -1,4 +1,4 @@
-use crate::window_event_listener::WindowEventListener;
+use crate::window::event_listener::WindowEventListener;
 use std::num::NonZeroU8;
 use wasm_bindgen::JsValue;
 use web_sys::{window, Event, FocusEvent, MouseEvent, TouchEvent, WheelEvent};
@@ -37,9 +37,13 @@ impl Component for Canvas {
         let resize_callback = ctx.link().callback(|_| CanvasMsg::Resize);
 
         Self {
-            _resize_event_listener: WindowEventListener::new("resize", move |_event| {
-                resize_callback.emit(());
-            }),
+            _resize_event_listener: WindowEventListener::new(
+                "resize",
+                move |_event| {
+                    resize_callback.emit(());
+                },
+                false,
+            ),
         }
     }
 
@@ -58,6 +62,7 @@ impl Component for Canvas {
         html! {
             <canvas
                 id="canvas"
+                style="position: absolute; width: 100%; height: 100%;"
                 width={window_width}
                 height={window_height}
                 onmouseenter={ctx.props().mouse_callback.clone()}
@@ -68,6 +73,7 @@ impl Component for Canvas {
                 ontouchstart={ctx.props().touch_callback.clone()}
                 ontouchmove={ctx.props().touch_callback.clone()}
                 ontouchend={ctx.props().touch_callback.clone()}
+                onwheel={ctx.props().wheel_callback.clone()}
                 onblur={ctx.props().focus_callback.clone()}
                 onfocus={ctx.props().focus_callback.clone()}
                 oncontextmenu={|event: MouseEvent| event.prevent_default()}

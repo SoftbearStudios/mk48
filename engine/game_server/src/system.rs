@@ -17,6 +17,7 @@ use db_ip::{include_region_database, DbIpDatabase, Region};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{error, info, warn};
+use rand::{thread_rng, Rng};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::redirect::Policy;
 use reqwest::Client;
@@ -818,7 +819,12 @@ impl<G: GameArenaService> Handler<SystemRequest> for Infrastructure<G> {
                     priority = -2;
                 }
 
-                if priority < ideal_server_priority || ideal_server_id.is_none() {
+                if priority < ideal_server_priority
+                    || ideal_server_id.is_none()
+                    || (self.admin.distribute_load
+                        && priority == ideal_server_priority
+                        && thread_rng().gen_bool(0.5))
+                {
                     ideal_server_id = Some(server.server_id);
                     ideal_server_priority = priority;
                 }

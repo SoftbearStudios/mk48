@@ -7,4 +7,4 @@ fmt:
 	cargo fmt --manifest-path engine_macros/Cargo.toml
 	cargo fmt --manifest-path sprite_sheet/Cargo.toml
 	cargo fmt --manifest-path sprite_sheet_util/Cargo.toml
-	cargo fmt --manifest-path yew/Cargo.toml
+	cargo fmt --manifest-path yew_frontend/Cargo.toml

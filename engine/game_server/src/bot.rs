@@ -13,7 +13,7 @@ use std::sync::Arc;
 pub struct BotData<G: GameArenaService> {
     player_tuple: Arc<PlayerTuple<G>>,
     /// Only Some during an update cycle.
-    action_buffer: Option<G::Command>,
+    action_buffer: Option<G::GameRequest>,
     bot: G::Bot,
 }
 
@@ -55,7 +55,7 @@ impl<G: GameArenaService> BotRepo<G> {
                 .par_iter_mut()
                 .with_min_len(64)
                 .for_each(|bot_data: &mut BotData<G>| {
-                    let update = service.get_bot_update(counter, &bot_data.player_tuple);
+                    let update = G::Bot::get_input(service, counter, &bot_data.player_tuple);
                     bot_data.action_buffer = bot_data
                         .bot
                         .update(update, bot_data.player_tuple.player.borrow().player_id)

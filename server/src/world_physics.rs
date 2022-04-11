@@ -473,7 +473,7 @@ impl World {
                 Fate::DowngradeHq => {
                     let entity = &mut self.entities[index];
                     entity.ticks = Ticks::ZERO;
-                    entity.change_entity_type(EntityType::OilPlatform, &mut self.arena);
+                    entity.change_entity_type(EntityType::OilPlatform, &mut self.arena, false);
                 }
             }
         }

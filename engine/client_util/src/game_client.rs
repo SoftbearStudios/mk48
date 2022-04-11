@@ -13,30 +13,30 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 /// A modular game client-side.
-pub trait GameClient: Sized {
+pub trait GameClient: Sized + 'static {
     const GAME_ID: GameId;
 
-    /// Game command to server.
-    type Command: 'static + Serialize + Clone;
-    /// Game render layer.
+    /// Game-specific command to server.
+    type GameRequest: 'static + Serialize + Clone;
+    /// Game-specific render layer.
     type RendererLayer: Layer;
-    /// Game state.
-    type State: Apply<Self::Update>;
-    /// Event from UI.
+    /// Game-specific state.
+    type GameState: Apply<Self::GameUpdate>;
+    /// Event from game UI.
     type UiEvent: DeserializeOwned;
-    /// State of UI.
+    /// State of game UI.
     type UiState: Apply<Self::UiEvent>;
-    /// Properties sent to UI.
-    type UiProps: 'static + Serialize;
-    /// Game update from server.
-    type Update: 'static + DeserializeOwned;
-    /// Game settings
-    type Settings: Settings;
+    /// Properties sent to game UI.
+    type UiProps: 'static;
+    /// Game-specific update from server.
+    type GameUpdate: 'static + DeserializeOwned;
+    /// Game-specific settings
+    type GameSettings: Settings;
 
     fn new() -> Self;
 
     /// Creates the (game-specific) settings.
-    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::Settings;
+    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::GameSettings;
 
     /// Creates the (game-specific) render layer.
     fn init_layer(
@@ -51,7 +51,7 @@ pub trait GameClient: Sized {
     /// Peek at a game update before it is applied to `GameState`.
     fn peek_game(
         &mut self,
-        _inbound: &Self::Update,
+        _inbound: &Self::GameUpdate,
         _context: &mut Context<Self>,
         _renderer: &Renderer,
         _layer: &mut Self::RendererLayer,
@@ -62,7 +62,13 @@ pub trait GameClient: Sized {
     fn peek_keyboard(&mut self, _event: &KeyboardEvent, _context: &mut Context<Self>) {}
 
     /// Peek at a mouse update before it is applied to `MouseState`.
-    fn peek_mouse(&mut self, _event: &MouseEvent, _context: &mut Context<Self>) {}
+    fn peek_mouse(
+        &mut self,
+        _event: &MouseEvent,
+        _context: &mut Context<Self>,
+        _renderer: &Renderer,
+    ) {
+    }
 
     /// Render the game. Optional, as this may be done in `tick`.
     fn render(

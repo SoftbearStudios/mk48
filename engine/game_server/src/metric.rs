@@ -14,7 +14,7 @@ use core_protocol::id::{RegionId, SessionId, UserAgentId};
 use core_protocol::name::Referrer;
 use core_protocol::{get_unix_time_now, UnixTime};
 use heapless::HistoryBuffer;
-use log::{error, warn};
+use log::error;
 use server_util::database_schema::{Metrics, MetricsItem, SessionItem};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -57,8 +57,14 @@ pub struct ClientMetricData<G: GameArenaService> {
     pub play_started: Option<Instant>,
     /// When the last play was stopped, for metrics purposes.
     pub play_stopped: Option<Instant>,
+    /// When the current visit was started.
+    pub visit_started: Option<Instant>,
+    /// When the current visit was stopped.
+    pub visit_stopped: Option<Instant>,
     /// How many plays on this session, for database purposes.
     pub plays: u32,
+    /// How many plays on the current visit.
+    pub visit_plays: u32,
     /// How many plays on previous sessions, for database purposes.
     pub previous_plays: u32,
     _spooky: PhantomData<G>,
@@ -80,7 +86,10 @@ impl<G: GameArenaService> From<&Authenticate> for ClientMetricData<G> {
             session_id_previous: None,
             play_started: None,
             play_stopped: None,
+            visit_started: None,
+            visit_stopped: None,
             plays: 0,
+            visit_plays: 0,
             previous_plays: 0,
             _spooky: PhantomData,
         }
@@ -246,8 +255,17 @@ impl<G: GameArenaService> MetricRepo<G> {
     }
 
     /// Call when a websocket connects.
-    pub fn start_visit(&mut self, client: &PlayerClientData<G>, was_stale: bool) {
-        let renewed = client.metrics.session_id_previous.is_some() || was_stale;
+    pub fn start_visit(&mut self, client: &mut PlayerClientData<G>) {
+        let renewed = client.metrics.session_id_previous.is_some()
+            || client.metrics.previous_plays > 0
+            || client.metrics.visit_stopped.is_some();
+
+        debug_assert!(
+            client.metrics.visit_started.is_none(),
+            "visit already started"
+        );
+        client.metrics.visit_stopped = None;
+        client.metrics.visit_started = Some(Instant::now());
 
         self.mutate_with(
             |m| {
@@ -286,6 +304,7 @@ impl<G: GameArenaService> MetricRepo<G> {
 
         client.metrics.play_started = Some(now);
         client.metrics.plays += 1;
+        client.metrics.visit_plays += 1;
         self.mutate_with(|m| m.plays_total.increment(), &client.metrics)
     }
 
@@ -330,11 +349,19 @@ impl<G: GameArenaService> MetricRepo<G> {
             client = unwrap_or_return!(player.client_mut());
         }
 
+        let now = Instant::now();
+
         let session_end = client
             .metrics
             .play_stopped
             .unwrap_or(client.metrics.created);
         let session_duration = session_end - client.metrics.created;
+
+        debug_assert!(client.metrics.visit_started.is_some());
+        let minutes_per_visit = client
+            .metrics
+            .visit_started
+            .map(|visit_started| (now - visit_started).as_secs_f32() * (1.0 / 60.0));
 
         self.mutate_with(
             |m| {
@@ -349,13 +376,18 @@ impl<G: GameArenaService> MetricRepo<G> {
                         // New player left promptly.
                         m.flop.push(peek_flop);
                     }
-                    m.minutes_per_session
-                        .push(session_duration.as_secs_f32() * (1.0 / 60.0));
-                    m.plays_per_session.push(client.metrics.plays as f32);
+                    if let Some(minutes_per_visit) = minutes_per_visit {
+                        m.minutes_per_visit.push(minutes_per_visit);
+                    }
+                    m.plays_per_visit.push(client.metrics.visit_plays as f32);
                 }
             },
             &client.metrics,
         );
+
+        client.metrics.visit_started = None;
+        client.metrics.visit_stopped = Some(Instant::now());
+        client.metrics.visit_plays = 0;
     }
 
     /// Returns metric to safe in database, if any.
@@ -427,7 +459,7 @@ impl<G: GameArenaService> MetricRepo<G> {
             m.ram.push(health.ram());
             m.connections.push(health.connections() as f32);
             if let Some(ups) = health.ups() {
-                m.ups.push(ups);
+                m.tps.push(ups);
             }
             m.uptime.push(uptime.as_secs_f32() / (24.0 * 60.0 * 60.0));
         });
@@ -506,26 +538,22 @@ impl<G: GameArenaService> MetricRepo<G> {
         ctx: &mut ActorContext<Infrastructure<G>>,
     ) {
         if let Some(metrics_item) = Self::update(infrastructure) {
-            if infrastructure.database_read_only {
-                warn!("would have written metrics to database but was inhibited");
-            } else {
-                let server_number = infrastructure.server_id.map(|id| id.0.get()).unwrap_or(0);
-                let database = infrastructure.database();
+            let server_number = infrastructure.server_id.map(|id| id.0.get()).unwrap_or(0);
+            let database = infrastructure.database();
 
-                async move {
-                    // Don't hammer the database row from multiple servers simultaneously, which
-                    // wouldn't compromise correctness, but would affect performance.
-                    tokio::time::sleep(Duration::from_secs(server_number as u64 * 5 + 1)).await;
-                    database.update_metrics(metrics_item).await
-                }
-                .into_actor(infrastructure)
-                .map(|res, _, _| {
-                    if let Err(e) = res {
-                        error!("error putting metrics: {:?}", e)
-                    }
-                })
-                .spawn(ctx)
+            async move {
+                // Don't hammer the database row from multiple servers simultaneously, which
+                // wouldn't compromise correctness, but would affect performance (number of retries).
+                tokio::time::sleep(Duration::from_secs(server_number as u64 * 5 + 1)).await;
+                database.update_metrics(metrics_item).await
             }
+            .into_actor(infrastructure)
+            .map(|res, _, _| {
+                if let Err(e) = res {
+                    error!("error putting metrics: {:?}", e)
+                }
+            })
+            .spawn(ctx)
         }
     }
 

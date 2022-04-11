@@ -45,6 +45,7 @@ impl<G: GameArenaService> ContextService<G> {
         leaderboard: &mut LeaderboardRepo<G>,
         invitations: &mut InvitationRepo<G>,
         metrics: &mut MetricRepo<G>,
+        server_id: Option<ServerId>,
         server_delta: Option<(Arc<[ServerDto]>, Arc<[ServerId]>)>,
     ) {
         benchmark_scope!("context_update");
@@ -59,13 +60,15 @@ impl<G: GameArenaService> ContextService<G> {
             &mut self.context.teams,
             invitations,
             metrics,
+            server_id,
+            self.context.arena_id,
         );
         self.context
             .bots
             .update_count(&mut self.service, &mut self.context.players);
 
         // Update game logic.
-        self.service.update(Ticks::ONE, self.context.counter);
+        self.service.tick(&self.context);
         self.context.players.update_is_alive_and_team_id(
             &mut self.service,
             &mut self.context.teams,

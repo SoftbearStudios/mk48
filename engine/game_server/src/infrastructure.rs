@@ -29,7 +29,6 @@ pub struct Infrastructure<G: GameArenaService> {
 
     /// API.
     pub(crate) database: &'static Database,
-    pub(crate) database_read_only: bool,
     pub(crate) system: Option<SystemRepo<G>>,
 
     /// Game specific stuff. In the future, there could be multiple of these.
@@ -91,8 +90,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             region_id,
             /// Leak the box, because static lifetime facilitates async code. This will probably
             /// only ever happen once, and it will last for the lifetime of the program.
-            database: Box::leak(Box::new(Database::new().await)),
-            database_read_only,
+            database: Box::leak(Box::new(Database::new(database_read_only).await)),
             system,
             admin: AdminRepo::new(),
             context_service: ContextService::new(
@@ -119,6 +117,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             &mut self.leaderboard,
             &mut self.invitations,
             &mut self.metrics,
+            self.server_id,
             server_delta,
         );
         self.leaderboard.clear_deltas();

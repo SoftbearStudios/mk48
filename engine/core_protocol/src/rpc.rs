@@ -185,6 +185,8 @@ pub enum AdminRequest {
         alias: PlayerAlias,
         message: String,
     },
+    RequestDistributeLoad,
+    SetDistributeLoad(bool),
     RequestRedirect,
     SetRedirect(Option<ServerId>),
     #[cfg(unix)]
@@ -204,7 +206,8 @@ pub enum AdminUpdate {
     PlayerRestricted(usize),
     ServersRequested(Box<[AdminServerDto]>),
     ReferrersRequested(Box<[(Referrer, f32)]>),
-    RestartRequested,
+    DistributeLoadRequested(bool),
+    DistributeLoadSet(bool),
     RedirectRequested(Option<ServerId>),
     RedirectSet(Option<ServerId>),
     SeriesRequested(Arc<[(UnixTime, MetricsDataPointDto)]>),

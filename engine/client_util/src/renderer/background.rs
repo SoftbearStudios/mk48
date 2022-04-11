@@ -24,7 +24,9 @@ pub enum Invalidation {
 /// Any extra data that is necessary to render the background.
 pub trait BackgroundContext {
     fn create_shader(&self, _: &mut Renderer) -> Shader;
-    fn prepare(&mut self, renderer: &Renderer, shader: &mut ShaderBinding);
+    /// Useful for setting extra uniforms.
+    fn prepare(&mut self, _renderer: &Renderer, _shader: &mut ShaderBinding) {}
+    /// Is it worth it to cache the rendered background?
     fn frame_cache_enabled(&self) -> bool {
         false
     }

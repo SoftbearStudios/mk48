@@ -17,11 +17,11 @@ pub struct Context<G: GameArenaService> {
     pub arena_id: ArenaId,
     /// Wrapping counter.
     pub counter: Ticks,
-    pub(crate) players: PlayerRepo<G>,
+    pub players: PlayerRepo<G>,
     pub(crate) clients: ClientRepo<G>,
     pub(crate) bots: BotRepo<G>,
     pub(crate) chat: ChatRepo<G>,
-    pub(crate) teams: TeamRepo<G>,
+    pub teams: TeamRepo<G>,
     pub(crate) liveboard: LiveboardRepo<G>,
 }
 

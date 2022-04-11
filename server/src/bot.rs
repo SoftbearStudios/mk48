@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::complete_ref::CompleteRef;
+use crate::contact_ref::ContactRef;
 use crate::server::Server;
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -11,13 +13,16 @@ use common::guidance::Guidance;
 use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
+use common::ticks::Ticks;
 use common::util::gen_radius;
 use core_protocol::id::PlayerId;
 use game_server::game_service::GameArenaService;
+use game_server::player::PlayerTuple;
 use glam::Vec2;
 use rand::rngs::ThreadRng;
 use rand::seq::IteratorRandom;
 use rand::{thread_rng, Rng};
+use std::sync::Arc;
 
 /// Bot implements a ship-controlling AI that is, in many ways, equivalent to a player.
 pub struct Bot {
@@ -353,11 +358,21 @@ impl Bot {
 }
 
 impl game_server::game_service::Bot<Server> for Bot {
+    type Input<'a> = CompleteRef<'a, impl Iterator<Item = ContactRef<'a>>>;
+
+    fn get_input<'a>(
+        server: &'a Server,
+        _counter: Ticks,
+        player: &'a Arc<PlayerTuple<Server>>,
+    ) -> Self::Input<'a> {
+        server.world.get_player_complete(player)
+    }
+
     fn update(
         &mut self,
-        update: <Server as GameArenaService>::BotUpdate<'_>,
+        update: Self::Input<'_>,
         player_id: PlayerId,
-    ) -> Option<<Server as GameArenaService>::Command> {
+    ) -> Option<<Server as GameArenaService>::GameRequest> {
         self.update(update, player_id)
     }
 }

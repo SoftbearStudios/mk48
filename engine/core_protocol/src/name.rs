@@ -58,14 +58,7 @@ impl PlayerAlias {
 
     /// Good for known-good names.
     pub fn new_unsanitized(str: &str) -> Self {
-        let unsanitized = Self(slice_up_to_array_string(str));
-        #[cfg(feature = "server")]
-        debug_assert_eq!(
-            unsanitized,
-            Self::new_sanitized(str),
-            "should have sanitized"
-        );
-        unsanitized
+        Self(slice_up_to_array_string(str))
     }
 
     pub fn from_bot_player_id(player_id: PlayerId) -> Self {

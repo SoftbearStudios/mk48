@@ -91,7 +91,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
     }
 
     /// Inserts a player (it is not mandatory to insert this way).
-    pub fn insert(&mut self, player_id: PlayerId, player: Arc<PlayerTuple<G>>) {
+    pub(crate) fn insert(&mut self, player_id: PlayerId, player: Arc<PlayerTuple<G>>) {
         #[cfg(debug_assertions)]
         {
             if let Some(existing) = self.players.get(&player_id) {
@@ -253,7 +253,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
     }
 
     /// Gets initializer for new client.
-    pub fn initializer(&self) -> PlayerUpdate {
+    pub(crate) fn initializer(&self) -> PlayerUpdate {
         PlayerUpdate::Updated {
             added: Arc::clone(&self.previous),
             removed: Vec::new().into(),
@@ -262,7 +262,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
     }
 
     /// Computes a diff, and updates cached dtos.
-    pub fn delta(
+    pub(crate) fn delta(
         &mut self,
         teams: &TeamRepo<G>,
     ) -> Option<(Arc<[PlayerDto]>, Arc<[PlayerId]>, u32)> {
@@ -307,7 +307,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
         self.players.values().map(|pt| pt.borrow_player())
     }
 
-    /// Iterates every plaeyr tuple, mutably borrowing it automatically.
+    /// Iterates every player tuple, mutably borrowing it automatically.
     /// Cannot coincide with other references to players.
     pub fn iter_borrow_mut(&mut self) -> impl Iterator<Item = AtomicRefMut<PlayerData<G>>> {
         self.players.values().map(|pt| pt.borrow_player_mut())
@@ -343,6 +343,22 @@ impl<G: GameArenaService> PlayerTuple<G> {
     /// Mutably borrows the player.
     pub fn borrow_player_mut(&self) -> AtomicRefMut<PlayerData<G>> {
         self.player.borrow_mut()
+    }
+
+    /// Borrows the player without checking for outstanding mutable borrows, the existence of which
+    /// would cause undefined behavior.
+    pub unsafe fn borrow_player_unchecked(&self) -> &PlayerData<G> {
+        #[cfg(debug_assertions)]
+        drop(self.borrow_player());
+        &*self.player.as_ptr()
+    }
+
+    /// Mutably borrows the player without checking for outstanding borrows, the existence
+    /// of which would cause undefined behavior.
+    pub unsafe fn borrow_player_mut_unchecked(&self) -> &mut PlayerData<G> {
+        #[cfg(debug_assertions)]
+        drop(self.borrow_player_mut());
+        &mut *self.player.as_ptr()
     }
 }
 

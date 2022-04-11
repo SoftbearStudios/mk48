@@ -10,11 +10,19 @@
 
     let redirect = 0;
     let servers = [];
+    let distributeLoad;
 
     onMount(async () => {
         const response = await adminRequest("RequestRedirect");
         if (response.RedirectRequested) {
             redirect = response.RedirectRequested == null ? 0 : response.RedirectRequested;
+        }
+    });
+
+    onMount(async () => {
+        const response = await adminRequest("RequestDistributeLoad");
+        if (response.DistributeLoadRequested !== undefined) {
+            distributeLoad = response.DistributeLoadRequested;
         }
     });
 
@@ -39,6 +47,13 @@
         const response = await adminRequest({SetProfiler: enabled});
         if (response.ProfilerSet !== undefined) {
             profiler = response.ProfilerSet;
+        }
+    }
+
+    async function setDistributeLoad(enabled) {
+        const response = await adminRequest({SetDistributeLoad: enabled});
+        if (response.DistributeLoadSet !== undefined) {
+            distributeLoad = response.DistributeLoadSet;
         }
     }
 
@@ -96,6 +111,11 @@
         <button on:click={() => setProfiler(false)}>Disengage Profiler</button>
     {:else}
         <button on:click={() => setProfiler(true)}>Engage Profiler</button>
+    {/if}
+    {#if distributeLoad}
+        <button on:click={() => setDistributeLoad(false)}>Disengage Load Distribution</button>
+    {:else}
+        <button on:click={() => setDistributeLoad(true)}>Engage Load Distribution</button>
     {/if}
 </main>
 

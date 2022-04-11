@@ -11,7 +11,7 @@ use common::entity::*;
 use common::protocol::*;
 use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
-use common::util::level_to_score;
+use common::util::{level_to_score, score_to_level};
 use common::world::{outside_area, ARCTIC};
 use game_server::player::PlayerTuple;
 use glam::Vec2;
@@ -433,9 +433,12 @@ impl CommandTrait for Upgrade {
             }
 
             player.data.flags.upgraded = true;
+
+            let below_full_potential = self.entity_type.data().level < score_to_level(player.score);
+
             drop(player);
 
-            entity.change_entity_type(self.entity_type, &mut world.arena);
+            entity.change_entity_type(self.entity_type, &mut world.arena, below_full_potential);
 
             Ok(())
         } else {

@@ -3,7 +3,7 @@ use serde::Serialize;
 use wasm_bindgen::prelude::wasm_bindgen;
 use wasm_bindgen::JsValue;
 
-pub trait Frontend<P: Serialize> {
+pub trait Frontend<P> {
     /// Set the props used to render the UI.
     fn set_ui_props(&self, props: P);
     /// Gets url hosting client files.
@@ -37,17 +37,17 @@ impl<P: Serialize> Frontend<P> for Svelte {
             pub fn get_real_host() -> Result<String, JsValue>;
         }
 
-        get_real_host().ok()
+        get_real_host().ok().filter(|s| !s.is_empty())
     }
 
     fn get_real_encryption(&self) -> Option<bool> {
         #[wasm_bindgen(raw_module = "../../../src/App.svelte")]
         extern "C" {
             #[wasm_bindgen(js_name = "getRealEncryption", catch)]
-            pub fn get_real_encryption() -> Result<bool, JsValue>;
+            pub fn get_real_encryption() -> Result<Option<bool>, JsValue>;
         }
 
-        get_real_encryption().ok()
+        get_real_encryption().ok().flatten()
     }
 
     fn get_ideal_server_id(&self) -> Option<ServerId> {

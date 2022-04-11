@@ -8,7 +8,7 @@ use crate::admin::ParameterizedAdminRequest;
 use crate::client::Authenticate;
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
-use crate::static_files::{static_handler, static_hash};
+use crate::static_files::{static_handler, static_size_and_hash};
 use crate::status::StatusRequest;
 use crate::system::{SystemRepo, SystemRequest};
 use actix::Actor;
@@ -29,7 +29,6 @@ use core_protocol::{get_unix_time_now, UnixTime};
 use futures::pin_mut;
 use futures::SinkExt;
 use log::{debug, error, warn, LevelFilter};
-use reqwest::header::HeaderMap;
 use rust_embed::RustEmbed;
 use server_util::cloud::Cloud;
 use server_util::http::limit_content_length;
@@ -109,7 +108,10 @@ pub struct Options {
     #[structopt(long, default_value = "500000")]
     pub http_bandwidth_limit: u32,
     /// HTTP request rate limiting burst (in bytes).
-    #[structopt(long, default_value = "10000000")]
+    ///
+    /// Implicit minimum is double the total size of the client static files.
+    #[cfg_attr(debug_assertions, structopt(long, default_value = "4294967294"))]
+    #[cfg_attr(not(debug_assertions), structopt(long, default_value = "10000000"))]
     pub http_bandwidth_burst: u32,
     /// Client authenticate rate limiting period (in seconds).
     #[structopt(long, default_value = "30")]
@@ -156,10 +158,19 @@ pub fn entry_point<G: GameArenaService>() {
     logger.filter_module("server_util::ssl", options.debug_watchdog);
     logger.init();
 
-    *HTTP_RATE_LIMITER.lock().unwrap() = IpRateLimiter::new_bandwidth_limiter(
-        options.http_bandwidth_limit,
-        options.http_bandwidth_burst,
-    );
+    let (static_size, static_hash) = static_size_and_hash::<GameClient>();
+
+    let bandwidth_burst = options.http_bandwidth_burst.max(static_size as u32 * 2);
+
+    if bandwidth_burst > options.http_bandwidth_burst {
+        warn!(
+            "Using increased bandwidth burst of {} to account for client size.",
+            bandwidth_burst
+        );
+    }
+
+    *HTTP_RATE_LIMITER.lock().unwrap() =
+        IpRateLimiter::new_bandwidth_limiter(options.http_bandwidth_limit, bandwidth_burst);
 
     let _ = actix::System::new().block_on(async move {
         let cloud = options
@@ -187,7 +198,7 @@ pub fn entry_point<G: GameArenaService>() {
             Infrastructure::new(
                 server_id,
                 system,
-                static_hash::<GameClient>(),
+                static_hash,
                 region_id,
                 options.database_read_only,
                 options.min_players,
@@ -254,9 +265,9 @@ pub fn entry_point<G: GameArenaService>() {
                             .on_upgrade(async move |mut web_socket| {
                             let mut protocol = query.protocol.unwrap_or_default();
 
-                            let (server_sender, mut server_receiver) = tokio::sync::mpsc::unbounded_channel::<ObserverUpdate<Update<G::ClientUpdate>>>();
+                            let (server_sender, mut server_receiver) = tokio::sync::mpsc::unbounded_channel::<ObserverUpdate<Update<G::GameUpdate>>>();
 
-                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Register {
+                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate>>::Register {
                                 player_id,
                                 observer: server_sender.clone(),
                             });
@@ -296,7 +307,7 @@ pub fn entry_point<G: GameArenaService>() {
                                                             {
                                                                 Ok(request) => {
                                                                     protocol = WebSocketProtocol::Binary;
-                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Request {
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate >>::Request {
                                                                         player_id,
                                                                         request,
                                                                     });
@@ -311,11 +322,11 @@ pub fn entry_point<G: GameArenaService>() {
                                                                 continue;
                                                             }
 
-                                                            let result: Result<Request<G::Command>, serde_json::Error> = serde_json::from_str(&text);
+                                                            let result: Result<Request<G::GameRequest>, serde_json::Error> = serde_json::from_str(&text);
                                                             match result {
                                                                 Ok(request) => {
                                                                     protocol = WebSocketProtocol::Json;
-                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Request {
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate >>::Request {
                                                                         player_id,
                                                                         request,
                                                                     });
@@ -338,7 +349,7 @@ pub fn entry_point<G: GameArenaService>() {
                                                                 let timestamp = UnixTime::from_ne_bytes(bytes);
                                                                 let rtt = now.saturating_sub(timestamp);
                                                                 if rtt < u16::MAX as UnixTime {
-                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::RoundTripTime {
+                                                                    let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate >>::RoundTripTime {
                                                                         player_id,
                                                                         rtt: rtt as u16,
                                                                     });
@@ -402,7 +413,7 @@ pub fn entry_point<G: GameArenaService>() {
                                 }
                             };
 
-                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::Command>, Update<G::ClientUpdate>>::Unregister {
+                            let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate>>::Unregister {
                                 player_id,
                                 observer: server_sender,
                             });
@@ -632,7 +643,7 @@ pub fn entry_point<G: GameArenaService>() {
 
         #[cfg(not(debug_assertions))]
         let http_app = Router::new()
-            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>, headers: HeaderMap| {
+            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>, headers: reqwest::header::HeaderMap| {
                 if let Err(response) = limit_content_length(&headers, 16384) {
                     return Err(response);
                 }
@@ -647,7 +658,7 @@ pub fn entry_point<G: GameArenaService>() {
                 }.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())?;
                 parts.authority = Some(authority);
                 Uri::from_parts(parts)
-                    .map(|uri| Redirect::permanent(uri))
+                    .map(|uri| if ports.0 == STANDARD_PORTS.0 { Redirect::permanent(uri) } else { Redirect::temporary(uri) })
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
             }));
 

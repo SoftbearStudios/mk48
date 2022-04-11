@@ -15,7 +15,7 @@ use core_protocol::id::PeriodId;
 use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::LeaderboardUpdate;
 use futures::stream::FuturesUnordered;
-use log::{error, warn};
+use log::error;
 use server_util::database_schema::{GameIdScoreType, ScoreItem, ScoreType};
 use server_util::rate_limiter::RateLimiter;
 use std::collections::{BinaryHeap, HashMap};
@@ -64,7 +64,7 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
     /// Computes minimum score to earn a place on the given leaderboard.
     fn minimum_score(&self, period_id: PeriodId) -> u32 {
         self.get(period_id)
-            .get(10)
+            .get(G::LEADERBOARD_SIZE - 1)
             .map(|dto| dto.score)
             .unwrap_or(0)
     }
@@ -111,7 +111,7 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
         if self.pending.is_empty() || self.take_pending_rate_limit.should_limit_rate() {
             None
         } else {
-            let now = get_unix_time_now();
+            let now_seconds = get_unix_time_now() / 1000;
 
             Some(
                 self.pending
@@ -130,7 +130,7 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
                             },
                             alias: alias.to_string(),
                             score,
-                            ttl: score_type.period().map(|period| now + period),
+                            ttl: score_type.period().map(|period| now_seconds + period),
                         }
                     }),
             )
@@ -201,19 +201,15 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
                         .collect()
                 });
         if let Some(stream) = stream {
-            if infrastructure.database_read_only {
-                warn!("would have written leaderboard scores to database but was inhibited");
-            } else {
-                stream
-                    .into_actor(infrastructure)
-                    .map(|res, _act, _| {
-                        if let Err(e) = res {
-                            error!("error putting leaderboard score: {:?}", e);
-                        }
-                    })
-                    .finish()
-                    .spawn(ctx);
-            }
+            stream
+                .into_actor(infrastructure)
+                .map(|res, _act, _| {
+                    if let Err(e) = res {
+                        error!("error putting leaderboard score: {:?}", e);
+                    }
+                })
+                .finish()
+                .spawn(ctx);
         }
     }
 
