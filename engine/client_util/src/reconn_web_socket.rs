@@ -76,7 +76,7 @@ where
         } else if self.was_closed && self.is_open() && self.inner.has_updates() {
             self.was_closed = false;
             // Need to clear state, since websocket is *no longer* closed and has new updates.
-            *state = S::default();
+            state.reset();
         }
 
         self.reconnect_if_necessary(state, time_seconds);
@@ -125,7 +125,7 @@ where
             self.next_try = time_seconds + Self::SECONDS_PER_TRY;
         } else if self.is_terminated() {
             // Stop trying, stop giving the impression of working.
-            *state = S::default();
+            state.reset();
         }
     }
 

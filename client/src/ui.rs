@@ -9,7 +9,7 @@ use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::{EntityKind, EntitySubKind, EntityType};
 use common::velocity::Velocity;
-use common::world::outside_area;
+use common::world::outside_strict_area;
 use core_protocol::id::{InvitationId, PeriodId, PlayerId, ServerId, TeamId};
 use core_protocol::name::{PlayerAlias, TeamName};
 use glam::{vec2, Vec2};
@@ -75,7 +75,7 @@ pub struct UiProps {
     pub team_name: Option<TeamName>,
     pub invitation_id: Option<InvitationId>,
     pub score: u32,
-    pub player_count: usize,
+    pub player_count: u32,
     pub fps: f32,
     pub status: UiStatus,
     pub chats: Vec<ChatModel>,
@@ -207,7 +207,7 @@ impl DeathReasonModel {
 pub struct ServerModel {
     server_id: ServerId,
     region: &'static str,
-    players: usize,
+    players: u32,
 }
 
 /// For serializing a vec2 as {"x": ..., "y": ...} instead of [..., ...]
@@ -238,7 +238,7 @@ impl Mk48Game {
             team_name: context.state.core.team().map(|t| t.name),
             invitation_id: context.state.core.created_invitation_id,
             score: context.state.game.score,
-            player_count: context.state.core.real_players as usize,
+            player_count: context.state.core.real_players,
             fps: self.fps_counter.last_sample().unwrap_or(0.0),
             chats: context
                 .state
@@ -373,7 +373,7 @@ impl Mk48Game {
             restrictions: EntityType::iter()
                 .filter(|&entity_type: &EntityType| {
                     if let UiStatus::Playing { position, .. } = &status {
-                        outside_area(entity_type, vec2(position.x, position.y))
+                        outside_strict_area(entity_type, vec2(position.x, position.y))
                     } else {
                         false
                     }
@@ -388,7 +388,7 @@ impl Mk48Game {
                 .map(|(&server_id, server_dto)| ServerModel {
                     server_id,
                     region: server_dto.region_id.as_human_readable_str(),
-                    players: server_dto.player_count as usize,
+                    players: server_dto.player_count,
                 })
                 .sorted_by_key(|model| model.server_id)
                 .collect(),

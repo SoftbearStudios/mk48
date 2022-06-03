@@ -207,6 +207,7 @@ dependencies = [
  "glam",
  "rand",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -827,9 +828,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.2.7"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0af670e6e75afa981a9d2e74c1c66402f34918f7cf47221e63c40345c2e9728"
+checksum = "a90b0343c5f10296c6b50fb8df628607ffa8443a849eb2065e3c5ed42d0bfb57"
 dependencies = [
  "doc-comment",
  "unicode_categories",
@@ -907,6 +908,7 @@ name = "sprite_sheet_packer"
 version = "0.1.0"
 dependencies = [
  "common",
+ "common_util",
  "crunch",
  "glam",
  "image",

@@ -19,13 +19,14 @@ use core_protocol::{get_unix_time_now, UnixTime};
 use log::warn;
 use serde::Deserialize;
 use server_util::database_schema::Metrics;
-use std::fs::File;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
+    allow_web_socket_json: &'static AtomicBool,
     pub(crate) redirect_server_id_preference: Option<ServerId>,
     /// Route players to other available servers.
     pub(crate) distribute_load: bool,
@@ -52,8 +53,9 @@ impl ParameterizedAdminRequest {
 }
 
 impl<G: GameArenaService> AdminRepo<G> {
-    pub fn new() -> Self {
+    pub fn new(allow_web_socket_json: &'static AtomicBool) -> Self {
         Self {
+            allow_web_socket_json,
             redirect_server_id_preference: None,
             distribute_load: false,
             #[cfg(unix)]
@@ -300,6 +302,23 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::ChatSent)
     }
 
+    /// Responds with the current status of web socket json.
+    fn request_allow_web_socket_json(&self) -> Result<AdminUpdate, &'static str> {
+        Ok(AdminUpdate::AllowWebSocketJsonRequested(
+            self.allow_web_socket_json.load(Ordering::Relaxed),
+        ))
+    }
+
+    /// Changes the web socket json setting.
+    fn set_allow_web_socket_json(
+        &mut self,
+        allow_web_socket_json: bool,
+    ) -> Result<AdminUpdate, &'static str> {
+        self.allow_web_socket_json
+            .store(allow_web_socket_json, Ordering::Relaxed);
+        Ok(AdminUpdate::AllowWebSocketJsonSet(allow_web_socket_json))
+    }
+
     /// Responds with the current status of load distribution.
     fn request_distribute_load(&self) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::DistributeLoadRequested(self.distribute_load))
@@ -344,33 +363,43 @@ impl<G: GameArenaService> AdminRepo<G> {
     }
 
     #[cfg(unix)]
-    fn set_profiler(&mut self, enabled: bool) -> Result<AdminUpdate, &'static str> {
+    fn start_profile(&mut self) -> Result<(), &'static str> {
+        if self.profile.is_some() {
+            Err("profile already started")
+        } else {
+            self.profile =
+                Some(pprof::ProfilerGuard::new(1000).map_err(|_| "failed to start profile")?);
+            Ok(())
+        }
+    }
+
+    #[cfg(unix)]
+    fn finish_profile(&mut self) -> Result<AdminUpdate, &'static str> {
         if let Some(profile) = self.profile.as_mut() {
             if let Ok(report) = profile.report().build() {
                 self.profile = None;
-                let file =
-                    File::create("pprof.svg").map_err(|_| "error creating profiler flamegraph")?;
+
+                let mut buf = Vec::new();
                 report
-                    .flamegraph(file)
+                    .flamegraph(&mut buf)
                     .map_err(|_| "error writing profiler flamegraph")?;
-            };
-        }
 
-        if enabled {
-            self.profile =
-                Some(pprof::ProfilerGuard::new(1000).map_err(|_| "failed to enable profiler")?);
+                Ok(AdminUpdate::ProfileRequested(
+                    String::from_utf8(buf).map_err(|_| "profile contained invalid utf8")?,
+                ))
+            } else {
+                Err("error building profile report")
+            }
         } else {
-            self.profile = None;
+            Err("profile not started or was interrupted")
         }
-
-        Ok(AdminUpdate::ProfilerSet(enabled))
     }
 }
 
 impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<G> {
     type Result = ResponseActFuture<Self, Result<AdminUpdate, &'static str>>;
 
-    fn handle(&mut self, msg: ParameterizedAdminRequest, ctx: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, msg: ParameterizedAdminRequest, _ctx: &mut Self::Context) -> Self::Result {
         if !msg.is_authentic() {
             return Box::pin(fut::ready(Err("invalid auth")));
         }
@@ -463,6 +492,12 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 message,
                 &mut self.context_service.context,
             ))),
+            AdminRequest::RequestAllowWebSocketJson => {
+                Box::pin(fut::ready(self.admin.request_allow_web_socket_json()))
+            }
+            AdminRequest::SetAllowWebSocketJson(allow_web_socket_json) => Box::pin(fut::ready(
+                self.admin.set_allow_web_socket_json(allow_web_socket_json),
+            )),
             AdminRequest::RequestDistributeLoad => {
                 Box::pin(fut::ready(self.admin.request_distribute_load()))
             }
@@ -476,16 +511,16 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 self.system.as_mut(),
             ))),
             #[cfg(unix)]
-            AdminRequest::SetProfiler(enabled) => {
-                use actix::ContextFutureSpawner;
-                // Runaway profiles could crash the server, so impose a time limit.
-                tokio::time::sleep(Duration::from_secs(10))
-                    .into_actor(self)
-                    .map(|_, act, _| {
-                        let _ = act.admin.set_profiler(false);
-                    })
-                    .spawn(ctx);
-                Box::pin(fut::ready(self.admin.set_profiler(enabled)))
+            AdminRequest::RequestProfile => {
+                if let Err(e) = self.admin.start_profile() {
+                    Box::pin(fut::ready(Err(e)))
+                } else {
+                    Box::pin(
+                        tokio::time::sleep(Duration::from_secs(10))
+                            .into_actor(self)
+                            .map(move |_res, act, _ctx| act.admin.finish_profile()),
+                    )
+                }
             }
         }
     }

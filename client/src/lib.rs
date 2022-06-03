@@ -13,6 +13,7 @@ mod armament;
 mod audio;
 mod background;
 mod game;
+mod interpolated;
 mod interpolated_contact;
 mod settings;
 mod sprite;

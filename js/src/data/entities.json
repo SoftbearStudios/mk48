@@ -71,7 +71,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 5400,
+		"lifespan": 900,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -82,7 +82,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 5400,
+		"lifespan": 900,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -199,6 +199,7 @@
 				"external": false
 			}
 		],
+		"ramDamage": 1,
 		"damage": 3.7766666666666664,
 		"turrets": [],
 		"exhausts": []
@@ -346,26 +347,26 @@
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
+				"positionForward": 39.7,
+				"positionSide": 1.5,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
+				"positionForward": 39.7,
+				"positionSide": -1.5,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
+				"positionForward": 39.7,
+				"positionSide": 1.5,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
+				"positionForward": 39.7,
+				"positionSide": -1.5,
 				"vertical": true
 			},
 			{
@@ -408,6 +409,7 @@
 			}
 		],
 		"antiAircraft": 0.284,
+		"ramDamage": 1,
 		"damage": 5.133333333333333
 	},
 	"bismarck": {
@@ -566,6 +568,7 @@
 			}
 		],
 		"antiAircraft": 0.413,
+		"ramDamage": 1,
 		"torpedoResistance": 0.4,
 		"damage": 8.053333333333333
 	},
@@ -594,25 +597,25 @@
 		"armaments": [
 			{
 				"type": "kalibr",
-				"positionForward": -3.4,
+				"positionForward": -3,
 				"positionSide": 0.32,
 				"vertical": true
 			},
 			{
 				"type": "kalibr",
-				"positionForward": -3.4,
+				"positionForward": -3,
 				"positionSide": -0.32,
 				"vertical": true
 			},
 			{
 				"type": "kalibr",
-				"positionForward": -3.4,
+				"positionForward": -3.8,
 				"positionSide": 0.32,
 				"vertical": true
 			},
 			{
 				"type": "kalibr",
-				"positionForward": -3.4,
+				"positionForward": -3.8,
 				"positionSide": -0.32,
 				"vertical": true
 			},
@@ -684,6 +687,7 @@
 			}
 		],
 		"antiAircraft": 0.167,
+		"ramDamage": 1,
 		"damage": 2.5,
 		"exhausts": []
 	},
@@ -841,6 +845,7 @@
 			}
 		],
 		"antiAircraft": 0.294,
+		"ramDamage": 1,
 		"damage": 5.363333333333333
 	},
 	"clemenceau": {
@@ -1038,6 +1043,7 @@
 			}
 		],
 		"antiAircraft": 0.448,
+		"ramDamage": 1,
 		"damage": 8.833333333333334
 	},
 	"dredger": {
@@ -1077,6 +1083,7 @@
 				"positionSide": -0.8
 			}
 		],
+		"ramDamage": 1,
 		"damage": 3.3
 	},
 	"espana": {
@@ -1210,6 +1217,7 @@
 			}
 		],
 		"antiAircraft": 0.261,
+		"ramDamage": 1,
 		"damage": 4.6137999999999995
 	},
 	"essex": {
@@ -1385,6 +1393,7 @@
 			}
 		],
 		"antiAircraft": 0.449,
+		"ramDamage": 1,
 		"damage": 8.86
 	},
 	"fairmileD": {
@@ -1498,6 +1507,7 @@
 			}
 		],
 		"antiAircraft": 0.107,
+		"ramDamage": 1,
 		"damage": 1.1666666666666667
 	},
 	"fletcher": {
@@ -1736,6 +1746,7 @@
 			}
 		],
 		"antiAircraft": 0.226,
+		"ramDamage": 1,
 		"damage": 3.8266666666666667
 	},
 	"freccia": {
@@ -1904,6 +1915,7 @@
 			}
 		],
 		"antiAircraft": 0.198,
+		"ramDamage": 1,
 		"damage": 3.205
 	},
 	"freedom": {
@@ -2084,6 +2096,7 @@
 			}
 		],
 		"antiAircraft": 0.226,
+		"ramDamage": 1,
 		"damage": 3.8333333333333335
 	},
 	"g5": {
@@ -2120,6 +2133,7 @@
 			}
 		],
 		"antiAircraft": 0.083,
+		"ramDamage": 1,
 		"damage": 0.6283333333333334,
 		"turrets": [],
 		"exhausts": []
@@ -2193,6 +2207,7 @@
 				"external": false
 			}
 		],
+		"ramDamage": 1,
 		"damage": 3.2800000000000002,
 		"turrets": [],
 		"exhausts": []
@@ -2285,10 +2300,280 @@
 			}
 		},
 		"antiAircraft": 0.134,
+		"ramDamage": 1,
 		"npc": true,
 		"damage": 1.7604766666666667,
 		"turrets": [],
 		"exhausts": []
+	},
+	"iowa": {
+		"label": "Iowa",
+		"link": "https://en.wikipedia.org/wiki/Iowa-class_battleship",
+		"kind": "boat",
+		"subkind": "battleship",
+		"level": 10,
+		"length": 270.4,
+		"width": 32.74,
+		"draft": 12,
+		"speed": 16.977,
+		"sensors": {
+			"visual": {
+				"range": 1211.1999999999998
+			},
+			"radar": {
+				"range": 1405.6
+			}
+		},
+		"armaments": [
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": 3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": -3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"external": false,
+				"hidden": true,
+				"turret": 0
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": 3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": -3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"external": false,
+				"hidden": true,
+				"turret": 1
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": 3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"positionSide": -3.16,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "mark8",
+				"angle": 0,
+				"positionForward": 12,
+				"external": false,
+				"hidden": true,
+				"turret": 2
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -13.45,
+				"positionSide": 10.748,
+				"angle": -1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -13.45,
+				"positionSide": -10.748,
+				"angle": 1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -13.45,
+				"positionSide": 10.748,
+				"angle": -1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -13.45,
+				"positionSide": -10.748,
+				"angle": 1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -17.08,
+				"positionSide": 10.748,
+				"angle": -1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -17.08,
+				"positionSide": -10.748,
+				"angle": 1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -17.08,
+				"positionSide": 10.748,
+				"angle": -1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -17.08,
+				"positionSide": -10.748,
+				"angle": 1.5707963267948966,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -41.02,
+				"positionSide": 4.45,
+				"angle": 0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -41.02,
+				"positionSide": -4.45,
+				"angle": -0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -41.02,
+				"positionSide": 4.45,
+				"angle": 0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -41.02,
+				"positionSide": -4.45,
+				"angle": -0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -46.9846,
+				"positionSide": 4.45086,
+				"angle": 0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -46.9846,
+				"positionSide": -4.45086,
+				"angle": -0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -46.9846,
+				"positionSide": 4.45086,
+				"angle": 0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -46.9846,
+				"positionSide": -4.45086,
+				"angle": -0.5235987755982988,
+				"hidden": true
+			},
+			{
+				"type": "seahawk",
+				"positionForward": -121,
+				"positionSide": 0
+			},
+			{
+				"type": "seahawk",
+				"positionForward": -109,
+				"positionSide": -8,
+				"angle": -0.2617993877991494
+			},
+			{
+				"type": "seahawk",
+				"positionForward": -109,
+				"positionSide": 8,
+				"angle": 0.2617993877991494
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark7",
+				"positionForward": 59.62,
+				"positionSide": 0,
+				"speed": 0.9424777960769379,
+				"angle": 0,
+				"azimuthBL": 0.3490658503988659,
+				"azimuthBR": 0.3490658503988659
+			},
+			{
+				"type": "mark7",
+				"positionForward": 38.25,
+				"positionSide": 0,
+				"speed": 0.9424777960769379,
+				"angle": 0,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
+			},
+			{
+				"type": "mark7",
+				"positionForward": -65.56,
+				"positionSide": 0,
+				"angle": 3.141592653589793,
+				"speed": 0.9424777960769379,
+				"azimuthBL": 0.5235987755982988,
+				"azimuthBR": 0.5235987755982988
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -14.41
+			},
+			{
+				"positionForward": -40.58
+			}
+		],
+		"antiAircraft": 0.456,
+		"ramDamage": 1,
+		"torpedoResistance": 0.4,
+		"damage": 9.013333333333332
 	},
 	"kalibr": {
 		"label": "Kalibr",
@@ -2301,7 +2586,7 @@
 		"speed": 265.04,
 		"sensors": {
 			"radar": {
-				"range": 1012.15
+				"range": 540.5
 			}
 		},
 		"lifespan": 5.665362543672178,
@@ -2441,38 +2726,38 @@
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": 3,
+				"positionForward": 61.2,
+				"positionSide": 4.7,
 				"vertical": true
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": -3,
+				"positionForward": 61.2,
+				"positionSide": -4.7,
 				"vertical": true
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": 3,
+				"positionForward": 61.2,
+				"positionSide": 4.7,
 				"vertical": true
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": -3,
+				"positionForward": 61.2,
+				"positionSide": -4.7,
 				"vertical": true
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": 3,
+				"positionForward": 61.2,
+				"positionSide": 4.7,
 				"vertical": true
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": -3,
+				"positionForward": 61.2,
+				"positionSide": -4.7,
 				"vertical": true
 			},
 			{
@@ -2508,6 +2793,7 @@
 			}
 		],
 		"antiAircraft": 0.429,
+		"ramDamage": 1,
 		"torpedoResistance": 0.2,
 		"damage": 8.4
 	},
@@ -2570,48 +2856,48 @@
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 43.4,
+				"positionSide": 1.4,
 				"vertical": true
 			},
 			{
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 43.4,
+				"positionSide": -1.4,
 				"vertical": true
 			},
 			{
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 43.4,
+				"positionSide": 1.4,
 				"vertical": true
 			},
 			{
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 43.4,
+				"positionSide": -1.4,
 				"vertical": true
 			},
 			{
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 43.4,
+				"positionSide": 1.4,
 				"vertical": true
 			},
 			{
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 43.4,
+				"positionSide": -1.4,
 				"vertical": true
 			},
 			{
@@ -2624,37 +2910,25 @@
 			},
 			{
 				"type": "barak8",
-				"positionForward": 38,
+				"positionForward": 37.5,
 				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "barak8",
-				"positionForward": 38,
+				"positionForward": 37.5,
 				"positionSide": -2,
 				"vertical": true
 			},
 			{
 				"type": "barak8",
-				"positionForward": 38,
-				"positionSide": 2,
-				"vertical": true
-			},
-			{
-				"type": "barak8",
-				"positionForward": 38,
-				"positionSide": -2,
-				"vertical": true
-			},
-			{
-				"type": "barak8",
-				"positionForward": -36,
+				"positionForward": -36.3,
 				"positionSide": 1.5,
 				"vertical": true
 			},
 			{
 				"type": "barak8",
-				"positionForward": -36,
+				"positionForward": -36.3,
 				"positionSide": -1.5,
 				"vertical": true
 			}
@@ -2695,6 +2969,7 @@
 			}
 		],
 		"antiAircraft": 0.297,
+		"ramDamage": 1,
 		"damage": 5.433333333333334
 	},
 	"komar": {
@@ -2794,6 +3069,7 @@
 			}
 		],
 		"antiAircraft": 0.093,
+		"ramDamage": 1,
 		"damage": 0.8466666666666666,
 		"exhausts": []
 	},
@@ -3019,6 +3295,7 @@
 			}
 		],
 		"antiAircraft": 0.306,
+		"ramDamage": 1,
 		"torpedoResistance": 0.2,
 		"damage": 5.636666666666667
 	},
@@ -3103,6 +3380,7 @@
 			}
 		],
 		"antiAircraft": 0.197,
+		"ramDamage": 1,
 		"damage": 3.1933333333333334,
 		"turrets": [],
 		"exhausts": []
@@ -3275,6 +3553,7 @@
 			}
 		],
 		"antiAircraft": 0.182,
+		"ramDamage": 1,
 		"damage": 2.8433333333333333
 	},
 	"montana": {
@@ -3460,6 +3739,7 @@
 			}
 		],
 		"antiAircraft": 0.472,
+		"ramDamage": 1,
 		"torpedoResistance": 0.4,
 		"damage": 9.36
 	},
@@ -3626,6 +3906,7 @@
 			}
 		],
 		"antiAircraft": 0.336,
+		"ramDamage": 1,
 		"damage": 6.3
 	},
 	"ohio": {
@@ -3685,7 +3966,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 32,
+				"positionForward": 30.3,
 				"positionSide": 2,
 				"angle": 0,
 				"external": false,
@@ -3693,7 +3974,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 32,
+				"positionForward": 30.3,
 				"positionSide": -2,
 				"angle": 0,
 				"external": false,
@@ -3701,7 +3982,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 24,
+				"positionForward": 23.7,
 				"positionSide": 2,
 				"angle": 0,
 				"external": false,
@@ -3709,7 +3990,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 24,
+				"positionForward": 23.7,
 				"positionSide": -2,
 				"angle": 0,
 				"external": false,
@@ -3717,7 +3998,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 16,
+				"positionForward": 17.2,
 				"positionSide": 2,
 				"angle": 0,
 				"external": false,
@@ -3725,7 +4006,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 16,
+				"positionForward": 17.2,
 				"positionSide": -2,
 				"angle": 0,
 				"external": false,
@@ -3733,7 +4014,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 8,
+				"positionForward": 10.75,
 				"positionSide": 2,
 				"angle": 0,
 				"external": false,
@@ -3741,7 +4022,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 8,
+				"positionForward": 10.75,
 				"positionSide": -2,
 				"angle": 0,
 				"external": false,
@@ -3749,7 +4030,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 0,
+				"positionForward": 4.25,
 				"positionSide": 2,
 				"angle": 0,
 				"external": false,
@@ -3757,7 +4038,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 0,
+				"positionForward": 4.25,
 				"positionSide": -2,
 				"angle": 0,
 				"external": false,
@@ -3772,6 +4053,7 @@
 				"hidden": true
 			}
 		],
+		"ramDamage": 1,
 		"damage": 5.666666666666667,
 		"turrets": [],
 		"exhausts": []
@@ -3861,6 +4143,7 @@
 				"external": false
 			}
 		],
+		"ramDamage": 1,
 		"damage": 3,
 		"turrets": [],
 		"exhausts": []
@@ -3870,6 +4153,7 @@
 		"link": "https://en.wikipedia.org/wiki/Olympias_%28trireme%29",
 		"kind": "boat",
 		"subkind": "ram",
+		"ramDamage": 3,
 		"level": 1,
 		"length": 36.9,
 		"width": 5.5,
@@ -3971,6 +4255,7 @@
 			}
 		],
 		"antiAircraft": 0.113,
+		"ramDamage": 1,
 		"damage": 1.2866666666666666,
 		"exhausts": []
 	},
@@ -4024,6 +4309,7 @@
 			}
 		],
 		"antiAircraft": 0.09,
+		"ramDamage": 1,
 		"damage": 0.7666666666666666,
 		"turrets": [],
 		"exhausts": []
@@ -4133,6 +4419,7 @@
 				"hidden": true
 			}
 		],
+		"ramDamage": 1,
 		"damage": 3.6,
 		"turrets": [],
 		"exhausts": []
@@ -4215,6 +4502,7 @@
 				"hidden": true
 			}
 		],
+		"ramDamage": 1,
 		"damage": 2.557,
 		"turrets": [],
 		"exhausts": []
@@ -4240,6 +4528,7 @@
 				"positionForward": -77
 			}
 		],
+		"ramDamage": 1,
 		"damage": 5.966666666666667,
 		"turrets": []
 	},
@@ -4248,6 +4537,7 @@
 		"link": "https://en.wikipedia.org/wiki/CCGS_Terry_Fox",
 		"kind": "boat",
 		"subkind": "icebreaker",
+		"ramDamage": 2.5,
 		"level": 6,
 		"length": 88,
 		"width": 17.7031,
@@ -4525,6 +4815,7 @@
 			}
 		],
 		"antiAircraft": 0.323,
+		"ramDamage": 1,
 		"torpedoResistance": 0.2,
 		"damage": 6.010000000000001
 	},
@@ -4577,50 +4868,50 @@
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 41.4,
+				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 41.4,
+				"positionSide": -2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 41.4,
+				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 41.4,
+				"positionSide": -2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 41.4,
+				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 41.4,
+				"positionSide": -2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 41.4,
+				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": -1.5,
+				"positionForward": 41.4,
+				"positionSide": -2,
 				"vertical": true
 			},
 			{
@@ -4633,25 +4924,13 @@
 			},
 			{
 				"type": "hq9",
-				"positionForward": 44,
+				"positionForward": 46.5,
 				"positionSide": 2,
 				"vertical": true
 			},
 			{
 				"type": "hq9",
-				"positionForward": 44,
-				"positionSide": -2,
-				"vertical": true
-			},
-			{
-				"type": "hq9",
-				"positionForward": 44,
-				"positionSide": 2,
-				"vertical": true
-			},
-			{
-				"type": "hq9",
-				"positionForward": 44,
+				"positionForward": 46.5,
 				"positionSide": -2,
 				"vertical": true
 			},
@@ -4715,6 +4994,7 @@
 			}
 		],
 		"antiAircraft": 0.322,
+		"ramDamage": 1,
 		"damage": 6
 	},
 	"typeVIIC": {
@@ -4797,6 +5077,7 @@
 				"azimuthBR": 0.3490658503988659
 			}
 		],
+		"ramDamage": 1,
 		"damage": 2.2366666666666664,
 		"exhausts": []
 	},
@@ -4973,6 +5254,7 @@
 			}
 		],
 		"antiAircraft": 0.163,
+		"ramDamage": 1,
 		"damage": 2.4233333333333333,
 		"exhausts": []
 	},
@@ -5134,6 +5416,7 @@
 			}
 		],
 		"antiAircraft": 0.445,
+		"ramDamage": 1,
 		"damage": 8.766666666666666
 	},
 	"yasen": {
@@ -5203,28 +5486,28 @@
 			},
 			{
 				"type": "brahmos",
-				"positionForward": -6,
+				"positionForward": -4.5,
 				"positionSide": 2,
 				"vertical": true,
 				"external": false
 			},
 			{
 				"type": "brahmos",
-				"positionForward": -6,
+				"positionForward": -4.5,
 				"positionSide": -2,
 				"vertical": true,
 				"external": false
 			},
 			{
 				"type": "brahmos",
-				"positionForward": -6,
+				"positionForward": -7,
 				"positionSide": 2,
 				"vertical": true,
 				"external": false
 			},
 			{
 				"type": "brahmos",
-				"positionForward": -6,
+				"positionForward": -7,
 				"positionSide": -2,
 				"vertical": true,
 				"external": false
@@ -5310,6 +5593,7 @@
 				"external": false
 			}
 		],
+		"ramDamage": 1,
 		"damage": 4.333333333333333,
 		"turrets": [],
 		"exhausts": []
@@ -5469,6 +5753,7 @@
 			}
 		],
 		"antiAircraft": 0.14,
+		"ramDamage": 1,
 		"damage": 1.9
 	},
 	"zumwalt": {
@@ -5476,6 +5761,7 @@
 		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
+		"ramDamage": 1.5,
 		"level": 8,
 		"length": 190,
 		"width": 24.6,
@@ -5496,74 +5782,74 @@
 		"armaments": [
 			{
 				"type": "tomahawk",
-				"positionForward": 40,
-				"positionSide": 7,
-				"vertical": true
-			},
-			{
-				"type": "tomahawk",
-				"positionForward": 40,
-				"positionSide": -7,
-				"vertical": true
-			},
-			{
-				"type": "tomahawk",
-				"positionForward": 40,
-				"positionSide": 7,
-				"vertical": true
-			},
-			{
-				"type": "tomahawk",
-				"positionForward": 40,
-				"positionSide": -7,
-				"vertical": true
-			},
-			{
-				"type": "tomahawk",
-				"positionForward": -50,
+				"positionForward": 16,
 				"positionSide": 9,
 				"vertical": true
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": -50,
+				"positionForward": 16,
 				"positionSide": -9,
 				"vertical": true
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": -50,
+				"positionForward": 16,
 				"positionSide": 9,
 				"vertical": true
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": -50,
+				"positionForward": 16,
+				"positionSide": -9,
+				"vertical": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -51.5,
+				"positionSide": 9,
+				"vertical": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -51.5,
+				"positionSide": -9,
+				"vertical": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -51.5,
+				"positionSide": 9,
+				"vertical": true
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -51.5,
 				"positionSide": -9,
 				"vertical": true
 			},
 			{
 				"type": "asroc",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 39.5,
+				"positionSide": 5.5,
 				"vertical": true
 			},
 			{
 				"type": "asroc",
-				"positionForward": 40,
-				"positionSide": -7,
+				"positionForward": 39.5,
+				"positionSide": -5.5,
 				"vertical": true
 			},
 			{
 				"type": "asroc",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 39.5,
+				"positionSide": 5.5,
 				"vertical": true
 			},
 			{
 				"type": "asroc",
-				"positionForward": 40,
-				"positionSide": -7,
+				"positionForward": 39.5,
+				"positionSide": -5.5,
 				"vertical": true
 			},
 			{
@@ -5578,49 +5864,49 @@
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 35,
+				"positionSide": 6,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": -7,
+				"positionForward": 35,
+				"positionSide": -6,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 35,
+				"positionSide": 6,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": -7,
+				"positionForward": 35,
+				"positionSide": -6,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": -50,
+				"positionForward": -56,
 				"positionSide": 9,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": -50,
+				"positionForward": -56,
 				"positionSide": -9,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": -50,
+				"positionForward": -56,
 				"positionSide": 9,
 				"vertical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": -50,
+				"positionForward": -56,
 				"positionSide": -9,
 				"vertical": true
 			},
@@ -5878,7 +6164,7 @@
 		"speed": 23,
 		"sensors": {
 			"sonar": {
-				"range": 351.6375
+				"range": 266.375
 			}
 		},
 		"lifespan": 65.21739130434783,
@@ -5984,16 +6270,16 @@
 		"width": 0.80859,
 		"speed": 200,
 		"damage": 0,
-		"sensors": {
-			"radar": {
-				"range": 1006.75
-			}
-		},
 		"armaments": [
 			{
 				"type": "mark54"
 			}
 		],
+		"sensors": {
+			"sonar": {
+				"range": 125
+			}
+		},
 		"lifespan": 5.211645949126277,
 		"reload": 20,
 		"turrets": [],
@@ -6010,7 +6296,7 @@
 		"speed": 662.6,
 		"sensors": {
 			"radar": {
-				"range": 1006.75
+				"range": 522.5
 			}
 		},
 		"lifespan": 4.290123456790123,
@@ -6117,7 +6403,7 @@
 		"speed": 993.9,
 		"sensors": {
 			"radar": {
-				"range": 1012.6
+				"range": 542
 			}
 		},
 		"lifespan": 5.073375262054507,
@@ -6194,7 +6480,7 @@
 		"speed": 1000,
 		"sensors": {
 			"radar": {
-				"range": 1003.525
+				"range": 511.75
 			}
 		},
 		"lifespan": 3.78125,
@@ -6251,7 +6537,7 @@
 		"speed": 1000,
 		"sensors": {
 			"radar": {
-				"range": 1005.49
+				"range": 518.3
 			}
 		},
 		"lifespan": 4.109819121447028,
@@ -6271,7 +6557,7 @@
 		"speed": 319,
 		"sensors": {
 			"radar": {
-				"range": 1009
+				"range": 530
 			}
 		},
 		"lifespan": 4.751837123664671,
@@ -6292,7 +6578,7 @@
 		"speed": 240,
 		"sensors": {
 			"radar": {
-				"range": 1005.7
+				"range": 519
 			}
 		},
 		"lifespan": 4.5563634318853135,
@@ -6380,7 +6666,7 @@
 		"speed": 950,
 		"sensors": {
 			"radar": {
-				"range": 1010.2
+				"range": 534
 			}
 		},
 		"lifespan": 4.7555555555555555,
@@ -6400,7 +6686,7 @@
 		"speed": 570,
 		"sensors": {
 			"radar": {
-				"range": 1002.361
+				"range": 507.87
 			}
 		},
 		"lifespan": 3.5831871345029236,
@@ -6475,7 +6761,7 @@
 		"speed": 1000,
 		"sensors": {
 			"radar": {
-				"range": 1004.08
+				"range": 513.6
 			}
 		},
 		"lifespan": 3.8644986449864502,
@@ -6642,7 +6928,7 @@
 		"damage": 1.2291786284078958,
 		"sensors": {
 			"sonar": {
-				"range": 352.9
+				"range": 279
 			}
 		},
 		"lifespan": 53.01402397647591,
@@ -6719,7 +7005,7 @@
 		"speed": 22.63557,
 		"sensors": {
 			"sonar": {
-				"range": 351.36
+				"range": 263.6
 			}
 		},
 		"lifespan": 66.26738359140062,
@@ -6740,7 +7026,7 @@
 		"speed": 300,
 		"sensors": {
 			"radar": {
-				"range": 1005.925
+				"range": 519.75
 			}
 		},
 		"lifespan": 4.284693816410552,
@@ -6761,7 +7047,7 @@
 		"speed": 680,
 		"sensors": {
 			"radar": {
-				"range": 1004.185
+				"range": 513.95
 			}
 		},
 		"lifespan": 3.8976964769647693,
@@ -6781,7 +7067,7 @@
 		"speed": 950,
 		"sensors": {
 			"radar": {
-				"range": 1009.9
+				"range": 533
 			}
 		},
 		"lifespan": 4.773242630385488,
@@ -6858,7 +7144,7 @@
 		"speed": 600,
 		"sensors": {
 			"radar": {
-				"range": 1009.225
+				"range": 530.75
 			}
 		},
 		"lifespan": 4.690393518518519,
@@ -7029,7 +7315,7 @@
 		"speed": 325.85,
 		"sensors": {
 			"radar": {
-				"range": 1008.7
+				"range": 529
 			}
 		},
 		"lifespan": 4.697630031549474,
@@ -7050,7 +7336,7 @@
 		"speed": 530.08,
 		"sensors": {
 			"radar": {
-				"range": 1015
+				"range": 550
 			}
 		},
 		"lifespan": 5.357142857142857,
@@ -7098,7 +7384,7 @@
 		"speed": 300,
 		"sensors": {
 			"radar": {
-				"range": 1006.495
+				"range": 521.65
 			}
 		},
 		"lifespan": 4.391191073943132,
@@ -7118,16 +7404,16 @@
 		"width": 0.533,
 		"speed": 200,
 		"damage": 0,
-		"sensors": {
-			"radar": {
-				"range": 1009.75
-			}
-		},
 		"armaments": [
 			{
 				"type": "82r"
 			}
 		],
+		"sensors": {
+			"sonar": {
+				"range": 125
+			}
+		},
 		"lifespan": 5.991584504002548,
 		"reload": 20,
 		"turrets": [],
@@ -7205,7 +7491,7 @@
 		"speed": 20.577778,
 		"sensors": {
 			"sonar": {
-				"range": 353.95
+				"range": 289.5
 			}
 		},
 		"lifespan": 72.89416767932865,
@@ -7286,7 +7572,7 @@
 		"speed": 245.872,
 		"sensors": {
 			"radar": {
-				"range": 1008.34
+				"range": 527.8
 			}
 		},
 		"lifespan": 5.096210582734502,
@@ -7307,7 +7593,7 @@
 		"speed": 20.57779,
 		"sensors": {
 			"sonar": {
-				"range": 351.425
+				"range": 264.25
 			}
 		},
 		"lifespan": 72.89412517087598,
@@ -7401,7 +7687,7 @@
 		"speed": 265.04,
 		"sensors": {
 			"radar": {
-				"range": 1012.15
+				"range": 540.5
 			}
 		},
 		"lifespan": 5.665362543672178,

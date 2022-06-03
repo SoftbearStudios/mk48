@@ -17,7 +17,8 @@ use db_ip::{include_region_database, DbIpDatabase, Region};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{error, info, warn};
-use rand::{thread_rng, Rng};
+use rand::prelude::IteratorRandom;
+use rand::thread_rng;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::redirect::Policy;
 use reqwest::Client;
@@ -798,8 +799,8 @@ impl<G: GameArenaService> Handler<SystemRequest> for Infrastructure<G> {
             .ip
             .and_then(|ip| SystemRepo::<G>::ip_to_region_id(ip)));
 
-        let mut ideal_server_id = None;
-        let mut ideal_server_priority = i8::MAX;
+        let mut ideal_server_ids = Vec::new();
+        let mut ideal_servers_priority = i8::MAX;
         if let Some(system) = self.system.as_ref() {
             // Iterate available (alive, compatible) servers.
             for server in system.previous.iter() {
@@ -810,26 +811,30 @@ impl<G: GameArenaService> Handler<SystemRequest> for Infrastructure<G> {
                 }
 
                 if Some(server.server_id) == request.server_id {
-                    ideal_server_id = Some(server.server_id);
                     priority = -1;
                 }
 
                 if Some(server.server_id) == invitation_server_id {
-                    ideal_server_id = Some(server.server_id);
                     priority = -2;
                 }
 
-                if priority < ideal_server_priority
-                    || ideal_server_id.is_none()
-                    || (self.admin.distribute_load
-                        && priority == ideal_server_priority
-                        && thread_rng().gen_bool(0.5))
-                {
-                    ideal_server_id = Some(server.server_id);
-                    ideal_server_priority = priority;
+                if priority <= ideal_servers_priority {
+                    if priority < ideal_servers_priority {
+                        ideal_server_ids.clear();
+                    }
+                    ideal_server_ids.push(server.server_id);
+                    ideal_servers_priority = priority;
                 }
             }
         }
+
+        let mut iter = ideal_server_ids.into_iter();
+
+        let ideal_server_id = if self.admin.distribute_load {
+            iter.choose(&mut thread_rng())
+        } else {
+            iter.next()
+        };
 
         SystemResponse {
             server_id: ideal_server_id.or(self.server_id),

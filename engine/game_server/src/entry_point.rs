@@ -40,7 +40,7 @@ use server_util::user_agent::UserAgent;
 use std::convert::TryInto;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use structopt::StructOpt;
@@ -124,10 +124,17 @@ pub struct Options {
 /// 0 is no redirect.
 static REDIRECT_TO_SERVER_ID: AtomicU8 = AtomicU8::new(0);
 
+/// Whether JSON is allowed for WebSockets. This may be disabled as a defense mechanism against
+/// denial of service or unwanted bots.
+static ALLOW_WEB_SOCKET_JSON: AtomicBool = AtomicBool::new(true);
+
 lazy_static::lazy_static! {
     // Will be overwritten first thing.
     static ref HTTP_RATE_LIMITER: Mutex<IpRateLimiter> = Mutex::new(IpRateLimiter::new_bandwidth_limiter(1, 0));
+}
 
+#[cfg(feature = "connection_leak_detector")]
+lazy_static::lazy_static! {
     static ref CONNECTION_LEAK_DETECTOR: Mutex<connection_leak_detector::ConnectionLeakDetector> = Mutex::new({
         let mut cld = connection_leak_detector::ConnectionLeakDetector::new();
         cld.set_log_path("/tmp/cld.csv");
@@ -204,6 +211,7 @@ pub fn entry_point<G: GameArenaService>() {
                 options.min_players,
                 options.chat_log,
                 options.trace_log,
+                &ALLOW_WEB_SOCKET_JSON,
                 RateLimiterProps::new(
                     Duration::from_secs(options.client_authenticate_rate_limit),
                     options.client_authenticate_burst,
@@ -280,6 +288,7 @@ pub fn entry_point<G: GameArenaService>() {
                             pin_mut!(keep_alive);
 
                             // For signaling what type of close frame should be sent, if any.
+                            // See https://github.com/tokio-rs/axum/issues/1061
                             const NORMAL_CLOSURE: Option<CloseCode> = Some(1000);
                             const PROTOCOL_ERROR: Option<CloseCode> = Some(1002);
                             const SILENT_CLOSURE: Option<CloseCode> = None;
@@ -318,7 +327,7 @@ pub fn entry_point<G: GameArenaService>() {
                                                             }
                                                         }
                                                         Message::Text(text) => {
-                                                            if rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
+                                                            if !ALLOW_WEB_SOCKET_JSON.load(Ordering::Relaxed) || rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
                                                                 continue;
                                                             }
 
@@ -386,6 +395,9 @@ pub fn entry_point<G: GameArenaService>() {
                                         };
                                         match observer_update {
                                             ObserverUpdate::Send{message} => {
+                                                if !ALLOW_WEB_SOCKET_JSON.load(Ordering::Relaxed) {
+                                                    protocol = WebSocketProtocol::Binary;
+                                                }
                                                 let web_socket_message = match protocol {
                                                     WebSocketProtocol::Binary => Message::Binary(bincode::serialize(&message).unwrap()),
                                                     WebSocketProtocol::Json => Message::Text(serde_json::to_string(&message).unwrap()),
@@ -543,6 +555,7 @@ pub fn entry_point<G: GameArenaService>() {
                 .layer(axum::middleware::from_fn(async move |request: axum::http::Request<_>, next: axum::middleware::Next<_>| {
                     let addr = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ci| ci.0);
 
+                    #[cfg(feature = "connection_leak_detector")]
                     if let Some(addr) = addr {
                         use connection_leak_detector::{Protocol, Encryption};
                         use axum::http::Version;
@@ -695,12 +708,14 @@ pub fn entry_point<G: GameArenaService>() {
 
                     i += 1;
 
+                    #[cfg(feature = "connection_leak_detector")]
                     {
                         let mut cld = CONNECTION_LEAK_DETECTOR.lock().unwrap();
                         if let Err(e) = cld.update() {
                             error!("cld: {:?}", e);
                         }
 
+                        // Every 5 minutes.
                         if i % 60 == 5 {
                             let leaked: Vec<_> = cld.iter_leaked_connections().collect();
                             match serde_json::to_string(&leaked) {
@@ -722,7 +737,8 @@ pub fn entry_point<G: GameArenaService>() {
                         }
                     }
 
-                    if i > 24 * 3600 {
+                    // Every day.
+                    if i > 24 * 60 {
                         match server_util::ssl::certificate_expiry(&certificate_path) {
                             Ok(new_expiry) => {
                                 if new_expiry > old_expiry {

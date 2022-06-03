@@ -56,7 +56,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 5400
+		"lifespan": 900
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",
@@ -64,7 +64,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 5400,
+		"lifespan": 900,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -218,10 +218,11 @@
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 0,
+				"positionForward": 39.7,
+				"positionSide": 1.5,
+				"symmetrical": true,
 				"vertical": true,
-				"count": 4
+				"count": 2
 			},
 			{
 				"type": "seahawk",
@@ -339,9 +340,15 @@
 		"armaments": [
 			{
 				"type": "kalibr",
-				"positionForward": -3.4,
+				"positionForward": -3,
 				"positionSide": 0.32,
-				"count": 2,
+				"symmetrical": true,
+				"vertical": true
+			},
+			{
+				"type": "kalibr",
+				"positionForward": -3.8,
+				"positionSide": 0.32,
 				"symmetrical": true,
 				"vertical": true
 			}
@@ -1215,6 +1222,103 @@
 			"visual": {}
 		}
 	},
+	"iowa": {
+		"label": "Iowa",
+		"link": "https://en.wikipedia.org/wiki/Iowa-class_battleship",
+		"kind": "boat",
+		"subkind": "battleship",
+		"level": 10,
+		"length": 270.4,
+		"width": 32.74,
+		"draft": 12,
+		"speed": 16.977,
+		"sensors": {
+			"visual": {},
+			"radar": {}
+		},
+		"armaments": [
+			{
+				"type": "tomahawk",
+				"positionForward": -13.45,
+				"positionSide": 10.748,
+				"angle": -90,
+				"symmetrical": true,
+				"hidden": true,
+				"count": 2
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -17.08,
+				"positionSide": 10.748,
+				"angle": -90,
+				"symmetrical": true,
+				"hidden": true,
+				"count": 2
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -41.02,
+				"positionSide": 4.45,
+				"angle": 30,
+				"symmetrical": true,
+				"hidden": true,
+				"count": 2
+			},
+			{
+				"type": "tomahawk",
+				"positionForward": -46.9846,
+				"positionSide": 4.45086,
+				"angle": 30,
+				"symmetrical": true,
+				"hidden": true,
+				"count": 2
+			},
+			{
+				"type": "seahawk",
+				"positionForward": -121,
+				"positionSide": 0
+			},
+			{
+				"type": "seahawk",
+				"positionForward": -109,
+				"positionSide": -8,
+				"angle": -15,
+				"symmetrical": true
+			}
+		],
+		"turrets": [
+			{
+				"type": "mark7",
+				"positionForward": 59.62,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 20
+			},
+			{
+				"type": "mark7",
+				"positionForward": 38.25,
+				"positionSide": 0,
+				"speed": "slow",
+				"azimuthB": 30
+			},
+			{
+				"type": "mark7",
+				"positionForward": -65.56,
+				"positionSide": 0,
+				"angle": 180,
+				"speed": "slow",
+				"azimuthB": 30
+			}
+		],
+		"exhausts": [
+			{
+				"positionForward": -14.41
+			},
+			{
+				"positionForward": -40.58
+			}
+		]
+	},
 	"kalibr": {
 		"label": "Kalibr",
 		"link": "https://en.wikipedia.org/wiki/3M-54_Kalibr",
@@ -1283,8 +1387,8 @@
 			},
 			{
 				"type": "s300",
-				"positionForward": 60,
-				"positionSide": 3,
+				"positionForward": 61.2,
+				"positionSide": 4.7,
 				"count": 3,
 				"symmetrical": true,
 				"vertical": true
@@ -1359,23 +1463,23 @@
 				"kind": "weapon",
 				"subkind": "missile",
 				"type": "brahmos",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 43.4,
+				"positionSide": 1.4,
 				"count": 3,
 				"symmetrical": true,
 				"vertical": true
 			},
 			{
 				"type": "barak8",
-				"positionForward": 38,
+				"positionForward": 37.5,
 				"positionSide": 2,
-				"count": 2,
+				"count": 1,
 				"symmetrical": true,
 				"vertical": true
 			},
 			{
 				"type": "barak8",
-				"positionForward": -36,
+				"positionForward": -36.3,
 				"positionSide": 1.5,
 				"count": 1,
 				"symmetrical": true,
@@ -1937,7 +2041,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 32,
+				"positionForward": 30.3,
 				"positionSide": 2,
 				"angle": 0,
 				"symmetrical": true,
@@ -1946,7 +2050,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 24,
+				"positionForward": 23.7,
 				"positionSide": 2,
 				"angle": 0,
 				"symmetrical": true,
@@ -1955,7 +2059,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 16,
+				"positionForward": 17.2,
 				"positionSide": 2,
 				"angle": 0,
 				"symmetrical": true,
@@ -1964,7 +2068,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 8,
+				"positionForward": 10.75,
 				"positionSide": 2,
 				"angle": 0,
 				"symmetrical": true,
@@ -1973,7 +2077,7 @@
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": 0,
+				"positionForward": 4.25,
 				"positionSide": 2,
 				"angle": 0,
 				"symmetrical": true,
@@ -2024,6 +2128,7 @@
 		"link": "https://en.wikipedia.org/wiki/Olympias_%28trireme%29",
 		"kind": "boat",
 		"subkind": "ram",
+		"ramDamage": 3.0,
 		"level": 1,
 		"length": 36.9,
 		"width": 5.5,
@@ -2236,6 +2341,7 @@
 		"link": "https://en.wikipedia.org/wiki/CCGS_Terry_Fox",
 		"kind": "boat",
 		"subkind": "icebreaker",
+		"ramDamage": 2.5,
 		"level": 6,
 		"length": 88,
 		"width": 17.7031,
@@ -2386,8 +2492,8 @@
 		"armaments": [
 			{
 				"type": "yj18",
-				"positionForward": 44,
-				"positionSide": 1.5,
+				"positionForward": 41.4,
+				"positionSide": 2,
 				"count": 4,
 				"symmetrical": true,
 				"vertical": true
@@ -2408,9 +2514,9 @@
 			},
 			{
 				"type": "hq9",
-				"positionForward": 44,
+				"positionForward": 46.5,
 				"positionSide": 2,
-				"count": 2,
+				"count": 1,
 				"symmetrical": true,
 				"vertical": true
 			},
@@ -2720,9 +2826,16 @@
 			},
 			{
 				"type": "brahmos",
-				"positionForward": -6,
+				"positionForward": -4.5,
 				"positionSide": 2,
-				"count": 2,
+				"symmetrical": true,
+				"vertical": true,
+				"external": false
+			},
+			{
+				"type": "brahmos",
+				"positionForward": -7,
+				"positionSide": 2,
 				"symmetrical": true,
 				"vertical": true,
 				"external": false
@@ -2799,6 +2912,7 @@
 		"link": "https://en.wikipedia.org/wiki/Zumwalt-class_destroyer",
 		"kind": "boat",
 		"subkind": "destroyer",
+		"ramDamage": 1.5,
 		"level": 8,
 		"length": 190,
 		"width": 24.6,
@@ -2813,15 +2927,15 @@
 		"armaments": [
 			{
 				"type": "tomahawk",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 16,
+				"positionSide": 9,
 				"vertical": true,
 				"count": 2,
 				"symmetrical": true
 			},
 			{
 				"type": "tomahawk",
-				"positionForward": -50,
+				"positionForward": -51.5,
 				"positionSide": 9,
 				"vertical": true,
 				"count": 2,
@@ -2829,23 +2943,23 @@
 			},
 			{
 				"type": "asroc",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 39.5,
+				"positionSide": 5.5,
 				"vertical": true,
 				"count": 2,
 				"symmetrical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": 40,
-				"positionSide": 7,
+				"positionForward": 35,
+				"positionSide": 6,
 				"vertical": true,
 				"count": 2,
 				"symmetrical": true
 			},
 			{
 				"type": "essm",
-				"positionForward": -50,
+				"positionForward": -56,
 				"positionSide": 9,
 				"vertical": true,
 				"count": 2,
@@ -3136,9 +3250,6 @@
 		"speed": 200,
 		"range": 9700,
 		"damage": 0,
-		"sensors": {
-			"radar": {}
-		},
 		"armaments": [
 			{
 				"type": "mark54"
@@ -3949,9 +4060,6 @@
 		"speed": 200,
 		"range": 20000,
 		"damage": 0,
-		"sensors": {
-			"radar": {}
-		},
 		"armaments": [
 			{
 				"type": "82r"

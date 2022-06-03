@@ -9,9 +9,9 @@ use common::entity::*;
 use common::guidance::Guidance;
 use common::ticks::Ticks;
 use common::transform::Transform;
-use common::util::gen_radius;
 use common::velocity::Velocity;
-use common::world::clamp_y_to_default_area_border;
+use common::world::distance_to_soft_area_border;
+use common_util::range::gen_radius;
 use glam::Vec2;
 use log::{info, warn};
 use rand::{thread_rng, Rng};
@@ -32,7 +32,7 @@ impl World {
     /// If initial_radius is zero, no attempts are made to adjust the entity, so spawning will
     /// fail if the initial conditions are insufficient.
     ///
-    /// An optional filter can return false to block spawning.
+    /// An optional exclusion zone can block spawning.
     ///
     /// Returns true if spawning successful, false if failed.
     ///
@@ -48,9 +48,19 @@ impl World {
             let mut rng = rand::thread_rng();
             let mut radius = initial_radius.max(1.0);
             let center = entity.transform.position;
-            let mut threshold = 6f32;
+            let mut threshold = 4f32;
 
-            let mut governor: u32 = if entity.is_boat() { 128 } else { 8 };
+            let max_attempts: u32 = if entity.is_boat() {
+                if entity.borrow_player().player_id.is_bot() {
+                    64
+                } else {
+                    256
+                }
+            } else {
+                8
+            };
+
+            let mut governor = max_attempts;
 
             // Always randomize on first iteration
             while entity.transform.position == center
@@ -66,18 +76,10 @@ impl World {
                 entity.transform.position = center + position;
                 entity.transform.direction = rng.gen();
 
-                // Clamp boats to correct area.
-                if entity.is_boat() {
-                    let y = &mut entity.transform.position.y;
-                    *y = clamp_y_to_default_area_border(
-                        entity.entity_type,
-                        *y,
-                        entity.entity_type.data().radius,
-                    );
-                }
+                radius = (radius * 1.05).min(self.radius * 0.9);
+                threshold = 0.02 + threshold * 0.98; // Approaches 1.0
 
-                radius = (radius * 1.1).min(self.radius * 0.85);
-                threshold = 0.05 + threshold * 0.95; // Approaches 1.0
+                debug_assert!(threshold >= 1.0, "so try_spawn works");
 
                 governor -= 1;
                 if governor == 0 {
@@ -87,16 +89,34 @@ impl World {
                 }
             }
 
+            // Ensure determinism and allowing spawn with threshold 1.0.
+            #[cfg(debug_assertions)]
+            if governor > 0 {
+                for i in 0..3 {
+                    debug_assert!(
+                        self.can_spawn(&entity, threshold),
+                        "i: {}, t: {}",
+                        i,
+                        threshold
+                    );
+                }
+                for i in 0..3 {
+                    debug_assert!(self.can_spawn(&entity, 1.0), "i: {}, t': {}", i, threshold);
+                }
+            }
+
             // Without this, some entities would rotate to angle 0 after spawning.
             // TODO: Maybe not within the scope of this function.
             entity.guidance.direction_target = entity.transform.direction;
 
             if entity.data().kind == EntityKind::Boat {
                 info!(
-                    "Took {} attempts to spawn {:?} (threshold = {}).",
-                    128 - governor,
+                    "Took {}/{} attempts to spawn {:?} (threshold = {}, final_radius = {}).",
+                    max_attempts - governor,
+                    max_attempts,
                     entity.entity_type,
-                    threshold
+                    threshold,
+                    radius,
                 );
             }
         }
@@ -154,6 +174,14 @@ impl World {
                 return entity.collides_with_terrain(&self.terrain, 0.0).is_none();
             }
             EntityKind::Boat => {
+                // Reject boats spawning in the wrong area. Don't clamp, as that biases towards
+                // spawning on border!
+                if distance_to_soft_area_border(entity.entity_type, entity.transform.position)
+                    < data.radius + 50.0 * threshold
+                {
+                    return false;
+                }
+
                 // TODO: Terrain/keel depth check.
             }
             _ => {}
@@ -162,9 +190,9 @@ impl World {
         // Slow, conservative check.
         if self.terrain.land_in_square(
             entity.transform.position,
-            (entity.data().radius + common::terrain::SCALE) * 2.0 * threshold,
-        ) != data.is_land_based()
-        {
+            (entity.data().radius + common::terrain::SCALE) * 2.0 * threshold.min(2.5),
+            //if threshold > 3.0 { default_land.min(-entity.data().draft) } else { default_land },
+        ) {
             return false;
         }
 
@@ -185,9 +213,15 @@ impl World {
                 .distance_squared(other_entity.transform.position);
             let collision_distance = data.radius + other_data.radius;
             let safe_distance = collision_distance
-                * if entity.is_boat() && other_entity.is_boat() && other_entity.data().level > 2 {
+                * if entity.is_friendly(other_entity) {
+                    1.0
+                } else if entity.is_boat()
+                    && other_entity.is_boat()
+                    && other_entity.data().level > 2
+                {
                     threshold
                 } else {
+                    // Low level ships and weapons.
                     (threshold * 0.5).max(1.0)
                 };
             if distance_squared <= safe_distance.powi(2) {

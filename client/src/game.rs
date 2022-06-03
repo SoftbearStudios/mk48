@@ -3,6 +3,7 @@
 
 use crate::armament::FireRateLimiter;
 use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
+use crate::interpolated::Interpolated;
 use crate::interpolated_contact::InterpolatedContact;
 use crate::settings::Mk48Settings;
 use crate::sprite::SortableSprite;
@@ -34,15 +35,18 @@ use common::ticks::Ticks;
 use common::transform::Transform;
 use common::util::score_to_level;
 use common::velocity::Velocity;
-use common::world::area_border;
-use common_util::range::{gen_radius, map_ranges};
+use common::world::strict_area_border;
+use common_util::range::{gen_radius, lerp, map_ranges};
 use core_protocol::id::{GameId, TeamId};
 use core_protocol::name::PlayerAlias;
-use glam::{Mat2, UVec2, Vec2, Vec4};
+use glam::{Mat2, UVec2, Vec2, Vec4, Vec4Swizzles};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
+use std::f32::consts::PI;
 
 pub struct Mk48Game {
+    /// Can't reverse on first control when you spawn.
+    pub first_control: bool,
     /// Holding mouse down, for the purpose of deciding whether to start reversing.
     pub holding: bool,
     /// Currently in mouse control reverse mode.
@@ -50,7 +54,9 @@ pub struct Mk48Game {
     /// Camera on death.
     pub saved_camera: Option<(Vec2, f32)>,
     /// Override respawning with regular spawning.
-    respawn_overriden: bool,
+    respawn_overridden: bool,
+    /// Interpolate altitude for smooth animation of visual range and restriction.
+    pub interpolated_altitude: Interpolated,
     /// In meters.
     pub interpolated_zoom: f32,
     /// 1 = normal.
@@ -63,6 +69,10 @@ pub struct Mk48Game {
     pub ui_props_rate_limiter: RateLimiter,
     /// Playing the alarm fast sound too often is annoying.
     pub alarm_fast_rate_limiter: RateLimiter,
+    /// Peek update sound rate limiter (prevent backlog of sounds from nuking ears).
+    /// It is reset to 0 every frame, and incremented in every peeked update. When it reaches
+    /// a certain threshold, remaining audio and animations are dropped.
+    pub peek_update_sound_counter: u8,
     /// If a given index is present and non-zero, should avoid firing weapon (was fired recently,
     /// and is probably consumed).
     pub fire_rate_limiter: FireRateLimiter,
@@ -88,6 +98,22 @@ pub fn wind() -> Vec2 {
     Vec2::new(7.0, 1.5)
 }
 
+// Back 75 degrees is reverse angle.
+const REVERSE_ANGLE: f32 = PI * 3.0 / 8.0;
+
+impl Mk48Game {
+    // Don't reverse early on, when the player doesn't have a great idea of their orientation.
+    fn can_reverse(&self, player_contact: &Contact) -> bool {
+        self.has_reverse(player_contact)
+            && (!self.first_control || player_contact.guidance().velocity_target < Velocity::ZERO)
+    }
+
+    // Level 1 ships can't reverse with mouse controls.
+    fn has_reverse(&self, player_contact: &Contact) -> bool {
+        player_contact.entity_type().unwrap().data().level > 1
+    }
+}
+
 impl GameClient for Mk48Game {
     const GAME_ID: GameId = GameId::Mk48;
 
@@ -107,16 +133,19 @@ impl GameClient for Mk48Game {
         }
 
         Self {
+            first_control: false,
             holding: false,
             reversing: false,
+            interpolated_altitude: Interpolated::new(0.2),
             interpolated_zoom: Self::DEFAULT_ZOOM_INPUT * Self::MENU_VISUAL_RANGE,
             zoom_input: Self::DEFAULT_ZOOM_INPUT,
             saved_camera: None,
-            respawn_overriden: false,
+            respawn_overridden: false,
             last_control: None,
             control_rate_limiter: RateLimiter::new(0.1),
             ui_props_rate_limiter: RateLimiter::new(0.25),
             alarm_fast_rate_limiter: RateLimiter::new(10.0),
+            peek_update_sound_counter: 0,
             fire_rate_limiter: FireRateLimiter::new(),
             fps_counter: FpsMonitor::new(1.0),
         }
@@ -180,6 +209,10 @@ impl GameClient for Mk48Game {
         renderer: &Renderer,
         layer: &mut Self::RendererLayer,
     ) {
+        self.peek_update_sound_counter = self.peek_update_sound_counter.saturating_add(1);
+        // Only play sounds for 10 peeked updates between frames.
+        let play_sounds = self.peek_update_sound_counter < 10;
+
         let updated: HashMap<EntityId, &Contact> =
             update.contacts.iter().map(|c| (c.id(), c)).collect();
 
@@ -188,11 +221,14 @@ impl GameClient for Mk48Game {
                 if Some(*id) == context.state.game.entity_id {
                     let recent_damage = contact.damage().saturating_sub(model.damage());
                     if recent_damage > Ticks::ZERO {
-                        layer.audio.play("damage");
+                        if play_sounds {
+                            layer.audio.play("damage");
+                        }
 
                         // Considered "intense" 250% of the damage would have been fatal.
-                        if recent_damage * 2.5
-                            >= model.data().max_health().saturating_sub(model.damage())
+                        if play_sounds
+                            && recent_damage * 2.5
+                                >= model.data().max_health().saturating_sub(model.damage())
                         {
                             Self::play_music("intense", &layer.audio);
                         }
@@ -207,9 +243,17 @@ impl GameClient for Mk48Game {
                 // estimate of latency)
                 network_contact.model.simulate(0.1);
             } else {
-                self.new_contact(contact, renderer.camera_center(), &*context, &layer.audio);
+                if play_sounds {
+                    self.play_new_contact_audio(
+                        contact,
+                        renderer.camera_center(),
+                        &*context,
+                        &layer.audio,
+                    );
+                }
                 if contact.player_id() == context.state.core.player_id && contact.is_boat() {
                     context.state.game.entity_id = Some(contact.id());
+                    self.first_control = true; // Just spawned so reset this.
                 }
                 context
                     .state
@@ -250,14 +294,16 @@ impl GameClient for Mk48Game {
             .map(|(_, InterpolatedContact { view, .. })| view)
             .collect::<Vec<_>>()
         {
-            let time_seconds = context.client.update_seconds;
-            self.lost_contact(
-                renderer.camera_center(),
-                &contact,
-                &layer.audio,
-                &mut context.state.game.animations,
-                time_seconds,
-            );
+            if play_sounds {
+                let time_seconds = context.client.update_seconds;
+                self.play_lost_contact_audio_and_animations(
+                    renderer.camera_center(),
+                    &contact,
+                    &layer.audio,
+                    &mut context.state.game.animations,
+                    time_seconds,
+                );
+            }
         }
 
         let player_position = renderer.camera_center();
@@ -352,7 +398,7 @@ impl GameClient for Mk48Game {
         _renderer: &Renderer,
     ) {
         if let MouseEvent::Wheel(delta) = event {
-            self.zoom(delta);
+            self.zoom(*delta);
         }
     }
 
@@ -363,8 +409,8 @@ impl GameClient for Mk48Game {
         renderer: &mut Renderer,
         layer: &mut Self::RendererLayer,
     ) {
-        // Don't create more particles at 144hz.
-        let particle_multiplier = elapsed_seconds.min(1.0 / 60.0) * 60.0;
+        // Allow more sounds to be played in peek.
+        self.peek_update_sound_counter = 0;
 
         // The distance from player's boat to the closest visible member of each team, for the purpose of sorting and
         // filtering.
@@ -447,20 +493,20 @@ impl GameClient for Mk48Game {
         renderer.set_camera(camera, zoom);
 
         let (visual_range, visual_restriction, area) =
-            if let Some(player_contact) = context.state.game.player_contact() {
-                let alt_norm = player_contact.altitude().to_norm();
-                let entity_type = player_contact.entity_type().unwrap();
-                (
-                    entity_type.data().sensors.visual.range
-                        * map_ranges(alt_norm, -1.0..0.0, 0.4..0.8, true),
-                    map_ranges(
-                        player_contact.altitude().to_norm(),
-                        0.0..-1.0,
-                        0.0..0.8,
-                        true,
-                    ),
-                    area_border(entity_type),
-                )
+            if let Some(c) = context.state.game.player_interpolated_contact() {
+                // Use model as input to interpolation (can't interpolate twice).
+                let altitude = c.model.altitude().to_norm();
+                let t = context.client.update_seconds;
+                let altitude = self.interpolated_altitude.update(altitude, t);
+
+                // Use view for entity type.
+                let entity_type = c.view.entity_type().unwrap();
+
+                let visual_range = entity_type.data().sensors.visual.range
+                    * map_ranges(altitude, -1.0..0.0, 0.4..0.8, true);
+                let visual_restriction = map_ranges(altitude, 0.0..-1.0, 0.0..0.8, true);
+                let area = strict_area_border(entity_type);
+                (visual_range, visual_restriction, area)
             } else {
                 (500.0, 0.0, None)
             };
@@ -469,10 +515,12 @@ impl GameClient for Mk48Game {
         let mut sortable_sprites = Vec::with_capacity(context.state.game.contacts.len() * 5);
 
         // Update background and add vegetation sprites.
+        let terrain_reset = context.state.game.take_terrain_reset();
         sortable_sprites.extend(layer.background.context.update(
             camera,
             zoom,
             &mut context.state.game.terrain,
+            terrain_reset,
             &*renderer,
         ));
 
@@ -523,19 +571,53 @@ impl GameClient for Mk48Game {
 
             if let Some(entity_type) = contact.entity_type() {
                 let altitude = contact.altitude().to_norm();
-                let alpha = (altitude + 1.0).clamp(0.25, 1.0);
+                // Only boats have non linear altitude to alpha (because they have more depth).
+                // TODO give entities depth dimension.
+                let alpha = if !contact.is_boat() || contact.altitude().is_submerged() {
+                    let max_alpha = if contact.is_boat() { 0.7 } else { 1.0 };
+                    map_ranges(altitude, -1.0..0.0, 0.2..max_alpha, true)
+                } else {
+                    1.0
+                };
                 let entity_id = contact.id();
-
-                sortable_sprites.push(SortableSprite::new_entity(
-                    entity_id,
-                    entity_type,
-                    *contact.transform(),
-                    altitude,
-                    alpha,
-                ));
-
                 let data: &'static EntityData = entity_type.data();
-                let parent_type = entity_type;
+
+                {
+                    let mut transform = *contact.transform();
+                    let settings = &context.settings;
+
+                    // Subtle wave animation on collectibles.
+                    // No waves if animations or waves are off.
+                    if settings.animations
+                        && settings.wave_quality > 0
+                        && data.kind == EntityKind::Collectible
+                    {
+                        let t = context.client.update_seconds;
+
+                        // Moves waves with the wind.
+                        let mut input = (transform.position + wind() * t) * 0.1;
+
+                        // Offset waves from regular grid.
+                        input.x += input.y * 0.3;
+
+                        // Don't apply waves when collectibles are moving (aka attracted to boat).
+                        let f = map_ranges(transform.velocity.to_mps(), 0.0..4.0, 1.0..0.0, true);
+
+                        // Waves modify rendered position and direction.
+                        transform.position += Vec2::new(input.x.sin(), input.y.sin()) * (f * 0.9);
+                        transform.direction += Angle::from_radians(
+                            input.dot(Vec2::new(0.7, 1.3)).sin() * (f * (PI / 10.0)),
+                        );
+                    }
+
+                    sortable_sprites.push(SortableSprite::new_entity(
+                        entity_id,
+                        entity_type,
+                        transform,
+                        altitude,
+                        alpha,
+                    ));
+                }
 
                 if contact.is_boat()
                     && !contact.altitude().is_submerged()
@@ -559,10 +641,11 @@ impl GameClient for Mk48Game {
                         {
                             continue;
                         }
+                        let armament_type = armament.entity_type;
                         sortable_sprites.push(SortableSprite::new_child_entity(
                             entity_id,
-                            parent_type,
-                            armament.entity_type,
+                            entity_type,
+                            armament_type,
                             *contact.transform() + data.armament_transform(contact.turrets(), i),
                             altitude + 0.02,
                             alpha
@@ -579,7 +662,7 @@ impl GameClient for Mk48Game {
                         let pos = turret.position();
                         sortable_sprites.push(SortableSprite::new_child_entity(
                             entity_id,
-                            parent_type,
+                            entity_type,
                             turret_type,
                             *contact.transform()
                                 + Transform {
@@ -645,21 +728,27 @@ impl GameClient for Mk48Game {
                                 },
                             );
                             // 4. Target speed
-                            layer.graphics.add_circle(
-                                contact.transform().position,
-                                map_ranges(
-                                    contact.guidance().velocity_target.abs().to_mps(),
-                                    0.0..data.speed.to_mps(),
-                                    data.radii(),
-                                    true,
-                                ),
-                                hud_thickness,
-                                if contact.guidance().velocity_target < Velocity::ZERO {
-                                    reverse_color
-                                } else {
-                                    hud_color
-                                },
-                            );
+                            {
+                                let velocity_target = contact
+                                    .guidance()
+                                    .velocity_target
+                                    .max(data.speed * Velocity::MAX_REVERSE_SCALE);
+                                layer.graphics.add_circle(
+                                    contact.transform().position,
+                                    map_ranges(
+                                        velocity_target.abs().to_mps(),
+                                        0.0..data.speed.to_mps(),
+                                        data.radii(),
+                                        true,
+                                    ),
+                                    hud_thickness,
+                                    if velocity_target < Velocity::ZERO {
+                                        reverse_color
+                                    } else {
+                                        hud_color
+                                    },
+                                );
+                            }
 
                             // Target bearing line.
                             {
@@ -680,46 +769,88 @@ impl GameClient for Mk48Game {
                                 }
 
                                 let dir_mat = Mat2::from_angle(direction.to_radians());
+                                let radii = data.radii();
+                                // Don't overlap inner/outer hud circles.
+                                let start = radii.start + hud_thickness * 0.5;
+                                let end = radii.end - hud_thickness * 0.5;
+
                                 layer.graphics.add_line(
-                                    contact.transform().position
-                                        + dir_mat * Vec2::new(data.radii().start, 0.0),
-                                    contact.transform().position
-                                        + dir_mat * Vec2::new(data.radii().end, 0.0),
+                                    contact.transform().position + dir_mat * Vec2::new(start, 0.0),
+                                    contact.transform().position + dir_mat * Vec2::new(end, 0.0),
                                     hud_thickness,
                                     color,
                                 );
                             }
 
+                            // Reverse azimuths.
+                            if self.has_reverse(contact) {
+                                let mut range = data.radii();
+                                // Don't overlap inner hud circle.
+                                range.start += hud_thickness * 0.5;
+                                range.end = lerp(range.start, range.end, 0.1);
+
+                                let position = contact.transform().position;
+                                let direction = contact.transform().direction.to_radians() - PI;
+                                let mut color = hud_color;
+
+                                if self.holding || !self.can_reverse(contact) {
+                                    if self.reversing {
+                                        color = reverse_color
+                                    } else {
+                                        color.w *= 0.5;
+                                    }
+                                }
+                                let end_color = color.xyz().extend(0.0);
+
+                                for m in [-0.5, 0.5] {
+                                    let direction = direction + REVERSE_ANGLE * m;
+                                    let dir_mat = Mat2::from_angle(direction);
+
+                                    layer.graphics.add_line_gradient(
+                                        position + dir_mat * Vec2::new(range.start, 0.0),
+                                        position + dir_mat * Vec2::new(range.end, 0.0),
+                                        hud_thickness,
+                                        color,
+                                        end_color,
+                                    );
+                                }
+                            }
+
                             // Turret azimuths.
                             // Pre-borrow to not borrow all of context (will be fixed eventually).
                             let ui_armament = context.ui.armament;
-                            if let Some(i) = context.mouse.world_position.and_then(|mouse_pos| {
-                                self.find_best_armament(contact, false, mouse_pos, ui_armament)
-                            }) {
+                            if let Some((i, mouse_pos)) =
+                                context.mouse.world_position.and_then(|mouse_pos| {
+                                    self.find_best_armament(contact, false, mouse_pos, ui_armament)
+                                        .zip(Some(mouse_pos))
+                                })
+                            {
                                 let armament = &data.armaments[i];
                                 if armament.entity_type != EntityType::Depositor {
+                                    let transform = *contact.transform();
+                                    let direction = contact.transform().direction;
+                                    let color = hud_color;
+
                                     if let Some(turret_index) = armament.turret {
                                         let turret = &data.turrets[turret_index];
                                         let turret_radius = turret
                                             .entity_type
                                             .map(|e| e.data().radius)
                                             .unwrap_or(0.0);
-                                        let contact_direction = contact.transform().direction;
-                                        let transform = *contact.transform()
-                                            + Transform::from_position(turret.position());
+                                        let transform =
+                                            transform + Transform::from_position(turret.position());
 
                                         let inner: f32 = 0.2 * data.width;
                                         let outer: f32 = 0.325 * data.width;
                                         let arc_thickness: f32 = outer - inner;
                                         let middle: f32 = inner + arc_thickness * 0.5;
-                                        let color = hud_color;
 
                                         // Aim line is only helpful on small turrets.
                                         if turret_radius < inner {
-                                            let angle = (contact_direction
+                                            let turret_direction = (direction
                                                 + contact.turrets()[turret_index])
                                                 .to_radians();
-                                            let dir_mat = Mat2::from_angle(angle);
+                                            let dir_mat = Mat2::from_angle(turret_direction);
                                             let line_thickness = hud_thickness * 2.0;
 
                                             layer.graphics.add_line(
@@ -732,19 +863,19 @@ impl GameClient for Mk48Game {
                                             );
                                         }
 
-                                        let left_back = (contact_direction + turret.angle
+                                        let left_back = (direction + turret.angle
                                             - turret.azimuth_bl
                                             + Angle::PI)
                                             .to_radians();
                                         let left_front =
-                                            (contact_direction + turret.angle + turret.azimuth_fl)
+                                            (direction + turret.angle + turret.azimuth_fl)
                                                 .to_radians();
-                                        let right_back = (contact_direction
+                                        let right_back = (direction
                                             + turret.angle
                                             + turret.azimuth_br
                                             + Angle::PI)
                                             .to_radians();
-                                        let right_front = (contact_direction + turret.angle
+                                        let right_front = (direction + turret.angle
                                             - turret.azimuth_fr)
                                             .to_radians();
 
@@ -768,9 +899,74 @@ impl GameClient for Mk48Game {
                                                 left_front..if left_back > left_front {
                                                     left_back
                                                 } else {
-                                                    left_back + 2.0 * std::f32::consts::PI
+                                                    left_back + 2.0 * PI
                                                 },
                                                 arc_thickness,
+                                                color,
+                                            );
+                                        }
+                                    } else {
+                                        let armament_data = armament.entity_type.data();
+
+                                        let transform = transform
+                                            + Transform::from_position(armament.position());
+                                        let color = hud_color.xyz().extend(0.45);
+
+                                        let is_vertical = armament.vertical;
+                                        let is_stationary = matches!(
+                                            armament_data.sub_kind,
+                                            EntitySubKind::DepthCharge | EntitySubKind::Mine
+                                        );
+
+                                        if !is_stationary {
+                                            let direction = if is_vertical
+                                                || armament_data.sub_kind == EntitySubKind::Heli
+                                            {
+                                                (mouse_pos - transform.position).into()
+                                            } else {
+                                                direction + armament.angle
+                                            };
+
+                                            let angle_radians = direction.to_radians();
+                                            let dir_mat = Mat2::from_angle(angle_radians);
+
+                                            let scale = data.width * 0.15;
+                                            let start: f32 = (0.65 * armament_data.length)
+                                                .max(data.width * 0.2)
+                                                + scale * 0.5;
+                                            let center = transform.position
+                                                + dir_mat * Vec2::new(start, 0.0);
+
+                                            // Widen triangle for aircraft.
+                                            let scale_x =
+                                                if armament_data.kind == EntityKind::Aircraft {
+                                                    scale
+                                                } else {
+                                                    scale * (2.0 / 3.0)
+                                                };
+                                            let scale = Vec2::new(scale_x, scale);
+
+                                            layer.graphics.add_triangle(
+                                                center,
+                                                scale,
+                                                angle_radians - PI * 0.5,
+                                                color,
+                                            );
+                                        } else {
+                                            let inner: f32 = 0.11 * data.width;
+                                            layer.graphics.add_circle(
+                                                transform.position,
+                                                inner,
+                                                inner * 0.55,
+                                                color,
+                                            )
+                                        }
+
+                                        if is_vertical {
+                                            let inner: f32 = 0.055 * data.width;
+                                            layer.graphics.add_filled_circle(
+                                                transform.position,
+                                                inner,
                                                 color,
                                             );
                                         }
@@ -781,28 +977,33 @@ impl GameClient for Mk48Game {
 
                         // Health bar
                         if contact.damage() > Ticks::ZERO {
-                            let health_bar_width = 0.12 * zoom;
-                            let health_bar_height = 0.0075 * zoom;
+                            let length = 0.12 * zoom;
                             let health =
                                 1.0 - contact.damage().to_secs() / data.max_health().to_secs();
-                            let health_back_position = contact.transform().position
+                            let center = contact.transform().position
                                 + Vec2::new(0.0, overlay_vertical_position);
-                            let health_bar_position = health_back_position
-                                + Vec2::new(
-                                    -health_bar_width * 0.5 + health * health_bar_width * 0.5,
-                                    0.0,
-                                );
-                            layer.graphics.add_rectangle(
-                                health_back_position,
-                                Vec2::new(health_bar_width, health_bar_height),
-                                0.0,
-                                rgba(85, 85, 85, 127),
+                            let offset_x = |v, x| v + Vec2::new(x, 0.0);
+
+                            let bg_color = rgba(85, 85, 85, 127);
+                            let health_color = color.extend(1.0);
+                            let thickness = 0.0075 * zoom;
+
+                            // Background of health bar.
+                            layer.graphics.add_rounded_line(
+                                offset_x(center, length * -0.5),
+                                offset_x(center, length * 0.5),
+                                thickness,
+                                bg_color,
+                                true,
                             );
-                            layer.graphics.add_rectangle(
-                                health_bar_position,
-                                Vec2::new(health * health_bar_width, health_bar_height),
-                                0.0,
-                                color.extend(1.0),
+
+                            // Health indicator.
+                            layer.graphics.add_rounded_line(
+                                offset_x(center, length * -0.5),
+                                offset_x(center, length * (health - 0.5)),
+                                thickness,
+                                health_color,
+                                true,
                             );
                         }
 
@@ -852,9 +1053,20 @@ impl GameClient for Mk48Game {
                 let tangent_vector = direction_vector.perp();
                 let speed = contact.transform().velocity.to_mps();
 
-                // Amount of particles per frame (scales with FPS).
-                let amount =
-                    (((data.width * 0.1 + speed * 0.007) * particle_multiplier) as usize).max(1);
+                // Integer amount of particles from fractional per_second
+                let amount = {
+                    let per_second = data.width * 6.0 + speed * 2.0;
+                    let t = context.client.update_seconds;
+                    let time_delta = elapsed_seconds;
+
+                    // Essentially a random number based on time.
+                    const SUB_STEPS: f32 = 1000.0 * PI;
+                    let f = (t as f64 * SUB_STEPS as f64).fract() as f32;
+
+                    // Clamp to 100 just in case floats aren't being very nice.
+                    // Yamato makes ~30 particles per frame (60 fps) so it's plenty.
+                    ((time_delta * per_second + f).floor() as usize).min(100)
+                };
 
                 // Wake/thrust particles and shell trails.
                 if contact.transform().velocity != Velocity::ZERO
@@ -870,15 +1082,21 @@ impl GameClient for Mk48Game {
                             data.width * 2.0,
                         );
                     } else {
-                        let layer = if contact.altitude().is_airborne() {
+                        let is_airborne = contact.altitude().is_airborne();
+                        let layer = if is_airborne {
                             &mut layer.airborne_particles
                         } else {
                             &mut layer.sea_level_particles
                         };
 
                         let spread = match (data.kind, data.sub_kind) {
-                            (EntityKind::Weapon, EntitySubKind::Torpedo) => 0.16,
-                            _ => 0.1,
+                            _ if !is_airborne => 0.16,
+                            (EntityKind::Aircraft, _) => 0.08,
+                            (
+                                EntityKind::Weapon,
+                                EntitySubKind::Rocket | EntitySubKind::RocketTorpedo,
+                            ) => 0.08,
+                            _ => 0.04,
                         };
 
                         let start = contact.transform().position;
@@ -1003,6 +1221,7 @@ impl GameClient for Mk48Game {
                             player_contact.guidance().velocity_target
                         },
                     });
+                    self.first_control = false; // First control was joystick.
                 }
 
                 if context.mouse.is_down(MouseButton::Right)
@@ -1017,14 +1236,15 @@ impl GameClient for Mk48Game {
 
                     // Only do when start holding.
                     if !self.holding {
-                        // Don't reverse early on, when the player doesn't have a great idea of their
-                        // orientation.
-                        if player_contact.entity_type().unwrap().data().level > 1 {
-                            // Back 60 degrees turns on reverse.
+                        if self.can_reverse(player_contact) {
+                            // Starting movement behind ship turns on reverse.
                             let delta = direction_target - current_dir;
-                            self.reversing =
-                                delta != delta.clamp_magnitude(Angle::from_degrees(300.0 / 2.0));
+                            self.reversing = delta
+                                != delta.clamp_magnitude(Angle::from_radians(
+                                    (PI * 2.0 - REVERSE_ANGLE) / 2.0,
+                                ));
                         }
+                        self.first_control = false; // First control was mouse.
                         self.holding = true;
                     }
 
@@ -1092,10 +1312,10 @@ impl GameClient for Mk48Game {
 
                 let current_control = Control {
                     guidance: Some(*player_contact.guidance()), // TODO don't send if hasn't changed.
-                    altitude_target: if player_contact.data().sub_kind == EntitySubKind::Submarine {
-                        Some(context.ui.altitude_target)
+                    submerge: if player_contact.data().sub_kind == EntitySubKind::Submarine {
+                        context.ui.altitude_target != Altitude::ZERO
                     } else {
-                        None
+                        false
                     },
                     aim_target,
                     active: context.ui.active,
@@ -1145,7 +1365,7 @@ impl GameClient for Mk48Game {
             }
 
             // Playing, so reset respawn override for next time.
-            self.respawn_overriden = false;
+            self.respawn_overridden = false;
 
             status
         } else {
@@ -1156,7 +1376,7 @@ impl GameClient for Mk48Game {
                 .game
                 .death_reason
                 .as_ref()
-                .filter(|_| !self.respawn_overriden)
+                .filter(|_| !self.respawn_overridden)
                 .and_then(|reason| DeathReasonModel::from_death_reason(reason).ok())
             {
                 UiStatus::Respawning {
@@ -1221,7 +1441,7 @@ impl GameClient for Mk48Game {
                 }
             }
             UiEvent::OverrideRespawn => {
-                self.respawn_overriden = true;
+                self.respawn_overridden = true;
             }
             _ => {}
         }

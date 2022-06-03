@@ -31,6 +31,6 @@ futures = "0.3"
 tokio = {version = "1", features=["macros", "time"]}
 woothee = "0.13"
 rand = "0.8"
-sysinfo = "0.21"
+simple_server_status = "0.2.0"
 variant_count = "1.1"
 derive_more = "0.99"

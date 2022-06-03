@@ -1,7 +1,7 @@
 use crate::game::wind;
 use client_util::renderer::graphic::GraphicLayer;
 use common::entity::EntityId;
-use common::util::map_ranges;
+use common_util::range::map_ranges;
 use common_util::ticks::Ticks;
 use glam::{Vec2, Vec3, Vec4};
 use itertools::Itertools;

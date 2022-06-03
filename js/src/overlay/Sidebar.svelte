@@ -17,7 +17,6 @@
 	import {cinematic, volume} from '../util/settings.js';
 	import {push} from 'svelte-spa-router'
 
-
 	export let onZoom;
 	export let onCopyInvitationLink;
 </script>

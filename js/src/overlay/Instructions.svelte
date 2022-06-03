@@ -13,7 +13,7 @@
 </script>
 
 {#if instructBasics}
-	<div in:fly="{{y: -100}}" out:fade>
+	<div id="instructions" in:fly="{{y: -100}}" out:fade>
 		{#if touch}
 			<h2>{$t('panel.instruction.touch.movement')}</h2>
 			{#if instructZoom}
@@ -30,6 +30,12 @@
 
 <style>
 	div {
+		left: 50%;
+		max-width: 45%;
+		min-width: 15%;
+		padding-top: 1rem;
+		position: absolute;
+		transform: translate(-50%, 0);
 		pointer-events: none;
 		text-align: center;
 		user-select: none;

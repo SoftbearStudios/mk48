@@ -14,6 +14,39 @@
 
 	<h2>2021</h2>
 
+	<h3>6/2/2022</h3>
+
+	<ul>
+		<li>Add "Iowa" battleship.</li>
+		<li>Add Tropics biome.</li>
+		<li>Icebreaker can destroy snow as well as ice.</li>
+		<li>Land repels boats instead of just damaging them.</li>
+		<li>Make reversing easier and more visual.</li>
+		<li>Homing torpedoes can make a U-turn.</li>
+		<li>Add invite, Discord, and GitHub links to splash screen.</li>
+		<li>Reduce sensor range of weapons like missiles and torpedoes.</li>
+		<li>Fix spawning bias towards border of Arctic biome.</li>
+		<li>Make submerging more visually obvious and delay it to avoid abuse.</li>
+		<li>Fix unwanted right-click menus.</li>
+		<li>Reduce the number of SAMs on "Kolkata" and "Type 055".</li>
+		<li>Add aim indicators for non-turreted weapons.</li>
+		<li>Pointy-looking ships do more ramming damage.</li>
+		<li>Torpedoes out-smart players who try to out-turn them.</li>
+		<li>Avoid playing loud sounds when tab is re-opened.</li>
+		<li>Improve rocket-torpedo sensing of enemies.</li>
+		<li>Mines can now hit submerged subs.</li>
+		<li>Oil rigs de-spawn if unused for 15 minutes.</li>
+		<li>Surface ships can no longer fire weapons while submerged.</li>
+		<li>Fix compatibility issue with lacking Uint64Array support.</li>
+		<li>Underwater surface ships can't handle the pressure...</li>
+		<li>Make zooming in and out more proportional.</li>
+		<li>Improve wake and smoke trails.</li>
+		<li>Make health-bar rounded.</li>
+		<li>Prevent closing weapons panel.</li>
+		<li>Fix some "Dredger" issues.</li>
+		<li>Make it much less likely to spawn near weapons.</li>
+	</ul>
+
 	<h3>4/10/2022</h3>
 
 	<ul>

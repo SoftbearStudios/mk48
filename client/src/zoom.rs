@@ -6,7 +6,10 @@ use common::contact::{Contact, ContactTrait};
 use glam::Vec2;
 
 impl Mk48Game {
-    pub const DEFAULT_ZOOM_INPUT: f32 = 0.6;
+    const MIN_ZOOM: f32 = 0.216; // 0.6×sqrt(1÷.6)^−4 aka 4 full steps to min zoom
+    const MAX_ZOOM: f32 = 1.0; // has to be 1.0 for full view
+    pub const DEFAULT_ZOOM_INPUT: f32 = 0.6; // not changed
+    const ZOOM_SPEED: f32 = 1.290994449; // sqrt(1÷.6) aka 2 full steps to max zoom
     pub const MENU_VISUAL_RANGE: f32 = 300.0;
 
     /// Gets the proper camera to display the game.
@@ -50,7 +53,7 @@ impl Mk48Game {
             saved_camera.1
         } else {
             Self::MENU_VISUAL_RANGE
-        } * self.zoom_input;
+        } * self.truncated_zoom_input();
 
         if snap {
             self.interpolated_zoom = zoom;
@@ -60,7 +63,15 @@ impl Mk48Game {
         }
     }
 
-    pub(crate) fn zoom(&mut self, delta: &f32) {
-        self.zoom_input = (self.zoom_input + delta * 0.14).clamp(1.0 / 6.0, 1.0);
+    pub(crate) fn zoom(&mut self, delta: f32) {
+        // Use multiplicative zoom instead of additive for more fluid feeling.
+        let next_zoom_input = self.zoom_input * Self::ZOOM_SPEED.powf(delta);
+        self.zoom_input = next_zoom_input.clamp(Self::MIN_ZOOM, Self::MAX_ZOOM);
+    }
+
+    // Get exact zoom if you don't use pinch to zoom.
+    fn truncated_zoom_input(&self) -> f32 {
+        const P: f64 = 65536.0;
+        ((self.zoom_input as f64 * P).floor() * (1.0 / P)) as f32
     }
 }

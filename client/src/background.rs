@@ -102,18 +102,21 @@ impl Mk48BackgroundContext {
         }
     }
 
+    // Update the background with terrain.
+    // TODO don't rely on mutating terrain to get updates (compare with last known state).
     pub fn update(
         &mut self,
         camera: Vec2,
         zoom: f32,
         terrain: &mut Terrain,
+        terrain_reset: bool,
         renderer: &Renderer,
     ) -> impl Iterator<Item = SortableSprite> + '_ {
         let view = TerrainView::new(camera, renderer.aspect_ratio(), zoom);
         let view_changed = view != self.last_view;
 
         // TODO Only if update happened in our current view.
-        let terrain_changed = !terrain.updated.is_empty();
+        let terrain_changed = !terrain.updated.is_empty() || terrain_reset;
 
         // If terrain changed or view changed the bytes can change.
         if terrain_changed || view_changed {
@@ -139,31 +142,36 @@ impl Mk48BackgroundContext {
                 .extend(generate_vegetation(&self.last_terrain, view))
         }
 
-        // Only invalidate if terrain changed in the intersection of our current and last views.
+        // Only create invalidations if frame cache is enabled and they'll be used.
         if self.frame_cache_enabled() {
-            let updated = terrain.updated.clone();
-            if !updated.is_empty() {
-                // Only invalidate the rects where pixels could have possibly changed.
-                let rects = updated
-                    .into_iter()
-                    .flat_map(|chunk_id| {
-                        let coord = chunk_id.as_coord();
-                        terrain
-                            .get_chunk(chunk_id)
-                            .updated_rects()
-                            .map(move |(start, end)| {
-                                let end = end + RelativeCoord(1, 1);
-                                let offset = -terrain::SCALE * 1.0;
+            // Invalidate frame cache when terrain is reset (aka switch servers).
+            if terrain_reset {
+                self.invalidation = Some(Invalidation::All);
+            } else {
+                let updated = terrain.updated.clone();
+                if !updated.is_empty() {
+                    // Only invalidate the rects where pixels could have possibly changed.
+                    let rects = updated
+                        .into_iter()
+                        .flat_map(|chunk_id| {
+                            let coord = chunk_id.as_coord();
+                            terrain
+                                .get_chunk(chunk_id)
+                                .updated_rects()
+                                .map(move |(start, end)| {
+                                    let end = end + RelativeCoord(1, 1);
+                                    let offset = -terrain::SCALE * 1.0;
 
-                                let s = (coord + start).corner() + offset;
-                                let e = (coord + end).corner() + offset;
+                                    let s = (coord + start).corner() + offset;
+                                    let e = (coord + end).corner() + offset;
 
-                                (s, e)
-                            })
-                    })
-                    .collect();
+                                    (s, e)
+                                })
+                        })
+                        .collect();
 
-                self.invalidation = Some(Invalidation::Rects(rects))
+                    self.invalidation = Some(Invalidation::Rects(rects));
+                }
             }
         }
 

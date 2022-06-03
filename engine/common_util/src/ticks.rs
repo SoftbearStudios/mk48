@@ -9,7 +9,7 @@ use std::time::Duration;
 
 pub type TicksRepr = u16;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Ticks(pub TicksRepr);
 
 /// Ticks efficiently stores an unsigned duration.

@@ -1,42 +1,48 @@
-use log::warn;
-use std::process::Command;
+use common_util::ticks::Ticks;
+use core_protocol::metrics::ContinuousExtremaMetric;
+use log::error;
+use simple_server_status::SimpleServerStatus;
+use std::mem;
 use std::time::{Duration, Instant};
-use sysinfo::{get_current_pid, ProcessorExt, RefreshKind, System, SystemExt};
 
 /// Keeps track of the "health" of the server.
 pub struct Health {
-    system: System,
+    system: SimpleServerStatus,
     last: Instant,
     /// Cached CPU fraction.
     cpu: f32,
+    cpu_steal: f32,
     /// Cached RAM fraction.
     ram: f32,
-    /// Cached connections count.
-    connections: usize,
+    swap: f32,
     /// Cached healthy status.
     healthy: bool,
-    /// Updates in current period.
-    updates: usize,
-    /// Start of UPS measurement.
-    ups_start: Instant,
-    /// Average UPS in previous period.
-    ups_previous: Option<f32>,
+    /// Last tick instant.
+    last_tick: Option<Instant>,
+    /// Seconds per tick.
+    spt: ContinuousExtremaMetric,
+    /// Ticks per second.
+    tps: ContinuousExtremaMetric,
+    /// Ticks in current TPS measurement period.
+    ticks: usize,
+    /// Start of TPS measurement.
+    tps_start: Instant,
 }
 
 impl Health {
     /// How long to cache data for (getting data is relatively expensive).
     const CACHE: Duration = Duration::from_secs(30);
 
-    /// Minimum time to sample UPS over.
-    const UPS_MINIMUM: Duration = Duration::from_secs(10);
-
-    /// Maximum time to sample UPS over.
-    const UPS_MAXIMUM: Duration = Duration::from_secs(6 * 3600);
-
     /// Get (possibly cached) cpu usage from 0 to 1.
     pub fn cpu(&mut self) -> f32 {
         self.refresh_if_necessary();
         self.cpu
+    }
+
+    /// Get (possibly cached) cpu steal from 0 to 1.
+    pub fn cpu_steal(&mut self) -> f32 {
+        self.refresh_if_necessary();
+        self.cpu_steal
     }
 
     /// Get (possibly cached) ram usage from 0 to 1.
@@ -45,31 +51,58 @@ impl Health {
         self.ram
     }
 
+    /// Get (possibly cached) bytes/second received.
+    pub fn bandwidth_rx(&mut self) -> u64 {
+        self.refresh_if_necessary();
+        self.system.net_reception_bandwidth().unwrap_or(0)
+    }
+
+    /// Get (possibly cached) bytes/second transmitted.
+    pub fn bandwidth_tx(&mut self) -> u64 {
+        self.refresh_if_necessary();
+        self.system.net_transmission_bandwidth().unwrap_or(0)
+    }
+
     /// Get (possibly cached) TCP connection count.
     pub fn connections(&mut self) -> usize {
         self.refresh_if_necessary();
-        self.connections
+        self.system.tcp_connections().unwrap_or(0)
     }
 
-    /// Call to get average UPS over a large interval.
+    /// Call to get average TPS over a large interval.
     /// May be NAN early on.
-    pub fn ups(&mut self) -> Option<f32> {
-        self.record_previous_ups_if_exceeds(Self::UPS_MINIMUM);
-        self.ups_previous
+    pub fn take_tps(&mut self) -> ContinuousExtremaMetric {
+        mem::take(&mut self.tps)
+    }
+
+    /// Take seconds-per-tick measurements.
+    pub fn take_spt(&mut self) -> ContinuousExtremaMetric {
+        mem::take(&mut self.spt)
     }
 
     /// Call every update a.k.a. tick.
-    pub fn update_ups(&mut self) {
-        self.updates = self.updates.saturating_add(1);
-        self.record_previous_ups_if_exceeds(Self::UPS_MAXIMUM);
-    }
+    pub fn record_tick(&mut self) {
+        let now = Instant::now();
+        if let Some(last_tick) = self.last_tick {
+            let elapsed = now.duration_since(last_tick).as_secs_f32().clamp(0.0, 10.0);
+            self.spt.push(elapsed);
+        }
+        self.last_tick = Some(now);
 
-    fn record_previous_ups_if_exceeds(&mut self, maximum_elapsed: Duration) {
-        let elapsed = self.ups_start.elapsed();
-        if elapsed > maximum_elapsed {
-            self.ups_previous = Some(self.updates as f32 / elapsed.as_secs_f32());
-            self.updates = 0;
-            self.ups_start = Instant::now();
+        let elapsed = now.duration_since(self.tps_start);
+        if elapsed >= Duration::from_secs_f32(1.0 - Ticks::PERIOD_SECS * 0.5) {
+            if elapsed >= Duration::from_secs(1) {
+                self.ticks = self.ticks.saturating_add(1);
+                self.tps.push(self.ticks as f32);
+                self.ticks = 0;
+            } else {
+                self.tps.push(self.ticks as f32);
+                self.ticks = 1;
+            }
+
+            self.tps_start = now;
+        } else {
+            self.ticks = self.ticks.saturating_add(1);
         }
     }
 
@@ -84,61 +117,35 @@ impl Health {
             return;
         }
         self.last = Instant::now();
-
-        self.cpu = self.compute_cpu();
-        self.ram = self.compute_ram();
-        match Self::compute_connection_count() {
-            Ok(count) => self.connections = count,
-            Err(e) => warn!("could not count connections: {}", e),
+        if let Err(e) = self.system.update() {
+            error!("error updating health: {:?}", e);
         }
 
+        self.cpu = self.system.cpu_usage().unwrap_or(0.0);
+        self.cpu_steal = self.system.cpu_stolen_usage().unwrap_or(0.0);
+        self.ram = self.system.ram_usage().unwrap_or(0.0);
+        self.swap = self.system.ram_swap_usage().unwrap_or(0.0);
+
         // Note: Written with the intention that NaN's do not result in unhealthy.
-        self.healthy = !(self.cpu.max(self.ram) > 0.8);
-    }
-
-    fn compute_cpu(&mut self) -> f32 {
-        self.system.refresh_cpu();
-        self.system
-            .processors()
-            .iter()
-            .map(|processor| processor.cpu_usage())
-            .sum::<f32>()
-            * 0.01
-            / self.system.processors().len() as f32
-    }
-
-    fn compute_ram(&mut self) -> f32 {
-        self.system.refresh_memory();
-        self.system.used_memory() as f32 / self.system.total_memory() as f32
-    }
-
-    fn compute_connection_count() -> Result<usize, &'static str> {
-        let pid = get_current_pid().map_err(|_| "get pid failed")?;
-        let output = Command::new("netstat")
-            .arg("-ntp")
-            .output()
-            .map_err(|_| "netstat failed")?;
-        let output_str = std::str::from_utf8(&output.stdout).map_err(|_| "netstat invalid utf8")?;
-        let pid_string = format!("{}", pid);
-        Ok(output_str
-            .lines()
-            .filter(|&l| l.contains(&pid_string))
-            .count())
+        self.healthy = !((self.cpu + self.cpu_steal).max(self.ram) > 0.8);
     }
 }
 
 impl Default for Health {
     fn default() -> Self {
         Self {
-            system: System::new_with_specifics(RefreshKind::new().with_cpu().with_memory()),
+            system: SimpleServerStatus::new(),
             last: Instant::now() - Self::CACHE * 2,
             cpu: 0.0,
+            cpu_steal: 0.0,
             ram: 0.0,
-            connections: 0,
+            swap: 0.0,
             healthy: true,
-            updates: 0,
-            ups_start: Instant::now(),
-            ups_previous: None,
+            ticks: 0,
+            last_tick: None,
+            spt: ContinuousExtremaMetric::default(),
+            tps: ContinuousExtremaMetric::default(),
+            tps_start: Instant::now(),
         }
     }
 }

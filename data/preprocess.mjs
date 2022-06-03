@@ -80,6 +80,9 @@ for (const entityType of Object.keys(entityDatas)) {
 						//console.log(`${entityType}: ${entityData.speed} -> ${avgSpeed}`);
 						break;
 				}
+				if (entityData.subkind == 'rocketTorpedo') {
+					entityData.sensors = { sonar: {} };
+				}
 				break;
 			case 'aircraft':
 				maxRange = 5000;
@@ -106,6 +109,11 @@ for (const entityType of Object.keys(entityDatas)) {
 					break;
 				default:
 					entityData.antiAircraft = parseFloat(mapRanges(entityData.length, 30, 300, 0.1, 0.5).toFixed(3));
+			}
+
+			// Ram damage.
+			if (typeof entityData.ramDamage !== 'number') {
+				entityData.ramDamage = 1.0;
 			}
 
 			// Torpedo resistance.
@@ -357,13 +365,23 @@ for (const entityType of Object.keys(entityDatas)) {
 						factor = 3.0;
 						break;
 					case 'radar':
-						base = 1000;
-						factor = 1.5;
+						if (entityData.kind == 'boat') {
+						    base = 1000;
+                            factor = 1.5;
+						} else {
+						    base = 500;
+						    factor = 5.0;
+						}
 						break;
 					case 'sonar':
 						if (entityData.subkind === 'submarine') {
 							base = 500;
 							factor = 1.25;
+						} else if (entityData.subkind === 'rocketTorpedo') {
+							base = 125
+						} else if (entityData.kind === 'weapon') {
+							base = 250
+							factor = 5
 						} else {
 							base = 350
 							factor = 0.5

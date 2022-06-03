@@ -35,6 +35,8 @@ mod world_outbound;
 mod world_physics;
 mod world_physics_radius;
 mod world_spawn;
+#[cfg(test)]
+mod world_test;
 
 fn main() {
     // SAFETY: As per spec, only called once (before .data()) is called.

@@ -21,8 +21,8 @@ ssh:
 	ssh $(SSH_OPTS) root@mk48.io
 
 new1: target/release/server
-	scp $(SCP_OPTS) target/release/server root@173.255.228.116:/root/server1
-	ssh $(SSH_OPTS) root@173.255.228.116 'mv /root/server1 /root/server && ./restart-game-server.sh'
+	scp $(SCP_OPTS) target/release/server root@45.79.190.29:/root/server1
+	ssh $(SSH_OPTS) root@45.79.190.29 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
 new2: target/release/server
 	scp $(SCP_OPTS) target/release/server root@173.255.228.145:/root/server1

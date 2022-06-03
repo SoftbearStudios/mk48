@@ -9,7 +9,7 @@ use client_util::renderer::particle::{Particle, ParticleLayer};
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
 use common::entity::{EntityData, EntityId, EntityKind, EntitySubKind};
-use common::util::gen_radius;
+use common_util::range::gen_radius;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
@@ -40,16 +40,16 @@ impl Mk48Game {
                     continue;
                 }
 
-                if !player_contact.reloads()[i] {
-                    // Reloading; cannot fire.
-                    continue;
-                }
-
-                if !self.fire_rate_limiter.is_ready(i as u8) {
+                // Don't limit dredger fire rate so players with bad ping can build faster.
+                // TODO fix ping reducing fire rate for all weapons.
+                if !((player_contact.reloads()[i] && self.fire_rate_limiter.is_ready(i as u8))
+                    || armament_entity_data.sub_kind == EntitySubKind::Depositor)
+                {
                     // Recently fired, shouldn't try to fire again (server will just block).
                     continue;
                 }
 
+                let mut max_angle_diff = Angle::ZERO;
                 if let Some(turret_index) = armament.turret {
                     if !player_contact.data().turrets[turret_index]
                         .within_azimuth(player_contact.turrets()[turret_index])
@@ -57,6 +57,8 @@ impl Mk48Game {
                         // Out of azimuth range; cannot fire.
                         continue;
                     }
+                } else {
+                    max_angle_diff += Angle::from_degrees(30.0)
                 }
 
                 let transform = *player_contact.transform()
@@ -67,7 +69,6 @@ impl Mk48Game {
                 let armament_direction_target = Angle::from(mouse_position - transform.position);
 
                 let mut angle_diff = (armament_direction_target - transform.direction).abs();
-                let distance_squared = mouse_position.distance_squared(transform.position);
                 if armament.vertical
                     || armament_entity_data.kind == EntityKind::Aircraft
                     || armament_entity_data.sub_kind == EntitySubKind::Depositor
@@ -80,7 +81,7 @@ impl Mk48Game {
                     angle_diff = Angle::ZERO;
                 }
 
-                let max_angle_diff = match armament_entity_data.sub_kind {
+                max_angle_diff += match armament_entity_data.sub_kind {
                     EntitySubKind::Shell => Angle::from_degrees(30.0),
                     EntitySubKind::Rocket => Angle::from_degrees(45.0),
                     EntitySubKind::RocketTorpedo => Angle::from_degrees(75.0),
@@ -91,8 +92,11 @@ impl Mk48Game {
                 };
 
                 if !angle_limit || angle_diff < max_angle_diff {
-                    let score = angle_diff.to_degrees().powi(2) + distance_squared;
-                    if best_armament.map(|(_, s)| score < s).unwrap_or(true) {
+                    let distance_squared = mouse_position.distance_squared(transform.position);
+                    let score = (angle_diff.to_degrees().powi(2) + distance_squared).sqrt();
+                    // Bias towards earlier firing solutions to avoid flickering left vs. right
+                    // when steering straight.
+                    if best_armament.map(|(_, s)| score + 2.5 < s).unwrap_or(true) {
                         best_armament = Some((i, score));
                     }
                 }

@@ -4,8 +4,8 @@
 use crate::altitude::Altitude;
 use crate::protocol::TerrainUpdate;
 use crate::transform::DimensionTransform;
-use crate::util::lerp;
 use crate::world;
+use common_util::range::lerp;
 use fast_hilbert as hilbert;
 use glam::Vec2;
 use lazy_static::lazy_static;
@@ -30,6 +30,8 @@ pub const SIZE: usize = (1 << 10) * crate::world::SIZE;
 const OFFSET: isize = (SIZE / 2) as isize;
 // Position of arctic biome in terrain y coordinate.
 pub const ARCTIC: usize = ((world::ARCTIC / SCALE) as isize + OFFSET) as usize;
+// Position of tropics biome in terrain y coordinate.
+pub const TROPICS: usize = ((world::TROPICS / SCALE) as isize + OFFSET) as usize;
 
 // Size of a chunk.
 // Must be a power of 2.
@@ -302,6 +304,15 @@ impl TerrainMutation {
     }
 }
 
+pub struct TerrainCollision {
+    /// Maximum altitude that a collision occured at.
+    pub max_altitude: Altitude,
+    /// Average of all the collision samples (useful for repelling entity from land).
+    pub average_position: Vec2,
+    // First collision sample (useful for destroying land that collides with an entity).
+    pub highest_position: Vec2,
+}
+
 impl Terrain {
     /// Allocates a Terrain with a zero generator.
     pub fn new() -> Self {
@@ -475,7 +486,7 @@ impl Terrain {
         mut dim_transform: DimensionTransform,
         threshold: Altitude,
         delta_seconds: f32,
-    ) -> Option<(Vec2, Altitude)> {
+    ) -> Option<TerrainCollision> {
         let normal = dim_transform.transform.direction.to_vec();
         let tangent = Vec2::new(-normal.y, normal.x);
 
@@ -486,7 +497,11 @@ impl Terrain {
         // Not worth doing multiple terrain samples for small, slow moving entities.
         if dim_transform.dimensions.x <= SCALE * 0.2 && dim_transform.dimensions.y <= SCALE * 0.2 {
             if let Some(alt) = self.sample(dim_transform.transform.position) {
-                return (alt >= threshold).then_some((dim_transform.transform.position, alt));
+                return (alt >= threshold).then_some(TerrainCollision {
+                    average_position: dim_transform.transform.position,
+                    highest_position: dim_transform.transform.position,
+                    max_altitude: alt,
+                });
             }
         }
 
@@ -501,8 +516,12 @@ impl Terrain {
         let half_width = (dim_transform.dimensions.y / dy) as i32 / 2;
 
         // Find highest altitude point that we are colliding with.
-        let mut max = Altitude::MIN;
-        let mut max_position = Vec2::ZERO;
+        let mut max_altitude = Altitude::MIN;
+        let mut highest_position = Vec2::ZERO;
+
+        // Find center of collision.
+        let mut average_position = Vec2::ZERO;
+        let mut counter = 0u32;
 
         for l in -(half_length as i32)..=half_length as i32 {
             for w in -(half_width as i32)..=half_width as i32 {
@@ -525,21 +544,35 @@ impl Terrain {
                 let pos = dim_transform.transform.position + normal * l + tangent * w;
 
                 if let Some(alt) = self.sample(pos) {
-                    if alt >= threshold && alt >= max {
-                        max = alt;
-                        max_position = pos;
+                    if alt >= threshold {
+                        average_position += pos;
+                        counter += 1;
+                        if alt >= max_altitude {
+                            max_altitude = alt;
+                            highest_position = pos;
+                        }
                     }
                 }
             }
         }
 
-        (max > Altitude::MIN).then_some((max_position, max))
+        (max_altitude > Altitude::MIN).then(|| {
+            average_position *= 1.0 / (counter as f32);
+            TerrainCollision {
+                max_altitude,
+                average_position,
+                highest_position,
+            }
+        })
     }
 
-    /// Returns if there is any land in a square, centered at center. Useful for determining whether something can spawn.
+    /// Returns if there is any land (meeting or exceeding threshold) in a square, centered at
+    /// center. Useful for determining whether something can spawn.
     pub fn land_in_square(&self, center: Vec2, side_length: f32) -> bool {
         let lower_left = Coord::saturating_from_position(center - side_length * 0.5);
         let upper_right = Coord::saturating_from_position(center + side_length * 0.5);
+
+        //let threshold = reverse_lookup_altitude(altitude);
 
         for x in lower_left.0..upper_right.0 {
             for y in lower_left.1..upper_right.1 {
@@ -564,9 +597,6 @@ impl Terrain {
 
         let fract = pos.sub(f_pos);
 
-        // The following code effectively doubles the amount, so correct for this.
-        mutation.amount *= 0.5;
-
         // Return if actually changed underlying data.
         fn mutate(
             terrain: &mut Terrain,
@@ -590,6 +620,9 @@ impl Terrain {
         }
 
         let mut modified = false;
+
+        // The following code (factor params) effectively doubles the amount, so correct for this.
+        mutation.amount *= 0.5;
 
         modified |= mutate(self, fx, fy, 2.0 - fract.x - fract.y, &mutation);
         modified |= mutate(self, cx, fy, 1.0 + fract.x - fract.y, &mutation);

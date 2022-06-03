@@ -7,6 +7,7 @@ use crate::player::Status;
 use crate::world::World;
 use crate::world_mutation::Mutation;
 use arrayvec::ArrayVec;
+use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::*;
@@ -14,12 +15,14 @@ use common::ticks;
 use common::ticks::Ticks;
 use common::util::hash_u32_to_f32;
 use common::velocity::Velocity;
+use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
 use rand::{thread_rng, Rng};
-use rayon::prelude::*;
 use server_util::benchmark::Timer;
 use server_util::benchmark_scope;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+pub const MINE_SPEED: f32 = 8.0;
 
 impl World {
     /// minimum_scan_radius returns the radius must be scanned to properly resolve all entity vs.
@@ -89,6 +92,7 @@ impl World {
 
         self.entities
             .par_iter()
+            .into_maybe_parallel_iter()
             .for_each(|(index, entity)| {
                 let data = entity.data();
 
@@ -167,19 +171,27 @@ impl World {
                         if collectibles.len() == 1 && altitude_overlap {
                             // Collectibles gravitate towards players (except if the player created them).
                             if boats.len() == 1 && (!entity.has_same_player(other_entity) || collectibles[0].ticks > Ticks::from_secs(5.0)) {
-                                mutate(collectibles[0], Mutation::Attraction(boats[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(20.0)));
+                                mutate(collectibles[0], Mutation::Attraction(boats[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(20.0), boats[0].altitude - collectibles[0].altitude));
                             }
 
                             // Payments gravitate towards oil rigs.
                             if obstacles.len() == 1 && obstacles[0].entity_type == EntityType::OilPlatform && collectibles[0].player.is_some() {
-                                mutate(collectibles[0], Mutation::Attraction(obstacles[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(10.0)));
+                                mutate(collectibles[0], Mutation::Attraction(obstacles[0].transform.position - collectibles[0].transform.position, Velocity::from_mps(10.0), Altitude::ZERO));
                             }
                         }
 
+                        // Repair obstacles near non bots to prevent them from decaying in front of players.
+                        if boats.len() == 1 && obstacles.len() == 1 && !boats[0].borrow_player().player_id.is_bot() && obstacles[0].data().lifespan != Ticks::ZERO {
+                            // Repair them ten times as fast as they decay.
+                            mutate(obstacles[0], Mutation::Repair(delta * 10.0));
+                        }
+
                         if !friendly {
-                            // Mines also gravitate towards boats.
-                            if boats.len() == 1 && weapons.len() == 1 && altitude_overlap && weapons[0].data().sub_kind == EntitySubKind::Mine && weapons[0].is_in_proximity_to(boats[0], Entity::CLOSE_PROXIMITY) {
-                                mutate(weapons[0], Mutation::Attraction(boats[0].transform.position - weapons[0].transform.position, Velocity::from_mps(5.0)));
+                            // Mines also gravitate towards boats (even submerged subs).
+                            if boats.len() == 1 && weapons.len() == 1 && weapons[0].data().sub_kind == EntitySubKind::Mine && weapons[0].is_in_proximity_to(boats[0], Entity::CLOSE_PROXIMITY) {
+                                let weapon_position = weapons[0].transform.position;
+                                let closest_point = boats[0].closest_point_on_keel_to(weapon_position, 1.0);
+                                mutate(weapons[0], Mutation::Attraction(closest_point - weapon_position, Velocity::from_mps(MINE_SPEED), boats[0].altitude - weapons[0].altitude));
                             }
 
                             // Make sure to consider case of 2 weapons, a SAM and a missile, not
@@ -192,7 +204,12 @@ impl World {
                                 let target = if weapon == &entity { other_entity } else { entity };
                                 let target_data = target.data();
 
-                                if weapon_data.sensors.any() && !matches!(weapon_data.sub_kind, EntitySubKind::Rocket | EntitySubKind::RocketTorpedo) {
+
+                                let sub_kind = weapon_data.sub_kind;
+                                let is_rocket_torpedo = data.sub_kind == EntitySubKind::RocketTorpedo;
+                                let mut rocket_torpedo_sensed = false;
+
+                                if weapon_data.sensors.any() && sub_kind != EntitySubKind::Rocket {
                                     // Home towards target/decoy
                                     // Sensor activates after 1 second.
                                     if weapons[0].ticks > Ticks::from_secs(1.0) {
@@ -220,7 +237,7 @@ impl World {
                                             let target_position = target.closest_point_on_keel_to(seeker_position, 0.5);
                                             let diff = target_position - weapon.transform.position;
                                             let distance_squared = diff.length_squared();
-                                            let angle = Angle::from(diff);
+                                            let mut angle = Angle::from(diff);
 
                                             // Should not exceed range.
                                             let remaining_range = weapon.transform.velocity.to_mps() * weapon.data().lifespan.saturating_sub(weapon.ticks).to_secs() + 30.0;
@@ -229,33 +246,50 @@ impl World {
                                             // Cannot sense beyond this angle.
                                             let angle_diff = (angle - weapon.transform.direction).abs();
 
-                                            if distance_squared <= remaining_range.powi(2) && angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
-                                                let mut size = target_data.radius;
-                                                if target_data.kind == EntityKind::Decoy {
-                                                    // Decoys appear very large to weapons.
-                                                    size += 200.0;
-                                                } else if target_data.kind == EntityKind::Boat && target_data.sensors.any() && target.extension().is_active() {
-                                                    // So do boats with active sensors.
-                                                    size += 75.0;
+                                            if (is_rocket_torpedo || distance_squared <= remaining_range.powi(2)) && angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
+                                                if is_rocket_torpedo {
+                                                    rocket_torpedo_sensed = true;
+                                                } else {
+                                                    let mut size = target_data.radius;
+                                                    if target_data.kind == EntityKind::Decoy {
+                                                        // Decoys appear very large to weapons.
+                                                        size += 200.0;
+                                                    } else if target_data.kind == EntityKind::Boat && target_data.sensors.any() && target.extension().is_active() {
+                                                        // So do boats with active sensors.
+                                                        size += 75.0;
+                                                    }
+
+                                                    // Switch target from keel to center of boat if it's rotating away.
+                                                    let center_diff = weapon.transform.position - target.transform.position;
+                                                    let dir = 1f32.copysign(center_diff.dot(target.transform.direction.to_vec()));
+                                                    let target_delta_angle = target.guidance.direction_target - target.transform.direction;
+                                                    if dir * target_delta_angle.to_degrees() > 5.0 {
+                                                        let diff = target.transform.position - weapon.transform.position;
+                                                        let a = Angle::from(diff);
+                                                        // Don't flip when above and passed center.
+                                                        if (a - weapon.transform.direction).abs() < Angle::from_degrees(90.0) {
+                                                            angle = a;
+                                                        }
+                                                    }
+
+                                                    // Altitude diff.
+                                                    let altitude_diff = weapon.altitude.difference(target.altitude).to_norm();
+
+                                                    let randomness = hash_u32_to_f32(target.id.get() ^ weapon.id.get());
+                                                    let strength = size / EntityData::MAX_RADIUS
+                                                        - distance_squared / radius.powi(2)
+                                                        - angle_diff.to_radians() / Angle::MAX.to_radians()
+                                                        - altitude_diff
+                                                        + (1.0 / 3.0) * randomness;
+                                                    mutate(weapon, Mutation::Guidance {direction_target: angle, altitude_target: target.altitude, signal_strength: strength});
                                                 }
-
-                                                // Altitude diff.
-                                                let altitude_diff = weapon.altitude.difference(target.altitude).to_norm();
-
-                                                let randomness = hash_u32_to_f32(target.id.get() ^ weapon.id.get());
-                                                let strength = size / EntityData::MAX_RADIUS
-                                                    - distance_squared / radius.powi(2)
-                                                    - angle_diff.to_radians() / Angle::MAX.to_radians()
-                                                    - altitude_diff
-                                                    + (1.0 / 3.0) * randomness;
-                                                mutate(weapon, Mutation::Guidance {direction_target: angle, altitude_target: target.altitude, signal_strength: strength});
                                             }
                                         }
                                     }
                                 }
 
                                 // Aircraft/ASROC (simulate weapons and anti-aircraft).
-                                let fireall_sub_kind = if weapon_data.sub_kind == EntitySubKind::RocketTorpedo && !weapon_data.armaments.is_empty() && target_data.kind == EntityKind::Boat {
+                                let fire_all_sub_kind = if weapon_data.sub_kind == EntitySubKind::RocketTorpedo && !weapon_data.armaments.is_empty() && target_data.kind == EntityKind::Boat {
                                     Some(weapon_data.armaments[0].entity_type.data().sub_kind)
                                 } else if weapon_data.kind == EntityKind::Aircraft {
                                     match target_data.kind {
@@ -280,7 +314,7 @@ impl World {
                                     None
                                 };
 
-                                if let Some(sub_kind) = fireall_sub_kind {
+                                if let Some(sub_kind) = fire_all_sub_kind {
                                     // If more than one weapon is being fired, then it takes proportionally longer to reload.
                                     let amount = weapon_data.armaments.iter().filter(|a| a.entity_type.data().sub_kind == sub_kind).count();
 
@@ -294,7 +328,8 @@ impl World {
                                     };
 
                                     // Uses aircraft lifespan as weapon consumption.
-                                    if (weapon.ticks > Ticks::from_secs(3.0 * amount as f32) || weapon_data.sub_kind == EntitySubKind::RocketTorpedo) && weapon.collides_with(target, drop_time + weapon.hash() * 0.25) {
+                                    // Don't use future collision based firing for rocket torpedoes.
+                                    if rocket_torpedo_sensed || (!is_rocket_torpedo && weapon.ticks > Ticks::from_secs(3.0 * amount as f32) && weapon.collides_with(target, drop_time + weapon.hash() * 0.25)) {
                                         mutate(weapon, Mutation::FireAll(sub_kind));
 
                                         if weapon_data.sub_kind == EntitySubKind::RocketTorpedo {
@@ -411,35 +446,42 @@ impl World {
                             let mut damage = base_damage;
 
                             if base_damage > Ticks::ZERO {
-                                const RAM_DAMAGE_MULTIPLIER: f32 = 3.0;
-
                                 // Colliding with center of boat is more deadly
                                 let front_pos = other_boat.transform.position + other_boat.transform.direction.to_vec() * (other_data.length * 0.5);
                                 let front_d2 = front_pos.distance_squared(boat.transform.position);
                                 damage *= collision_multiplier(front_d2, data.radius.powi(2), data.sub_kind == EntitySubKind::Submarine);
                                 damage *= boat.extension().spawn_protection();
 
+                                // Boats that do more ram damage take less recoil.
+                                if data.ram_damage != 1.0 {
+                                    relative_mass /= data.ram_damage;
+                                }
+
                                 match data.sub_kind {
                                     EntitySubKind::Ram => {
                                         mutate(boat, Mutation::ClearSpawnProtection);
-                                        // Reduce recoil.
-                                        relative_mass *= 0.5;
+                                        // Rams take less recoil.
+                                        relative_mass *= 0.1;
                                         // Rams take less damage from ramming.
-                                        damage *= 1.0 / RAM_DAMAGE_MULTIPLIER
+                                        damage *= 1.0 / data.ram_damage;
                                     }
                                     EntitySubKind::Submarine => {
                                         // Subs take more damage from ramming because they are fRaGiLe.
                                         damage *= 1.5
                                     }
-                                    _ => ()
+                                    _ => {
+                                        // Rising boats take lots more damage because they weren't
+                                        // designed for high pressure (upgrading to ram sub is op).
+                                        if boat.altitude.is_submerged() {
+                                            damage *= 10.0
+                                        }
+                                    }
                                 }
 
-                                if other_data.sub_kind == EntitySubKind::Ram {
-                                    // Un-reduce recoil.
-                                    relative_mass *= 2.0;
-                                    // Rams deal more damage while ramming.
-                                    damage *= RAM_DAMAGE_MULTIPLIER
-                                }
+                                damage *= other_data.ram_damage;
+                            } else {
+                                // Friendly targets are repelled quicker.
+                                relative_mass *= 3.0;
                             }
 
                             let closest_point_on_other_keel = other_boat.closest_point_on_keel_to(boat.transform.position, 1.0);
@@ -448,9 +490,9 @@ impl World {
                             let pos_diff_closest_point_on_other_keel = (boat.transform.position - closest_point_on_other_keel).normalize_or_zero();
 
                             // Velocity change to cause repulsion.
-                            let impulse = Velocity::from_mps(6.0 * pos_diff_closest_point_on_other_keel.dot(boat.transform.direction.to_vec()) * relative_mass);
+                            let impulse = Velocity::from_mps(2.0 * pos_diff_closest_point_on_other_keel.dot(boat.transform.direction.to_vec()) * relative_mass);
 
-                            mutate(boat, Mutation::CollidedWithBoat{other_player: Arc::clone(other_boat.player.as_ref().unwrap()), damage, ram: other_data.sub_kind == EntitySubKind::Ram, impulse});
+                            mutate(boat, Mutation::CollidedWithBoat{other_player: Arc::clone(other_boat.player.as_ref().unwrap()), damage, ram: other_data.ram_damage > 1.0, impulse});
                         }
                     } else if boats.len() == 1 && weapons.len() == 1 && !friendly {
                         let boat_data = boats[0].data();
@@ -479,15 +521,11 @@ impl World {
                         potential_limited_reload(weapons[0], false);
                         debug_remove!(weapons[0], "hit");
                     } else if boats.len() == 1 && obstacles.len() == 1 {
-                        if matches!(obstacles[0].data().sub_kind, EntitySubKind::Tree) {
-                            debug_remove!(obstacles[0], "crushed");
-                        } else {
-                            let pos_diff = (boats[0].transform.position - obstacles[0].transform.position).normalize_or_zero();
+                        let pos_diff = (boats[0].transform.position - obstacles[0].transform.position).normalize_or_zero();
 
-                            let impulse = Velocity::from_mps(6.0 * pos_diff.dot(boats[0].transform.direction.to_vec())).clamp_magnitude(Velocity::from_mps(30.0));
+                        let impulse = Velocity::from_mps(6.0 * pos_diff.dot(boats[0].transform.direction.to_vec())).clamp_magnitude(Velocity::from_mps(30.0));
 
-                            mutate(boats[0], Mutation::CollidedWithObstacle{impulse, entity_type: obstacles[0].entity_type});
-                        }
+                        mutate(boats[0], Mutation::CollidedWithObstacle{impulse, entity_type: obstacles[0].entity_type});
                     } else if collectibles.len() == 1
                         && obstacles.len() == 1
                     {
@@ -533,7 +571,7 @@ impl World {
         let mut mutations = mutations.into_inner().unwrap();
 
         // Sort by reverse EntityIndex while prioritizing Mutation ordering.
-        mutations.par_sort_unstable_by(|a, b| {
+        mutations.maybe_par_sort_unstable_by(|a, b| {
             b.0.cmp(&a.0).then_with(|| {
                 b.1.absolute_priority().cmp(&a.1.absolute_priority()).then(
                     b.1.relative_priority()
@@ -570,4 +608,29 @@ fn collision_multiplier(d2: f32, r2: f32, is_sub: bool) -> f32 {
         true => 0.8,
     };
     ((r2 - d2) / r2 * (1.0 - min) + min).clamp(min, 1.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::Entity;
+    use crate::world::World;
+    use common::entity::EntityType;
+    use common::ticks::Ticks;
+
+    #[test]
+    fn test_minimum_scan_radius() {
+        unsafe { EntityType::init() }
+
+        let mut minimum_scan_radii: Vec<_> = EntityType::iter()
+            .map(|entity_type| {
+                let entity = Entity::new(entity_type, None);
+                let r = World::minimum_scan_radius(&entity, Ticks::ONE.to_secs());
+
+                (entity_type, r)
+            })
+            .collect();
+        minimum_scan_radii.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
+        println!("{:?}", minimum_scan_radii);
+    }
 }

@@ -361,6 +361,9 @@ impl<'a> ContactSerializer<'a> {
         // Assert that all boats have turrets.
         assert_eq!(c.turrets.is_some(), c.is_boat());
 
+        // Assert that, if reloads are known, so is entity type.
+        debug_assert!(!(c.reloads.is_some() && c.entity_type.is_none()), "{:?}", c);
+
         let s = Self {
             c,
             h: ContactHeader {
@@ -585,7 +588,7 @@ impl<'de, 'a> Visitor<'de> for ContactDeserializer<'a> {
             self.c.player_id = seq.next_element()?.unwrap();
         }
         if self.h.has_reloads {
-            // Must be after type is assigend.
+            // Must be after type is assigned.
             // Round bits up to bytes.
             let size: usize = (self.c.entity_type.unwrap().data().armaments.len() + 7) / 8;
             if size == 0 {

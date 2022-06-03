@@ -4,6 +4,7 @@
 use crate::shorten_name;
 use common::entity::EntityType;
 use crunch::{pack, Item, Rect, Rotation};
+use glam::*;
 use image::imageops::{replace, resize, FilterType};
 use image::{codecs::png, io::Reader, ColorType, GenericImageView, ImageEncoder, RgbaImage};
 use oxipng::{optimize_from_memory, Headers, Options};
@@ -179,29 +180,33 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
 
     // Packing conserves overall area. Don't even try sizes that wouldn't fit all the images.
     let total_area: u32 = sorted.iter().map(|(_, i)| i.width() * i.height()).sum();
+    const MAX_SIZE: u32 = 4096;
 
-    let size_step = 1;
-
-    let min_size = if power_of_two {
-        (total_area as f32).sqrt().log2() as u32
+    let iterator: Box<dyn Iterator<Item = UVec2>> = if power_of_two {
+        // Divide area by 2 because could use 2x1 scale.
+        let min_size = ((total_area / 2) as f32).sqrt().log2() as u32;
+        Box::new((min_size..=MAX_SIZE.log2()).into_iter().flat_map(|power| {
+            // Try 2x1 scale first as it could half the result's size.
+            [1u32, 0]
+                .into_iter()
+                .map(move |d| UVec2::new(2u32.pow(power), 2u32.pow(power.saturating_sub(d))))
+        }))
     } else {
-        (total_area as f32).sqrt() as u32 / size_step
+        // TODO could binary search instead of linear.
+        let size_step = 1;
+        let min_size = (total_area as f32).sqrt() as u32 / size_step;
+        Box::new(
+            (min_size..=(MAX_SIZE))
+                .into_iter()
+                .map(move |power| UVec2::splat(power * size_step)),
+        )
     };
 
-    for size in (min_size..=if power_of_two { 12 } else { 64 * 32 })
-        .into_iter()
-        .map(|power| {
-            if power_of_two {
-                2u32.pow(power as u32)
-            } else {
-                power * size_step
-            }
-        })
-    {
-        println!("Trying {}px...", size);
+    for size in iterator {
+        println!("Trying {}x{}...", size.x, size.y);
 
-        let c_size = (size + padding) as usize;
-        let container = Rect::of_size(c_size, c_size);
+        let padded_size = size + padding;
+        let container = Rect::of_size(padded_size.x as usize, padded_size.y as usize);
         let items: Vec<_> = sorted
             .iter()
             .map(|(key, image)| {
@@ -231,10 +236,10 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
             }
         };
 
-        let mut packed = RgbaImage::new(size, size);
+        let mut packed = RgbaImage::new(size.x, size.y);
         let mut data = SpriteSheet {
-            width: size,
-            height: size,
+            width: size.x,
+            height: size.y,
             sprites: HashMap::new(),
             animations: animations
                 .iter()
@@ -245,7 +250,7 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
         for (rect, key) in packed_rects {
             // Blit image.
             let image = &sorted[&key];
-            // Don't add padding / 2 because of c_size.
+            // Don't add padding / 2 because of padded_size.
             let x = rect.x as u32;
             let y = rect.y as u32;
 
@@ -277,7 +282,7 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
         let mut buf = Vec::new();
 
         png::PngEncoder::new(&mut buf)
-            .write_image(packed.as_raw(), size, size, ColorType::Rgba8)
+            .write_image(packed.as_raw(), size.x, size.y, ColorType::Rgba8)
             .unwrap();
 
         let optimized = if optimize {
@@ -320,10 +325,13 @@ pub(crate) fn pack_sprite_sheet<E: Fn(EntityType) -> EntityPackParams + Sync>(
         println!("Writing {}...", data_path);
         fs::write(&data_path, json).unwrap();
 
-        break;
+        return;
     }
+    println!("Failed took more than {0}x{0}!", MAX_SIZE)
 }
 
+// TODO remove if not going to use again
+#[allow(unused)]
 pub fn webpify(path: &str) {
     let image = Reader::open(&path).unwrap().decode().unwrap();
 

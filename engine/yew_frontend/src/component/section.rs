@@ -8,10 +8,8 @@ use yew_icons::{Icon, IconId};
 #[derive(PartialEq, Properties)]
 pub struct SectionProps {
     pub children: Children,
-    #[prop_or(false)]
+    #[prop_or(true)]
     pub closable: bool,
-    #[prop_or(None)]
-    pub header_align: Option<TextAlign>,
     pub name: String,
     #[prop_or(None)]
     pub on_left_arrow: Option<Callback<()>>,
@@ -21,59 +19,39 @@ pub struct SectionProps {
     pub right_arrow: bool,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum TextAlign {
-    Left,
-    Right,
-}
-
 #[styled_component(Section)]
 pub fn section(props: &SectionProps) -> Html {
     let open = use_state(|| true);
 
-    let onclick = if !props.closable {
-        None
-    } else {
+    let onclick = props.closable.then(|| {
         let open = open.clone();
-        Some(Callback::from(move |_| open.set(!*open)))
-    };
+        Callback::from(move |_| open.set(!*open))
+    });
 
-    let div_css_class = css!(
-        r#"
-        left: 0;
-        position: absolute;
-        top: 0;
-    "#
-    );
+    let div_css_class = css!(r#""#);
 
     let h2_css_class = css!(
         r#"
-        h2 {
-            color: white;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 0;
-            user-select: none;
-            text-align: center;
-            transition: filter 0.1s;
-        }
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        margin: 0;
+        user-select: none;
+        transition: filter 0.1s;
 
-        h2:hover {
+        :hover {
             filter: opacity(0.85);
-        }
-
-        @media (min-width: 1000px) {
-            h2 {
-                white-space: nowrap;
-            }
         }
     "#
     );
 
-    let h2_style = props.header_align.map(|header_align| match header_align {
-        TextAlign::Left => "left",
-        TextAlign::Right => "right",
-    });
+    /*
+       @media (min-width: 1000px) {
+           h2 {
+               white-space: nowrap;
+           }
+       }
+    */
 
     let span_css_class = css!(
         r#"
@@ -95,22 +73,24 @@ pub fn section(props: &SectionProps) -> Html {
         })
     });
 
+    const ICON_WIDTH: &'static str = "1.5rem";
+    const ICON_HEIGHT: &'static str = "1.2rem";
+
     html! {
         <>
             <h2
                 class={h2_css_class}
-                style={h2_style}
                 {onclick}
                 >
-                if left_click.is_some() {
+                if *open && left_click.is_some() {
                     <span class={span_css_class.clone()} onclick={left_click}>
-                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft}/>
+                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }
                 {&props.name}
-                if right_click.is_some() {
+                if *open && right_click.is_some() {
                     <span class={span_css_class} onclick={right_click}>
-                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight}/>
+                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }
             </h2>

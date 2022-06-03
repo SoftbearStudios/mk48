@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::altitude::Altitude;
 use crate::contact::Contact;
 use crate::death_reason::DeathReason;
 use crate::entity::*;
@@ -44,8 +43,8 @@ pub enum Command {
 pub struct Control {
     /// Steering commands.
     pub guidance: Option<Guidance>,
-    /// Altitude target (useful for submarines).
-    pub altitude_target: Option<Altitude>,
+    /// Submerge submarine.
+    pub submerge: bool,
     /// Turret/aircraft/pay target.
     pub aim_target: Option<Vec2>,
     /// Active sensors.

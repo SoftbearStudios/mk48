@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::ticks::{Ticks, TicksRepr};
-use crate::util::map_ranges;
+use common_util::range::map_ranges;
 use core_protocol::serde_util::{F32Visitor, I8Visitor};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
@@ -67,7 +67,7 @@ impl Altitude {
             self.0 as f32,
             Self::MIN.0 as f32..Self::MAX.0 as f32,
             -1.0..1.0,
-            true,
+            false,
         )
     }
 
@@ -81,7 +81,7 @@ impl Altitude {
 
     /// Returns self, clamped between min and max (max >= min or will panic).
     pub fn clamp(self, min: Self, max: Self) -> Self {
-        Self(self.0.clamp(min.0, max.0) as AltitudeRepr)
+        Self(self.0.clamp(min.0, max.0))
     }
 
     /// Argument must be positive.
@@ -100,7 +100,7 @@ impl Altitude {
         }
     }
 
-    /// Returns true if below zero.
+    /// Returns true if below surface.
     pub fn is_submerged(self) -> bool {
         self < Self::ZERO
     }
@@ -205,11 +205,4 @@ impl<'de> Deserialize<'de> for Altitude {
             deserializer.deserialize_i8(I8Visitor).map(Self)
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    // use crate::altitude::Altitude;
-
-    // TODO: Test altitude.
 }

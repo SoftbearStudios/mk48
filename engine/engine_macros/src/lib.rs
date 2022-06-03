@@ -118,24 +118,9 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                 let getter_name = format_ident!("get_{}", ident);
                 let setter_name = format_ident!("set_{}", ident);
                 let validator_name = format_ident!("validate_{}", ident);
-                let loader = quote! {
-                    #ident: local_storage.get(#ident_string).and_then(Self::#validator_name).unwrap_or(default.#ident),
-                };
-                let getter = quote! {
-                    pub fn #getter_name(&self) -> #ty {
-                        self.#ident
-                    }
-                };
-                let setter = quote! {
-                    pub fn #setter_name(&mut self, value: #ty, local_storage: &mut LocalStorage) {
-                        if let Some(valid) = Self::#validator_name(value) {
-                            self.#ident = valid;
-                            let _ = local_storage.set(#ident_string, Some(valid));
-                        }
-                    }
-                };
-                let mut arbitrary = true;
 
+                let mut storage = quote! { local };
+                let mut arbitrary = true;
                 let mut validations = Vec::new();
 
                 for attribute in attrs.into_iter().filter(|a| a.path.is_ident("setting")) {
@@ -161,6 +146,8 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                                         });
                                     } else if path.is_ident("no_serde_wasm_bindgen") {
                                         arbitrary = false;
+                                    } else if path.is_ident("volatile") {
+                                        storage = quote! { session };
                                     } else {
                                         panic!("Unexpected path");
                                     }
@@ -173,6 +160,22 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                     }
                 }
 
+                let loader = quote! {
+                    #ident: browser_storages.#storage.get(#ident_string).and_then(Self::#validator_name).unwrap_or(default.#ident),
+                };
+                let getter = quote! {
+                    pub fn #getter_name(&self) -> #ty {
+                        self.#ident
+                    }
+                };
+                let setter = quote! {
+                    pub fn #setter_name(&mut self, value: #ty, browser_storages: &mut BrowserStorages) {
+                        if let Some(valid) = Self::#validator_name(value) {
+                            self.#ident = valid;
+                            let _ = browser_storages.#storage.set(#ident_string, Some(valid));
+                        }
+                    }
+                };
                 let validator = quote! {
                     fn #validator_name(value: #ty) -> Option<#ty> {
                         #(#validations)*
@@ -191,7 +194,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                     arbitrary_setters.push(quote! {
                         #ident_string => {
                             if let Ok(value) = serde_wasm_bindgen::from_value(value) {
-                                self.#setter_name(value, local_storage);
+                                self.#setter_name(value, browser_storages);
                             }
                         }
                     });
@@ -200,7 +203,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
 
             let output = quote! {
                 impl Settings for #ident {
-                    fn load(local_storage: &LocalStorage, default: Self) -> Self {
+                    fn load(browser_storages: &BrowserStorages, default: Self) -> Self {
                         Self {
                             #(#loaders)*
                         }
@@ -213,7 +216,7 @@ pub fn derive_settings(input: TokenStream) -> TokenStream {
                         }
                     }
 
-                    fn set(&mut self, key: &str, value: wasm_bindgen::JsValue, local_storage: &mut LocalStorage) {
+                    fn set(&mut self, key: &str, value: wasm_bindgen::JsValue, browser_storages: &mut BrowserStorages) {
                         match key {
                             #(#arbitrary_setters),*
                             _ => ()

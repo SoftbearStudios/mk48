@@ -5,6 +5,7 @@ use crate::entities::EntityIndex;
 use crate::entity::Entity;
 use crate::server::Server;
 use crate::world::World;
+use crate::world_physics_radius::MINE_SPEED;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
@@ -45,7 +46,7 @@ pub(crate) enum Mutation {
     // For things that may only be collected once.
     CollectedBy(Arc<PlayerTuple<Server>>, u32),
     HitBy(Arc<PlayerTuple<Server>>, EntityType, Ticks),
-    Attraction(Vec2, Velocity),
+    Attraction(Vec2, Velocity, Altitude), // Altitude is a delta.
     Guidance {
         direction_target: Angle,
         altitude_target: Altitude,
@@ -63,7 +64,7 @@ impl Mutation {
             Self::HitBy(_, _, _) => 125,
             Self::CollidedWithBoat { .. } => 124,
             Self::CollectedBy(_, _) => 123,
-            Self::Attraction(_, _) => 101,
+            Self::Attraction(_, _, _) => 101,
             Self::Guidance { .. } => 100,
             _ => 0,
         }
@@ -90,7 +91,11 @@ impl Mutation {
             Self::HitBy(_, _, damage) => damage.to_secs(),
             Self::CollidedWithBoat { damage, .. } => damage.to_secs(),
             // Closest attraction goes last (takes effect).
-            Self::Attraction(delta, _) => delta.length_squared(),
+            Self::Attraction(delta, _, altitude) => {
+                // Distance formula without the sqrt.
+                // Factor in speed difference between moving and submerging.
+                delta.length_squared() + (altitude.to_meters() * (MINE_SPEED / 50.0)).powi(2)
+            }
             _ => 0.0,
         }
     }
@@ -220,10 +225,15 @@ impl Mutation {
                     entity.apply_altitude_target(&world.terrain, Some(altitude_target), 5.0, delta);
                 }
             }
-            Self::Attraction(delta, velocity) => {
-                let transform = &mut entities[index].transform;
-                transform.direction = Angle::from(delta);
-                transform.velocity = velocity;
+            Self::Attraction(delta_pos, velocity, delta_altitude) => {
+                let entity = &mut entities[index];
+                entity.transform.direction = Angle::from(delta_pos);
+                entity.transform.velocity = velocity;
+                // Same as above (can't do > 1 time).
+                if is_last_of_type {
+                    entity.altitude = entity.altitude
+                        + delta_altitude.clamp_magnitude(Altitude::UNIT * 5.0 * delta);
+                }
             }
             Self::FireAll(sub_kind) => {
                 let entity = &mut entities[index];

@@ -1,7 +1,9 @@
+use client_util::context::CoreState;
 use client_util::frontend::Frontend;
 use client_util::game_client::GameClient;
 use core_protocol::id::{LanguageId, ServerId};
 use std::ops::Deref;
+use std::rc::Rc;
 use yew::{use_context, Callback, Properties};
 
 pub struct Yew<P> {
@@ -22,9 +24,24 @@ impl<P: PartialEq> Deref for PropertiesWrapper<P> {
 }
 
 /// Non-game-specific context wrapper.
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub struct Ctw {
     pub language_id: LanguageId,
+    /// A copy of the core state.
+    pub state: Rc<CoreState>,
+}
+
+impl Ctw {
+    pub fn use_core_state() -> Rc<CoreState> {
+        let ctx = use_context::<Self>().unwrap();
+        ctx.state
+    }
+}
+
+impl PartialEq for Ctw {
+    fn eq(&self, other: &Self) -> bool {
+        self.language_id == other.language_id && Rc::ptr_eq(&self.state, &other.state)
+    }
 }
 
 /// Game-specific context wrapper.

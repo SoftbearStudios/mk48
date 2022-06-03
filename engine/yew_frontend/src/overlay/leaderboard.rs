@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: 2022 Softbear, Inc.
 
-use crate::component::section::{Section, TextAlign};
+use crate::component::section::Section;
 use crate::translation::t;
 //use core_protocol::name::PlayerAlias;
+use crate::Ctw;
 use core_protocol::name::{PlayerAlias, TeamName};
 use stylist::yew::styled_component;
 use yew::prelude::*;
 
 #[derive(Default, PartialEq, Properties)]
 pub struct LeaderboardProps {
-    pub children: Children,
-    pub content: Vec<LeaderboardTuple>,
+    pub children: Option<Children>,
     pub name: &'static str,
 }
 
@@ -22,19 +22,7 @@ pub struct LeaderboardTuple {
 }
 
 #[styled_component(LeaderboardOverlay)]
-pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
-    let leaderboard_css_class = css!(
-        r#"
-        max-width: 25%;
-        padding-right: 1rem;
-        padding-top: 1rem;
-        position: absolute;
-        right: 0;
-        text-align: right;
-        top: 0;
-    "#
-    );
-
+pub fn leaderboard_overlay(_props: &LeaderboardProps) -> Html {
     let p_css_class = css!(
         r#"
         color: white;
@@ -74,27 +62,42 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
         })
     };
 
+    let core_state = Ctw::use_core_state();
+
+    let mut content = Vec::new();
+
+    content.extend(core_state.liveboard.iter().filter_map(|dto| {
+        core_state
+            .player_or_bot(dto.player_id)
+            .map(|player| LeaderboardTuple {
+                name: player.alias,
+                score: dto.score,
+                team: dto
+                    .team_id
+                    .and_then(|team_id| core_state.teams.get(&team_id))
+                    .map(|team_dto| team_dto.name),
+            })
+    }));
+
     // TODO: <Section ... bind:open={$leaderboardShown}>
     html! {
-        <div id="leaderboard" class={leaderboard_css_class}>
-            <Section name={leaderboard_name} header_align={TextAlign::Right} on_right_arrow={on_next_index}>
-                <table class={table_css_class}>
-                {
-                    props.content.iter().map(|LeaderboardTuple{name, score, team}| {
-                        html!{
-                            <tr>
-                                <td class="name">{team.map(|team_name| format!("[{}] {}", team_name, name)).unwrap_or(name.to_string())}</td>
-                                <td class="score">{score}</td>
-                            </tr>
-                        }
-                    }).collect::<Html>()
-                }
-                </table>
-                if footer {
-                    <p class={p_css_class}>{footer}</p>
-                }
-            </Section>
-        </div>
+        <Section name={leaderboard_name} on_right_arrow={on_next_index}>
+            <table class={table_css_class}>
+            {
+                content.iter().map(|LeaderboardTuple{name, score, team}| {
+                    html!{
+                        <tr>
+                            <td class="name">{team.map(|team_name| format!("[{}] {}", team_name, name)).unwrap_or(name.to_string())}</td>
+                            <td class="score">{score}</td>
+                        </tr>
+                    }
+                }).collect::<Html>()
+            }
+            </table>
+            if footer {
+                <p class={p_css_class}>{footer}</p>
+            }
+        </Section>
     }
 }
 

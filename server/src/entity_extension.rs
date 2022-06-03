@@ -12,15 +12,27 @@ use std::sync::Arc;
 /// Additional fields for certain entities (for now, boats). Stored separately for memory efficiency.
 #[derive(Debug)]
 pub struct EntityExtension {
-    pub altitude_target: Altitude,
+    // true means altitude target is Altitude::MIN false means Altitude::ZERO.
+    // Used by Self::altitude_target().
+    // Can't submerge right away to prevent dodging missiles.
+    submerge: bool,
+    submerge_delay: Ticks,
+
     /// Whether the player *wants* active sensors. To tell if the player *has* active sensors, use
-    /// Self::is_active() instead.
-    pub active: bool,
+    /// Used by Self::is_active().
     /// Active stays on for a an extra duration to avoid rapid switching, which could induce flickering on other player's screens.
-    active_cooldown: Ticks,
+    pub active: bool,
+    deactivate_delay: Ticks,
+
     /// Ticks of protection ticks remaining, zeroed if showing signs of aggression.
     spawn_protection_remaining: Ticks,
+
+    // 1 reload per armament, 0 = reloaded.
+    // Not an arc because converted to a bitset with max len of 32.
     pub reloads: Box<[Ticks]>,
+
+    // 1 angle per turret relative to boat.
+    // Arc to save allocations
     pub turrets: Arc<[Angle]>,
 }
 
@@ -36,32 +48,52 @@ impl EntityExtension {
     /// How long spawn protection lasts (it linearly fades over this time).
     const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::FREQUENCY_HZ.0 * 20);
 
-    /// new allocates a new entity extension, sized to a particular entity type.
-    pub fn new(entity_type: EntityType) -> Self {
+    /// How long deactivating sensors is delayed.
+    const DEACTIVATE_DELAY: Ticks = Ticks(5);
+    /// How long submerging is delayed.
+    const SUBMERGE_DELAY: Ticks = Ticks::from_whole_secs(1);
+
+    /// Allocates reloads and turrets, sized to a particular entity type.
+    /// It can also give spawn protection.
+    pub fn change_entity_type(&mut self, entity_type: EntityType) {
+        // TODO clear active/submerge based on if boat supports them but probably doesn't matter.
+
         let data = entity_type.data();
-        Self {
-            altitude_target: Altitude::ZERO,
-            active: true,
-            active_cooldown: Ticks::ZERO,
-            spawn_protection_remaining: if entity_type.data().level == 1 {
-                Self::SPAWN_PROTECTION_INITIAL
-            } else {
-                Ticks::ZERO
-            },
-            reloads: box_default_n(data.armaments.len()),
-            turrets: Arc::from_iter(data.turrets.iter().map(|t| t.angle)),
+        self.spawn_protection_remaining = if entity_type.data().level == 1 {
+            Self::SPAWN_PROTECTION_INITIAL
+        } else {
+            Ticks::ZERO
+        };
+        self.reloads = box_default_n(data.armaments.len());
+        self.turrets = Arc::from_iter(data.turrets.iter().map(|t| t.angle));
+    }
+
+    /// Returns the target altitude of the boat from submerge.
+    pub fn altitude_target(&self) -> Altitude {
+        if self.submerge && self.submerge_delay == Ticks::ZERO {
+            Altitude::MIN
+        } else {
+            Altitude::ZERO
         }
     }
 
-    /// Returns whether active sensors, or within active sensor cooldown.
-    pub fn is_active(&self) -> bool {
-        self.active || self.active_cooldown > Ticks::ZERO
+    /// Sets submerge, possibly also setting deactivate_delay to an appropriate value.
+    pub fn set_submerge(&mut self, submerge: bool) {
+        if submerge && !self.submerge {
+            self.submerge_delay = Self::SUBMERGE_DELAY;
+        }
+        self.submerge = submerge;
     }
 
-    /// Sets active, possibly also setting active_cooldown to an appropriate value.
+    /// Returns whether active sensors, or within deactivate sensor delay.
+    pub fn is_active(&self) -> bool {
+        self.active || self.deactivate_delay > Ticks::ZERO
+    }
+
+    /// Sets active, possibly also setting deactivate_delay to an appropriate value.
     pub fn set_active(&mut self, active: bool) {
         if !active && self.active {
-            self.active_cooldown = Ticks::from_secs(0.5);
+            self.deactivate_delay = Self::DEACTIVATE_DELAY;
         }
         self.active = active;
     }
@@ -78,9 +110,13 @@ impl EntityExtension {
         self.spawn_protection_remaining = Ticks::ZERO;
     }
 
-    /// Subtracts from the active cooldown and spawn protection until they reach zero.
-    pub fn update_active_cooldown_and_spawn_protection(&mut self, delta: Ticks) {
-        self.active_cooldown = self.active_cooldown.saturating_sub(delta);
+    /// Subtracts from the player's tickers:
+    /// submerge
+    /// deactivate_delay
+    /// spawn_protection_remaining
+    pub fn update_tickers(&mut self, delta: Ticks) {
+        self.submerge_delay = self.submerge_delay.saturating_sub(delta);
+        self.deactivate_delay = self.deactivate_delay.saturating_sub(delta);
         self.spawn_protection_remaining = self.spawn_protection_remaining.saturating_sub(delta);
     }
 
@@ -96,13 +132,15 @@ impl EntityExtension {
 }
 
 impl Default for EntityExtension {
-    /// default allocates an empty entity extension, suitable only as a placeholder.
+    /// default allocates an empty entity extension, suitable as not having a boat.
+    /// Once a boat is spawned/upgraded change_entity_type must be called.
     fn default() -> Self {
         Self {
-            altitude_target: Altitude::ZERO,
+            submerge: false,
+            submerge_delay: Ticks::ZERO,
             active: true,
+            deactivate_delay: Ticks::ZERO,
             spawn_protection_remaining: Self::SPAWN_PROTECTION_INITIAL,
-            active_cooldown: Ticks::ZERO,
             reloads: box_default_n(0),
             turrets: arc_default_n(0),
         }

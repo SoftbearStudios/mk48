@@ -1,14 +1,17 @@
 // SPDX-FileCopyrightText: 2022 Softbear, Inc.
 
+use crate::component::positioner::Position;
 use crate::translation::t;
 use core_protocol::name::PlayerAlias;
 use stylist::yew::styled_component;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-#[derive(Default, PartialEq, Properties)]
+#[derive(PartialEq, Properties)]
 pub struct DialogProps {
     pub on_play: Callback<PlayerAlias>,
+    #[prop_or(Position::Center)]
+    pub position: Position,
     pub children: Children,
 }
 
@@ -19,11 +22,8 @@ pub fn spawn_overlay(props: &DialogProps) -> Html {
         display: flex;
         flex-direction: column;
         font-size: 2rem;
-        left: 50%;
         position: absolute;
         row-gap: 2rem;
-        top: 50%;
-        transform: translate(-50%, -50%);
         user-select: none;
         width: 50%;
     "#
@@ -117,7 +117,7 @@ pub fn spawn_overlay(props: &DialogProps) -> Html {
     // <svelte:window on:message={handleMessage}/>
     // <div id="spawn_overlay" in:fade={transition} on:introstart={() => transitioning = true} on:introend={() => transitioning = false}>
     html! {
-        <form id="spawn_overlay" class={div_style} {onsubmit}>
+        <form id="spawn_overlay" class={div_style} style={props.position.to_string()} {onsubmit}>
             {props.children.clone()}
             <input id="alias_input" class={input_style} disabled={paused || transitioning} type="text" name="name" placeholder={t().splash_screen_alias_placeholder()} autocomplete="off" value={alias.to_string()} {oninput}/>
             <button id="play_button" class={button_style} disabled={paused || transitioning} {onclick}>{t().splash_screen_play_button()}</button>

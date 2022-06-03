@@ -14,7 +14,7 @@ use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
 use common::ticks::Ticks;
-use common::util::gen_radius;
+use common_util::range::gen_radius;
 use core_protocol::id::PlayerId;
 use game_server::game_service::GameArenaService;
 use game_server::player::PlayerTuple;
@@ -36,6 +36,8 @@ pub struct Bot {
     level_ambition: u8,
     /// Whether the bot spawned at least once, and therefore is capable of rage-quitting.
     spawned_at_least_once: bool,
+    /// The value of submerge previously sent.
+    was_submerging: bool,
 }
 
 impl Default for Bot {
@@ -54,6 +56,7 @@ impl Default for Bot {
             // Bias towards lower levels.
             level_ambition: random_level(&mut rng).min(random_level(&mut rng)),
             spawned_at_least_once: false,
+            was_submerging: false,
         }
     }
 }
@@ -301,27 +304,28 @@ impl Bot {
                 }
             }
 
+            self.was_submerging = if data.sub_kind == EntitySubKind::Submarine {
+                // More positive values mean want to surface, more negative values mean want to dive.
+                let surface_bias = health_percent - self.aggression * (1.0 / Self::MAX_AGGRESSION);
+
+                // Hysteresis.
+                if self.was_submerging && surface_bias >= 0.1 {
+                    false
+                } else if !self.was_submerging && surface_bias <= -0.1 {
+                    true
+                } else {
+                    self.was_submerging
+                }
+            } else {
+                false
+            };
+
             let mut ret = Command::Control(Control {
                 guidance: Some(Guidance {
                     direction_target: Angle::from(movement) + self.steer_bias,
                     velocity_target: data.speed * 0.8,
                 }),
-                altitude_target: if data.sub_kind == EntitySubKind::Submarine {
-                    // More positive values mean want to surface, more negative values mean want to dive.
-                    let surface_bias =
-                        health_percent - self.aggression * (1.0 / Self::MAX_AGGRESSION);
-
-                    // Hysteresis.
-                    if boat.altitude().is_submerged() && surface_bias >= 0.1 {
-                        Some(Altitude::ZERO)
-                    } else if !boat.altitude().is_submerged() && surface_bias <= -0.1 {
-                        Some(Altitude::MIN)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                },
+                submerge: self.was_submerging,
                 aim_target: best_firing_solution.map(|solution| solution.1 + self.aim_bias),
                 active: health_percent >= 0.5,
                 fire: best_firing_solution

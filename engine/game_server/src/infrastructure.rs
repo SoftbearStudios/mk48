@@ -20,6 +20,8 @@ use server_util::database::Database;
 use server_util::rate_limiter::RateLimiterProps;
 use std::num::NonZeroU32;
 use std::process;
+use std::sync::atomic::AtomicBool;
+use std::time::{Duration, Instant};
 
 /// An entire game server.
 pub struct Infrastructure<G: GameArenaService> {
@@ -45,6 +47,9 @@ pub struct Infrastructure<G: GameArenaService> {
 
     /// Monitoring.
     pub(crate) status: StatusRepo,
+
+    /// Drop missed updates.
+    last_update: Instant,
 }
 
 impl<G: GameArenaService> Actor for Infrastructure<G> {
@@ -78,6 +83,7 @@ impl<G: GameArenaService> Infrastructure<G> {
         min_players: usize,
         chat_log: Option<String>,
         trace_log: Option<String>,
+        allow_web_socket_json: &'static AtomicBool,
         client_authenticate: RateLimiterProps,
     ) -> Self {
         // TODO: If multiple arenas, generate randomly.
@@ -92,7 +98,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             /// only ever happen once, and it will last for the lifetime of the program.
             database: Box::leak(Box::new(Database::new(database_read_only).await)),
             system,
-            admin: AdminRepo::new(),
+            admin: AdminRepo::new(allow_web_socket_json),
             context_service: ContextService::new(
                 arena_id,
                 min_players,
@@ -104,11 +110,20 @@ impl<G: GameArenaService> Infrastructure<G> {
             leaderboard: LeaderboardRepo::new(),
             metrics: MetricRepo::new(),
             status: StatusRepo::new(client_hash),
+            last_update: Instant::now(),
         }
     }
 
     /// Call once every tick.
     pub fn update(&mut self, ctx: &mut <Infrastructure<G> as Actor>::Context) {
+        let now = Instant::now();
+        if now.duration_since(self.last_update) < Duration::from_secs_f32(Ticks::PERIOD_SECS * 0.5)
+        {
+            // Less than half a tick elapsed. Drop this update on the floor, to avoid jerking.
+            return;
+        }
+        self.last_update = now;
+
         benchmark_scope!("infrastructure_update");
 
         let status = &self.status;
@@ -121,7 +136,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             server_delta,
         );
         self.leaderboard.clear_deltas();
-        self.status.health.update_ups();
+        self.status.health.record_tick();
 
         // These are all rate-limited internally.
         LeaderboardRepo::update_to_database(self, ctx);

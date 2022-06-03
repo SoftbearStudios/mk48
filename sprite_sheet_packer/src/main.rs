@@ -2,18 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #![feature(exit_status_error)]
+#![feature(int_log)]
 
 mod audio;
 mod texture;
 
 use crate::audio::pack_audio_sprite_sheet;
-use crate::texture::{pack_sprite_sheet, webpify, EntityPackParams};
+use crate::texture::{pack_sprite_sheet, EntityPackParams};
 use common::entity::{EntityData, EntityKind, EntityType};
-use common::util::map_ranges;
+use common_util::range::map_ranges;
 
 fn main() {
     unsafe { EntityType::init() };
 
+    // now done by engine static_files.rs
     //webpify("../js/public/sand.png");
     //webpify("../js/public/grass.png");
     //webpify("../js/public/snow.png");
@@ -99,7 +101,7 @@ fn main() {
                         EntityKind::Obstacle => boat_meters_to_pixels(data.length) * 0.85,
                         _ => boat_meters_to_pixels(data.length),
                     }
-                    .clamp(4.0, 1024.0) as u32,
+                    .clamp(4.0, 1024.0) as u32, // TODO don't clamp to 1024
                 }
             } else {
                 let min_width = if data.kind == EntityKind::Boat {

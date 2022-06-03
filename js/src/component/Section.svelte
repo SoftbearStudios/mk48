@@ -15,17 +15,18 @@
 	export let name = '';
 	export let open = true;
 	export let onClick = null;
+	export let closable = true;
 	export let onLeftArrow = null;
 	export let onRightArrow = null;
 
 	function toggleOpen() {
-		if (onClick === null || onClick()) {
+		if (closable && (onClick === null || onClick())) {
 			open = !open;
 		}
 	}
 </script>
 
-<h2 on:click={toggleOpen} style={`text-align: ${headerAlign};`}>
+<h2 class:closable on:click={toggleOpen} style={`text-align: ${headerAlign};`}>
 	{#if onLeftArrow && open}
 		<span class:disable={disableLeftArrow} on:click={e => {e.stopPropagation(); if (!disableLeftArrow) onLeftArrow();}}>
 			<LeftArrowIcon/> 
@@ -42,7 +43,7 @@
 	{/if}
 </h2>
 {#if open}
-	<div class="collapsable" transition:slide="{{delay: 100}}">
+	<div class:prevent={!closable} transition:slide="{{delay: 100}}">
 		<slot/>
 	</div>
 {/if}
@@ -60,9 +61,12 @@
 		margin-left: 0.2em;
 	}
 
+	div.prevent {
+		animation: none !important;
+	}
+
 	h2 {
 		color: white;
-		cursor: pointer;
 		font-weight: bold;
 		margin: 0;
 		user-select: none;
@@ -70,7 +74,11 @@
 		transition: filter 0.1s;
 	}
 
-	h2:hover {
+	h2.closable {
+		cursor: pointer;
+	}
+
+	h2.closable:hover {
 		filter: opacity(0.85);
 	}
 

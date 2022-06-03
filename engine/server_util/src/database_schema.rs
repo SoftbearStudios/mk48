@@ -145,6 +145,12 @@ pub struct Metrics {
     /// How many arenas are in cache.
     #[serde(default)]
     pub arenas_cached: DiscreteMetric,
+    /// How many megabits per second received.
+    #[serde(default)]
+    pub bandwidth_rx: ContinuousExtremaMetric,
+    /// How many megabits per second transmitted.
+    #[serde(default)]
+    pub bandwidth_tx: ContinuousExtremaMetric,
     /// Ratio of new players that leave without ever playing.
     #[serde(default)]
     pub bounce: RatioMetric,
@@ -154,9 +160,12 @@ pub struct Metrics {
     /// How many connections are open.
     #[serde(default)]
     pub connections: ContinuousExtremaMetric,
-    /// Percent of available server CPU required by service.
+    /// Fraction of total CPU time used by processes in the current operating system.
     #[serde(default)]
     pub cpu: ContinuousExtremaMetric,
+    /// Fraction of total CPU time stolen by the hypervisor.
+    #[serde(default)]
+    pub cpu_steal: ContinuousExtremaMetric,
     /// Ratio of new players that play only once and leave quickly.
     #[serde(default)]
     pub flop: RatioMetric,
@@ -217,6 +226,9 @@ pub struct Metrics {
     /// Total sessions in cache.
     #[serde(default)]
     pub sessions_cached: DiscreteMetric,
+    /// Seconds per tick.
+    #[serde(default)]
+    pub spt: ContinuousExtremaMetric,
     /// Ratio of plays that end team-less to plays that don't.
     #[serde(default)]
     pub teamed: RatioMetric,
@@ -239,10 +251,13 @@ impl Metrics {
         MetricsSummaryDto {
             abuse_reports: self.abuse_reports.summarize(),
             arenas_cached: self.arenas_cached.summarize(),
+            bandwidth_rx: self.bandwidth_rx.summarize(),
+            bandwidth_tx: self.bandwidth_tx.summarize(),
             bounce: self.bounce.summarize(),
             concurrent: self.concurrent.summarize(),
             connections: self.connections.summarize(),
             cpu: self.cpu.summarize(),
+            cpu_steal: self.cpu_steal.summarize(),
             flop: self.flop.summarize(),
             fps: self.fps.summarize(),
             invited: self.invited.summarize(),
@@ -263,6 +278,7 @@ impl Metrics {
             rtt: self.rtt.summarize(),
             score: self.score.summarize(),
             sessions_cached: self.sessions_cached.summarize(),
+            spt: self.spt.summarize(),
             teamed: self.teamed.summarize(),
             toxicity: self.toxicity.summarize(),
             tps: self.tps.summarize(),
@@ -275,10 +291,13 @@ impl Metrics {
         MetricsDataPointDto {
             abuse_reports: self.abuse_reports.data_point(),
             arenas_cached: self.arenas_cached.data_point(),
+            bandwidth_rx: self.bandwidth_rx.data_point(),
+            bandwidth_tx: self.bandwidth_tx.data_point(),
             bounce: self.bounce.data_point(),
             concurrent: self.concurrent.data_point(),
             connections: self.connections.data_point(),
             cpu: self.cpu.data_point(),
+            cpu_steal: self.cpu_steal.data_point(),
             flop: self.flop.data_point(),
             fps: self.fps.data_point(),
             invited: self.invited.data_point(),
@@ -298,6 +317,7 @@ impl Metrics {
             rtt: self.rtt.data_point(),
             score: self.score.data_point(),
             sessions_cached: self.sessions_cached.data_point(),
+            spt: self.spt.data_point(),
             teamed: self.teamed.data_point(),
             toxicity: self.toxicity.data_point(),
             tps: self.tps.data_point(),

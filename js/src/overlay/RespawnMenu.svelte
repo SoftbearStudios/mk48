@@ -75,7 +75,7 @@
 	{/if}
 	<div class='respawn_menu'>
 		{#if !paused}
-			<ShipMenu bind:level={level} maxLevel={respawnLevel} minLevel={1} name={($t('panel.respawn.label')).replace("{level}", level)} onSelectShip={handleRespawn} onClickSection={() => false}/>
+			<ShipMenu bind:level={level} maxLevel={respawnLevel} minLevel={1} name={($t('panel.respawn.label')).replace("{level}", level)} onSelectShip={handleRespawn} closable={false}/>
 		{/if}
 	</div>
 </div>

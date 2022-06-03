@@ -28,7 +28,7 @@ use core_protocol::rpc::{
 };
 use futures::stream::FuturesUnordered;
 use log::{error, info, warn};
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use maybe_parallel_iterator::IntoMaybeParallelRefIterator;
 use server_util::benchmark::{benchmark_scope, Timer};
 use server_util::database_schema::SessionItem;
 use server_util::generate_id::{generate_id, generate_id_64};
@@ -361,7 +361,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let liveboard_update = liveboard.delta(&*players, &*teams);
         let leaderboard_update: Vec<_> = leaderboard.deltas_nondestructive().collect();
 
-        players.players.par_iter().for_each(
+        players.players.maybe_par_iter().for_each(
             move |(player_id, player_tuple): (&PlayerId, &Arc<PlayerTuple<G>>)| {
                 let player = player_tuple.borrow_player();
 
@@ -778,25 +778,25 @@ fn sanitize_tps(tps: f32) -> Option<f32> {
 
 /// Data stored per client (a.k.a websocket a.k.a. real player).
 #[derive(Debug)]
-pub(crate) struct PlayerClientData<G: GameArenaService> {
+pub struct PlayerClientData<G: GameArenaService> {
     /// Authentication.
-    pub session_id: SessionId,
+    pub(crate) session_id: SessionId,
     /// Alias chosen by player.
-    pub alias: PlayerAlias,
+    pub(crate) alias: PlayerAlias,
     /// Connection state.
-    pub status: ClientStatus<G>,
+    pub(crate) status: ClientStatus<G>,
     /// Previous database item.
-    pub session_item: Option<SessionItem>,
-    pub metrics: ClientMetricData<G>,
+    pub(crate) session_item: Option<SessionItem>,
+    pub(crate) metrics: ClientMetricData<G>,
     pub(crate) invitation: ClientInvitationData,
     pub(crate) chat: ClientChatData,
     pub(crate) team: ClientTeamData,
     /// Players this client has reported.
     pub(crate) reported: HashSet<PlayerId>,
     /// Number of times sent error trace (in order to limit abuse).
-    pub traces: u8,
+    pub(crate) traces: u8,
     /// Game specific client data. Manually serialized
-    data: AtomicRefCell<G::ClientData>,
+    pub(crate) data: AtomicRefCell<G::ClientData>,
 }
 
 #[derive(Debug)]
@@ -816,7 +816,7 @@ pub(crate) enum ClientStatus<G: GameArenaService> {
 }
 
 impl<G: GameArenaService> PlayerClientData<G> {
-    pub fn new(
+    pub(crate) fn new(
         session_id: SessionId,
         metrics: ClientMetricData<G>,
         invitation: Option<InvitationDto>,
@@ -836,6 +836,16 @@ impl<G: GameArenaService> PlayerClientData<G> {
             traces: 0,
             data: AtomicRefCell::new(G::ClientData::default()),
         }
+    }
+
+    /// Requires mutable self, but as a result, guaranteed not to panic.
+    pub fn data(&mut self) -> &G::ClientData {
+        &*self.data.get_mut()
+    }
+
+    /// Infallible way of getting mutable client data.
+    pub fn data_mut(&mut self) -> &mut G::ClientData {
+        self.data.get_mut()
     }
 }
 

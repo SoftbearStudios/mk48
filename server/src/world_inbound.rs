@@ -12,11 +12,12 @@ use common::protocol::*;
 use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::{level_to_score, score_to_level};
-use common::world::{outside_area, ARCTIC};
+use common::world::{clamp_y_to_strict_area_border, outside_strict_area, ARCTIC};
+use common_util::range::map_ranges;
 use game_server::player::PlayerTuple;
 use glam::Vec2;
+use maybe_parallel_iterator::IntoMaybeParallelIterator;
 use rand::{thread_rng, Rng};
-use rayon::iter::ParallelIterator;
 use std::ops::Range;
 use std::sync::Arc;
 use std::time::Duration;
@@ -45,40 +46,40 @@ impl CommandTrait for Spawn {
             return Err("cannot spawn as given entity type");
         }
 
-        /*
-        // Default to spawning near the center of the world, with more points making you spawn further north.
-        let vertical_bias = map_ranges(
-            player.score as f32,
-            0.0..level_to_score(EntityData::MAX_BOAT_LEVEL) as f32,
-            -0.75..0.75,
-            true,
-        );
-        debug_assert!((-1.0..=1.0).contains(&vertical_bias));
-
-        // Don't spawn in wrong area.
-        let spawn_y = clamp_y_to_default_area_border(
-            self.entity_type,
-            world.radius * vertical_bias,
-            self.entity_type.data().radius * 2.0,
-        );
-
-        if spawn_y.abs() > world.radius {
-            return Err("unable to spawn this type of boat");
-        }
-
-        // Solve circle equation.
-        let world_half_width_at_spawn_y = (world.radius.powi(2) - spawn_y.powi(2)).sqrt();
-        debug_assert!(world_half_width_at_spawn_y <= world.radius);
-
-        // Randomize horizontal a bit.
-        let spawn_x = (thread_rng().gen::<f32>() - 0.5) * world_half_width_at_spawn_y;
-
         // These initial positions may be overwritten later.
-        let mut spawn_position = Vec2::new(spawn_x, spawn_y);
-        let mut spawn_radius = 0.25 * world.radius;
-         */
         let mut spawn_position = Vec2::ZERO;
         let mut spawn_radius = 0.8 * world.radius;
+
+        let mut rng = thread_rng();
+
+        if !(player.is_bot() && rng.gen()) {
+            // Default to spawning near the center of the world, with more points making you spawn further north.
+            let vertical_bias = map_ranges(
+                score_to_level(player.score) as f32,
+                1.0..(EntityData::MAX_BOAT_LEVEL + 1) as f32,
+                -0.75..0.75,
+                true,
+            );
+            debug_assert!((-1.0..=1.0).contains(&vertical_bias));
+
+            // Don't spawn in wrong area.
+            let spawn_y =
+                clamp_y_to_strict_area_border(self.entity_type, world.radius * vertical_bias);
+
+            if spawn_y.abs() > world.radius {
+                return Err("unable to spawn this type of boat");
+            }
+
+            // Solve circle equation.
+            let world_half_width_at_spawn_y = (world.radius.powi(2) - spawn_y.powi(2)).sqrt();
+            debug_assert!(world_half_width_at_spawn_y <= world.radius);
+
+            // Randomize horizontal a bit.
+            let spawn_x = (rng.gen::<f32>() - 0.5) * world_half_width_at_spawn_y;
+
+            spawn_position = Vec2::new(spawn_x, spawn_y);
+            spawn_radius = 0.25 * world.radius;
+        }
 
         debug_assert!(spawn_position.length() <= world.radius);
 
@@ -100,6 +101,11 @@ impl CommandTrait for Spawn {
                 time,
                 ..
             } => {
+                // Don't spawn too far away from where you died.
+                spawn_position = *position;
+                spawn_radius = (0.4 * world.radius).clamp(500.0, 3000.0);
+
+                // Don't spawn right where you died either.
                 let exclusion_seconds =
                     if player.score > level_to_score(EntityData::MAX_BOAT_LEVEL / 2) {
                         20
@@ -121,30 +127,36 @@ impl CommandTrait for Spawn {
         if player.team_id().is_some() || player.invitation_accepted().is_some() {
             // TODO: Inefficient to scan all entities; only need to scan all players. Unfortunately,
             // that data is not available here, currently.
-            if let Some((_, team_boat)) = world.entities.par_iter().find_any(|(_, entity)| {
-                let data = entity.data();
-                if data.kind == EntityKind::Boat
-                    && ((player.team_id().is_some()
-                        && entity.borrow_player().team_id() == player.team_id())
-                        || (player.invitation_accepted().is_some()
-                            && entity.borrow_player().player_id
-                                == player.invitation_accepted().as_ref().unwrap().player_id))
-                {
+            if let Some((_, team_boat)) = world
+                .entities
+                .par_iter()
+                .into_maybe_parallel_iter()
+                .find_any(|(_, entity)| {
+                    let data = entity.data();
+                    if data.kind != EntityKind::Boat {
+                        return false;
+                    }
+
                     if let Some(exclusion_zone) = exclusion_zone {
                         if entity.transform.position.distance_squared(exclusion_zone)
-                            < 1250f32.powi(2)
+                            < 800f32.powi(2)
                         {
-                            // Continue.
                             return false;
                         }
                     }
 
-                    return true;
-                }
-                false
-            }) {
+                    let is_team_member = player.team_id().is_some()
+                        && entity.borrow_player().team_id() == player.team_id();
+
+                    let was_invited_by = player.invitation_accepted().is_some()
+                        && entity.borrow_player().player_id
+                            == player.invitation_accepted().as_ref().unwrap().player_id;
+
+                    is_team_member || was_invited_by
+                })
+            {
                 spawn_position = team_boat.transform.position;
-                spawn_radius = team_boat.data().radius + 100.0;
+                spawn_radius = team_boat.data().radius + 25.0;
             }
         }
 
@@ -152,7 +164,15 @@ impl CommandTrait for Spawn {
 
         let mut boat = Entity::new(self.entity_type, Some(Arc::clone(player_tuple)));
         boat.transform.position = spawn_position;
+        #[cfg(debug_assertions)]
+        let begin = std::time::Instant::now();
         if world.spawn_here_or_nearby(boat, spawn_radius, exclusion_zone) {
+            #[cfg(debug_assertions)]
+            println!(
+                "took {:?} to spawn a {:?}",
+                begin.elapsed(),
+                self.entity_type
+            );
             Ok(())
         } else {
             Err("failed to find enough space to spawn")
@@ -194,10 +214,8 @@ impl CommandTrait for Control {
                 None
             };
             let extension = entity.extension_mut();
+            extension.set_submerge(self.submerge);
             extension.set_active(self.active);
-            if let Some(altitude_target) = self.altitude_target {
-                extension.altitude_target = altitude_target;
-            }
 
             drop(player);
 
@@ -255,14 +273,16 @@ impl CommandTrait for Fire {
             let armament = &data.armaments[index];
             let armament_entity_data = armament.entity_type.data();
 
-            if entity.altitude.is_submerged() {
-                // Submerged submarine or former submarine.
-                if armament_entity_data.sub_kind == EntitySubKind::Shell
-                    || armament_entity_data.sub_kind == EntitySubKind::Sam
-                    || armament_entity_data.kind == EntityKind::Aircraft
-                {
-                    return Err("cannot fire provided armament while submerged");
-                }
+            // Can't fire if boat is a submerged former submarine.
+            if entity.altitude.is_submerged()
+                && (data.sub_kind != EntitySubKind::Submarine
+                    || matches!(armament_entity_data.kind, EntityKind::Aircraft)
+                    || matches!(
+                        armament_entity_data.sub_kind,
+                        EntitySubKind::Shell | EntitySubKind::Sam
+                    ))
+            {
+                return Err("cannot fire while surfacing as a boat");
             }
 
             if let Some(turret_index) = armament.turret {
@@ -384,6 +404,7 @@ impl CommandTrait for Pay {
             );
 
             payment.transform.position = position;
+            payment.altitude = entity.altitude;
 
             // If payment successfully spawns, withdraw funds.
             if world.spawn_here_or_nearby(payment, 1.0, None) {
@@ -428,7 +449,7 @@ impl CommandTrait for Upgrade {
                 return Err("cannot upgrade to provided entity type");
             }
 
-            if outside_area(self.entity_type, entity.transform.position) {
+            if outside_strict_area(self.entity_type, entity.transform.position) {
                 return Err("cannot upgrade outside the correct area");
             }
 

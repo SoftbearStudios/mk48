@@ -185,12 +185,14 @@ pub enum AdminRequest {
         alias: PlayerAlias,
         message: String,
     },
+    RequestAllowWebSocketJson,
+    SetAllowWebSocketJson(bool),
     RequestDistributeLoad,
     SetDistributeLoad(bool),
     RequestRedirect,
     SetRedirect(Option<ServerId>),
     #[cfg(unix)]
-    SetProfiler(bool),
+    RequestProfile,
 }
 
 /// Admin related responses from the server.
@@ -206,6 +208,8 @@ pub enum AdminUpdate {
     PlayerRestricted(usize),
     ServersRequested(Box<[AdminServerDto]>),
     ReferrersRequested(Box<[(Referrer, f32)]>),
+    AllowWebSocketJsonRequested(bool),
+    AllowWebSocketJsonSet(bool),
     DistributeLoadRequested(bool),
     DistributeLoadSet(bool),
     RedirectRequested(Option<ServerId>),
@@ -213,7 +217,7 @@ pub enum AdminUpdate {
     SeriesRequested(Arc<[(UnixTime, MetricsDataPointDto)]>),
     SummaryRequested(MetricsSummaryDto),
     UserAgentsRequested(Box<[(UserAgentId, f32)]>),
-    ProfilerSet(bool),
+    ProfileRequested(String),
 }
 
 /// Team related requests from the client to the server.

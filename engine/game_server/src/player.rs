@@ -316,9 +316,9 @@ impl<G: GameArenaService> PlayerRepo<G> {
 
 /// Player tuple contains the Player (real or bot) and the PlayerExtension.
 ///
-/// The Player part is an AtomicRefCell because mutations are manually serialized.
+/// The Player part is an [`AtomicRefCell`] because mutations are manually serialized.
 ///
-/// The PlayerExtension part is an UnsafeCell because mutators are forced to hold a mutable reference
+/// The PlayerExtension part is an [`UnsafeCell`] because mutators are forced to hold a mutable reference
 /// to a unique structure (such as the player's vehicle).
 pub struct PlayerTuple<G: GameArenaService> {
     pub player: AtomicRefCell<PlayerData<G>>,
@@ -394,7 +394,7 @@ pub struct PlayerData<G: GameArenaService> {
 }
 
 impl<G: GameArenaService> PlayerData<G> {
-    pub(crate) fn new(player_id: PlayerId, client: Option<Box<PlayerClientData<G>>>) -> Self {
+    pub fn new(player_id: PlayerId, client: Option<Box<PlayerClientData<G>>>) -> Self {
         Self {
             player_id,
             score: G::DEFAULT_SCORE,
@@ -420,13 +420,13 @@ impl<G: GameArenaService> PlayerData<G> {
         }
     }
 
-    /// If player is a real plyaer, returns their client data.
-    pub(crate) fn client(&self) -> Option<&PlayerClientData<G>> {
+    /// If player is a real player, returns their client data.
+    pub fn client(&self) -> Option<&PlayerClientData<G>> {
         self.client.as_deref()
     }
 
     /// If player is a real player, returns a mutable reference to their client data.
-    pub(crate) fn client_mut(&mut self) -> Option<&mut PlayerClientData<G>> {
+    pub fn client_mut(&mut self) -> Option<&mut PlayerClientData<G>> {
         self.client.as_deref_mut()
     }
 

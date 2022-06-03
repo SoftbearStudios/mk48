@@ -456,11 +456,14 @@ impl<G: GameArenaService> MetricRepo<G> {
 
         metrics_repo.mutate_all(|m| {
             m.cpu.push(health.cpu());
+            m.cpu_steal.push(health.cpu_steal());
             m.ram.push(health.ram());
+            const MEGABIT: f32 = 125000.0;
+            m.bandwidth_rx.push(health.bandwidth_rx() as f32 / MEGABIT);
+            m.bandwidth_tx.push(health.bandwidth_tx() as f32 / MEGABIT);
             m.connections.push(health.connections() as f32);
-            if let Some(ups) = health.ups() {
-                m.tps.push(ups);
-            }
+            m.tps = m.tps + health.take_tps();
+            m.spt = m.spt + health.take_spt();
             m.uptime.push(uptime.as_secs_f32() / (24.0 * 60.0 * 60.0));
         });
 

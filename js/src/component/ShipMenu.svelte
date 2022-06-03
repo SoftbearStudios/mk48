@@ -25,7 +25,7 @@
 	export let open = true;
 	export let restrictions;
 	export let type;
-	export let onClickSection;
+	export let closable = true;
 
 	let forcedUnlocks = {};
 	const FORCE_UNLOCKS = 5;
@@ -41,7 +41,7 @@
 	// $: console.log(`min=${minLevel}, max=${maxLevel}, level=${level}`);
 
 	function handleSelectShip(shipType) {
-		if (onSelectShip && !(restricted(shipType, restrictions) && locked(shipType, forcedUnlocks))) {
+		if (onSelectShip && !(restricted(shipType, restrictions) || locked(shipType, forcedUnlocks))) {
 			onSelectShip(shipType);
 		}
 	}
@@ -67,7 +67,7 @@
 	}
 </script>
 
-<Section disableLeftArrow={level == minLevel} disableRightArrow={level == maxLevel} headerAlign='center' name={name} bind:open onLeftArrow={() => incrementIndex(-1)} onRightArrow={() => incrementIndex(1)} onClick={onClickSection}>
+<Section disableLeftArrow={level == minLevel} disableRightArrow={level == maxLevel} headerAlign='center' name={name} bind:open onLeftArrow={() => incrementIndex(-1)} onRightArrow={() => incrementIndex(1)} {closable}>
 	<div class="ships" class:columns={ships.length > 3}>
 		{#each ships as shipType}
 			<Sprite

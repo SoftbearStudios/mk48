@@ -183,7 +183,9 @@ impl InterpolatedContact {
 
 impl Mk48Game {
     /// Call when a contact disappears (keep alive already expired).
-    pub fn lost_contact(
+    ///
+    /// Fine not to call if audio and animations not desired.
+    pub fn play_lost_contact_audio_and_animations(
         &mut self,
         player_position: Vec2,
         contact: &Contact,
@@ -242,7 +244,9 @@ impl Mk48Game {
     }
 
     /// Call when a previously-unseen contact appears.
-    pub fn new_contact(
+    ///
+    /// Fine not to call if sounds are undesired.
+    pub fn play_new_contact_audio(
         &mut self,
         contact: &Contact,
         player_position: Vec2,

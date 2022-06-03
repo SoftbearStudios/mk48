@@ -110,7 +110,6 @@ const jsSettingsStore = function(name, defaultValue, minValue, maxValue) {
 export const chatShown = jsSettingsStore('chatShown', true);
 export const fpsShown = jsSettingsStore('fpsShown', false);
 export const leaderboardShown = jsSettingsStore('leaderboardShown', true);
-export const shipControlsShown = jsSettingsStore('shipControlsShown', true);
 export const teamsShown = jsSettingsStore('teamsShown', true);
 export const upgradeShown = jsSettingsStore('upgradeShown', true);
 export const resolution = jsSettingsStore('resolution', 1.0, 0.25, 1.0);

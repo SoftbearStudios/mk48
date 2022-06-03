@@ -3,6 +3,7 @@
 
 use common::terrain;
 use common::terrain::*;
+use common_util::range::map_ranges;
 use noise::{NoiseFn, SuperSimplex};
 use std::mem::MaybeUninit;
 
@@ -21,11 +22,20 @@ fn get_noise() -> &'static SuperSimplex {
 
 /// noise generator returns noise (one of 256 possible Altitude's) for a given terrain coordinate.
 pub fn noise_generator(x: usize, y: usize) -> u8 {
+    const ARCTIC_BLEND: f64 = 1.0 / 20.0;
+    const TROPICS_BLEND: f64 = 1.0 / 10.0;
+
     // Distance from border of arctic (positive = arctic, negative = ocean).
     let arctic_distance = y as isize - terrain::ARCTIC as isize;
 
+    // Distance from border of tropics (positive = tropics, negative = ocean).
+    let tropics_distance = terrain::TROPICS as isize - y as isize;
+
     // Don't generate land near ocean/arctic border due to "subduction".
-    let scale = ((arctic_distance as f64).abs() * (1.0 / 20.0)).min(1.0);
+    let mut scale = ((arctic_distance as f64).abs() * ARCTIC_BLEND).min(1.0);
+
+    // Don't generate default land in tropics (tropics has different function).
+    scale = scale.min((-tropics_distance as f64 * TROPICS_BLEND).clamp(0.0, 1.0));
 
     const S: f64 = SCALE as f64 * 0.0012;
     // Safety: Seed is only ever modified for testing purposes, when there are no other threads
@@ -34,7 +44,12 @@ pub fn noise_generator(x: usize, y: usize) -> u8 {
     let noise_y = y as f64 * S;
 
     // Height in range of 0.0..1.0, 0.0 being the lowest point in the ocean and 1.0 being highest mountain.
-    let mut height = fractal_noise(get_noise(), noise_x, noise_y, 4) * scale;
+    let mut height = 0.0;
+
+    // Don't waste time generating unused noise.
+    if scale > 0.0001 {
+        height = fractal_noise(get_noise(), noise_x, noise_y, 4) * scale;
+    }
 
     if arctic_distance > 0 {
         let ice_sheet = (arctic_distance as f64 * (1.0 / 40.0)).min(1.0);
@@ -48,6 +63,28 @@ pub fn noise_generator(x: usize, y: usize) -> u8 {
             m if m > 0.3 => height = height.max(9.0 / 16.0),
             _ => (),
         }
+    }
+
+    if tropics_distance > 0 {
+        height = 0.09;
+
+        const F: f64 = 2.3;
+        let n = fractal_noise(get_noise(), noise_x * F - 1000.0, noise_y * F, 4);
+        height += (n.powi(2) + 0.1) * 0.4;
+
+        const F2: f64 = 0.47;
+        let m = fractal_noise(get_noise(), noise_x * F2 - 2000.0, noise_y * F2, 3);
+        let m = map_ranges(m as f32, -1.0..1.0, 0.35..0.47, false) as f64;
+        height += m * 0.5;
+        height = height.max(m);
+
+        const F3: f64 = 1.42;
+        let o = fractal_noise(get_noise(), noise_x * F3 - 3000.0, noise_y * F3, 3);
+        height += map_ranges((o as f32).max(0.0).powi(2), 0.5..0.8, 0.0..-0.3, true) as f64;
+
+        // Smooth border.
+        let scale = ((tropics_distance as f64).abs() * TROPICS_BLEND).min(1.0);
+        height *= scale
     }
 
     // Convert height to u8 (later converted to u4 by terrain).
@@ -71,7 +108,6 @@ mod tests {
     use crate::noise::{noise_generator, SEED};
     use common::altitude::Altitude;
     use common::terrain::*;
-    use common::util;
     use glam::Vec2;
     use image::{Rgb, RgbImage};
 
@@ -85,9 +121,9 @@ mod tests {
 
     fn lerp(a: Color, b: Color, x: f32) -> Color {
         [
-            util::lerp(a[0] as f32, b[0] as f32, x) as u8,
-            util::lerp(a[1] as f32, b[1] as f32, x) as u8,
-            util::lerp(a[2] as f32, b[2] as f32, x) as u8,
+            common_util::range::lerp(a[0] as f32, b[0] as f32, x) as u8,
+            common_util::range::lerp(a[1] as f32, b[1] as f32, x) as u8,
+            common_util::range::lerp(a[2] as f32, b[2] as f32, x) as u8,
         ]
     }
 
@@ -95,8 +131,8 @@ mod tests {
     fn render() {
         init();
 
-        const SIZE: u32 = 3000;
-        const ZOOM: f32 = 1.0;
+        const SIZE: u32 = 2048;
+        const ZOOM: f32 = 25.0;
 
         for s in 100..1000 {
             unsafe {
@@ -114,8 +150,8 @@ mod tests {
                         (j as i32 - SIZE as i32 / 2) as f32 * ZOOM,
                     );
 
-                    if pos.length() > 1500.0 {
-                        continue;
+                    if pos.length() > SCALE * SIZE as f32 / 2.0 {
+                        //continue;
                     }
 
                     // let height = terrain.at(i as usize, j as usize);
@@ -139,6 +175,7 @@ mod tests {
             image
                 .save(&format!("terrain_test/{}.png", unsafe { SEED }))
                 .unwrap();
+            break;
         }
     }
 }

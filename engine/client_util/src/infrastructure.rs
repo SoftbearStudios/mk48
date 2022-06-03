@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::apply::Apply;
+use crate::browser_storage::BrowserStorages;
 use crate::context::{Context, ServerState};
 use crate::fps_monitor::FpsMonitor;
 use crate::frontend::Frontend;
 use crate::game_client::GameClient;
 use crate::js_hooks::canvas;
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
-use crate::local_storage::LocalStorage;
 use crate::mouse::{MouseButton, MouseButtonState, MouseEvent as GameClientMouseEvent};
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::renderer::Renderer;
@@ -29,7 +29,7 @@ use web_sys::{FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEven
 
 pub struct Infrastructure<G: GameClient> {
     game: G,
-    context: Context<G>,
+    pub context: Context<G>,
     renderer: Renderer,
     renderer_layer: G::RendererLayer,
     statistic_fps_monitor: FpsMonitor,
@@ -41,16 +41,16 @@ impl<G: GameClient> Infrastructure<G> {
 
         // First load local storage common settings.
         // Not guaranteed to set either or both to Some. Could fail to load.
-        let local_storage = LocalStorage::new();
-        let common_settings = CommonSettings::load(&local_storage, CommonSettings::default());
+        let browser_storages = BrowserStorages::new();
+        let common_settings = CommonSettings::load(&browser_storages, CommonSettings::default());
 
         // Next create renderer and load game settings with it.
         let mut renderer = Renderer::new(common_settings.antialias);
         let game_settings =
-            G::GameSettings::load(&local_storage, game.init_settings(&mut renderer));
+            G::GameSettings::load(&browser_storages, game.init_settings(&mut renderer));
 
         // Finally create context with common and game settings.
-        let mut context = Context::new(local_storage, common_settings, game_settings, frontend);
+        let mut context = Context::new(browser_storages, common_settings, game_settings, frontend);
         let renderer_layer = game.init_layer(&mut renderer, &mut context);
 
         Self {
@@ -92,17 +92,17 @@ impl<G: GameClient> Infrastructure<G> {
                 self.context.socket.reset_host(host);
                 self.context
                     .common_settings
-                    .set_server_id(server_id, &mut self.context.local_storage);
+                    .set_server_id(server_id, &mut self.context.browser_storages);
 
                 if self.context.socket.is_closed()
                     || Some((arena_id, session_id)) != self.context.common_settings.session_tuple()
                 {
                     self.context
                         .common_settings
-                        .set_arena_id(Some(arena_id), &mut self.context.local_storage);
+                        .set_arena_id(Some(arena_id), &mut self.context.browser_storages);
                     self.context
                         .common_settings
-                        .set_session_id(Some(session_id), &mut self.context.local_storage);
+                        .set_session_id(Some(session_id), &mut self.context.browser_storages);
                 }
             }
 
@@ -347,7 +347,12 @@ impl<G: GameClient> Infrastructure<G> {
     }
 
     pub fn wheel(&mut self, event: WheelEvent) {
-        self.raw_zoom(event.delta_y() as f32 * 0.01)
+        // each wheel step is 53 pixels.
+        // do 0.5 or 1.0 raw zoom.
+        let steps: f64 = event.delta_y() * (1.0 / 53.0);
+        let sign = 1f64.copysign(steps);
+        let steps = steps.abs().clamp(1.0, 2.0).floor() * sign;
+        self.raw_zoom(steps as f32 * 0.5)
     }
 
     /// Sends a command to the server to send a chat message.
@@ -423,7 +428,7 @@ impl<G: GameClient> Infrastructure<G> {
         self.context.socket.set_protocol(protocol);
         self.context
             .common_settings
-            .set_protocol(protocol, &mut self.context.local_storage);
+            .set_protocol(protocol, &mut self.context.browser_storages);
     }
 
     /// Send error message to server.
@@ -444,10 +449,10 @@ impl<G: GameClient> Infrastructure<G> {
     pub fn set_setting(&mut self, key: &str, value: JsValue) {
         self.context
             .settings
-            .set(key, value.clone(), &mut self.context.local_storage);
+            .set(key, value.clone(), &mut self.context.browser_storages);
         self.context
             .common_settings
-            .set(key, value, &mut self.context.local_storage);
+            .set(key, value, &mut self.context.browser_storages);
     }
 
     /// Connects to a different server.
@@ -467,7 +472,7 @@ impl<G: GameClient> Infrastructure<G> {
             ReconnWebSocket::new(host, self.context.common_settings.protocol, None);
         self.context
             .common_settings
-            .set_server_id(server_id, &mut self.context.local_storage);
+            .set_server_id(server_id, &mut self.context.browser_storages);
     }
 
     /// Simulates dropping of one or both websockets.

@@ -1,9 +1,7 @@
 #ifdef WAVES
     #extension GL_OES_standard_derivatives : enable
-    precision highp float;
-#else
-    precision mediump float;
 #endif
+precision highp float;
 
 varying vec2 vPosition;
 varying vec2 vUv;

@@ -8,7 +8,9 @@ use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
 macro_rules! x_vec2 {
     ($name: ident, $lower_name: ident, $int: ty, $hash: ident) => {
-        #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+        #[derive(
+            Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize,
+        )]
         pub struct $name {
             pub x: $int,
             pub y: $int,
@@ -39,12 +41,40 @@ macro_rules! x_vec2 {
                 }
             }
 
+            pub fn floor(vec2: Vec2) -> Self {
+                Self {
+                    x: vec2.x.floor() as $int,
+                    y: vec2.y.floor() as $int,
+                }
+            }
+
+            pub fn ceil(vec2: Vec2) -> Self {
+                Self {
+                    x: vec2.x.ceil() as $int,
+                    y: vec2.y.ceil() as $int,
+                }
+            }
+
             pub fn max_element(&self) -> $int {
                 self.x.max(self.y)
             }
 
             pub fn min_element(&self) -> $int {
                 self.x.min(self.y)
+            }
+
+            pub fn min_components(&self, other: Self) -> Self {
+                Self {
+                    x: self.x.min(other.x),
+                    y: self.y.min(other.y),
+                }
+            }
+
+            pub fn max_components(&self, other: Self) -> Self {
+                Self {
+                    x: self.x.max(other.x),
+                    y: self.y.max(other.y),
+                }
             }
 
             pub fn saturating_add(&self, rhs: Self) -> Self {

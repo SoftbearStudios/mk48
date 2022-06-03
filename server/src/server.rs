@@ -149,7 +149,7 @@ impl GameArenaService for Server {
         self.world.terrain.pre_update();
     }
 
-    fn post_update(&mut self) {
+    fn post_update(&mut self, _context: &Context<Self>) {
         // Needs to be after clients receive updates.
         self.world.terrain.post_update();
     }

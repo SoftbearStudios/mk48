@@ -10,7 +10,7 @@ use crate::transform::Transform;
 use crate::util::{level_to_score, natural_death_coins};
 use crate::velocity::Velocity;
 use arrayvec::ArrayVec;
-use common_util::range::map_ranges;
+use common_util::range::map_ranges_fast;
 use core_protocol::serde_util::{StrVisitor, U8Visitor};
 use enum_iterator::IntoEnumIterator;
 use glam::Vec2;
@@ -130,6 +130,8 @@ pub struct EntityData {
     #[serde(default)]
     pub anti_aircraft: f32,
     #[serde(default)]
+    pub ram_damage: f32,
+    #[serde(default)]
     pub torpedo_resistance: f32,
     #[serde(default)]
     pub stealth: f32,
@@ -187,11 +189,6 @@ impl EntityData {
         self.radii().end
     }
 
-    /// returns whether this entity type primarily/only exists on land, as opposed to water.
-    pub fn is_land_based(&self) -> bool {
-        self.sub_kind == EntitySubKind::Tree
-    }
-
     /// max_health returns the the minimum damage to kill a boat, panicking if the corresponding
     /// entity does not have health.
     pub fn max_health(&self) -> Ticks {
@@ -214,11 +211,12 @@ impl EntityData {
         let lo = Velocity::from_knots(8.0);
         let hi = Velocity::from_knots(12.0);
         Velocity::from_mps(
-            map_ranges(
+            map_ranges_fast(
                 altitude.to_norm(),
                 0.0..-1.0,
                 lo.to_mps()..hi.to_mps(),
                 true,
+                false, // to_norm can't return less than -1 (high).
             ) * (1.0 + self.stealth),
         )
     }
@@ -596,5 +594,27 @@ impl EntityType {
         }));
 
         ENTITY_DATA = vector;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::entity::{EntityKind, EntityType};
+
+    #[test]
+    fn weapon_sensors() {
+        unsafe {
+            EntityType::init();
+        }
+        let mut ranges: Vec<(EntityType, f32)> = EntityType::iter()
+            .map(|typ| (typ, typ.data().sensors.max_range()))
+            .collect();
+        ranges.sort_by_key(|(_, f)| *f as usize);
+        for (typ, range) in ranges {
+            if typ.data().kind == EntityKind::Boat {
+                continue;
+            }
+            println!("{:?} sensor range is {}", typ, range);
+        }
     }
 }

@@ -1,4 +1,5 @@
 extern crate client_util;
+extern crate core;
 extern crate core_protocol;
 extern crate gloo_events;
 extern crate gloo_render;
@@ -27,6 +28,7 @@ use gloo_render::{request_animation_frame, AnimationFrame};
 use keyboard::KeyboardEventsListener;
 use std::marker::PhantomData;
 use std::num::NonZeroU8;
+use std::rc::Rc;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent};
 use yew::prelude::*;
 
@@ -150,6 +152,12 @@ where
 
         let context = Ctw {
             language_id: LanguageId::English,
+            state: Rc::new(
+                self.infrastructure
+                    .as_ref()
+                    .map(|i| i.context.state.core.clone())
+                    .unwrap_or_default(),
+            ),
         };
 
         let game_context = Gctw {

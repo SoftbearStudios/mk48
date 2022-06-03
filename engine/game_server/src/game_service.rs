@@ -76,7 +76,10 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     /// Called when a player leaves the game. Responsible for clearing player data as necessary.
     fn player_left(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
 
+    /// Gets a client a.k.a. real player's [`GameUpdate`].
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
+    ///
+    /// Expected, but not necessarily required, to be idempotent.
     fn get_game_update(
         &self,
         counter: Ticks,
@@ -89,7 +92,7 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     /// Before sending.
     fn tick(&mut self, context: &Context<Self>);
     /// After sending.
-    fn post_update(&mut self) {}
+    fn post_update(&mut self, _context: &Context<Self>) {}
 }
 
 /// Implemented by game bots.

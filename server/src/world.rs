@@ -54,7 +54,7 @@ impl World {
         if target_radius.powi(2) > self.radius.powi(2) + 1000f32.powi(2) {
             self.radius = target_radius;
         } else {
-            self.radius += (target_radius - self.radius).clamp(s * -0.5, s);
+            self.radius += (target_radius - self.radius).clamp(-s, 2.0 * s);
         }
     }
 

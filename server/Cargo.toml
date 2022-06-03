@@ -43,10 +43,11 @@ rand = "0.8"
 idalloc = "0.1"
 noise = { version = "0.7", default-features = false }
 common = {path="../common", version="0.1", features=["server"]}
+common_util = {path="../engine/common_util"}
 game_server = {path="../engine/game_server"}
 core_protocol = {path="../engine/core_protocol"}
 server_util = {path="../engine/server_util"}
-rayon = "1.5"
+maybe_parallel_iterator = {version = "0.10.0", features = []}
 ringbuffer = "0.8"
 log = {version = "0.4", features = [ "release_max_level_info" ] }
 env_logger = "0.9"
@@ -55,4 +56,5 @@ rustrict = {version = "0", features=["customize"], default-features=false}
 bitvec = "1.0.0"
 
 [dev-dependencies]
-image = { version = "0.23.14", features = [ "png" ] }
+image = { version = "0.24", features = [ "png" ], default-features=false }
+imageproc = "0.23.0"

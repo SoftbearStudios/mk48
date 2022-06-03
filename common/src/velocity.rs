@@ -28,6 +28,8 @@ impl Velocity {
     const SCALE: f32 = 1.0 / (1 << 5) as f32;
     /// How many knots per unit of velocity.
     const KNOTS_SCALE: f32 = Self::SCALE * 1.94384;
+    /// Max reverse velocity as a function of max forward velocity.
+    pub const MAX_REVERSE_SCALE: f32 = -1.0 / 3.0;
 
     /// new returns zero Velocity.
     pub fn new() -> Self {
@@ -47,11 +49,13 @@ impl Velocity {
     }
 
     /// to_knots returns an amount of knots corresponding to the Velocity.
+    #[inline]
     pub fn to_knots(self) -> f32 {
         self.0 as f32 * Self::KNOTS_SCALE
     }
 
     /// from_knots returns a velocity from a given amount of knots.
+    #[inline]
     pub fn from_knots(knots: f32) -> Self {
         Self((knots * (1.0 / Self::KNOTS_SCALE)) as VelocityRepr)
     }

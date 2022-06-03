@@ -12,12 +12,15 @@ use common::death_reason::DeathReason;
 use common::entity::*;
 use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
-use common::util::map_ranges;
+use common::transform::Transform;
 use common::velocity::Velocity;
-use common::world::{area_border_normal, clamp_y_to_area_border, outside_area, ARCTIC};
+use common::world::{
+    clamp_y_to_strict_area_border, outside_strict_area, strict_area_border_normal, ARCTIC,
+};
+use common_util::range::map_ranges;
 use glam::Vec2;
+use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
 use rand::Rng;
-use rayon::prelude::*;
 use server_util::benchmark::Timer;
 use server_util::benchmark_scope;
 use std::sync::{Arc, Mutex};
@@ -67,6 +70,7 @@ impl World {
         let mut fates: Vec<_> = self
             .entities
             .par_iter_mut()
+            .into_maybe_parallel_iter()
             .filter_map(|(index, entity)| {
                 let index = index as EntityIndex;
                 let data = entity.data();
@@ -139,6 +143,7 @@ impl World {
                                         true,
                                     );
                                 } else {
+                                    // Turn in place.
                                     max_speed = 0.0;
                                 }
                             }
@@ -190,7 +195,7 @@ impl World {
                     EntityKind::Boat => {
                         entity.apply_altitude_target(
                             terrain,
-                            Some(entity.extension().altitude_target),
+                            Some(entity.extension().altitude_target()),
                             2.0,
                             delta,
                         );
@@ -226,69 +231,76 @@ impl World {
                     .apply_guidance(data, entity.guidance, max_speed, delta_seconds);
                 entity.transform.do_kinematics(delta_seconds);
 
-                let arctic = entity.transform.position.y >= common::world::ARCTIC;
+                let arctic = entity.transform.position.y >= ARCTIC;
 
                 let collision = entity.collides_with_terrain(terrain, delta_seconds);
-
-                // An entity colliding with terrain/water when it shouldn't has consequences.
-                if collision.is_some() != data.is_land_based() {
+                if let Some(collision) = collision {
+                    // All non-boats die instantly to terrain.
                     if data.kind != EntityKind::Boat {
                         potential_limited_reload(entity);
                         return Some((index, Fate::Remove(DeathReason::Terrain)));
                     }
 
-                    // Should always be true.
-                    if let Some((collision_point, collision_altitude)) = collision {
-                        entity.transform.velocity = entity
-                            .transform
-                            .velocity
-                            .clamp_magnitude(Velocity::from_mps(5.0));
+                    let immune = data.sub_kind == EntitySubKind::Hovercraft
+                        || (arctic && data.sub_kind == EntitySubKind::Icebreaker)
+                        || (!arctic && data.sub_kind == EntitySubKind::Dredger);
 
-                        let immune = data.sub_kind == EntitySubKind::Hovercraft
-                            || (arctic
-                                && data.sub_kind == EntitySubKind::Icebreaker
-                                && collision_altitude <= Altitude(1))
-                            || (!arctic && data.sub_kind == EntitySubKind::Dredger);
+                    entity.transform.velocity = {
+                        let Transform {
+                            position,
+                            direction,
+                            mut velocity,
+                            ..
+                        } = entity.transform;
 
-                        #[cfg(debug_assertions)]
-                        if !entity.borrow_player().is_bot() {
-                            println!(
-                                "immune: {} arctic: {} col_alt: {:?}, col_alt_bytes: {}",
-                                immune, arctic, collision_altitude, collision_altitude.0
-                            );
-                        }
-
-                        if data.sub_kind != EntitySubKind::Hovercraft {
-                            let max_breakable =
-                                if arctic && data.sub_kind == EntitySubKind::Icebreaker {
-                                    Altitude(1)
-                                } else {
-                                    Altitude(0)
-                                };
-
-                            let breakable = Altitude(0)..=max_breakable;
-
-                            if breakable.contains(&collision_altitude) {
-                                // Ships break sand and ice they come into contact with.
-                                let terrain_mutation =
-                                    TerrainMutation::conditional(collision_point, -20.0, breakable);
-
-                                terrain_mutations.lock().unwrap().push((
-                                    terrain_mutation,
-                                    (data.sub_kind == EntitySubKind::Icebreaker).then_some(index),
-                                ));
-                            }
-                        }
-
+                        // Move boat away from terrain if it would taking damage.
                         if !immune {
-                            repair_eligible = false;
-
-                            if entity.kill_in(delta, Ticks::from_secs(4.0)) {
-                                return Some((index, Fate::Remove(DeathReason::Terrain)));
-                            }
+                            let delta =
+                                (collision.average_position - position) * (1.0 / data.length);
+                            let dot = direction.to_vec().dot(delta);
+                            let push = Velocity::from_mps(dot * -150.0);
+                            velocity += push;
                         }
-                    } else {
-                        debug_assert!(false);
+                        velocity.clamp_magnitude(Velocity::from_mps(5.0))
+                    };
+
+                    if !matches!(
+                        data.sub_kind,
+                        EntitySubKind::Hovercraft | EntitySubKind::Dredger
+                    ) {
+                        let is_icebreaker = arctic && data.sub_kind == EntitySubKind::Icebreaker;
+                        let max_breakable = if is_icebreaker {
+                            Altitude::MAX
+                        } else {
+                            Altitude(0)
+                        };
+
+                        let breakable = Altitude(0)..=max_breakable;
+
+                        if breakable.contains(&collision.max_altitude) {
+                            // Break quicker for less points.
+                            let amount = if is_icebreaker { -60.0 } else { -20.0 };
+
+                            // Ships break sand and ice they come into contact with.
+                            let terrain_mutation = TerrainMutation::conditional(
+                                collision.highest_position,
+                                amount,
+                                breakable,
+                            );
+
+                            terrain_mutations
+                                .lock()
+                                .unwrap()
+                                .push((terrain_mutation, is_icebreaker.then_some(index)));
+                        }
+                    }
+
+                    if !immune {
+                        repair_eligible = false;
+
+                        if entity.kill_in(delta, Ticks::from_secs(4.0)) {
+                            return Some((index, Fate::Remove(DeathReason::Terrain)));
+                        }
                     }
                 } else if data.kind == EntityKind::Boat && !arctic {
                     let below_keel = entity.altitude
@@ -317,7 +329,8 @@ impl World {
 
                 let outside_border =
                     entity.transform.position.length_squared() > border_radius_squared;
-                let outside_area = outside_area(entity.entity_type, entity.transform.position);
+                let outside_area =
+                    outside_strict_area(entity.entity_type, entity.transform.position);
 
                 if outside_border || outside_area {
                     repair_eligible = false;
@@ -334,8 +347,8 @@ impl World {
                         normal = -n;
                     }
                     if outside_area {
-                        position.y = clamp_y_to_area_border(entity.entity_type, position.y);
-                        normal = area_border_normal(entity.entity_type).unwrap()
+                        position.y = clamp_y_to_strict_area_border(entity.entity_type, position.y);
+                        normal = strict_area_border_normal(entity.entity_type).unwrap()
                     }
 
                     entity.transform.velocity =
@@ -351,9 +364,7 @@ impl World {
                 if data.kind == EntityKind::Boat {
                     entity.update_turret_aim(delta_seconds);
                     entity.reload(delta);
-                    entity
-                        .extension_mut()
-                        .update_active_cooldown_and_spawn_protection(delta);
+                    entity.extension_mut().update_tickers(delta);
 
                     if repair_eligible {
                         let repair_amount = if data.length > 200.0 {
@@ -369,7 +380,7 @@ impl World {
                     if data.sub_kind == EntitySubKind::Dredger {
                         // Dredgers excavate land they come into contact with.
                         terrain_mutations.lock().unwrap().push((
-                            TerrainMutation::simple(entity.transform.position, -20.0),
+                            TerrainMutation::simple(entity.transform.position, -17.5),
                             None,
                         ))
                     }
@@ -424,7 +435,7 @@ impl World {
         }
 
         // Sorted in reverse to remove correctly.
-        fates.par_sort_unstable_by(|a, b| b.0.cmp(&a.0));
+        fates.maybe_par_sort_unstable_by(|a, b| b.0.cmp(&a.0));
 
         for (index, fate) in fates {
             match fate {
@@ -479,21 +490,25 @@ impl World {
         }
 
         #[cfg(debug_assertions)]
-        self.entities.par_iter().for_each(|(index, entity)| {
-            assert!(!index.changed(entity));
-        });
+        self.entities
+            .par_iter()
+            .into_maybe_parallel_iter()
+            .for_each(|(index, entity)| {
+                assert!(!index.changed(entity));
+            });
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::entity::Entity;
-    use crate::player::PlayerTuple;
     use crate::world::World;
+    use crate::Server;
     use common::entity::{EntityKind, EntityType};
     use common::terrain::Terrain;
     use common::ticks::Ticks;
     use core_protocol::id::PlayerId;
+    use game_server::player::{PlayerData, PlayerTuple};
     use std::num::NonZeroU32;
     use std::sync::Arc;
 
@@ -511,12 +526,13 @@ mod tests {
             .filter(|t| t.data().kind == EntityKind::Boat)
             .collect();
 
-        let players: Vec<Arc<PlayerTuple>> = cases
+        let players: Vec<Arc<PlayerTuple<Server>>> = cases
             .iter()
             .enumerate()
             .map(|(i, _)| {
-                Arc::new(PlayerTuple::new(PlayerId(
-                    NonZeroU32::new(i as u32 + 1).unwrap(),
+                Arc::new(PlayerTuple::new(PlayerData::new(
+                    PlayerId(NonZeroU32::new(i as u32 + 1).unwrap()),
+                    None,
                 )))
             })
             .collect();
@@ -539,7 +555,8 @@ mod tests {
         'outer: loop {
             for (i, (typ, player)) in cases.iter().zip(players.iter()).enumerate() {
                 if let Some(entity) = player
-                    .borrow()
+                    .borrow_player()
+                    .data
                     .status
                     .get_entity_index()
                     .map(|idx| &world.entities[idx])

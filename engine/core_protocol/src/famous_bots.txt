@@ -32,6 +32,7 @@ Megatron
 MQ-1
 MQ-9
 Otto
+Project 2501
 R2-D2
 Rev-9
 Rex
@@ -49,4 +50,6 @@ UAV
 OptimusPrime
 Ultron
 Wall-E
+WarriorAI
 Wheatly
+Wintermute

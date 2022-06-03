@@ -5,7 +5,7 @@ use crate::game_service::{Bot, GameArenaService};
 use crate::player::{PlayerData, PlayerRepo, PlayerTuple};
 use common_util::ticks::Ticks;
 use core_protocol::id::PlayerId;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use maybe_parallel_iterator::IntoMaybeParallelRefMutIterator;
 use server_util::benchmark::{benchmark_scope, Timer};
 use std::sync::Arc;
 
@@ -45,23 +45,22 @@ impl<G: GameArenaService> BotRepo<G> {
     }
 
     /// Updates all bots.
-    pub fn update(&mut self, counter: Ticks, service: &mut G) {
+    pub fn update(&mut self, counter: Ticks, service: &G) {
         benchmark_scope!("update_bots");
 
-        {
-            let service = &service;
+        self.bots
+            .maybe_par_iter_mut()
+            .with_min_sequential(64)
+            .for_each(|bot_data: &mut BotData<G>| {
+                let update = G::Bot::get_input(service, counter, &bot_data.player_tuple);
+                bot_data.action_buffer = bot_data
+                    .bot
+                    .update(update, bot_data.player_tuple.player.borrow().player_id)
+            });
+    }
 
-            self.bots
-                .par_iter_mut()
-                .with_min_len(64)
-                .for_each(|bot_data: &mut BotData<G>| {
-                    let update = G::Bot::get_input(service, counter, &bot_data.player_tuple);
-                    bot_data.action_buffer = bot_data
-                        .bot
-                        .update(update, bot_data.player_tuple.player.borrow().player_id)
-                });
-        }
-
+    /// Call after `GameService::post_update` to avoid sending commands between `GameService::tick` and it.
+    pub fn post_update(&mut self, service: &mut G) {
         for bot_data in &mut self.bots {
             if let Some(command) = bot_data.action_buffer.take() {
                 service.player_command(command, &bot_data.player_tuple);

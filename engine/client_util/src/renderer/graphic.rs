@@ -10,6 +10,7 @@ use crate::renderer::vertex::PosColor;
 use glam::{Mat2, Vec2, Vec4};
 use std::array;
 use std::cmp::Ordering;
+use std::f32::consts::PI;
 use std::ops::Range;
 use web_sys::WebGlRenderingContext as Gl;
 
@@ -131,6 +132,66 @@ impl<I: Index> GraphicLayer<I> {
         );
     }
 
+    /// add_rounded_line adds a rounded line to the graphics queue.
+    /// Extend means start and end are the centers of the arcs (aka longer than a nomral line).
+    pub fn add_rounded_line(
+        &mut self,
+        start: Vec2,
+        end: Vec2,
+        mut thickness: f32,
+        color: Vec4,
+        extend: bool,
+    ) {
+        let length = start.distance(end);
+        let mut line_length = length;
+
+        if !extend {
+            // Can't round a line that is shorter than it is wide.
+            thickness = thickness.min(length);
+            let radius = thickness * 0.5;
+
+            // 2 arcs on either side of line take up 2 radii of length.
+            line_length -= radius * 2.0
+        }
+
+        // Don't divide by zero.
+        let line_factor = if length < 0.0001 {
+            0.0
+        } else {
+            (length - line_length) / length
+        };
+
+        let line_start = start.lerp(end, line_factor * 0.5);
+        let line_end = end.lerp(start, line_factor * 0.5);
+
+        // Don't add a line if it has zero length.
+        if line_start != line_end {
+            self.add_line(line_start, line_end, thickness, color);
+        }
+
+        let diff = line_end - line_start;
+        let angle = diff.y.atan2(diff.x);
+
+        let arc_thickness = thickness * 0.5;
+        // Account for thickness which is applied to radius.
+        let adjusted_radius = arc_thickness * 0.5;
+
+        // Rounded start.
+        let opp_angle = angle - PI;
+        let angle_range = (opp_angle - PI / 2.0)..(opp_angle + PI / 2.0);
+        self.add_arc(
+            line_start,
+            adjusted_radius,
+            angle_range,
+            arc_thickness,
+            color,
+        );
+
+        // Rounded end.
+        let angle_range = (angle - PI / 2.0)..(angle + PI / 2.0);
+        self.add_arc(line_end, adjusted_radius, angle_range, arc_thickness, color);
+    }
+
     /// add_arc_graphic adds an arc to the graphics queue. Angles are in radians.
     pub fn add_arc(
         &mut self,
@@ -139,6 +200,18 @@ impl<I: Index> GraphicLayer<I> {
         angle_range: Range<f32>,
         thickness: f32,
         color: Vec4,
+    ) {
+        self.add_arc_inner(center, radius, angle_range, thickness, color, None);
+    }
+
+    fn add_arc_inner(
+        &mut self,
+        center: Vec2,
+        radius: f32,
+        angle_range: Range<f32>,
+        thickness: f32,
+        color: Vec4,
+        segments: Option<usize>,
     ) {
         match radius.partial_cmp(&0.0).unwrap() {
             Ordering::Greater => {}
@@ -152,14 +225,14 @@ impl<I: Index> GraphicLayer<I> {
             return;
         }
 
-        // Number of segments to approximate an arc.
-        // The radius.sqrt() helps even out the quality surprisingly well.
-        let segments = ((radius / self.zoom).sqrt()
-            * angle_span
-            * (200.0 / (std::f32::consts::PI * 2.0))) as i32;
+        let segments = segments.unwrap_or_else(|| {
+            // Number of segments to approximate an arc.
+            // The radius.sqrt() helps even out the quality surprisingly well.
+            let segments = ((radius / self.zoom).sqrt() * angle_span * (200.0 / (PI * 2.0))) as i32;
 
-        // Set maximum to prevent indices from overflowing.
-        let segments = segments.clamp(6, 100) as usize;
+            // Set maximum to prevent indices from overflowing.
+            segments.clamp(6, 100) as usize
+        });
 
         // Algorithm: Build a circle outline segment by segment, going counterclockwise. Vertices
         // are reused for maximum efficiency (except the original A and B which are duplicated at the
@@ -224,21 +297,48 @@ impl<I: Index> GraphicLayer<I> {
         );
     }
 
-    /// add_circle_graphic adds a circle outline to the graphics queue.
+    /// Adds a circle outline to the graphics queue.
     pub fn add_circle(&mut self, center: Vec2, radius: f32, thickness: f32, color: Vec4) {
-        self.add_arc(
-            center,
-            radius,
-            0.0..std::f32::consts::PI * 2.0,
-            thickness,
-            color,
-        );
+        self.add_arc(center, radius, 0.0..PI * 2.0, thickness, color);
     }
 
-    /// Like `Self::add_circle_graphic` but filled instead of hollow.
+    /// Like `Self::add_circle` but filled instead of hollow.
     pub fn add_filled_circle(&mut self, center: Vec2, radius: f32, color: Vec4) {
         // TODO: Not the most efficient way to make a filled circle.
         self.add_circle(center, radius * 0.5, radius, color)
+    }
+
+    /// Adds a polygon outline to the graphics queue.
+    pub fn add_polygon(
+        &mut self,
+        center: Vec2,
+        radius: f32,
+        angle: f32,
+        thickness: f32,
+        color: Vec4,
+        sides: usize,
+    ) {
+        self.add_arc_inner(
+            center,
+            radius,
+            angle..(angle + PI * 2.0),
+            thickness,
+            color,
+            Some(sides),
+        );
+    }
+
+    /// Like `Self::add_polygon` but filled instead of hollow.
+    pub fn add_filled_polygon(
+        &mut self,
+        center: Vec2,
+        radius: f32,
+        angle: f32,
+        color: Vec4,
+        sides: usize,
+    ) {
+        // TODO: Not the most efficient way to make a filled polygon.
+        self.add_polygon(center, radius * 0.5, angle, radius, color, sides)
     }
 }
 

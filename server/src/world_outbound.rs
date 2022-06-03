@@ -9,7 +9,7 @@ use crate::server::Server;
 use crate::world::World;
 use common::entity::{EntityKind, EntitySubKind};
 use common::ticks::Ticks;
-use common::util::*;
+use common_util::range::{map_ranges, map_ranges_fast};
 use game_server::player::PlayerTuple;
 use glam::{vec2, Vec2};
 
@@ -114,6 +114,9 @@ impl World {
         let radar_range_inv = camera.radar.powi(-2);
         let sonar_range_inv = camera.sonar.powi(-2);
         let max_range = camera.visual.max(camera.radar.max(camera.sonar));
+        let close_proximity_squared = player_entity.map_or(0.0, |e| {
+            (e.entity_type.data().radius + Entity::CLOSE_PROXIMITY).powi(2)
+        });
         let inner_circle_squared = camera.inner.powi(2);
         let camera_pos = camera.position;
         let camera_view = camera.view;
@@ -226,7 +229,7 @@ impl World {
                     if visual_range_inv.is_finite() {
                         let mut visual_ratio = default_ratio * visual_range_inv;
                         if altitude.is_submerged() {
-                            let min = if data.kind == EntityKind::Boat
+                            let extra = if data.kind == EntityKind::Boat
                                 && entity.extension().reloads.iter().any(|&t| t > Ticks::ZERO)
                             {
                                 // A submarine that has fired recently is visible, for practical reasons.
@@ -234,15 +237,22 @@ impl World {
                             } else {
                                 0.0
                             };
-                            visual_ratio /=
-                                map_ranges(altitude.to_norm(), -0.5..1.0, min..0.8, true);
+                            // Don't clamp high because to_norm can't return above 1.0 (high).
+                            visual_ratio /= map_ranges_fast(
+                                altitude.to_norm(),
+                                -0.5..1.0,
+                                0.0..0.8,
+                                true,
+                                false,
+                            ) + extra;
                         }
                         visible = visual_ratio < 1.0;
                         uncertainty = uncertainty.min(visual_ratio);
                     }
 
-                    if data.kind == EntityKind::Weapon
-                        && player_entity.is_some()
+                    if player_entity.is_some()
+                        && data.kind == EntityKind::Weapon
+                        && distance_squared < close_proximity_squared // Do faster check first.
                         && entity.is_in_proximity_to(
                             player_entity.as_ref().unwrap(),
                             Entity::CLOSE_PROXIMITY,
@@ -261,7 +271,6 @@ impl World {
                 }
 
                 let has_type = data.kind == EntityKind::Collectible
-                    || data.sub_kind == EntitySubKind::Tree
                     || friendly
                     || uncertainty < 0.5
                     || distance_squared < inner_circle_squared;

@@ -87,12 +87,16 @@ impl<G: GameArenaService> ContextService<G> {
         );
         self.context
             .bots
-            .update(self.context.counter, &mut self.service);
+            .update(self.context.counter, &self.service);
 
         leaderboard.process(&self.context.liveboard, &self.context.players);
 
         // Post-update game logic.
-        self.service.post_update();
+        self.service.post_update(&self.context);
+
+        // Bot commands/joining/leaving, postponed because no commands should be issued between
+        // `GameService::tick` and `GameService::post_update`.
+        self.context.bots.post_update(&mut self.service);
 
         if self.context.counter % Ticks::from_secs(5.0) == Ticks::ZERO {
             warn!("{:?}", benchmark::borrow_all());

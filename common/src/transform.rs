@@ -52,9 +52,15 @@ impl Transform {
 
         // Collectibles don't turn with guidance.
         // Shells and rockets (at least the ones currently in the game) can't turn.
+        // Mines and depth charges have no control surfaces.
         if data.kind != EntityKind::Collectible
-            && data.sub_kind != EntitySubKind::Shell
-            && data.sub_kind != EntitySubKind::Rocket
+            && !matches!(
+                data.sub_kind,
+                EntitySubKind::Shell
+                    | EntitySubKind::Rocket
+                    | EntitySubKind::Mine
+                    | EntitySubKind::DepthCharge
+            )
         {
             let delta_angle = guidance.direction_target - self.direction;
             let turn_max = Angle::from_radians(
@@ -73,6 +79,14 @@ impl Transform {
                 .clamp(0.0, std::f32::consts::PI),
             );
             self.direction += delta_angle.clamp_magnitude(turn_max);
+
+            // Allow torpedoes to make a u-turn without getting too far off track.
+            // Never will activate with only automatic homing.
+            if data.sub_kind == EntitySubKind::Torpedo
+                && delta_angle.abs() > Angle::from_degrees(80.0)
+            {
+                max_speed *= 1.0 / 3.0
+            }
         }
 
         // Velocity is brought within acceptable parameters not by clamping it directly,
@@ -82,7 +96,7 @@ impl Transform {
         let delta_velocity = guidance
             .velocity_target
             .to_mps()
-            .clamp(-max_speed * (1.0 / 3.0), max_speed)
+            .clamp(max_speed * Velocity::MAX_REVERSE_SCALE, max_speed)
             - self.velocity.to_mps();
 
         // Delta cannot be proportional to possibly-zero max_speed, because zero-max-speed

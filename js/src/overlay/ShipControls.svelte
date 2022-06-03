@@ -7,7 +7,7 @@
 	import Section from '../component/Section.svelte';
 	import entityData from '../data/entities.json';
 	import Sprite from '../component/Sprite.svelte';
-	import {cinematic, shipControlsShown} from '../util/settings.js';
+	import {cinematic} from '../util/settings.js';
 	import {fromCamelCase} from '../util/strings.js';
 	import {hasArmament, getArmamentType, groupArmaments, summarizeType} from '../util/warship.js';
 	import t from '../util/translation.js';
@@ -82,7 +82,10 @@
 </script>
 
 <div id='ship_controls' class:cinematic={$cinematic}>
-	<Section name={entityData[alive.type].label} bind:open={$shipControlsShown}>
+	<Section name={entityData[alive.type].label} closable={false}>
+		{#if !armaments || armaments.length === 0}
+			<small>{$t(`kind.boat.${entityData[alive.type].subkind}.hint`)}</small>
+		{/if}
 		{#each groupArmaments(armaments, alive.armamentConsumption) as [type, group]}
 			<div class='button' class:selected={type === selection} on:click={() => selection = type}>
 				<Sprite title={`${entityData[group.type].label} (${summarizeType($t, group.type)})`} consumed={group.ready === 0} name={group.type}/>
@@ -94,9 +97,6 @@
 		{/if}
 		{#if getActiveSensorHint($t, alive.type, alive.altitude)}
 			<div class='button' class:selected={active} on:click={toggleActive} title={getActiveSensorHint($t, alive.type, alive.altitude)}>{$t(`panel.ship.action.active.label`)}</div>
-		{/if}
-		{#if !armaments || armaments.length === 0}
-			<small>{$t(`kind.boat.${entityData[alive.type].subkind}.hint`)}</small>
 		{/if}
 	</Section>
 </div>

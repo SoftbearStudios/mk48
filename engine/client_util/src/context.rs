@@ -1,9 +1,9 @@
 use crate::apply::Apply;
+use crate::browser_storage::BrowserStorages;
 use crate::frontend::Frontend;
 use crate::game_client::GameClient;
 use crate::js_hooks::{domain_name_of, host, invitation_id, is_https, referrer, ws_protocol};
 use crate::keyboard::KeyboardState;
-use crate::local_storage::LocalStorage;
 use crate::mouse::MouseState;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::setting::CommonSettings;
@@ -35,7 +35,7 @@ pub struct Context<G: GameClient + ?Sized> {
     /// Common settings.
     pub common_settings: CommonSettings,
     /// Local storage.
-    pub(crate) local_storage: LocalStorage,
+    pub(crate) browser_storages: BrowserStorages,
     pub(crate) frontend: Box<dyn Frontend<G::UiProps> + 'static>,
 }
 
@@ -53,7 +53,7 @@ pub struct ServerState<G: GameClient> {
 }
 
 /// Server state specific to core functions
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct CoreState {
     pub player_id: Option<PlayerId>,
     pub created_invitation_id: Option<InvitationId>,
@@ -269,14 +269,14 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
 
 impl<G: GameClient> Context<G> {
     pub(crate) fn new(
-        mut local_storage: LocalStorage,
+        mut browser_storages: BrowserStorages,
         mut common_settings: CommonSettings,
         settings: G::GameSettings,
         frontend: Box<dyn Frontend<G::UiProps> + 'static>,
     ) -> Self {
         let (host, server_id) = Self::compute_websocket_host(&common_settings, None, &*frontend);
         let socket = ReconnWebSocket::new(host, common_settings.protocol, None);
-        common_settings.set_server_id(server_id, &mut local_storage);
+        common_settings.set_server_id(server_id, &mut browser_storages);
 
         Self {
             client: ClientState::default(),
@@ -287,7 +287,7 @@ impl<G: GameClient> Context<G> {
             mouse: MouseState::default(),
             settings,
             common_settings,
-            local_storage,
+            browser_storages,
             frontend,
         }
     }

@@ -353,7 +353,7 @@
 	<WarningPanel message={$t('panel.splash.connectionLost')} />
 {:else if $state.status == 'spawning'}
 	<SpawnOverlay {onSpawn} />
-	<HelpLinks />
+	<HelpLinks {onCopyInvitationLink}/>
 {:else if $state.status.playing}
 	<Chat bind:this={chatRef} state={$state} {onMutePlayer} {onReportAbuse} {onSendChat}/>
 	<Hint type={$state.status.playing.type}/>
@@ -369,11 +369,13 @@
 			restrictions={$state.restrictions}
 			{onUpgrade}
 		/>
+	{:else}
+		<Instructions {touch} {instructBasics} {instructZoom}/>
 	{/if}
 {:else if $state.status.respawning}
 	<XButton on:click={() => client && client.event('OverrideRespawn')}/>
 	<RespawnMenu respawnLevel={$state.status.respawning.respawnLevel} state={$state} {onSpawn}/>
-	<HelpLinks />
+	<HelpLinks {onCopyInvitationLink}/>
 {:else}
 	<WarningPanel message="Invalid state {JSON.stringify($state)}"/>
 {/if}
@@ -396,6 +398,7 @@
 
 <svelte:window
 	bind:innerWidth bind:innerHeight
+	on:contextmenu={e => e.preventDefault()}
 	on:keydown={onKey} on:keyup={onKey}
 	on:blur={onChangeWindowFocused}
 	on:focus={onChangeWindowFocused}

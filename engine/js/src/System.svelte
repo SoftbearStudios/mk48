@@ -10,12 +10,21 @@
 
     let redirect = 0;
     let servers = [];
+    let allowWebSocketJson;
     let distributeLoad;
+    let profiling = false;
 
     onMount(async () => {
         const response = await adminRequest("RequestRedirect");
         if (response.RedirectRequested) {
             redirect = response.RedirectRequested == null ? 0 : response.RedirectRequested;
+        }
+    });
+
+    onMount(async () => {
+        const response = await adminRequest("RequestAllowWebSocketJson");
+        if (response.AllowWebSocketJsonRequested !== undefined) {
+            allowWebSocketJson = response.AllowWebSocketJsonRequested;
         }
     });
 
@@ -40,13 +49,26 @@
         }
     }
 
-    // TODO: This is a potentially incorrect assumption.
-    let profiler = false;
+    async function requestProfile() {
+        try {
+            profiling = true;
+            const response = await adminRequest("RequestProfile");
+            profiling = false;
+            if (response.ProfileRequested !== undefined) {
+                const dl = document.createElement('a');
+                dl.href = `data:text/plain;charset=utf-8,${encodeURIComponent(response.ProfileRequested)}`;
+                dl.download = "profile.svg";
+                dl.click();
+            }
+        } finally {
+            profiling = false;
+        }
+    }
 
-    async function setProfiler(enabled) {
-        const response = await adminRequest({SetProfiler: enabled});
-        if (response.ProfilerSet !== undefined) {
-            profiler = response.ProfilerSet;
+    async function setAllowWebSocketJson(enabled) {
+        const response = await adminRequest({SetAllowWebSocketJson: enabled});
+        if (response.AllowWebSocketJsonSet !== undefined) {
+            allowWebSocketJson = response.AllowWebSocketJsonSet;
         }
     }
 
@@ -107,10 +129,11 @@
     {#if redirect}
         <button on:click={setRedirect.bind(null, null)}>Clear Redirect {redirect}</button>
     {/if}
-    {#if profiler}
-        <button on:click={() => setProfiler(false)}>Disengage Profiler</button>
+    <button on:click={() => requestProfile()} disabled={profiling}>Profile (10s)</button>
+    {#if allowWebSocketJson}
+        <button on:click={() => setAllowWebSocketJson(false)}>Disallow WebSocket Json</button>
     {:else}
-        <button on:click={() => setProfiler(true)}>Engage Profiler</button>
+        <button on:click={() => setAllowWebSocketJson(true)}>Allow WebSocket Json</button>
     {/if}
     {#if distributeLoad}
         <button on:click={() => setDistributeLoad(false)}>Disengage Load Distribution</button>

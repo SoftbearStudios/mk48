@@ -13,6 +13,7 @@
 
 pub mod apply;
 pub mod audio;
+pub mod browser_storage;
 pub mod context;
 pub mod entry_point;
 pub mod fps_monitor;
@@ -22,7 +23,6 @@ pub mod infrastructure;
 pub mod joystick;
 pub mod js_hooks;
 pub mod keyboard;
-pub mod local_storage;
 pub mod mouse;
 pub mod rate_limiter;
 pub mod reconn_web_socket;

@@ -139,6 +139,7 @@ dependencies = [
  "glam",
  "rand",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -456,9 +457,9 @@ dependencies = [
 
 [[package]]
 name = "rustrict"
-version = "0.4.1"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "492d28a7c51c0c6eb1fe658cc128e2db96d49ab2a8f8b5648bd97402e7571b43"
+checksum = "a90b0343c5f10296c6b50fb8df628607ffa8443a849eb2065e3c5ed42d0bfb57"
 dependencies = [
  "doc-comment",
  "unicode_categories",

@@ -4,7 +4,9 @@
 use crate::entity::*;
 use common::death_reason::DeathReason;
 use glam::Vec2;
-use rayon::prelude::*;
+use maybe_parallel_iterator::{
+    IntoMaybeParallelIterator, IntoMaybeParallelRefIterator, IntoMaybeParallelRefMutIterator,
+};
 use std::convert::{TryFrom, TryInto};
 use std::ops::{Index, IndexMut, RangeInclusive};
 
@@ -80,7 +82,8 @@ impl SectorId {
 
     /// Iterates all `SectorId`s in a rectangle defined by corners start and end.
     fn iter(start: Self, end: Self) -> impl Iterator<Item = Self> {
-        (start.0..=end.0).flat_map(move |x| (start.1..=end.1).map(move |y| Self(x, y)))
+        // Range inclusive is slow so add 1.
+        (start.0..end.0 + 1).flat_map(move |x| (start.1..end.1 + 1).map(move |y| Self(x, y)))
     }
 
     /// Iterates all `SectorId`s in a circle.
@@ -203,17 +206,17 @@ impl Entities {
     }
 
     /// Iterates all entities in parallel.
-    pub fn par_iter(&self) -> impl ParallelIterator<Item = (EntityIndex, &Entity)> {
+    pub fn par_iter(&self) -> impl IntoMaybeParallelIterator<Item = (EntityIndex, &Entity)> {
         self.sectors
-            .par_iter()
+            .maybe_par_iter()
             .enumerate()
             .flat_map(|(sector_index, sector)| {
                 let sector_id = SectorId::from_sector_index(sector_index);
 
                 sector
                     .entities
-                    .par_iter()
-                    .with_min_len(256)
+                    .maybe_par_iter()
+                    .with_min_sequential(256)
                     .enumerate()
                     .map(move |(index, entity)| {
                         let entity_index = EntityIndex(sector_id, index as u16);
@@ -223,17 +226,19 @@ impl Entities {
     }
 
     /// Mutably iterates all entities in parallel.
-    pub fn par_iter_mut(&mut self) -> impl ParallelIterator<Item = (EntityIndex, &mut Entity)> {
+    pub fn par_iter_mut(
+        &mut self,
+    ) -> impl IntoMaybeParallelIterator<Item = (EntityIndex, &mut Entity)> {
         self.sectors
-            .par_iter_mut()
+            .maybe_par_iter_mut()
             .enumerate()
             .flat_map(|(sector_index, sector)| {
                 let sector_id = SectorId::from_sector_index(sector_index);
 
                 sector
                     .entities
-                    .par_iter_mut()
-                    .with_min_len(256)
+                    .maybe_par_iter_mut()
+                    .with_min_sequential(256)
                     .enumerate()
                     .map(move |(index, entity)| {
                         let entity_index = EntityIndex(sector_id, index as u16);

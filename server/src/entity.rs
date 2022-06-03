@@ -117,10 +117,6 @@ impl Entity {
 
         let extension = self.extension_mut();
 
-        // Save some settings from the old extension.
-        let old_active = extension.active;
-        let old_altitude_target = extension.altitude_target;
-
         // Keep armament (lack of) reloads. Use usize ot avoid overflow.
         // Start by counting the total ticks left to reload (for non-limited armaments).
         let mut total_reload = 0;
@@ -131,11 +127,7 @@ impl Entity {
         }
 
         // Change the extension to correspond with the new type.
-        *extension = EntityExtension::new(entity_type);
-
-        // Restore some settings from the old extension.
-        extension.active = old_active;
-        extension.altitude_target = old_altitude_target;
+        extension.change_entity_type(entity_type);
 
         // Finish (un)reloading.
         for (i, reload) in extension.reloads_mut().iter_mut().enumerate() {
@@ -150,47 +142,54 @@ impl Entity {
             }
         }
 
-        // extension dropped, can call methods that get it themselves now:
+        // Pre-aim turrets at aim target.
         self.update_turret_aim(10.0);
     }
 
     /// Adds a reference from player to self.
+    /// Only call on boats.
     pub fn create_index(&mut self, i: EntityIndex) {
-        if let Some(ref player) = self.player {
-            let mut player = player.borrow_player_mut();
+        debug_assert!(self.is_boat());
 
-            // Set status to alive.
-            assert!(!player.data.status.is_alive());
-            player.data.status = Status::new_alive(i);
+        let mut player = self.borrow_player_mut();
 
-            // Clear flags when player's boat is spawned.
-            player.data.flags = Flags::default();
-        } else {
-            return;
-        }
-        *self.extension_mut() = EntityExtension::new(self.entity_type);
+        // Set status to alive.
+        assert!(!player.data.status.is_alive());
+        player.data.status = Status::new_alive(i);
+
+        // Clear flags when player's boat is spawned.
+        player.data.flags = Flags::default();
+        drop(player);
+
+        // Change entity type (allocate turrets/reloads).
+        let entity_type = self.entity_type;
+        self.extension_mut().change_entity_type(entity_type);
     }
 
     /// Adjusts player's pointer to self, if applicable.
+    /// Only call on boats.
     pub fn set_index(&mut self, i: EntityIndex) {
-        if let Some(ref player) = self.player {
-            player.borrow_player_mut().data.status.set_entity_index(i);
-        }
+        debug_assert!(self.is_boat());
+
+        self.borrow_player_mut().data.status.set_entity_index(i);
     }
 
     /// Set's player to dead, removing reference to self, if applicable.
+    /// Only call on boats.
     pub fn delete_index(&mut self, reason: DeathReason) {
-        if let Some(ref player_tuple) = self.player {
-            let mut player = player_tuple.borrow_player_mut();
-            player.data.status = if player.data.flags.left_game {
-                Status::Spawning
-            } else {
-                Status::Dead {
-                    reason,
-                    position: self.transform.position,
-                    time: Instant::now(),
-                    visual_range: self.data().sensors.visual.range,
-                }
+        debug_assert!(self.is_boat());
+        let position = self.transform.position;
+        let visual_range = self.data().sensors.visual.range;
+
+        let mut player = self.borrow_player_mut();
+        player.data.status = if player.data.flags.left_game {
+            Status::Spawning
+        } else {
+            Status::Dead {
+                reason,
+                position,
+                time: Instant::now(),
+                visual_range,
             }
         }
     }
@@ -227,7 +226,7 @@ impl Entity {
             .borrow_player_mut()
     }
 
-    /// Get's the entity's data, corresponding to it's current entity type.
+    /// Gets the entity's data, corresponding to it's current entity type.
     pub fn data(&self) -> &'static EntityData {
         self.entity_type.data()
     }
@@ -235,6 +234,17 @@ impl Entity {
     /// Returns true if and only if the entity is of kind boat.
     pub fn is_boat(&self) -> bool {
         self.entity_type.data().kind == EntityKind::Boat
+    }
+
+    /// Returns if this entity is owned by a real player (not a bot, not ownerless).
+    /// For printing debug info without being too verbose (including bots).
+    #[cfg(debug_assertions)]
+    #[allow(unused)]
+    pub fn is_real_player(&self) -> bool {
+        self.player
+            .as_ref()
+            .map(|p| !p.borrow_player().player_id.is_bot())
+            .unwrap_or(false)
     }
 
     /// Determines if two entities would collide if delta_seconds elapsed.
@@ -296,15 +306,15 @@ impl Entity {
     /// Threshold is minimum terrain altitude to be considered colliding. `Altitude::ZERO` is a good
     /// default.
     ///
-    /// Returns one point of collision, if any.
+    /// Returns a `TerrainCollision` if one occurred.
     pub fn collides_with_terrain(
         &self,
         t: &Terrain,
         delta_seconds: f32,
-    ) -> Option<(Vec2, Altitude)> {
+    ) -> Option<TerrainCollision> {
         let arctic = self.transform.position.y >= common::world::ARCTIC;
 
-        let threshold = if arctic && self.altitude < Altitude::from_meters(-5.0) {
+        let threshold = if arctic && self.altitude.is_submerged() {
             // Below ice, so only collide with solid land.
             Altitude(2)
         } else {
@@ -448,8 +458,8 @@ impl Entity {
 
     /// Returns true if two entities are overlapping, only taking into account their altitudes.
     pub fn altitude_overlapping(&self, other: &Self) -> bool {
-        if (self.altitude > Altitude::ZERO && other.altitude < Altitude::ZERO)
-            || (self.altitude < Altitude::ZERO && other.altitude > Altitude::ZERO)
+        if (self.altitude.is_airborne() && other.altitude.is_submerged())
+            || (self.altitude.is_submerged() && other.altitude.is_airborne())
         {
             // Entities above water should never collide with entities below water.
             return false;
@@ -557,6 +567,7 @@ impl Entity {
         let altitude_change =
             (target_altitude - self.altitude).clamp_magnitude(Altitude::UNIT * speed * delta);
         self.altitude += altitude_change;
+
         altitude_change
     }
 
@@ -572,7 +583,7 @@ impl Entity {
         };
 
         // This is very hot code, and we can't afford atomic shenanigans.
-        if std::ptr::eq(Arc::as_ptr(player), other_player as *const _) {
+        if ptr::eq(Arc::as_ptr(player), other_player as *const _) {
             return true;
         }
 
@@ -626,7 +637,7 @@ impl Entity {
             if self.transform.position.distance_squared(transform.position) < data.radius.powi(2) {
                 // Helicopters can land at any angle, but planes must be withing angle parameters.
                 if data.sub_kind == EntitySubKind::Heli
-                    || (self.transform.direction - boat.transform.direction).abs() < Angle::PI_2
+                    || (self.transform.direction - transform.direction).abs() < Angle::PI_2
                 {
                     return true;
                 }
