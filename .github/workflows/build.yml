@@ -22,8 +22,13 @@ jobs:
         toolchain: nightly-2021-10-28
         override: true
         components: rustfmt, clippy
-    - name: Build Server
-      run: cargo build --manifest-path server/Cargo.toml --verbose
     - name: Build Client
       working-directory: ./js
       run: npm install && npm run build
+    - name: Build Server
+      run: cargo build --release --manifest-path server/Cargo.toml --verbose
+    - name: Upload Server
+      uses: actions/upload-artifact@v2
+      with:
+        name: server
+        path: server/target/release/server
