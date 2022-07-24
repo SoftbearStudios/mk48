@@ -27,3 +27,8 @@ jobs:
       run: npm install && npm run build
     - name: Build Server
       run: cargo build --release --manifest-path server/Cargo.toml --verbose
+    - name: Upload Server
+      uses: actions/upload-artifact@v2
+      with:
+        name: server
+        path: server/target/release/server
