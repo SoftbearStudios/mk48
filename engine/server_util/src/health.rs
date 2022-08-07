@@ -1,4 +1,3 @@
-use common_util::ticks::Ticks;
 use core_protocol::metrics::ContinuousExtremaMetric;
 use log::error;
 use simple_server_status::SimpleServerStatus;
@@ -81,7 +80,7 @@ impl Health {
     }
 
     /// Call every update a.k.a. tick.
-    pub fn record_tick(&mut self) {
+    pub fn record_tick(&mut self, tick_period: f32) {
         let now = Instant::now();
         if let Some(last_tick) = self.last_tick {
             let elapsed = now.duration_since(last_tick).as_secs_f32().clamp(0.0, 10.0);
@@ -90,7 +89,7 @@ impl Health {
         self.last_tick = Some(now);
 
         let elapsed = now.duration_since(self.tps_start);
-        if elapsed >= Duration::from_secs_f32(1.0 - Ticks::PERIOD_SECS * 0.5) {
+        if elapsed >= Duration::from_secs_f32(1.0 - tick_period * 0.5) {
             if elapsed >= Duration::from_secs(1) {
                 self.ticks = self.ticks.saturating_add(1);
                 self.tps.push(self.ticks as f32);

@@ -7,6 +7,7 @@ use crate::keyboard::KeyboardEvent;
 use crate::mouse::MouseEvent;
 use crate::renderer::renderer::{Layer, Renderer};
 use crate::setting::Settings;
+use crate::visibility::VisibilityEvent;
 use core_protocol::id::GameId;
 use core_protocol::rpc::ClientUpdate;
 use serde::de::DeserializeOwned;
@@ -16,6 +17,9 @@ use serde::Serialize;
 pub trait GameClient: Sized + 'static {
     const GAME_ID: GameId;
 
+    /// Audio files to play.
+    #[cfg(feature = "audio")]
+    type Audio: crate::audio::Audio;
     /// Game-specific command to server.
     type GameRequest: 'static + Serialize + Clone;
     /// Game-specific render layer.
@@ -51,23 +55,35 @@ pub trait GameClient: Sized + 'static {
     /// Peek at a game update before it is applied to `GameState`.
     fn peek_game(
         &mut self,
-        _inbound: &Self::GameUpdate,
+        inbound: &Self::GameUpdate,
         _context: &mut Context<Self>,
         _renderer: &Renderer,
         _layer: &mut Self::RendererLayer,
     ) {
+        let _ = inbound;
     }
 
-    /// Peek at a keyboard update before it is applied to `KeyboardState`.
+    /// Peek at a keyboard event before it is applied to `KeyboardState`.
     fn peek_keyboard(&mut self, _event: &KeyboardEvent, _context: &mut Context<Self>) {}
 
-    /// Peek at a mouse update before it is applied to `MouseState`.
+    /// Peek at a mouse event before it is applied to `MouseState`.
     fn peek_mouse(
         &mut self,
-        _event: &MouseEvent,
+        event: &MouseEvent,
         _context: &mut Context<Self>,
         _renderer: &Renderer,
     ) {
+        let _ = event;
+    }
+
+    /// Peek at a visibility event before it is applied to `VisibilityState`.
+    fn peek_visibility(
+        &mut self,
+        event: &VisibilityEvent,
+        _context: &mut Context<Self>,
+        _renderer: &Renderer,
+    ) {
+        let _ = event;
     }
 
     /// Render the game. Optional, as this may be done in `tick`.

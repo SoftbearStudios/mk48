@@ -15,8 +15,7 @@ use common_util::range::gen_radius;
 use glam::Vec2;
 use log::{info, warn};
 use rand::{thread_rng, Rng};
-use server_util::benchmark::Timer;
-use server_util::benchmark_scope;
+use std::time::Instant;
 
 impl World {
     /// Target square meters of world per square meter of player vision.
@@ -45,39 +44,41 @@ impl World {
     ) -> bool {
         let retry = initial_radius > 0.0;
         if retry {
+            let start_time = Instant::now();
             let mut rng = rand::thread_rng();
             let mut radius = initial_radius.max(1.0);
             let center = entity.transform.position;
-            let mut threshold = 4f32;
-
-            let max_attempts: u32 = if entity.is_boat() {
+            let (max_attempts, mut threshold): (u32, f32) = if entity.is_boat() {
                 if entity.borrow_player().player_id.is_bot() {
-                    64
+                    (128, 4.0)
                 } else {
-                    256
+                    (1024, 6.0)
                 }
             } else {
-                8
+                (8, 4.0)
             };
 
             let mut governor = max_attempts;
+            let max_distance_from_center =
+                (self.radius * 0.9 - entity.data().radius * 1.5).max(self.radius * 0.5);
 
             // Always randomize on first iteration
             while entity.transform.position == center
                 || exclusion_zone
                     .map(|ez| {
-                        entity.transform.position.distance_squared(ez) < (threshold * 100.0).powi(2)
+                        entity.transform.position.distance_squared(ez)
+                            < (threshold.min(3.0) * 500.0).powi(2)
                     })
                     .unwrap_or(false)
-                || !self.can_spawn(&entity, threshold)
+                || !self.can_spawn(&entity, threshold, max_distance_from_center)
             {
                 // Pick a new position
                 let position = gen_radius(&mut rng, radius);
                 entity.transform.position = center + position;
                 entity.transform.direction = rng.gen();
 
-                radius = (radius * 1.05).min(self.radius * 0.9);
-                threshold = 0.02 + threshold * 0.98; // Approaches 1.0
+                radius = (radius * 1.05).min(max_distance_from_center);
+                threshold = 0.005 + threshold * 0.995; // Approaches 1.0
 
                 debug_assert!(threshold >= 1.0, "so try_spawn works");
 
@@ -94,14 +95,19 @@ impl World {
             if governor > 0 {
                 for i in 0..3 {
                     debug_assert!(
-                        self.can_spawn(&entity, threshold),
+                        self.can_spawn(&entity, threshold, max_distance_from_center),
                         "i: {}, t: {}",
                         i,
                         threshold
                     );
                 }
                 for i in 0..3 {
-                    debug_assert!(self.can_spawn(&entity, 1.0), "i: {}, t': {}", i, threshold);
+                    debug_assert!(
+                        self.can_spawn(&entity, 1.0, max_distance_from_center),
+                        "i: {}, t': {}",
+                        i,
+                        threshold
+                    );
                 }
             }
 
@@ -111,9 +117,10 @@ impl World {
 
             if entity.data().kind == EntityKind::Boat {
                 info!(
-                    "Took {}/{} attempts to spawn {:?} (threshold = {}, final_radius = {}).",
+                    "Took {}/{} attempts ({:?}) to spawn {:?} (threshold = {}, final_radius = {}).",
                     max_attempts - governor,
                     max_attempts,
+                    start_time.elapsed(),
                     entity.entity_type,
                     threshold,
                     radius,
@@ -131,7 +138,7 @@ impl World {
 
     /// try_spawn attempts to spawn an entity at a position and returns if the entity was spawned.
     pub fn try_spawn(&mut self, entity: Entity) -> bool {
-        if self.can_spawn(&entity, 1.0) {
+        if self.can_spawn(&entity, 1.0, self.radius) {
             self.add(entity);
             true
         } else {
@@ -142,11 +149,22 @@ impl World {
     /// Threshold ranges from [1,infinity), and makes the spawning more picky.
     /// e.g. threshold=2 means that twice the normal radius must be clear of obstacles.
     /// below threshold=2, obstacles only matter if they actually intersect.
-    pub fn can_spawn(&self, entity: &Entity, threshold: f32) -> bool {
+    pub fn can_spawn(
+        &self,
+        entity: &Entity,
+        threshold: f32,
+        max_distance_from_center: f32,
+    ) -> bool {
         assert!(threshold >= 1.0, "threshold {} is invalid", threshold);
+        debug_assert!(
+            max_distance_from_center >= 0.0 && max_distance_from_center <= self.radius,
+            "max_distance_from_center={:?} radius={:?} is invalid",
+            max_distance_from_center,
+            self.radius
+        );
 
-        if entity.transform.position.length_squared() > self.radius.powi(2) {
-            // Outside world.
+        if entity.transform.position.length_squared() > max_distance_from_center.powi(2) {
+            // Outside world/max radius from center.
             return false;
         }
 
@@ -168,7 +186,9 @@ impl World {
                         return false;
                     }
                 }
-                return entity.collides_with_terrain(&self.terrain, 0.0).is_none();
+                return entity
+                    .collides_with_terrain(&self.terrain, Ticks::PERIOD_SECS)
+                    .is_none();
             }
             EntityKind::Collectible | EntityKind::Aircraft => {
                 return entity.collides_with_terrain(&self.terrain, 0.0).is_none();
@@ -190,7 +210,7 @@ impl World {
         // Slow, conservative check.
         if self.terrain.land_in_square(
             entity.transform.position,
-            (entity.data().radius + common::terrain::SCALE) * 2.0 * threshold.min(2.5),
+            (entity.data().radius * threshold.min(2.0) + common::terrain::SCALE) * 2.0,
             //if threshold > 3.0 { default_land.min(-entity.data().draft) } else { default_land },
         ) {
             return false;
@@ -217,12 +237,15 @@ impl World {
                     1.0
                 } else if entity.is_boat()
                     && other_entity.is_boat()
-                    && other_entity.data().level > 2
+                    && data.level.abs_diff(other_data.level) > 1
                 {
-                    threshold
+                    // Be extra careful when there is a level differential.
+                    threshold * 1.5
+                } else if other_data.kind == EntityKind::Obstacle {
+                    threshold.min(1.5)
                 } else {
                     // Low level ships and weapons.
-                    (threshold * 0.5).max(1.0)
+                    threshold
                 };
             if distance_squared <= safe_distance.powi(2) {
                 return false;
@@ -233,8 +256,6 @@ impl World {
 
     /// Spawn basic entities (crates, oil platforms) to maintain their densities.
     pub fn spawn_statics(&mut self, ticks: Ticks) {
-        benchmark_scope!("spawn");
-
         let crate_count = self.arena.count(EntityType::Crate);
         let platform_count =
             self.arena.count(EntityType::OilPlatform) + self.arena.count(EntityType::Hq);
@@ -248,9 +269,9 @@ impl World {
 
         self.spawn_static_amount(
             |position| {
-                Some(if position.y >= common::world::ARCTIC + 500.0 {
+                Some(if position.y >= common::world::ARCTIC + 300.0 {
                     EntityType::Hq
-                } else if position.y < common::world::ARCTIC && thread_rng().gen_bool(0.25) {
+                } else if position.y < common::world::ARCTIC && thread_rng().gen_bool(0.2) {
                     EntityType::OilPlatform
                 } else {
                     // Fail, to bias against ocean spawns, in favor of arctic.

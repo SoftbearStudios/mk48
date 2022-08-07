@@ -51,7 +51,7 @@
 		<li><b>Battleships</b> and <b>Dreadnoughts</b> are very formidable ships, having extremely
 		powerful main cannons. They may carry a minimal amount of planes for submarine defense.</li>
 		<li><b>Submarines</b> travel underwater, making them immune to certain
-		types of weapons, but must surface to fire certain types of weapons and regenerate others at a normal rate.</li>
+		types of weapons, but must surface to fire certain types of weapons.</li>
 		<li><b>Hovercraft</b> can travel on land and water.</li>
 		<li><b>Rams</b> are a special ship type that is designed to ram other
 		ships. They take very little damage in the process, and inflict extra damage to
@@ -60,7 +60,7 @@
 		can be created by clicking in front of them, and old land can be destroyed
 		by driving over it.</li>
 		<li><b>Icebreakers</b> can plow through ice sheets without taking damage.</li>
-		<li><b>Minelayers</b> dispense long lasting mines that can help guard a
+		<li><b>Minelayers</b> dispense long-lasting mines that can help guard a
 		small area.</li>
 		<li><b>Aircraft carriers</b> command a squadron of planes to bomb enemy ships! Planes will follow your mouse cursor.</li>
 	</ol>

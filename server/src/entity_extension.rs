@@ -21,7 +21,7 @@ pub struct EntityExtension {
     /// Whether the player *wants* active sensors. To tell if the player *has* active sensors, use
     /// Used by Self::is_active().
     /// Active stays on for a an extra duration to avoid rapid switching, which could induce flickering on other player's screens.
-    pub active: bool,
+    active: bool,
     deactivate_delay: Ticks,
 
     /// Ticks of protection ticks remaining, zeroed if showing signs of aggression.
@@ -46,12 +46,12 @@ fn box_default_n<T: Default>(n: usize) -> Box<[T]> {
 
 impl EntityExtension {
     /// How long spawn protection lasts (it linearly fades over this time).
-    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks(Ticks::FREQUENCY_HZ.0 * 20);
+    const SPAWN_PROTECTION_INITIAL: Ticks = Ticks::from_whole_secs(20);
 
     /// How long deactivating sensors is delayed.
-    const DEACTIVATE_DELAY: Ticks = Ticks(5);
+    const DEACTIVATE_DELAY: Ticks = Ticks::from_repr(5);
     /// How long submerging is delayed.
-    const SUBMERGE_DELAY: Ticks = Ticks::from_whole_secs(1);
+    const SUBMERGE_DELAY: Ticks = Ticks::from_repr(8);
 
     /// Allocates reloads and turrets, sized to a particular entity type.
     /// It can also give spawn protection.

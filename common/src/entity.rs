@@ -38,7 +38,7 @@ pub enum EntityKind {
 
 impl EntityKind {
     /// Largest possible `Self::keep_alive()` return value.
-    pub const MAX_KEEP_ALIVE: Ticks = Ticks(10);
+    pub const MAX_KEEP_ALIVE: Ticks = Ticks::from_repr(10);
 
     /// After how many ticks of not hearing about an entity should we assume it is gone/no longer
     /// visible. This allows the server to optimize bandwidth usage but transmitting certain entities
@@ -51,9 +51,9 @@ impl EntityKind {
     pub const fn keep_alive(self) -> RangeInclusive<Ticks> {
         match self {
             Self::Boat | Self::Decoy | Self::Weapon | Self::Aircraft | Self::Turret => {
-                Ticks(0)..=Ticks(0)
+                Ticks::from_repr(0)..=Ticks::from_repr(0)
             }
-            Self::Collectible => Ticks(2)..=Ticks(5),
+            Self::Collectible => Ticks::from_repr(2)..=Ticks::from_repr(5),
             Self::Obstacle => Self::MAX_KEEP_ALIVE..=Self::MAX_KEEP_ALIVE,
         }
     }

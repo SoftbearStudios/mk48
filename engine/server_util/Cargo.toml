@@ -9,7 +9,6 @@ license = "AGPL-3.0-or-later"
 actix = "0.13"
 axum = "0"
 reqwest = {version = "0.11.9", features=["json"]}
-actix-plus-static-files = {git="https://github.com/finnbear/actix-plus", branch="actix-web-4"}
 aws-config = "0.7.0"
 aws-sdk-dynamodb = "0.7"
 serde_dynamo = { git = "https://github.com/zenlist/serde_dynamo", tag = "3.0.0-alpha.5", default_features=false, features=["aws-sdk-dynamodb+0_7"]}
@@ -21,6 +20,7 @@ num_cpus = "1.13"
 core_protocol = {path="../core_protocol", features=["server"] }
 common_util = {path="../common_util" }
 lazy_static = "1.4"
+lru = "0.7"
 rustls = "0.20"
 rustls-pemfile = "0.2"
 serde = { version = "1.0", features = ["derive"] }

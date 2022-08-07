@@ -8,7 +8,6 @@
 #![feature(hash_drain_filter)]
 #![feature(type_alias_impl_trait)]
 #![feature(generic_associated_types)]
-#![feature(bool_to_option)]
 
 //! The game server has authority over all game logic. Clients are served the client, which connects
 //! via websocket.
@@ -39,7 +38,7 @@ mod world_spawn;
 mod world_test;
 
 fn main() {
-    // SAFETY: As per spec, only called once (before .data()) is called.
+    // SAFETY: As per spec, only called once (before .data() is called).
     unsafe {
         EntityType::init();
         noise::init();
@@ -49,5 +48,8 @@ fn main() {
         }
     }
 
-    game_server::entry_point::entry_point::<Server>();
+    game_server::entry_point::entry_point::<Server>(
+        minicdn::release_include_mini_cdn!("../../js/public"),
+        false,
+    );
 }

@@ -5,10 +5,30 @@ use crate::dto::*;
 use crate::id::*;
 use crate::name::*;
 use crate::web_socket::WebSocketProtocol;
-use crate::UnixTime;
 use serde::{Deserialize, Serialize};
-use std::num::NonZeroU8;
 use std::sync::Arc;
+
+/// See https://docs.rs/actix/latest/actix/dev/trait.MessageResponse.html
+macro_rules! actix_response {
+    ($typ: ty) => {
+        #[cfg(feature = "server")]
+        impl<A, M> actix::dev::MessageResponse<A, M> for $typ
+        where
+            A: actix::Actor,
+            M: actix::Message<Result = $typ>,
+        {
+            fn handle(
+                self,
+                _ctx: &mut A::Context,
+                tx: Option<actix::dev::OneshotSender<M::Result>>,
+            ) {
+                if let Some(tx) = tx {
+                    let _ = tx.send(self);
+                }
+            }
+        }
+    };
+}
 
 /// Pass the following query parameters to the system endpoint to inform server routing.
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,20 +55,18 @@ pub struct SystemResponse {
     pub server_id: Option<ServerId>,
 }
 
-/// Some nonsense required by actix
-/// See https://docs.rs/actix/latest/actix/dev/trait.MessageResponse.html
-#[cfg(feature = "server")]
-impl<A, M> actix::dev::MessageResponse<A, M> for SystemResponse
-where
-    A: actix::Actor,
-    M: actix::Message<Result = SystemResponse>,
-{
-    fn handle(self, _ctx: &mut A::Context, tx: Option<actix::dev::OneshotSender<M::Result>>) {
-        if let Some(tx) = tx {
-            let _ = tx.send(self);
-        }
-    }
+actix_response!(SystemResponse);
+
+/// Response to status request.
+#[derive(Serialize, Deserialize)]
+pub struct LeaderboardResponse {
+    /// Eventually consistent global leaderboard.
+    pub leaderboard: Arc<[LeaderboardDto]>,
+    /// Eventually consistent player count across all servers.
+    pub players: u32,
 }
+
+actix_response!(LeaderboardResponse);
 
 /// Response to status request.
 #[derive(Serialize, Deserialize)]
@@ -76,20 +94,7 @@ pub struct StatusResponse {
     pub dying_server_ids: Vec<ServerId>,
 }
 
-/// Some nonsense required by actix
-/// See https://docs.rs/actix/latest/actix/dev/trait.MessageResponse.html
-#[cfg(feature = "server")]
-impl<A, M> actix::dev::MessageResponse<A, M> for StatusResponse
-where
-    A: actix::Actor,
-    M: actix::Message<Result = StatusResponse>,
-{
-    fn handle(self, _ctx: &mut A::Context, tx: Option<actix::dev::OneshotSender<M::Result>>) {
-        if let Some(tx) = tx {
-            let _ = tx.send(self);
-        }
-    }
-}
+actix_response!(StatusResponse);
 
 /// Initiate a websocket with these optional parameters in the URL query string.
 #[derive(Debug, Serialize, Deserialize)]
@@ -106,6 +111,12 @@ pub struct WebSocketQuery {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub invitation_id: Option<InvitationId>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub login_id: Option<String>,
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub login_type: Option<LoginType>,
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub referrer: Option<Referrer>,
@@ -148,107 +159,132 @@ pub enum Update<GU> {
 
 /// Admin requests are from the admin interface to the core service.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg(feature = "admin")]
 pub enum AdminRequest {
-    RequestDay {
-        filter: Option<MetricFilterDto>,
-    },
-    RequestGames,
-    RequestPlayers,
-    OverridePlayerAlias {
-        player_id: PlayerId,
-        alias: PlayerAlias,
+    ClearSnippet {
+        cohort_id: Option<CohortId>,
+        referrer: Option<Referrer>,
     },
     MutePlayer {
         player_id: PlayerId,
         minutes: usize,
     },
+    /// Set client hash to that of this server. Sending [`None`] will reset to default.
+    OverrideClientHash(Option<ServerId>),
+    OverridePlayerAlias {
+        player_id: PlayerId,
+        alias: PlayerAlias,
+    },
+    RequestAllowWebSocketJson,
+    RequestDay {
+        filter: Option<MetricFilter>,
+    },
+    RequestDistributeLoad,
+    RequestGames,
+    RequestPlayers,
+    RequestProfile,
+    RequestRedirect,
+    RequestReferrers,
+    RequestRegions,
+    RequestSeries {
+        game_id: GameId,
+        filter: Option<MetricFilter>,
+        period_start: Option<crate::UnixTime>,
+        period_stop: Option<crate::UnixTime>,
+        // Resolution in hours.
+        resolution: Option<std::num::NonZeroU8>,
+    },
+    /// Qualifies the result of RequestDay and RequestSummary.
+    RequestServerId,
+    RequestServers,
+    RequestSnippets,
+    RequestSummary {
+        filter: Option<MetricFilter>,
+    },
+    RequestUserAgents,
     RestrictPlayer {
         player_id: PlayerId,
         minutes: usize,
     },
-    RequestServers,
-    RequestSeries {
-        game_id: GameId,
-        period_start: Option<UnixTime>,
-        period_stop: Option<UnixTime>,
-        // Resolution in hours.
-        resolution: Option<NonZeroU8>,
-    },
-    RequestSummary {
-        filter: Option<MetricFilterDto>,
-    },
-    RequestReferrers,
-    RequestUserAgents,
     SendChat {
         // If None, goes to all players.
         player_id: Option<PlayerId>,
         alias: PlayerAlias,
         message: String,
     },
-    RequestAllowWebSocketJson,
     SetAllowWebSocketJson(bool),
-    RequestDistributeLoad,
     SetDistributeLoad(bool),
-    RequestRedirect,
+    SetGameClient(minicdn::EmbeddedMiniCdn),
     SetRedirect(Option<ServerId>),
-    #[cfg(unix)]
-    RequestProfile,
+    SetSnippet {
+        cohort_id: Option<CohortId>,
+        referrer: Option<Referrer>,
+        snippet: Arc<str>,
+    },
 }
 
 /// Admin related responses from the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg(feature = "admin")]
 pub enum AdminUpdate {
-    ChatSent,
-    DayRequested(Arc<[(UnixTime, MetricsDataPointDto)]>),
-    GamesRequested(Box<[(GameId, f32)]>),
-    PlayersRequested(Box<[AdminPlayerDto]>),
-    PlayerAliasOverridden(PlayerAlias),
-    PlayerMuted(usize),
-    HttpServerRestarting,
-    PlayerRestricted(usize),
-    ServersRequested(Box<[AdminServerDto]>),
-    ReferrersRequested(Box<[(Referrer, f32)]>),
     AllowWebSocketJsonRequested(bool),
     AllowWebSocketJsonSet(bool),
+    ChatSent,
+    ClientHashOverridden(u64),
+    DayRequested(Arc<[(crate::UnixTime, MetricsDataPointDto)]>),
     DistributeLoadRequested(bool),
     DistributeLoadSet(bool),
+    GameClientSet(u64),
+    GamesRequested(Box<[(GameId, f32)]>),
+    HttpServerRestarting,
+    PlayerAliasOverridden(PlayerAlias),
+    PlayerMuted(usize),
+    PlayerRestricted(usize),
+    PlayersRequested(Box<[AdminPlayerDto]>),
+    ProfileRequested(String),
     RedirectRequested(Option<ServerId>),
     RedirectSet(Option<ServerId>),
-    SeriesRequested(Arc<[(UnixTime, MetricsDataPointDto)]>),
+    ReferrersRequested(Box<[(Referrer, f32)]>),
+    RegionsRequested(Box<[(RegionId, f32)]>),
+    SeriesRequested(Arc<[(crate::UnixTime, MetricsDataPointDto)]>),
+    ServerIdRequested(Option<ServerId>),
+    ServersRequested(Box<[AdminServerDto]>),
+    SnippetCleared,
+    SnippetSet,
+    SnippetsRequested(Box<[SnippetDto]>),
     SummaryRequested(MetricsSummaryDto),
     UserAgentsRequested(Box<[(UserAgentId, f32)]>),
-    ProfileRequested(String),
 }
 
 /// Team related requests from the client to the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TeamRequest {
     Accept(PlayerId),
-    Promote(PlayerId),
     Create(TeamName),
+    Join(TeamId),
     Kick(PlayerId),
     Leave,
+    Promote(PlayerId),
     Reject(PlayerId),
-    Join(TeamId),
 }
 
 /// Team related update from server to client.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TeamUpdate {
-    Promoted(PlayerId),
-    Joining(TeamId),
+    Accepted(PlayerId),
+    AddedOrUpdated(Arc<[TeamDto]>),
+    Created(TeamId, TeamName),
     /// A complete enumeration of joiners, for the team captain only.
     Joiners(Box<[PlayerId]>),
+    Joining(TeamId),
     /// The following is for the joiner only, to indicate which teams they are joining.
     Joins(Box<[TeamId]>),
+    Kicked(PlayerId),
+    Left,
     /// A complete enumeration of team members, in order (first is captain).
     Members(Arc<[PlayerId]>),
-    Accepted(PlayerId),
-    Kicked(PlayerId),
+    Promoted(PlayerId),
     Rejected(PlayerId),
-    Created(TeamId, TeamName),
-    Left,
-    AddedOrUpdated(Arc<[TeamDto]>),
     Removed(Arc<[TeamId]>),
 }
 
@@ -256,16 +292,16 @@ pub enum TeamUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChatRequest {
     Mute(PlayerId),
-    Unmute(PlayerId),
     Send { message: String, whisper: bool },
+    Unmute(PlayerId),
 }
 
 /// Chat related update from server to client.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChatUpdate {
-    Sent,
-    Received(Box<[Arc<MessageDto>]>),
     Muted(PlayerId),
+    Received(Box<[Arc<MessageDto>]>),
+    Sent,
     Unmuted(PlayerId),
 }
 
@@ -326,14 +362,16 @@ pub enum ClientRequest {
 /// General update from server to client.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientUpdate {
+    AliasSet(PlayerAlias),
+    EvalSnippet(Arc<str>),
+    FpsTallied,
     SessionCreated {
         arena_id: ArenaId,
+        cohort_id: CohortId,
         server_id: Option<ServerId>,
         session_id: SessionId,
         player_id: PlayerId,
     },
-    AliasSet(PlayerAlias),
-    FpsTallied,
     Traced,
 }
 

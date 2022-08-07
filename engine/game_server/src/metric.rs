@@ -9,15 +9,17 @@ use crate::system::SystemRepo;
 use crate::unwrap_or_return;
 use actix::Context as ActorContext;
 use actix::{ActorFutureExt, ContextFutureSpawner, WrapFuture};
-use core_protocol::dto::{MetricFilterDto, MetricsDataPointDto};
-use core_protocol::id::{RegionId, SessionId, UserAgentId};
+use core_protocol::dto::{MetricFilter, MetricsDataPointDto};
+use core_protocol::id::{CohortId, RegionId, SessionId, UserAgentId};
 use core_protocol::name::Referrer;
 use core_protocol::{get_unix_time_now, UnixTime};
 use heapless::HistoryBuffer;
 use log::error;
-use server_util::database_schema::{Metrics, MetricsItem, SessionItem};
+use rand::{thread_rng, Rng};
+use server_util::database_schema::{GameIdMetricFilter, Metrics, MetricsItem, SessionItem};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::iter;
 use std::marker::PhantomData;
 use std::time::{Duration, Instant};
 
@@ -25,7 +27,7 @@ use std::time::{Duration, Instant};
 pub(crate) struct MetricRepo<G: GameArenaService> {
     next_update: UnixTime,
     next_swap: UnixTime,
-    current: MetricBundle,
+    pub(crate) current: MetricBundle,
     pub history: HistoryBuffer<MetricBundle, 24>,
     _spooky: PhantomData<G>,
 }
@@ -33,6 +35,8 @@ pub(crate) struct MetricRepo<G: GameArenaService> {
 /// Metric related data stored per client.
 #[derive(Debug)]
 pub struct ClientMetricData<G: GameArenaService> {
+    /// Randomly assigned cohort.
+    pub cohort_id: CohortId,
     /// Summary of domain that referred client.
     pub referrer: Option<Referrer>,
     /// General geographic location of the client.
@@ -74,6 +78,7 @@ pub struct ClientMetricData<G: GameArenaService> {
 impl<G: GameArenaService> From<&Authenticate> for ClientMetricData<G> {
     fn from(auth: &Authenticate) -> Self {
         Self {
+            cohort_id: thread_rng().gen(),
             user_agent_id: auth.user_agent_id,
             referrer: auth.referrer,
             region_id: auth.ip_address.and_then(SystemRepo::<G>::ip_to_region_id),
@@ -98,6 +103,7 @@ impl<G: GameArenaService> From<&Authenticate> for ClientMetricData<G> {
 
 impl<G: GameArenaService> ClientMetricData<G> {
     pub(crate) fn supplement(&mut self, session_item: &SessionItem) {
+        self.cohort_id = session_item.cohort_id;
         self.session_id_previous = Some(session_item.session_id);
         self.date_previous = Some(
             session_item
@@ -110,22 +116,26 @@ impl<G: GameArenaService> ClientMetricData<G> {
 
 /// Stores a T for each of several queries, and an aggregate.
 #[derive(Default)]
-struct Bundle<T> {
-    total: T,
-    by_referrer: HashMap<Referrer, T>,
-    by_region_id: HashMap<RegionId, T>,
-    by_user_agent_id: HashMap<UserAgentId, T>,
+pub(crate) struct Bundle<T> {
+    pub(crate) total: T,
+    pub(crate) by_cohort_id: HashMap<CohortId, T>,
+    pub(crate) by_referrer: HashMap<Referrer, T>,
+    pub(crate) by_region_id: HashMap<RegionId, T>,
+    pub(crate) by_user_agent_id: HashMap<UserAgentId, T>,
 }
 
 impl<T: Default> Bundle<T> {
-    pub fn mutate(
+    /// Visits a specific cross-section of the metrics.
+    pub fn visit_specific_mut(
         &mut self,
         mut mutation: impl FnMut(&mut T),
+        cohort_id: CohortId,
         referrer: Option<Referrer>,
         region_id: Option<RegionId>,
         user_agent_id: Option<UserAgentId>,
     ) {
         mutation(&mut self.total);
+        mutation(self.by_cohort_id.entry(cohort_id).or_default());
         if let Some(referrer) = referrer {
             // We cap at the first few referrers we see to avoid unbounded memory.
             let referrers_full = self.by_referrer.len() >= 128;
@@ -147,22 +157,12 @@ impl<T: Default> Bundle<T> {
         }
     }
 
-    pub fn mutate_all(&mut self, mut mutation: impl FnMut(&mut T)) {
-        mutation(&mut self.total);
-        for m in self.by_referrer.values_mut() {
-            mutation(m);
-        }
-        for m in self.by_region_id.values_mut() {
-            mutation(m);
-        }
-        for m in self.by_user_agent_id.values_mut() {
-            mutation(m);
-        }
-    }
-
     /// Applies another bundle to this one, component-wise.
     pub fn apply<O>(&mut self, other: Bundle<O>, mut map: impl FnMut(&mut T, O)) {
         map(&mut self.total, other.total);
+        for (cohort_id, o) in other.by_cohort_id {
+            map(self.by_cohort_id.entry(cohort_id).or_default(), o);
+        }
         for (referrer, o) in other.by_referrer {
             map(self.by_referrer.entry(referrer).or_default(), o);
         }
@@ -173,13 +173,40 @@ impl<T: Default> Bundle<T> {
             map(self.by_user_agent_id.entry(user_agent_id).or_default(), o);
         }
     }
+}
 
-    pub fn get(&self, filter: Option<MetricFilterDto>) -> Option<&T> {
+impl<T: 'static> Bundle<T> {
+    pub fn into_iter(self) -> impl Iterator<Item = (Option<MetricFilter>, T)> + 'static {
+        iter::once((None, self.total))
+            .chain(
+                self.by_cohort_id
+                    .into_iter()
+                    .map(|(k, v)| (Some(MetricFilter::CohortId(k)), v)),
+            )
+            .chain(
+                self.by_referrer
+                    .into_iter()
+                    .map(|(k, v)| (Some(MetricFilter::Referrer(k)), v)),
+            )
+            .chain(
+                self.by_region_id
+                    .into_iter()
+                    .map(|(k, v)| (Some(MetricFilter::RegionId(k)), v)),
+            )
+            .chain(
+                self.by_user_agent_id
+                    .into_iter()
+                    .map(|(k, v)| (Some(MetricFilter::UserAgentId(k)), v)),
+            )
+    }
+
+    pub fn get(&self, filter: Option<MetricFilter>) -> Option<&T> {
         match filter {
             None => Some(&self.total),
-            Some(MetricFilterDto::Referrer(referrer)) => self.by_referrer.get(&referrer),
-            Some(MetricFilterDto::RegionId(region_id)) => self.by_region_id.get(&region_id),
-            Some(MetricFilterDto::UserAgentId(user_agent_id)) => {
+            Some(MetricFilter::CohortId(cohort_id)) => self.by_cohort_id.get(&cohort_id),
+            Some(MetricFilter::Referrer(referrer)) => self.by_referrer.get(&referrer),
+            Some(MetricFilter::RegionId(region_id)) => self.by_region_id.get(&region_id),
+            Some(MetricFilter::UserAgentId(user_agent_id)) => {
                 self.by_user_agent_id.get(&user_agent_id)
             }
         }
@@ -189,7 +216,7 @@ impl<T: Default> Bundle<T> {
 /// Metrics total, and by various key types.
 pub(crate) struct MetricBundle {
     pub(crate) start: UnixTime,
-    bundle: Bundle<Metrics>,
+    pub(crate) bundle: Bundle<Metrics>,
 }
 
 impl MetricBundle {
@@ -200,14 +227,14 @@ impl MetricBundle {
         }
     }
 
-    pub fn metric(&self, filter: Option<MetricFilterDto>) -> Metrics {
+    pub fn metric(&self, filter: Option<MetricFilter>) -> Metrics {
         self.bundle
             .get(filter)
             .cloned()
             .unwrap_or_else(|| Metrics::default())
     }
 
-    pub fn data_point(&self, filter: Option<MetricFilterDto>) -> MetricsDataPointDto {
+    pub fn data_point(&self, filter: Option<MetricFilter>) -> MetricsDataPointDto {
         self.bundle
             .get(filter)
             .map(|m| m.data_point())
@@ -237,17 +264,14 @@ impl<G: GameArenaService> MetricRepo<G> {
         }
     }
 
-    pub fn mutate_all(&mut self, mutation: impl FnMut(&mut Metrics)) {
-        self.current.bundle.mutate_all(mutation);
-    }
-
     pub fn mutate_with(
         &mut self,
         mutation: impl Fn(&mut Metrics),
         client_metric_data: &ClientMetricData<G>,
     ) {
-        self.current.bundle.mutate(
+        self.current.bundle.visit_specific_mut(
             mutation,
+            client_metric_data.cohort_id,
             client_metric_data.referrer,
             client_metric_data.region_id,
             client_metric_data.user_agent_id,
@@ -391,7 +415,7 @@ impl<G: GameArenaService> MetricRepo<G> {
     }
 
     /// Returns metric to safe in database, if any.
-    pub fn update(infrastructure: &mut Infrastructure<G>) -> Option<MetricsItem> {
+    fn update(infrastructure: &mut Infrastructure<G>) -> Option<Bundle<MetricsItem>> {
         let metrics_repo = &mut infrastructure.metrics;
 
         let now = get_unix_time_now();
@@ -412,8 +436,9 @@ impl<G: GameArenaService> MetricRepo<G> {
                 continue;
             }
             if let Some(client) = player.client() {
-                concurrent.mutate(
+                concurrent.visit_specific_mut(
                     |c| *c += 1,
+                    client.metrics.cohort_id,
                     client.metrics.referrer,
                     client.metrics.region_id,
                     client.metrics.user_agent_id,
@@ -454,7 +479,7 @@ impl<G: GameArenaService> MetricRepo<G> {
                 }
             });
 
-        metrics_repo.mutate_all(|m| {
+        let mut general = |m: &mut Metrics| {
             m.cpu.push(health.cpu());
             m.cpu_steal.push(health.cpu_steal());
             m.ram.push(health.ram());
@@ -465,7 +490,9 @@ impl<G: GameArenaService> MetricRepo<G> {
             m.tps = m.tps + health.take_tps();
             m.spt = m.spt + health.take_spt();
             m.uptime.push(uptime.as_secs_f32() / (24.0 * 60.0 * 60.0));
-        });
+        };
+        // metrics_repo.mutate_all(general);
+        general(&mut metrics_repo.current.bundle.total);
 
         if now < metrics_repo.next_swap {
             return None;
@@ -475,59 +502,75 @@ impl<G: GameArenaService> MetricRepo<G> {
 
         let mut current = MetricBundle::new(metrics_repo.current.start);
         current.bundle.total = Self::get_metrics(infrastructure, None);
-        for user_agent_id in infrastructure
-            .metrics
-            .current
-            .bundle
-            .by_user_agent_id
-            .keys()
-            .copied()
-            .collect::<Vec<_>>()
-            .into_iter()
-        {
-            current.bundle.by_user_agent_id.insert(
-                user_agent_id,
-                Self::get_metrics(
-                    infrastructure,
-                    Some(MetricFilterDto::UserAgentId(user_agent_id)),
-                ),
-            );
-        }
-        for referrer in infrastructure
-            .metrics
-            .current
-            .bundle
-            .by_referrer
-            .keys()
-            .copied()
-            .collect::<Vec<_>>()
-            .into_iter()
-        {
-            current.bundle.by_referrer.insert(
-                referrer,
-                Self::get_metrics(infrastructure, Some(MetricFilterDto::Referrer(referrer))),
-            );
-        }
-        for region_id in infrastructure
-            .metrics
-            .current
-            .bundle
-            .by_region_id
-            .keys()
-            .copied()
-            .collect::<Vec<_>>()
-            .into_iter()
-        {
-            current.bundle.by_region_id.insert(
-                region_id,
-                Self::get_metrics(infrastructure, Some(MetricFilterDto::RegionId(region_id))),
-            );
+
+        macro_rules! copy {
+            ($infrastructure: expr, $new: expr, $map: ident, $variant: ident) => {
+                for key in $infrastructure
+                    .metrics
+                    .current
+                    .bundle
+                    .$map
+                    .keys()
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                {
+                    $new.bundle.$map.insert(
+                        key,
+                        Self::get_metrics($infrastructure, Some(MetricFilter::$variant(key))),
+                    );
+                }
+            };
         }
 
-        let save_to_db = MetricsItem {
-            game_id: G::GAME_ID,
-            timestamp: current.start,
-            metrics: current.bundle.total.clone(),
+        copy!(infrastructure, current, by_cohort_id, CohortId);
+        copy!(infrastructure, current, by_user_agent_id, UserAgentId);
+        copy!(infrastructure, current, by_referrer, Referrer);
+        copy!(infrastructure, current, by_region_id, RegionId);
+
+        macro_rules! collect {
+            ($map: ident, $variant: ident) => {
+                collect!($map, $variant, |_| true)
+            };
+            ($map: ident, $variant: ident, $filter: expr) => {{
+                current
+                    .bundle
+                    .$map
+                    .iter()
+                    .filter_map(|(&key, m)| {
+                        $filter(key).then(|| {
+                            ((
+                                key,
+                                MetricsItem {
+                                    game_id_metric_filter: GameIdMetricFilter {
+                                        game_id: G::GAME_ID,
+                                        metric_filter: Some(MetricFilter::$variant(key)),
+                                    },
+                                    timestamp: current.start,
+                                    metrics: m.clone(),
+                                },
+                            ))
+                        })
+                    })
+                    .collect()
+            }};
+        }
+
+        let save_to_db = Bundle {
+            total: MetricsItem {
+                game_id_metric_filter: GameIdMetricFilter {
+                    game_id: G::GAME_ID,
+                    metric_filter: None,
+                },
+                timestamp: current.start,
+                metrics: current.bundle.total.clone(),
+            },
+            by_cohort_id: collect!(by_cohort_id, CohortId),
+            by_referrer: collect!(by_referrer, Referrer, |referrer: Referrer| {
+                Referrer::TRACKED.iter().any(|&t| referrer.0.as_str() == t)
+            }),
+            by_region_id: collect!(by_region_id, RegionId),
+            by_user_agent_id: collect!(by_user_agent_id, UserAgentId),
         };
 
         infrastructure.metrics.history.write(current);
@@ -540,29 +583,31 @@ impl<G: GameArenaService> MetricRepo<G> {
         infrastructure: &mut Infrastructure<G>,
         ctx: &mut ActorContext<Infrastructure<G>>,
     ) {
-        if let Some(metrics_item) = Self::update(infrastructure) {
+        if let Some(bundle) = Self::update(infrastructure) {
             let server_number = infrastructure.server_id.map(|id| id.0.get()).unwrap_or(0);
             let database = infrastructure.database();
 
             async move {
                 // Don't hammer the database row from multiple servers simultaneously, which
                 // wouldn't compromise correctness, but would affect performance (number of retries).
-                tokio::time::sleep(Duration::from_secs(server_number as u64 * 5 + 1)).await;
-                database.update_metrics(metrics_item).await
+                tokio::time::sleep(Duration::from_secs(server_number as u64 * 5 + 100)).await;
+
+                for (filter, metrics_item) in bundle.into_iter() {
+                    if let Err(e) = database.update_metrics(metrics_item).await {
+                        error!("error putting metrics for {:?}: {:?}", filter, e)
+                    }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
             }
             .into_actor(infrastructure)
-            .map(|res, _, _| {
-                if let Err(e) = res {
-                    error!("error putting metrics: {:?}", e)
-                }
-            })
+            .map(|_, _, _| {})
             .spawn(ctx)
         }
     }
 
     pub fn get_metrics(
         infrastructure: &mut Infrastructure<G>,
-        filter: Option<MetricFilterDto>,
+        filter: Option<MetricFilter>,
     ) -> Metrics {
         // Get basis.
         let metrics_repo = &mut infrastructure.metrics;
@@ -574,16 +619,22 @@ impl<G: GameArenaService> MetricRepo<G> {
             .unwrap_or_default();
 
         // For now, the infrastructure is always hosting one arena.
+        // Must increment arena id even when filtering, as the database compare and swap relies
+        // on it changing.
         metrics.arenas_cached.increment();
-        metrics
-            .players_cached
-            .add_length(infrastructure.context_service.context.players.len());
-        metrics
-            .sessions_cached
-            .add_length(infrastructure.context_service.context.players.real_players);
-        metrics
-            .invitations_cached
-            .add_length(infrastructure.invitations.len());
+
+        // But these don't matter for the compare and swap and do not pertain to individual filters.
+        if filter.is_none() {
+            metrics
+                .players_cached
+                .add_length(infrastructure.context_service.context.players.len());
+            metrics
+                .sessions_cached
+                .add_length(infrastructure.context_service.context.players.real_players);
+            metrics
+                .invitations_cached
+                .add_length(infrastructure.invitations.len());
+        }
 
         metrics
     }

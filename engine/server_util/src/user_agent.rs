@@ -3,7 +3,7 @@
 
 use arrayvec::ArrayString;
 use core_protocol::id::UserAgentId;
-use core_protocol::name::slice_up_to_array_string;
+use core_protocol::name::trim_and_slice_up_to_array_string;
 use serde::{Deserialize, Serialize};
 use woothee::parser::Parser;
 
@@ -13,7 +13,7 @@ pub struct UserAgent(pub ArrayString<384>);
 
 impl UserAgent {
     pub fn new(str: &str) -> Self {
-        Self(slice_up_to_array_string(str))
+        Self(trim_and_slice_up_to_array_string(str))
     }
 
     /// Bucketize user agent in order to limit the number of categories.

@@ -3,6 +3,7 @@
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
+use crate::player::Status;
 use crate::server::Server;
 use crate::world::World;
 use crate::world_physics_radius::MINE_SPEED;
@@ -11,6 +12,7 @@ use common::angle::Angle;
 use common::death_reason::DeathReason;
 use common::entity::*;
 use common::guidance::Guidance;
+use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::*;
 use common::velocity::Velocity;
@@ -39,10 +41,6 @@ pub(crate) enum Mutation {
     Remove(DeathReason),
     Repair(Ticks),
     Reload(Ticks),
-    ReloadLimited {
-        entity_type: EntityType,
-        instant: bool,
-    },
     // For things that may only be collected once.
     CollectedBy(Arc<PlayerTuple<Server>>, u32),
     HitBy(Arc<PlayerTuple<Server>>, EntityType, Ticks),
@@ -113,13 +111,9 @@ impl Mutation {
         match self {
             Self::Remove(reason) => {
                 #[cfg(debug_assertions)]
-                {
-                    let e = &entities[index];
-                    if e.is_boat() {
-                        Self::boat_died(world, index, false);
-                        if let DeathReason::Debug(msg) = reason {
-                            panic!("boat removed with debug reason {}", msg);
-                        }
+                if entities[index].is_boat() {
+                    if let DeathReason::Debug(msg) = reason {
+                        panic!("boat removed with debug reason {}", msg);
                     }
                 }
 
@@ -137,9 +131,7 @@ impl Mutation {
                         alias
                     };
 
-                    Self::boat_died(world, index, false);
                     world.remove(index, DeathReason::Weapon(killer_alias, weapon_type));
-
                     return true;
                 }
             }
@@ -159,7 +151,6 @@ impl Mutation {
                         alias
                     };
 
-                    Self::boat_died(world, index, false);
                     world.remove(
                         index,
                         if ram {
@@ -179,8 +170,7 @@ impl Mutation {
             } => {
                 let entity = &mut entities[index];
                 if entity.kill_in(delta, Ticks::from_secs(6.0)) {
-                    Self::boat_died(world, index, true);
-                    world.remove(index, DeathReason::Entity(entity_type));
+                    world.remove(index, DeathReason::Obstacle(entity_type));
                     return true;
                 }
                 entity.transform.velocity =
@@ -197,12 +187,6 @@ impl Mutation {
             }
             Self::Reload(amount) => {
                 entities[index].reload(amount);
-            }
-            Self::ReloadLimited {
-                entity_type,
-                instant,
-            } => {
-                Self::reload_limited_armament(world, index, entity_type, instant);
             }
             Self::Score(score) => {
                 entities[index].borrow_player_mut().score += score;
@@ -231,8 +215,7 @@ impl Mutation {
                 entity.transform.velocity = velocity;
                 // Same as above (can't do > 1 time).
                 if is_last_of_type {
-                    entity.altitude = entity.altitude
-                        + delta_altitude.clamp_magnitude(Altitude::UNIT * 5.0 * delta);
+                    entity.altitude += delta_altitude.clamp_magnitude(Altitude::UNIT * 5.0 * delta);
                 }
             }
             Self::FireAll(sub_kind) => {
@@ -288,21 +271,74 @@ impl Mutation {
         false
     }
 
-    /// boat_died applies the effect of a boat dying, such as a reduction in the corresponding player's
+    /// Called by World::remove.
+    pub fn on_world_remove(world: &mut World, index: EntityIndex, reason: &DeathReason) {
+        let entity_type = world.entities[index].entity_type;
+        let data: &EntityData = entity_type.data();
+
+        if data.kind == EntityKind::Boat {
+            // If killed by a player, that player will get the coins. If killed by land or by
+            // fleeing combat, score should be converted into coins to prevent destruction of score.
+            // DeathReason::Unknown means player left game.
+            let score_to_coins = matches!(
+                reason,
+                DeathReason::Border
+                    | DeathReason::Terrain
+                    | DeathReason::Unknown
+                    | DeathReason::Obstacle(_)
+            );
+
+            Self::boat_died(world, index, score_to_coins);
+        } else {
+            if matches!(reason, DeathReason::Terrain) || data.sub_kind == EntitySubKind::DepthCharge
+            {
+                Self::maybe_damage_terrain(world, index);
+            }
+
+            if data.limited {
+                let boat_index = {
+                    let entity = &world.entities[index];
+                    let player = entity.borrow_player();
+                    if let Status::Alive { entity_index, .. } = player.data.status {
+                        Some(entity_index)
+                    } else {
+                        None
+                    }
+                };
+
+                if let Some(boat_index) = boat_index {
+                    // Reload landed aircraft instantly on the correct pad.
+                    let landing_pad = if let DeathReason::Landing(pad) = reason {
+                        Some(*pad)
+                    } else {
+                        None
+                    };
+
+                    Self::reload_limited_armament(world, boat_index, entity_type, landing_pad)
+                }
+            }
+        }
+    }
+
+    /// Called by on_world_remove when a boat dies.
+    /// Applies the effect of a boat dying, such as a reduction in the corresponding player's
     /// score and the spawning of loot.
-    ///
-    /// If killed by a player, that player will get the coins. If killed by land or by fleeing combat,
-    /// score should be converted into coins to strategic destruction of score.
-    pub fn boat_died(world: &mut World, index: EntityIndex, score_to_coins: bool) {
+    fn boat_died(world: &mut World, index: EntityIndex, score_to_coins: bool) {
         let entity = &mut world.entities[index];
         let mut player = entity.borrow_player_mut();
+        let mut rng = thread_rng();
         let score = player.score;
-        player.score = respawn_score(player.score);
+        player.score = if player.is_bot() {
+            // Make sure there are bots in the shallow area.
+            respawn_score(player.score).min(level_to_score(rng.gen_range(1..=2)))
+        } else {
+            respawn_score(player.score)
+        };
         drop(player);
 
         let data = entity.data();
         debug_assert_eq!(data.kind, EntityKind::Boat);
-        let mut rng = thread_rng();
+
         // Loot is based on the length of the boat.
 
         let center = entity.transform.position;
@@ -329,44 +365,108 @@ impl Mutation {
         }
     }
 
-    /// Call when a weapon, decoy, or aircraft dies and the player may still be alive, so it may be
-    /// reloaded if it is a limited armament.
-    pub fn reload_limited_armament(
+    /// Called by on_world_remove when a non-boat dies.
+    fn maybe_damage_terrain(world: &mut World, entity_index: EntityIndex) {
+        let entity = &world.entities[entity_index];
+        let data = entity.data();
+
+        // Dying weapons may leave a mark on the terrain.
+        if data.kind == EntityKind::Weapon {
+            match data.sub_kind {
+                EntitySubKind::DepthCharge
+                | EntitySubKind::Missile
+                | EntitySubKind::Rocket
+                | EntitySubKind::Shell
+                | EntitySubKind::Torpedo => {
+                    // Weapons less than 0.7 damage do 0.7 amount damage/0.7% of the time.
+                    // Otherwise terrain wouldn't change since the delta would be too small.
+                    const MIN_AMOUNT: f32 = 0.7;
+                    let damage = data.damage;
+                    let probability = (damage * (1.0 / MIN_AMOUNT)).clamp(0.0, 1.0);
+                    let amount = data.damage.max(MIN_AMOUNT);
+
+                    if thread_rng().gen_bool(probability as f64) {
+                        // Modify terrain slightly in front of death, to account for finite tick rate.
+                        // Should be more correct, on average.
+                        let pos = entity.transform.position
+                            + (entity.transform.velocity.to_mps() * (Ticks::ONE.to_secs() * 0.5));
+                        world.terrain.modify(TerrainMutation::conditional(
+                            pos,
+                            -20.0 * amount,
+                            Altitude(-10)..=Altitude::MAX,
+                        ));
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
+    /// Called by on_world_remove when a limited armament (weapon, decoy, or aircraft) dies with a
+    /// player that is alive.
+    fn reload_limited_armament(
         world: &mut World,
         boat_index: EntityIndex,
         entity_type: EntityType,
-        instant: bool,
+        landing_pad: Option<usize>,
     ) {
-        let limited_data: &EntityData = entity_type.data();
+        let armament_data: &EntityData = entity_type.data();
 
-        if !limited_data.limited {
-            // Not a limited armament.
-            return;
-        }
+        // Only call this on limited armaments.
+        debug_assert!(armament_data.limited);
 
+        // So far these are the only valid types of limited armaments.
         debug_assert!(
-            limited_data.kind == EntityKind::Weapon
-                || limited_data.kind == EntityKind::Aircraft
-                || limited_data.kind == EntityKind::Decoy
+            armament_data.kind == EntityKind::Weapon
+                || armament_data.kind == EntityKind::Aircraft
+                || armament_data.kind == EntityKind::Decoy
         );
 
-        let boat = &mut world.entities[boat_index];
-        let data = boat.data();
-        let extension = boat.extension_mut();
-        let consumption = extension.reloads_mut();
-
-        for (i, armament) in data.armaments.iter().enumerate() {
-            if armament.entity_type != entity_type || consumption[i] != Ticks::MAX {
-                continue;
-            }
-
-            consumption[i] = if instant {
-                Ticks::ZERO
+        let try_reload = |a: &Armament, c: &mut Ticks| {
+            debug_assert_eq!(a.entity_type, entity_type);
+            if *c == Ticks::MAX {
+                *c = if landing_pad.is_some() {
+                    Ticks::ZERO
+                } else {
+                    a.reload()
+                };
+                true
             } else {
-                armament.reload()
-            };
+                false
+            }
+        };
 
-            return;
+        let boat = &mut world.entities[boat_index];
+        let armaments = &*boat.data().armaments;
+        let consumption = boat.extension_mut().reloads_mut();
+
+        if let Some(i) = landing_pad {
+            if try_reload(&armaments[i], &mut consumption[i]) {
+                return;
+            }
         }
+
+        for (a, c) in armaments
+            .iter()
+            .zip(consumption.iter_mut())
+            .filter(|(a, _)| a.entity_type == entity_type)
+        {
+            if try_reload(a, c) {
+                return;
+            }
+        }
+
+        // Limited armaments must be reloaded except for when players leave or upgrade.
+        // TOOD: Fix to allow not being able to reload after respawning.
+        /*
+        debug_assert!(
+            {
+                let player = boat.borrow_player();
+                let flags = player.flags;
+                flags.left_game || flags.upgraded
+            },
+            "failed to reload limited armament for {:?} {:?}", boat.entity_type, boat.extension().spawn_protection()
+        );
+         */
     }
 }

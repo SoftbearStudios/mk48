@@ -91,6 +91,10 @@
     function maybe(val) {
         return val == null ? '?' : val;
     }
+
+    function checkmark(bool) {
+        return bool ? '✔' : '✗';
+    }
 </script>
 
 <Nav/>
@@ -119,13 +123,15 @@
                 <th>ID</th>
                 <th>Alias</th>
                 <th>Team ID</th>
+                <th>Discord ID</th>
+                <th>Mod</th>
                 <th>Score</th>
                 <th>Plays</th>
                 <th>Region ID</th>
                 <th>FPS</th>
                 <th>RTT</th>
-                <th>Total Messages</th>
-                <th>Inappropriate</th>
+                <th>Msgs.</th>
+                <th>Inapp.</th>
                 <th>Reports</th>
                 <th>Restrict</th>
                 <th>Mute</th>
@@ -139,6 +145,8 @@
                     <td>{player.player_id}</td>
                     <td on:click={() => overrideAlias(player.player_id, player.alias)}>{player.alias}</td>
                     <td>{player.team_id == null ? '-' : player.team_id}</td>
+                    <td>{player.discord_id == null ? '-' : player.discord_id}</td>
+                    <td>{checkmark(player.moderator)}</td>
                     <td>{player.score}</td>
                     <td>{player.plays}</td>
                     <td>{maybe(player.region_id)}</td>

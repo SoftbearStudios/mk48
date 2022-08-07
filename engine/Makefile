@@ -8,3 +8,4 @@ fmt:
 	cargo fmt --manifest-path sprite_sheet/Cargo.toml
 	cargo fmt --manifest-path sprite_sheet_util/Cargo.toml
 	cargo fmt --manifest-path yew_frontend/Cargo.toml
+	cargo fmt --manifest-path upload_game_client/Cargo.toml

@@ -8,7 +8,6 @@ use crate::renderer::renderer::Renderer;
 use crate::renderer::shader::Shader;
 use crate::renderer::vertex::PosColor;
 use glam::{Mat2, Vec2, Vec4};
-use std::array;
 use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::ops::Range;
@@ -132,14 +131,27 @@ impl<I: Index> GraphicLayer<I> {
         );
     }
 
-    /// add_rounded_line adds a rounded line to the graphics queue.
-    /// Extend means start and end are the centers of the arcs (aka longer than a nomral line).
+    /// Adds a rounded line to the graphics queue.
+    /// Extend means start and end are the centers of the arcs (aka longer than a normal line).
     pub fn add_rounded_line(
         &mut self,
         start: Vec2,
         end: Vec2,
-        mut thickness: f32,
+        thickness: f32,
         color: Vec4,
+        extend: bool,
+    ) {
+        self.add_rounded_line_gradient(start, end, thickness, color, color, extend);
+    }
+
+    /// Like add_rounded_line but with different colors on each end.
+    pub fn add_rounded_line_gradient(
+        &mut self,
+        start: Vec2,
+        end: Vec2,
+        mut thickness: f32,
+        s: Vec4,
+        e: Vec4,
         extend: bool,
     ) {
         let length = start.distance(end);
@@ -166,7 +178,7 @@ impl<I: Index> GraphicLayer<I> {
 
         // Don't add a line if it has zero length.
         if line_start != line_end {
-            self.add_line(line_start, line_end, thickness, color);
+            self.add_line_gradient(line_start, line_end, thickness, s, e);
         }
 
         let diff = line_end - line_start;
@@ -179,17 +191,11 @@ impl<I: Index> GraphicLayer<I> {
         // Rounded start.
         let opp_angle = angle - PI;
         let angle_range = (opp_angle - PI / 2.0)..(opp_angle + PI / 2.0);
-        self.add_arc(
-            line_start,
-            adjusted_radius,
-            angle_range,
-            arc_thickness,
-            color,
-        );
+        self.add_arc(line_start, adjusted_radius, angle_range, arc_thickness, s);
 
         // Rounded end.
         let angle_range = (angle - PI / 2.0)..(angle + PI / 2.0);
-        self.add_arc(line_end, adjusted_radius, angle_range, arc_thickness, color);
+        self.add_arc(line_end, adjusted_radius, angle_range, arc_thickness, e);
     }
 
     /// add_arc_graphic adds an arc to the graphics queue. Angles are in radians.
@@ -270,7 +276,7 @@ impl<I: Index> GraphicLayer<I> {
             .extend((0..segments).into_iter().flat_map(|i| {
                 let index = starting_index + i * 2;
                 // Triangles are [A, D, B] and [A, C, D].
-                array::IntoIter::new([
+                IntoIterator::into_iter([
                     I::from_usize(index),
                     I::from_usize(index + 3),
                     I::from_usize(index + 1),
@@ -283,17 +289,19 @@ impl<I: Index> GraphicLayer<I> {
         // Use extend instead of loop to allow pre-allocation.
         let angle_per_segment = angle_span / segments as f32;
         vertices.extend(
-            array::IntoIter::new([PosColor { pos: a, color }, PosColor { pos: b, color }]).chain(
-                (1..=segments).into_iter().flat_map(|i| {
+            IntoIterator::into_iter([PosColor { pos: a, color }, PosColor { pos: b, color }])
+                .chain((1..=segments).into_iter().flat_map(|i| {
                     let angle = i as f32 * angle_per_segment + angle_range.start;
                     let mat = Mat2::from_angle(angle);
 
                     let c = center + mat * initial_a;
                     let d = center + mat * initial_b;
 
-                    array::IntoIter::new([PosColor { pos: c, color }, PosColor { pos: d, color }])
-                }),
-            ),
+                    IntoIterator::into_iter([
+                        PosColor { pos: c, color },
+                        PosColor { pos: d, color },
+                    ])
+                })),
         );
     }
 

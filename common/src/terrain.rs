@@ -576,7 +576,7 @@ impl Terrain {
 
         for x in lower_left.0..upper_right.0 {
             for y in lower_left.1..upper_right.1 {
-                if self.at(Coord(x, y)) + 6 > 255 / 2 {
+                if self.at(Coord(x, y)) + DATA_OFFSET > 255 / 2 {
                     return true;
                 }
             }
@@ -911,13 +911,12 @@ impl Chunk {
                     ChunkUpdate::Mods(
                         coords
                             .into_iter()
-                            .map(|coord| {
-                                std::array::IntoIter::new(
+                            .flat_map(|coord| {
+                                IntoIterator::into_iter(
                                     Mod::new(coord, self.at(coord.into_absolute_coord()))
                                         .to_bytes(),
                                 )
                             })
-                            .flatten()
                             .collect(),
                     )
                 } else {
@@ -1066,12 +1065,10 @@ impl Chunk {
                                         y = y2;
                                         break;
                                     }
+                                } else if let Some(i) = i {
+                                    maybe_y2 = Some(i + y);
                                 } else {
-                                    if let Some(i) = i {
-                                        maybe_y2 = Some(i + y);
-                                    } else {
-                                        break;
-                                    }
+                                    break;
                                 }
 
                                 mask[x2][y..=(y + i.unwrap())].fill(false);
@@ -1095,9 +1092,9 @@ impl Chunk {
 
                     fn format_mask(mask: &[[bool; CHUNK_SIZE + 1]; CHUNK_SIZE + 1]) -> String {
                         let mut s = String::new();
-                        for x in 0..=CHUNK_SIZE {
-                            for y in 0..=CHUNK_SIZE {
-                                s.push((b'0' + mask[x][y] as u8) as char);
+                        for r in mask {
+                            for &v in r {
+                                s.push((b'0' + v as u8) as char);
                             }
                             s.push('\n');
                         }

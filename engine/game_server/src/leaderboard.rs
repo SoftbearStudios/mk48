@@ -6,14 +6,14 @@ use crate::infrastructure::Infrastructure;
 use crate::liveboard::LiveboardRepo;
 use crate::player::PlayerRepo;
 use actix::{
-    ActorFutureExt, ActorStreamExt, Context as ActorContext, ContextFutureSpawner, WrapFuture,
-    WrapStream,
+    ActorFutureExt, ActorStreamExt, Context as ActorContext, ContextFutureSpawner, Handler,
+    WrapFuture, WrapStream,
 };
 use core_protocol::dto::LeaderboardDto;
 use core_protocol::get_unix_time_now;
 use core_protocol::id::PeriodId;
 use core_protocol::name::PlayerAlias;
-use core_protocol::rpc::LeaderboardUpdate;
+use core_protocol::rpc::{LeaderboardResponse, LeaderboardUpdate};
 use futures::stream::FuturesUnordered;
 use log::error;
 use server_util::database_schema::{GameIdScoreType, ScoreItem, ScoreType};
@@ -273,5 +273,34 @@ impl<G: GameArenaService> LeaderboardRepo<G> {
                 ))
             }
         })
+    }
+}
+
+/// Asks the server if it and the underlying hardware and OS are healthy.
+#[derive(actix::Message)]
+#[rtype(result = "LeaderboardResponse")]
+pub struct LeaderboardRequest;
+
+/// Reports whether infrastructure is healthy (hardware and actor are running properly).
+impl<G: GameArenaService> Handler<LeaderboardRequest> for Infrastructure<G> {
+    type Result = LeaderboardResponse;
+
+    fn handle(&mut self, _request: LeaderboardRequest, _: &mut Self::Context) -> Self::Result {
+        let local_players = self.context_service.context.players.real_players_live as u32;
+
+        LeaderboardResponse {
+            leaderboard: Arc::clone(self.leaderboard.get(PeriodId::AllTime)),
+            players: self
+                .system
+                .as_ref()
+                .map(|s| {
+                    s.servers
+                        .iter()
+                        .map(|(_, d)| d.status.player_count().unwrap_or_default())
+                        .sum::<u32>()
+                })
+                .unwrap_or_default()
+                .max(local_players),
+        }
     }
 }

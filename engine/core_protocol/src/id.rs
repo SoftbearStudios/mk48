@@ -2,10 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use enum_iterator::IntoEnumIterator;
+use lazy_static::lazy_static;
+use rand::distributions::{Standard, WeightedIndex};
+use rand::prelude::Distribution;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use serde::de::Error;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{self, Display, Formatter};
-use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroU8, ParseIntError};
 use std::str::FromStr;
 use variant_count::VariantCount;
 
@@ -13,12 +17,92 @@ use variant_count::VariantCount;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct ArenaId(pub NonZeroU32);
 
+/// Cohorts 1-4 are used for A/B testing.
+/// The default for existing players is cohort 1.
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct CohortId(pub NonZeroU8);
+
+impl CohortId {
+    const WEIGHTS: [u8; 4] = [8, 4, 2, 1];
+
+    pub fn new(n: u8) -> Option<Self> {
+        NonZeroU8::new(n)
+            .filter(|n| n.get() <= Self::WEIGHTS.len() as u8)
+            .map(Self)
+    }
+}
+
+impl Default for CohortId {
+    fn default() -> Self {
+        Self::new(1).unwrap()
+    }
+}
+
+impl Display for CohortId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidCohortId;
+
+impl FromStr for CohortId {
+    type Err = InvalidCohortId;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse().ok().and_then(Self::new).ok_or(InvalidCohortId)
+    }
+}
+
+impl Distribution<CohortId> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CohortId {
+        lazy_static! {
+            static ref DISTRIBUTION: WeightedIndex<u8> =
+                WeightedIndex::new(&CohortId::WEIGHTS).unwrap();
+        }
+        let n = DISTRIBUTION.sample(rng) + 1;
+        debug_assert!(n > 0);
+        debug_assert!(n <= CohortId::WEIGHTS.len());
+        // The or default is purely defensive.
+        CohortId::new(n as u8).unwrap_or_default()
+    }
+}
+
+impl Serialize for CohortId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.get().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CohortId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        <u8>::deserialize(deserializer)
+            .and_then(|n| Self::new(n).ok_or(D::Error::custom("invalid cohort id")))
+    }
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum GameId {
-    Mazean,
     Mk48,
     /// A placeholder for games we haven't released yet.
     Redacted,
+}
+
+impl GameId {
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Mk48 => "Mk48.io",
+            Self::Redacted => "Redacted",
+        }
+    }
 }
 
 #[repr(transparent)]
@@ -45,35 +129,61 @@ impl InvitationId {
     }
 }
 
+impl Display for InvitationId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl FromStr for InvitationId {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        NonZeroU32::from_str(s).map(InvitationId)
+    }
+}
+
 // The LanguageId enum may be extended with additional languages, such as:
 // Bengali,
 // Hindi,
-// German,
-// Japanese,
 // Indonesian,
 // Italy,
 // Korean,
 // Portuguese,
 // StandardArabic,
-// Vietnamese,
+// TraditionalChinese,
 
-/// Currently unused.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+/// In order that they should be presented in a language picker.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, IntoEnumIterator)]
 pub enum LanguageId {
-    #[serde(rename = "xx-bork")]
-    Bork,
     #[serde(rename = "en")]
     English,
-    #[serde(rename = "fr")]
-    French,
-    #[serde(rename = "ru")]
-    Russian,
     #[serde(rename = "es")]
     Spanish,
-    #[serde(rename = "zh_TW")]
-    SimplifiedChinese,
+    #[serde(rename = "fr")]
+    French,
+    #[serde(rename = "de")]
+    German,
+    #[serde(rename = "it")]
+    Italian,
+    #[serde(rename = "ru")]
+    Russian,
+    #[serde(rename = "ar")]
+    Arabic,
     #[serde(rename = "zh")]
-    TraditionalChinese,
+    SimplifiedChinese,
+    #[serde(rename = "ja")]
+    Japanese,
+    #[serde(rename = "vi")]
+    Vietnamese,
+    #[serde(rename = "xx-bork")]
+    Bork,
+}
+
+impl LanguageId {
+    pub fn iter() -> impl Iterator<Item = Self> + 'static {
+        Self::into_enum_iter()
+    }
 }
 
 impl Default for LanguageId {
@@ -137,19 +247,19 @@ impl PlayerId {
     }
 
     /// Returns true if the id is reserved for bots.
-    pub fn is_bot(self) -> bool {
+    pub const fn is_bot(self) -> bool {
         let n = self.0.get();
         n & Self::DAY_MASK == 0 && !self.is_solo()
     }
 
     /// Returns true if the id is reserved for offline solo play.
-    pub fn is_solo(self) -> bool {
+    pub const fn is_solo(self) -> bool {
         self.0.get() == 1
     }
 }
 
 /// Mirrors [`db_ip::Region`]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, IntoEnumIterator, Serialize)]
 pub enum RegionId {
     Africa,
     Asia,
@@ -231,6 +341,10 @@ impl RegionId {
             Self::SouthAmerica => "South America",
         }
     }
+
+    pub fn iter() -> impl Iterator<Item = Self> + 'static {
+        Self::into_enum_iter()
+    }
 }
 
 /// Wasn't a valid region string.
@@ -285,7 +399,7 @@ pub struct SessionId(pub NonZeroU64);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct TeamId(pub NonZeroU32);
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, IntoEnumIterator, Serialize, Deserialize)]
 pub enum UserAgentId {
     ChromeOS,
     Desktop,
@@ -295,6 +409,23 @@ pub enum UserAgentId {
     Mobile,
     Spider,
     Tablet,
+}
+
+impl UserAgentId {
+    pub fn iter() -> impl Iterator<Item = Self> + 'static {
+        Self::into_enum_iter()
+    }
+}
+
+// This will supersede [`PlayerId`] for persistent storage.
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct UserId(pub NonZeroU64);
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub enum LoginType {
+    /// Discord OAuth2.
+    Discord,
 }
 
 #[cfg(test)]

@@ -71,7 +71,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 900,
+		"lifespan": 600,
 		"armaments": [],
 		"turrets": [],
 		"exhausts": []
@@ -82,7 +82,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 900,
+		"lifespan": 600,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -707,6 +707,30 @@
 			}
 		},
 		"armaments": [
+			{
+				"type": "mark18",
+				"positionForward": 45.1688,
+				"positionSide": 7.4,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "mark18",
+				"positionForward": 45.1688,
+				"positionSide": -7.4,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "mark18",
+				"positionForward": 44.5688,
+				"positionSide": 7.5,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "mark18",
+				"positionForward": 44.5688,
+				"positionSide": -7.5,
+				"angle": -1.5707963267948966
+			},
 			{
 				"type": "300x1400mmR",
 				"angle": 0,
@@ -4863,6 +4887,18 @@
 			{
 				"type": "82r",
 				"positionForward": -40.4359,
+				"positionSide": -8,
+				"angle": -1.5707963267948966
+			},
+			{
+				"type": "82r",
+				"positionForward": -41.0359,
+				"positionSide": 8,
+				"angle": 1.5707963267948966
+			},
+			{
+				"type": "82r",
+				"positionForward": -41.0359,
 				"positionSide": -8,
 				"angle": -1.5707963267948966
 			},

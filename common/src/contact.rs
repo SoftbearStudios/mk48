@@ -89,6 +89,7 @@ impl Default for Contact {
 
 impl Contact {
     /// Initializes all (private) fields.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         altitude: Altitude,
         damage: Ticks,
@@ -193,7 +194,7 @@ impl Contact {
                 let diff = *m - *v;
 
                 // Don't let it get too far off.
-                if diff.abs() > t.speed * Ticks(2).to_secs() {
+                if diff.abs() > t.speed * Ticks::from_repr(2).to_secs() {
                     *v = *m;
                 } else {
                     *v += diff.clamp_magnitude(t.speed * delta_seconds);
@@ -630,7 +631,7 @@ struct ByteDeserializer<const MAX: usize> {
     size: usize,
 }
 
-impl<'de, const MAX: usize> ByteDeserializer<MAX> {
+impl<const MAX: usize> ByteDeserializer<MAX> {
     fn new(size: usize) -> Self {
         debug_assert!(size != 0);
         Self {

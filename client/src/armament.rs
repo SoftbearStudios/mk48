@@ -219,9 +219,9 @@ impl FireRateLimiter {
     }
 
     pub fn update(&mut self, elapsed_seconds: f32) {
-        if self.update_rate_limiter.update_ready(elapsed_seconds) {
+        for _ in self.update_rate_limiter.iter_updates(elapsed_seconds) {
             for counter in &mut self.counters {
-                *counter = counter.saturating_sub(((elapsed_seconds * 10.0) as u8).max(1));
+                *counter = counter.saturating_sub(1);
             }
         }
     }

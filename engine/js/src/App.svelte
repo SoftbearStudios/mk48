@@ -6,9 +6,11 @@
     import {game, games} from './util.js';
     import Summary from './Summary.svelte';
     import Chat from './Chat.svelte';
+    import Snippets from './Snippets.svelte';
     import System from './System.svelte';
     import Day from './Day.svelte';
     import Referrers, {referrers} from './Referrers.svelte';
+    import Regions, {regions} from './Regions.svelte';
     import UserAgents, {userAgents} from './UserAgents.svelte';
     import Series, {periods} from './Series.svelte';
 
@@ -17,10 +19,12 @@
         '/summary/:filter': Summary,
         '/day/:filter': Day,
         '/referrers': Referrers,
+        '/regions': Regions,
         '/userAgents': UserAgents,
-        '/series/:period/:resolution': Series,
+        '/series/:period/:resolution/:filter': Series,
         '/chat': Chat,
         '/system': System,
+        '/snippets': Snippets,
     }
 </script>
 
@@ -82,7 +86,7 @@
         left: 50%;
         position: relative;
         transform: translate(-50%, 0%);
-        width: 80%;
+        width: 95%;
     }
 
     :global(select) {

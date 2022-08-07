@@ -58,6 +58,7 @@ impl Transform {
                 data.sub_kind,
                 EntitySubKind::Shell
                     | EntitySubKind::Rocket
+                    | EntitySubKind::RocketTorpedo
                     | EntitySubKind::Mine
                     | EntitySubKind::DepthCharge
             )

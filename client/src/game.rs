@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::armament::FireRateLimiter;
+use crate::audio::Audio;
 use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
 use crate::interpolated::Interpolated;
 use crate::interpolated_contact::InterpolatedContact;
@@ -9,7 +10,6 @@ use crate::settings::Mk48Settings;
 use crate::sprite::SortableSprite;
 use crate::state::Mk48State;
 use crate::ui::{DeathReasonModel, UiEvent, UiProps, UiState, UiStatus};
-use client_util::audio::AudioLayer;
 use client_util::context::Context;
 use client_util::fps_monitor::FpsMonitor;
 use client_util::game_client::GameClient;
@@ -83,7 +83,6 @@ pub struct Mk48Game {
 /// Order of fields is order of rendering.
 #[derive(Layer)]
 pub struct RendererLayer {
-    pub audio: AudioLayer,
     background: BackgroundLayer<Mk48BackgroundContext>,
     pub sea_level_particles: ParticleLayer,
     sprites: SpriteLayer,
@@ -117,6 +116,7 @@ impl Mk48Game {
 impl GameClient for Mk48Game {
     const GAME_ID: GameId = GameId::Mk48;
 
+    type Audio = Audio;
     type GameRequest = Command;
     type RendererLayer = RendererLayer;
     type GameState = Mk48State;
@@ -169,8 +169,6 @@ impl GameClient for Mk48Game {
     ) -> Self::RendererLayer {
         renderer.set_background_color(Vec4::new(0.0, 0.20784314, 0.45490196, 1.0));
 
-        let audio_sprite_sheet =
-            serde_json::from_str(include_str!("./sprites_audio.json")).unwrap();
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
         let sprite_texture =
             renderer.load_texture("/sprites_webgl.png", UVec2::new(2048, 2048), None, false);
@@ -189,7 +187,6 @@ impl GameClient for Mk48Game {
         }
 
         RendererLayer {
-            audio: AudioLayer::new("/sprites_audio.mp3", audio_sprite_sheet),
             background: BackgroundLayer::new(renderer, background_context),
             sea_level_particles: ParticleLayer::new(renderer, Vec2::ZERO),
             sprites: SpriteLayer::new(renderer, sprite_texture, sprite_sheet),
@@ -207,7 +204,7 @@ impl GameClient for Mk48Game {
         update: &Update,
         context: &mut Context<Self>,
         renderer: &Renderer,
-        layer: &mut Self::RendererLayer,
+        _layer: &mut Self::RendererLayer,
     ) {
         self.peek_update_sound_counter = self.peek_update_sound_counter.saturating_add(1);
         // Only play sounds for 10 peeked updates between frames.
@@ -222,7 +219,7 @@ impl GameClient for Mk48Game {
                     let recent_damage = contact.damage().saturating_sub(model.damage());
                     if recent_damage > Ticks::ZERO {
                         if play_sounds {
-                            layer.audio.play("damage");
+                            context.audio.play(Audio::Damage);
                         }
 
                         // Considered "intense" 250% of the damage would have been fatal.
@@ -230,7 +227,7 @@ impl GameClient for Mk48Game {
                             && recent_damage * 2.5
                                 >= model.data().max_health().saturating_sub(model.damage())
                         {
-                            Self::play_music("intense", &layer.audio);
+                            Self::play_music(Audio::Intense, &context.audio);
                         }
                     }
                 }
@@ -248,12 +245,13 @@ impl GameClient for Mk48Game {
                         contact,
                         renderer.camera_center(),
                         &*context,
-                        &layer.audio,
+                        &context.audio,
                     );
                 }
                 if contact.player_id() == context.state.core.player_id && contact.is_boat() {
                     context.state.game.entity_id = Some(contact.id());
                     self.first_control = true; // Just spawned so reset this.
+                    self.interpolated_altitude.reset();
                 }
                 context
                     .state
@@ -299,7 +297,7 @@ impl GameClient for Mk48Game {
                 self.play_lost_contact_audio_and_animations(
                     renderer.camera_center(),
                     &contact,
-                    &layer.audio,
+                    &context.audio,
                     &mut context.state.game.animations,
                     time_seconds,
                 );
@@ -370,24 +368,26 @@ impl GameClient for Mk48Game {
         }
 
         if aircraft_volume > 0.01 {
-            layer
+            context
                 .audio
-                .play_with_volume("aircraft", (aircraft_volume + 1.0).ln());
+                .play_with_volume(Audio::Aircraft, (aircraft_volume + 1.0).ln());
         }
 
         if jet_volume > 0.01 {
-            layer.audio.play_with_volume("jet", (jet_volume + 1.0).ln());
+            context
+                .audio
+                .play_with_volume(Audio::Jet, (jet_volume + 1.0).ln());
         }
 
         if need_to_dodge >= 3.0 {
-            Self::play_music("dodge", &layer.audio);
+            Self::play_music(Audio::Dodge, &context.audio);
         }
 
         let score_delta = update.score.saturating_sub(context.state.game.score);
         if score_delta >= 10
             && (score_delta >= 200 || score_delta as f32 / context.state.game.score as f32 > 0.5)
         {
-            Self::play_music("achievement", &layer.audio);
+            Self::play_music(Audio::Achievement, &context.audio);
         }
     }
 
@@ -435,12 +435,12 @@ impl GameClient for Mk48Game {
         .is_some()
             || context.state.game.death_reason.is_some()
         {
-            layer.audio.set_volume(context.settings.volume);
-            if !layer.audio.is_playing("ocean") {
-                layer.audio.play_looping("ocean");
+            context.audio.set_muted_by_game(false);
+            if !context.audio.is_playing(Audio::Ocean) {
+                context.audio.play_looping(Audio::Ocean);
             }
         } else {
-            layer.audio.set_volume(0.0);
+            context.audio.set_muted_by_game(true);
             self.last_control = None;
         }
 
@@ -1164,10 +1164,10 @@ impl GameClient for Mk48Game {
             .update(&mut layer.airborne_graphics);
 
         // Play anti-aircraft sfx.
-        if anti_aircraft_volume > 0.0 && !layer.audio.is_playing("aa") {
-            layer
+        if anti_aircraft_volume > 0.0 && !context.audio.is_playing(Audio::Aa) {
+            context
                 .audio
-                .play_with_volume("aa", anti_aircraft_volume.min(0.5));
+                .play_with_volume(Audio::Aa, anti_aircraft_volume.min(0.5));
         }
 
         // Sort sprites by altitude.
@@ -1368,24 +1368,22 @@ impl GameClient for Mk48Game {
             self.respawn_overridden = false;
 
             status
-        } else {
-            if connection_lost {
-                UiStatus::Offline
-            } else if let Some(death_reason) = context
-                .state
-                .game
-                .death_reason
-                .as_ref()
-                .filter(|_| !self.respawn_overridden)
-                .and_then(|reason| DeathReasonModel::from_death_reason(reason).ok())
-            {
-                UiStatus::Respawning {
-                    death_reason,
-                    respawn_level: score_to_level(context.state.game.score),
-                }
-            } else {
-                UiStatus::Spawning
+        } else if connection_lost {
+            UiStatus::Offline
+        } else if let Some(death_reason) = context
+            .state
+            .game
+            .death_reason
+            .as_ref()
+            .filter(|_| !self.respawn_overridden)
+            .and_then(|reason| DeathReasonModel::from_death_reason(reason).ok())
+        {
+            UiStatus::Respawning {
+                death_reason,
+                respawn_level: score_to_level(context.state.game.score),
             }
+        } else {
+            UiStatus::Spawning
         };
 
         if let Some(control) = control {
@@ -1404,7 +1402,7 @@ impl GameClient for Mk48Game {
         &mut self,
         event: &UiEvent,
         context: &mut Context<Self>,
-        layer: &mut Self::RendererLayer,
+        _layer: &mut Self::RendererLayer,
     ) {
         match event {
             UiEvent::Spawn { alias, entity_type } => {
@@ -1414,7 +1412,7 @@ impl GameClient for Mk48Game {
                 }))
             }
             UiEvent::Upgrade(entity_type) => {
-                layer.audio.play("upgrade");
+                context.audio.play(Audio::Upgrade);
                 context.send_to_game(Command::Upgrade(Upgrade {
                     entity_type: *entity_type,
                 }))
@@ -1422,7 +1420,7 @@ impl GameClient for Mk48Game {
             UiEvent::Active(active) => {
                 if let Some(contact) = context.state.game.player_contact() {
                     if *active && contact.data().sensors.sonar.range >= 0.0 {
-                        layer.audio.play("sonar1")
+                        context.audio.play(Audio::Sonar1);
                     }
                 }
             }
@@ -1431,11 +1429,11 @@ impl GameClient for Mk48Game {
                 if let Some(contact) = context.state.game.player_contact() {
                     if contact.data().sub_kind == EntitySubKind::Submarine {
                         if !context.ui.altitude_target.is_submerged() && altitude.is_submerged() {
-                            layer.audio.play("dive");
+                            context.audio.play(Audio::Dive);
                         } else if context.ui.altitude_target.is_submerged()
                             && !altitude.is_submerged()
                         {
-                            layer.audio.play("surface");
+                            context.audio.play(Audio::Surface);
                         }
                     }
                 }

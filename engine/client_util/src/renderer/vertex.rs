@@ -1,46 +1,24 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::renderer::attribute::{Attribs, Attribute};
+use crate::renderer::attribs::Attribs;
+use bytemuck::{Pod, Zeroable};
 pub use engine_macros::Vertex;
-use glam::{Vec2, Vec4};
-use std::mem::size_of;
+use glam::*;
 
-/// Vertex is any vertex data consisting of floats.
-pub trait Vertex: Sized {
-    fn size() -> usize {
-        size_of::<Self>()
-    }
-
-    fn floats() -> usize {
-        Self::size() / 4
-    }
-
-    // TODO create #[derive(Vertex)]
-    fn bind_attribs(attribs: &mut Attribs<Self>);
+/// Vertex is any vertex data consisting of floats (or rounded to 4 bytes).
+pub trait Vertex: Pod {
+    fn bind_attribs(attribs: &mut Attribs);
 }
 
-/// Vec2 stores a vertex with (only) a given position.
-impl Vertex for Vec2 {
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        Vec2::bind_attrib(attribs);
-    }
-}
-
+#[derive(Copy, Clone, Pod, Zeroable, Vertex)]
 #[repr(C)]
 pub struct PosUv {
     pub pos: Vec2,
     pub uv: Vec2,
 }
-
-impl Vertex for PosUv {
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        Vec2::bind_attrib(attribs);
-        Vec2::bind_attrib(attribs);
-    }
-}
-
 /// PosUvAlpha stores a vertex with (only) a given position, texture coordinate, and alpha.
+#[derive(Copy, Clone, Pod, Zeroable, Vertex)]
 #[repr(C)]
 pub struct PosUvAlpha {
     pub pos: Vec2,
@@ -48,26 +26,43 @@ pub struct PosUvAlpha {
     pub alpha: f32,
 }
 
-impl Vertex for PosUvAlpha {
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        Vec2::bind_attrib(attribs);
-        Vec2::bind_attrib(attribs);
-        f32::bind_attrib(attribs);
-    }
-}
-
 /// PosColor stores a vertex with (only) a given position and color.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable, Vertex)]
 #[repr(C)]
 pub struct PosColor {
     pub pos: Vec2,
-    // This is normally 16 byte aligned (breaking attribute size assertion), but not with glam's scalar-math feature enabled.
+    // This is normally 16 byte aligned (breaking derive Pod), but not with glam's scalar-math feature enabled.
     pub color: Vec4,
 }
 
-impl Vertex for PosColor {
-    fn bind_attribs(attribs: &mut Attribs<Self>) {
-        Vec2::bind_attrib(attribs);
-        Vec4::bind_attrib(attribs);
+macro_rules! impl_vertex_floats {
+    ($a: ty, $floats: literal) => {
+        impl Vertex for $a {
+            fn bind_attribs(attribs: &mut Attribs) {
+                attribs.floats($floats);
+            }
+        }
+    };
+}
+
+impl_vertex_floats!(f32, 1);
+impl_vertex_floats!(Vec2, 2);
+impl_vertex_floats!(Vec3, 3);
+impl_vertex_floats!(Vec4, 4);
+impl_vertex_floats!(Mat2, 4);
+
+impl Vertex for Mat3 {
+    fn bind_attribs(attribs: &mut Attribs) {
+        for _ in 0..3 {
+            attribs.floats(3);
+        }
+    }
+}
+
+impl Vertex for Mat4 {
+    fn bind_attribs(attribs: &mut Attribs) {
+        for _ in 0..4 {
+            attribs.floats(4);
+        }
     }
 }

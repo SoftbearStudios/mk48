@@ -4,6 +4,32 @@ echo "Security measures"
 
 sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/g' /etc/ssh/sshd_config && service ssh restart
 
+<<comment
+cat <<EOF > /etc/sysctl.conf
+# Enable Spoof protection (reverse-path filter)
+# Turn on Source Address Verification in all interfaces to
+# prevent some spoofing attacks
+net.ipv4.conf.default.rp_filter=1
+net.ipv4.conf.all.rp_filter=1
+
+# Enable TCP/IP SYN cookies
+# See http://lwn.net/Articles/277146/
+# Note: This may impact IPv6 TCP sessions too
+net.ipv4.tcp_syncookies=1
+
+# Do not accept ICMP redirects (prevent MITM attacks)
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv6.conf.all.accept_redirects = 0
+
+# Do not send ICMP redirects (we are not a router)
+net.ipv4.conf.all.send_redirects = 0
+
+# Do not accept IP source route packets (we are not a router)
+net.ipv4.conf.all.accept_source_route = 0
+net.ipv6.conf.all.accept_source_route = 0
+EOF
+comment
+
 cat <<EOF > /etc/nftables.conf
 #!/usr/sbin/nft -f
 

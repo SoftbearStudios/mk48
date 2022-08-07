@@ -8,11 +8,10 @@
 #![feature(hash_drain_filter)]
 #![feature(generic_associated_types)]
 #![feature(binary_heap_into_iter_sorted)]
-#![feature(bool_to_option)]
 #![feature(once_cell)]
-#![feature(const_fn_trait_bound)]
 #![feature(int_roundings)]
 #![feature(is_sorted)]
+#![feature(variant_count)]
 
 pub mod admin;
 pub mod bot;
@@ -33,5 +32,8 @@ pub mod status;
 pub mod team;
 #[macro_use]
 pub mod util;
-mod static_files;
+pub mod discord;
+pub(crate) mod log;
+pub(crate) mod options;
+pub mod static_files;
 pub mod system;

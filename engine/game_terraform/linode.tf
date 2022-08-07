@@ -1,4 +1,4 @@
-resource "linode_instance" "servers_new" {
+resource "linode_instance" "servers" {
     depends_on = [linode_domain.main]
     for_each = var.servers
     label = "${var.name}_${each.key}"
@@ -26,7 +26,7 @@ resource "linode_instance" "servers_new" {
     }
 
     provisioner "file" {
-        source      = "./server_init.sh"
+        source      = "../engine/game_terraform/server_init.sh"
         destination = "/root/server_init.sh"
     }
 
@@ -50,4 +50,10 @@ resource "linode_instance" "servers_new" {
             "/root/server_init.sh"
         ]
     }
+}
+
+resource "linode_firewall_device" "servers" {
+    for_each = var.servers
+    firewall_id = data.terraform_remote_state.core.outputs.game_server_firewall_id
+    entity_id = linode_instance.servers[each.key].id
 }

@@ -13,11 +13,10 @@ use common::guidance::Guidance;
 use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
-use common::ticks::Ticks;
 use common_util::range::gen_radius;
 use core_protocol::id::PlayerId;
-use game_server::game_service::GameArenaService;
-use game_server::player::PlayerTuple;
+use game_server::game_service::{BotAction, GameArenaService};
+use game_server::player::{PlayerRepo, PlayerTuple};
 use glam::Vec2;
 use rand::rngs::ThreadRng;
 use rand::seq::IteratorRandom;
@@ -80,7 +79,7 @@ impl Bot {
         &mut self,
         mut update: U,
         player_id: PlayerId,
-    ) -> Option<Command> {
+    ) -> BotAction<Command> {
         let mut rng = thread_rng();
 
         let mut contacts = update.contacts();
@@ -347,12 +346,12 @@ impl Bot {
                 }
             }
 
-            Some(ret)
+            BotAction::Some(ret)
         } else if self.spawned_at_least_once && rng.gen_bool(1.0 / 3.0) {
             // Rage quit.
-            None
+            BotAction::Quit
         } else {
-            Some(Command::Spawn(Spawn {
+            BotAction::Some(Command::Spawn(Spawn {
                 entity_type: EntityType::spawn_options(true)
                     .choose(&mut rng)
                     .expect("there must be at least one entity type to spawn as"),
@@ -366,8 +365,8 @@ impl game_server::game_service::Bot<Server> for Bot {
 
     fn get_input<'a>(
         server: &'a Server,
-        _counter: Ticks,
         player: &'a Arc<PlayerTuple<Server>>,
+        _players: &'a PlayerRepo<Server>,
     ) -> Self::Input<'a> {
         server.world.get_player_complete(player)
     }
@@ -376,7 +375,8 @@ impl game_server::game_service::Bot<Server> for Bot {
         &mut self,
         update: Self::Input<'_>,
         player_id: PlayerId,
-    ) -> Option<<Server as GameArenaService>::GameRequest> {
+        _players: &PlayerRepo<Server>,
+    ) -> BotAction<<Server as GameArenaService>::GameRequest> {
         self.update(update, player_id)
     }
 }

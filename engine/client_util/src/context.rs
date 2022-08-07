@@ -1,4 +1,6 @@
 use crate::apply::Apply;
+#[cfg(feature = "audio")]
+use crate::audio::AudioPlayer;
 use crate::browser_storage::BrowserStorages;
 use crate::frontend::Frontend;
 use crate::game_client::GameClient;
@@ -7,14 +9,16 @@ use crate::keyboard::KeyboardState;
 use crate::mouse::MouseState;
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::setting::CommonSettings;
+use crate::visibility::VisibilityState;
 use core_protocol::dto::{LeaderboardDto, LiveboardDto, MessageDto, PlayerDto, ServerDto, TeamDto};
-use core_protocol::id::{InvitationId, PeriodId, PlayerId, ServerId, TeamId};
+use core_protocol::id::{CohortId, InvitationId, LoginType, PeriodId, PlayerId, ServerId, TeamId};
 use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{
     ChatUpdate, ClientRequest, ClientUpdate, InvitationUpdate, LeaderboardUpdate, LiveboardUpdate,
     PlayerUpdate, Request, SystemUpdate, TeamUpdate, Update, WebSocketQuery,
 };
 use std::collections::{HashMap, VecDeque};
+use web_sys::{window, UrlSearchParams};
 
 /// The context (except rendering) of a game.
 pub struct Context<G: GameClient + ?Sized> {
@@ -26,16 +30,21 @@ pub struct Context<G: GameClient + ?Sized> {
     pub socket: ReconnWebSocket<Update<G::GameUpdate>, Request<G::GameRequest>, ServerState<G>>,
     /// Ui.
     pub ui: G::UiState,
+    /// Audio player (volume managed automatically).
+    #[cfg(feature = "audio")]
+    pub audio: AudioPlayer<G::Audio>,
     /// Keyboard input.
     pub keyboard: KeyboardState,
     /// Mouse input.
     pub mouse: MouseState,
+    /// Whether the page is visible.
+    pub visibility: VisibilityState,
     /// Settings.
     pub settings: G::GameSettings,
     /// Common settings.
     pub common_settings: CommonSettings,
     /// Local storage.
-    pub(crate) browser_storages: BrowserStorages,
+    pub browser_storages: BrowserStorages,
     pub(crate) frontend: Box<dyn Frontend<G::UiProps> + 'static>,
 }
 
@@ -55,12 +64,14 @@ pub struct ServerState<G: GameClient> {
 /// Server state specific to core functions
 #[derive(Clone, Default)]
 pub struct CoreState {
+    pub cohort_id: Option<CohortId>,
     pub player_id: Option<PlayerId>,
     pub created_invitation_id: Option<InvitationId>,
     /// Ordered, i.e. first is captain.
     pub members: Box<[PlayerId]>,
     pub joiners: Box<[PlayerId]>,
     pub joins: Box<[TeamId]>,
+    /// TODO: Deprecate `pub`
     pub leaderboards: [Vec<LeaderboardDto>; PeriodId::VARIANT_COUNT],
     pub liveboard: Vec<LiveboardDto>,
     pub messages: VecDeque<MessageDto>,
@@ -145,6 +156,14 @@ impl CoreState {
     fn team_id_lookup(&self, player_id: PlayerId) -> Option<TeamId> {
         self.players.get(&player_id).and_then(|p| p.team_id)
     }
+
+    pub fn leaderboard(&self, period_id: PeriodId) -> &[LeaderboardDto] {
+        &self.leaderboards[period_id as usize]
+    }
+
+    pub(crate) fn leaderboard_mut(&mut self, period_id: PeriodId) -> &mut Vec<LeaderboardDto> {
+        &mut self.leaderboards[period_id as usize]
+    }
 }
 
 impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
@@ -165,7 +184,12 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
                 }
             }
             Update::Client(update) => match update {
-                ClientUpdate::SessionCreated { player_id, .. } => {
+                ClientUpdate::SessionCreated {
+                    cohort_id,
+                    player_id,
+                    ..
+                } => {
+                    self.core.cohort_id = Some(cohort_id);
                     self.core.player_id = Some(player_id);
                 }
                 _ => {}
@@ -180,8 +204,7 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
             },
             Update::Leaderboard(update) => match update {
                 LeaderboardUpdate::Updated(period_id, leaderboard) => {
-                    self.core.leaderboards[period_id as usize] =
-                        leaderboard.iter().cloned().collect();
+                    *self.core.leaderboard_mut(period_id) = leaderboard.iter().cloned().collect();
                 }
             },
             Update::Liveboard(update) => {
@@ -279,12 +302,15 @@ impl<G: GameClient> Context<G> {
         common_settings.set_server_id(server_id, &mut browser_storages);
 
         Self {
+            #[cfg(feature = "audio")]
+            audio: AudioPlayer::default(),
             client: ClientState::default(),
             state: ServerState::default(),
             socket,
             ui: G::UiState::default(),
             keyboard: KeyboardState::default(),
             mouse: MouseState::default(),
+            visibility: VisibilityState::default(),
             settings,
             common_settings,
             browser_storages,
@@ -308,11 +334,17 @@ impl<G: GameClient> Context<G> {
 
         // crate::console_log!("override={:?} ideal server={:?}, host={:?}, ideal_host={:?}", override_server_id, ideal_server_id, host, ideal_host);
 
+        let query = window().unwrap().location().search().ok();
+        let params = query.and_then(|query| UrlSearchParams::new_with_str(&query).ok());
+        let oauth2_code = params.and_then(|params| params.get("code"));
+
         let web_socket_query = WebSocketQuery {
             protocol: Some(common_settings.protocol),
             arena_id: common_settings.arena_id,
             session_id: common_settings.session_id,
             invitation_id: invitation_id(),
+            login_type: oauth2_code.is_some().then(|| LoginType::Discord),
+            login_id: oauth2_code,
             referrer: referrer(),
         };
 

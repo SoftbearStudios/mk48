@@ -12,7 +12,10 @@ use std::time::{Duration, Instant};
 pub struct StatusRepo {
     pub(crate) health: Health,
     uptime: Instant,
+    /// Possibly overridden.
     pub(crate) client_hash: u64,
+    /// Before being overridden.
+    pub(crate) original_client_hash: u64,
 }
 
 impl StatusRepo {
@@ -21,6 +24,7 @@ impl StatusRepo {
             health: Health::default(),
             uptime: Instant::now(),
             client_hash,
+            original_client_hash: client_hash,
         }
     }
 

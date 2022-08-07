@@ -10,13 +10,15 @@ use std::cmp::Ordering;
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DeathReason {
-    // For non-boats, and for when boats are removed without a better reason.
-    Unknown,
+    // For non-boats
+    Landing(usize), // Contains index of armament aka landing pad.
+    // For boats and non-boats.
     Border,
     Terrain,
+    Unknown, // Used by boats only for leaving game.
+    // Only for boats.
     Boat(PlayerAlias),
-    // Applies to hitting stuff like structures, never boats.
-    Entity(EntityType),
+    Obstacle(EntityType),
     Ram(PlayerAlias),
     Weapon(PlayerAlias, EntityType),
     // Allows code to convey a reason for killing an entity that is not necessarily a player's boat.
@@ -32,11 +34,12 @@ impl DeathReason {
         match self {
             Self::Unknown => false,
             Self::Border => false,
+            Self::Landing(_) => false,
             Self::Terrain => false,
             Self::Boat(_) => true,
-            Self::Entity(entity_type) => {
+            Self::Obstacle(entity_type) => {
                 // The assumption here is that all boats are controlled by players, and therefore
-                // should kill via Self::Boat not Self::Entity.
+                // should kill via Self::Boat not Self::Obstacle.
                 debug_assert!(entity_type.data().kind != EntityKind::Boat);
                 false
             }

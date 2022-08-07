@@ -1,12 +1,22 @@
 // SPDX-FileCopyrightText: 2022 Softbear, Inc.
 
 use stylist::yew::styled_component;
-use yew::{html, Children, Properties};
+use yew::virtual_dom::AttrValue;
+use yew::{html, Children, Classes, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct PositionerProps {
+    pub id: Option<AttrValue>,
     pub children: Children,
     pub position: Position,
+    /// Override default alignment (horizontal position).
+    pub align: Option<Align>,
+    /// Use flex layout.
+    pub flex: Option<Flex>,
+    pub min_width: Option<AttrValue>,
+    pub max_width: Option<AttrValue>,
+    #[prop_or_default]
+    pub class: Classes,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -23,8 +33,8 @@ pub enum Position {
 }
 
 impl Position {
-    pub fn text_align(&self) -> &'static str {
-        self.horizontal().text_align()
+    pub fn default_text_align(&self) -> Align {
+        self.horizontal().default_text_align()
     }
 }
 
@@ -39,13 +49,12 @@ impl ToString for Position {
                 ("left: 0;", format!("margin-left: {};", margin), 0)
             }
             HorizontalPosition::Middle => ("left: 50%;", String::new(), -50),
-            HorizontalPosition::Right { margin } => {
+            HorizontalPosition::Right { margin, .. } => {
                 ("right: 0;", format!("margin-right: {};", margin), 0)
             }
         };
 
         style += h_position;
-        style += self.horizontal().text_align();
         style += &h_margin;
 
         let (v_position, v_margin, v_translation) = match self.vertical() {
@@ -71,6 +80,38 @@ impl ToString for Position {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Align {
+    Left,
+    Center,
+    Right,
+}
+
+impl Align {
+    fn as_css(self) -> &'static str {
+        match self {
+            Align::Left => "text-align: left;",
+            Align::Center => "text-align: center;",
+            Align::Right => "text-align: right;",
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Flex {
+    Column,
+    Row,
+}
+
+impl Flex {
+    fn as_css(self) -> &'static str {
+        match self {
+            Flex::Column => "display: flex; flex-direction: column; gap: 0.5rem;",
+            Flex::Row => "display: flex; flex-direction: row; gap: 0.75rem;",
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum HorizontalPosition {
     Left { margin: &'static str },
     Middle,
@@ -78,11 +119,11 @@ enum HorizontalPosition {
 }
 
 impl HorizontalPosition {
-    fn text_align(self) -> &'static str {
+    fn default_text_align(self) -> Align {
         match self {
-            Self::Left { .. } => "text-align: left;",
-            Self::Middle => "text-align: center;",
-            Self::Right { .. } => "text-align: right;",
+            Self::Left { .. } => Align::Left,
+            Self::Middle => Align::Center,
+            Self::Right { .. } => Align::Right,
         }
     }
 }
@@ -113,21 +154,40 @@ impl Position {
         match self {
             Self::BottomLeft { margin }
             | Self::BottomMiddle { margin }
-            | Self::BottomRight { margin } => VerticalPosition::Bottom { margin },
+            | Self::BottomRight { margin, .. } => VerticalPosition::Bottom { margin },
             Self::CenterLeft { .. } | Self::Center | Self::CenterRight { .. } => {
                 VerticalPosition::Center
             }
-            Self::TopLeft { margin } | Self::TopMiddle { margin } | Self::TopRight { margin } => {
-                VerticalPosition::Top { margin }
-            }
+            Self::TopLeft { margin }
+            | Self::TopMiddle { margin }
+            | Self::TopRight { margin, .. } => VerticalPosition::Top { margin },
         }
     }
 }
 
 #[styled_component(Positioner)]
 pub fn positioner(props: &PositionerProps) -> Html {
+    let mut style = props.position.to_string();
+
+    if let Some(min_width) = props.min_width.as_ref() {
+        style += &format!("min-width: {};", min_width);
+    }
+
+    if let Some(max_width) = props.max_width.as_ref() {
+        style += &format!("max-width: {};", max_width);
+    }
+
+    if let Some(flex) = props.flex {
+        style += flex.as_css();
+    }
+
+    style += props
+        .align
+        .unwrap_or(props.position.default_text_align())
+        .as_css();
+
     html! {
-        <div style={props.position.to_string()}>
+        <div id={props.id.clone()} style={style} class={props.class.clone()}>
             {props.children.clone()}
         </div>
     }

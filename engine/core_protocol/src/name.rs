@@ -3,18 +3,19 @@
 
 use crate::id::PlayerId;
 use arrayvec::ArrayString;
-use glam::Vec3;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 /// An alias, e.g. "mrbig", is NOT a real name.
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct PlayerAlias(ArrayString<12>);
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct Referrer(pub ArrayString<16>);
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
@@ -45,7 +46,7 @@ impl PlayerAlias {
             string = string.replace('[', "<").replace(']', ">");
         }
 
-        let ret = Self(slice_up_to_array_string(rustrict::trim_to_width(
+        let ret = Self(trim_and_slice_up_to_array_string(rustrict::trim_to_width(
             &string, 14,
         )));
 
@@ -56,9 +57,14 @@ impl PlayerAlias {
         };
     }
 
+    /// Doesn't trim spaces, useful for guarding text inputs.
+    pub fn new_input_sanitized(str: &str) -> Self {
+        Self(slice_up_to_array_string(str))
+    }
+
     /// Good for known-good names.
     pub fn new_unsanitized(str: &str) -> Self {
-        Self(slice_up_to_array_string(str))
+        Self(trim_and_slice_up_to_array_string(str))
     }
 
     pub fn from_bot_player_id(player_id: PlayerId) -> Self {
@@ -89,6 +95,8 @@ impl Display for PlayerAlias {
 }
 
 impl Referrer {
+    pub const TRACKED: [&'static str; 3] = ["crazygames", "gamedistribution", "google"];
+
     /// For example, given "https://foo.bar.com:1234/moo.zoo/woo.hoo" the referer will be "bar".
     pub fn new(raw: &str) -> Option<Self> {
         let a: Vec<&str> = raw.split("://").into_iter().collect();
@@ -105,29 +113,56 @@ impl Referrer {
                 // e.g. "foo.com.uk"
                 cooked = e[n - 3];
             }
-            Some(Self(slice_up_to_array_string(cooked)))
+            Some(Self(trim_and_slice_up_to_array_string(cooked)))
         } else if n == 1 && !e[0].is_empty() {
             // e.g. localhost
-            Some(Self(slice_up_to_array_string(e[0])))
+            Some(Self(trim_and_slice_up_to_array_string(e[0])))
         } else {
             None
         }
     }
 }
 
+impl Display for Referrer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromStr for Referrer {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(trim_and_slice_up_to_array_string(s)))
+    }
+}
+
 impl TeamName {
+    const MAX_CHARS: usize = 6;
+    /// In units of `m`.
+    #[cfg(feature = "server")]
+    const MAX_WIDTH: usize = 8;
+
     pub fn new_unsanitized(str: &str) -> Self {
-        Self(slice_up_to_array_string(str))
+        Self(trim_and_slice_up_to_array_string(str))
+    }
+
+    /// Enforces `MAX_CHARS`, doesn't trim spaces, useful for guarding text inputs.
+    pub fn new_input_sanitized(str: &str) -> Self {
+        Self(slice_up_to_array_string(slice_up_to_chars(
+            str,
+            Self::MAX_CHARS,
+        )))
     }
 
     #[cfg(feature = "server")]
     pub fn new_sanitized(str: &str) -> Self {
         let string = rustrict::Censor::from_str(str)
             .with_censor_first_character_threshold(rustrict::Type::INAPPROPRIATE)
-            .take(6)
+            .take(Self::MAX_CHARS)
             .collect::<String>();
 
-        let str = rustrict::trim_whitespace(rustrict::trim_to_width(&string, 8))
+        let str = rustrict::trim_whitespace(rustrict::trim_to_width(&string, Self::MAX_WIDTH))
             .trim_start_matches('[')
             .trim_end_matches(']');
 
@@ -156,8 +191,11 @@ impl Display for TeamName {
     }
 }
 
-pub fn slice_up_to(s: &str, bytes: usize) -> &str {
-    let s = rustrict::trim_whitespace(s);
+pub fn trim_and_slice_up_to(s: &str, bytes: usize) -> &str {
+    slice_up_to_bytes(rustrict::trim_whitespace(s), bytes)
+}
+
+fn slice_up_to_bytes(s: &str, bytes: usize) -> &str {
     let mut idx = bytes;
     while !s.is_char_boundary(idx) {
         idx -= 1;
@@ -165,11 +203,21 @@ pub fn slice_up_to(s: &str, bytes: usize) -> &str {
     &s[..idx]
 }
 
-pub fn slice_up_to_array_string<const CAPACITY: usize>(s: &str) -> ArrayString<CAPACITY> {
-    ArrayString::from(slice_up_to(s, CAPACITY)).unwrap()
+fn slice_up_to_chars(s: &str, max: usize) -> &str {
+    &s[0..s
+        .char_indices()
+        .nth(max)
+        .map(|(idx, _)| idx)
+        .unwrap_or(s.len())]
 }
 
-pub type Location = Vec3;
+pub fn trim_and_slice_up_to_array_string<const CAPACITY: usize>(s: &str) -> ArrayString<CAPACITY> {
+    ArrayString::from(trim_and_slice_up_to(s, CAPACITY)).unwrap()
+}
+
+pub fn slice_up_to_array_string<const CAPACITY: usize>(s: &str) -> ArrayString<CAPACITY> {
+    ArrayString::from(slice_up_to_bytes(s, CAPACITY)).unwrap()
+}
 
 #[cfg(test)]
 mod test {

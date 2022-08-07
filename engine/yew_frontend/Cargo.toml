@@ -3,23 +3,53 @@ name = "yew_frontend"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 yew = "0.19.3"
-yew_icons = {version = "0", features = ["FontAwesomeSolidSquareCaretLeft", "FontAwesomeSolidSquareCaretRight"]}
+yew_icons = {version = "0.4.1", features = [
+    "BootstrapDiscord",
+    "BootstrapGithub",
+    "BootstrapGear",
+    "BootstrapVolumeMute",
+    "BootstrapVolumeDownFill",
+    "BootstrapVolumeUpFill",
+    "BootstrapZoomIn",
+    "BootstrapZoomOut",
+    "FontAwesomeSolidSquareCaretLeft",
+    "FontAwesomeSolidSquareCaretRight",
+    "LipisFlagIcons4X3Gb",
+    "LipisFlagIcons4X3Cn",
+    "LipisFlagIcons4X3Es",
+    "LipisFlagIcons4X3Ru",
+    "LipisFlagIcons4X3Vn",
+    "LipisFlagIcons4X3De",
+    "LipisFlagIcons4X3Jp",
+    "LipisFlagIcons4X3Fr",
+    "LipisFlagIcons4X3In",
+    "LipisFlagIcons4X3It",
+    "LipisFlagIcons4X3Ye",
+]}
+gloo = "0.7"
 gloo-events = "0.1"
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
 core_protocol = {path = "../core_protocol"}
 client_util = {path = "../client_util"}
 serde = "1.0"
+serde_json = "1.0"
+serde_urlencoded = "0.7"
 gloo-render = "0.1"
-stylist = {version = "0.10", features = ["yew_integration"]}
+stylist = {version = "0.10", features = ["yew_integration", "macros"], default-features = false}
+yew-router = "0.16.0"
 
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
     'Location',
     'UiEvent',
+    'FocusEvent',
     'Window',
+    'HtmlSelectElement',
+    'Navigator',
+    'Clipboard',
+    'VisibilityState',
 ]

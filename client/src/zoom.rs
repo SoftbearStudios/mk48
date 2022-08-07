@@ -9,7 +9,7 @@ impl Mk48Game {
     const MIN_ZOOM: f32 = 0.216; // 0.6×sqrt(1÷.6)^−4 aka 4 full steps to min zoom
     const MAX_ZOOM: f32 = 1.0; // has to be 1.0 for full view
     pub const DEFAULT_ZOOM_INPUT: f32 = 0.6; // not changed
-    const ZOOM_SPEED: f32 = 1.290994449; // sqrt(1÷.6) aka 2 full steps to max zoom
+    const ZOOM_SPEED: f32 = 1.2909944; // sqrt(1÷.6) aka 2 full steps to max zoom
     pub const MENU_VISUAL_RANGE: f32 = 300.0;
 
     /// Gets the proper camera to display the game.

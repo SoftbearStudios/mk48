@@ -55,7 +55,7 @@ impl<'a> ContactRef<'a> {
             *self.guidance(),
             self.id(),
             self.player_id(),
-            self.reloads.clone(),
+            self.reloads,
             *self.transform(),
             self.turrets_arc().cloned(),
         )
@@ -118,7 +118,7 @@ impl<'a> ContactTrait for ContactRef<'a> {
         self.reloads
             .as_ref()
             .map(|a| &a.as_bitslice()[0..self.entity.entity_type.data().armaments.len()])
-            .unwrap_or_else(|| &RELOADS_ARRAY_ZERO.as_bitslice())
+            .unwrap_or_else(|| RELOADS_ARRAY_ZERO.as_bitslice())
     }
 
     #[inline]

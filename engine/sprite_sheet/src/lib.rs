@@ -52,9 +52,10 @@ pub struct AudioSpriteSheet {
     pub sprites: HashMap<String, AudioSprite>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AudioSprite {
     pub start: f32,
+    pub loop_start: Option<f32>,
     pub duration: f32,
 }
 

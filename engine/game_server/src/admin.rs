@@ -5,27 +5,35 @@ use crate::client::ClientRepo;
 use crate::context::Context;
 use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
-use crate::metric::{MetricBundle, MetricRepo};
+use crate::metric::{Bundle, MetricBundle, MetricRepo};
 use crate::player::PlayerRepo;
+use crate::static_files::static_size_and_hash;
+use crate::status::StatusRepo;
 use crate::system::{ServerStatus, SystemRepo};
 use actix::{fut, ActorFutureExt, Handler, Message, ResponseActFuture, WrapFuture};
 use core_protocol::dto::{
-    AdminPlayerDto, AdminServerDto, MessageDto, MetricFilterDto, MetricsDataPointDto,
+    AdminPlayerDto, AdminServerDto, MessageDto, MetricFilter, MetricsDataPointDto, SnippetDto,
 };
-use core_protocol::id::{PlayerId, ServerId};
-use core_protocol::name::PlayerAlias;
+use core_protocol::id::{CohortId, PlayerId, RegionId, ServerId, UserAgentId};
+use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::{get_unix_time_now, UnixTime};
 use log::warn;
+use minicdn::{EmbeddedMiniCdn, MiniCdn};
 use serde::Deserialize;
 use server_util::database_schema::Metrics;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::iter;
 use std::marker::PhantomData;
+use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
+    game_client: Arc<RwLock<MiniCdn>>,
     allow_web_socket_json: &'static AtomicBool,
     pub(crate) redirect_server_id_preference: Option<ServerId>,
     /// Route players to other available servers.
@@ -53,8 +61,12 @@ impl ParameterizedAdminRequest {
 }
 
 impl<G: GameArenaService> AdminRepo<G> {
-    pub fn new(allow_web_socket_json: &'static AtomicBool) -> Self {
+    pub fn new(
+        game_client: Arc<RwLock<MiniCdn>>,
+        allow_web_socket_json: &'static AtomicBool,
+    ) -> Self {
         Self {
+            game_client,
             allow_web_socket_json,
             redirect_server_id_preference: None,
             distribute_load: false,
@@ -84,6 +96,8 @@ impl<G: GameArenaService> AdminRepo<G> {
                             player_id: player.player_id,
                             team_id: player.team_id(),
                             region_id: client.metrics.region_id,
+                            discord_id: client.discord_id,
+                            moderator: client.moderator,
                             score: player.score,
                             plays: client.metrics.plays,
                             fps: client.metrics.fps,
@@ -168,33 +182,19 @@ impl<G: GameArenaService> AdminRepo<G> {
             .servers
             .iter()
             .map(|(&server_id, server)| {
-                let (redirect_server_id, client_hash, player_count) = match &server.status {
-                    &ServerStatus::Healthy {
-                        redirect_server_id,
-                        client_hash,
-                        player_count,
-                        ..
-                    }
-                    | &ServerStatus::Unhealthy {
-                        redirect_server_id,
-                        client_hash,
-                        player_count,
-                        ..
-                    } => (redirect_server_id, client_hash, player_count),
-                    _ => (None, None, None),
-                };
+                let advertisement = server.status.advertisement().cloned().unwrap_or_default();
 
                 AdminServerDto {
                     server_id,
-                    redirect_server_id,
+                    redirect_server_id: advertisement.redirect_server_id,
                     region_id: server.region_id,
                     ip: server.ip,
                     home: server.home,
                     rtt: server.rtt.as_millis().min(u16::MAX as u128) as u16,
                     reachable: !matches!(&server.status, ServerStatus::Unreachable { .. }),
                     healthy: matches!(server.status, ServerStatus::Healthy { .. }),
-                    client_hash,
-                    player_count,
+                    client_hash: advertisement.client_hash,
+                    player_count: advertisement.player_count,
                 }
             })
             .collect::<Vec<_>>();
@@ -204,10 +204,50 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::ServersRequested(servers.into()))
     }
 
+    fn request_snippets(clients: &ClientRepo<G>) -> Result<AdminUpdate, &'static str> {
+        let mut list: Vec<SnippetDto> = clients
+            .snippets
+            .iter()
+            .map(|((cohort_id, referrer), snippet)| SnippetDto {
+                cohort_id: cohort_id.clone(),
+                referrer: referrer.clone(),
+                snippet: Arc::clone(snippet),
+            })
+            .collect();
+        list.sort();
+        Ok(AdminUpdate::SnippetsRequested(list.into()))
+    }
+
+    fn clear_snippet(
+        clients: &mut ClientRepo<G>,
+        cohort_id: Option<CohortId>,
+        referrer: Option<Referrer>,
+    ) -> Result<AdminUpdate, &'static str> {
+        if clients.snippets.remove(&(cohort_id, referrer)).is_some() {
+            Ok(AdminUpdate::SnippetCleared)
+        } else {
+            Err("snippet not found")
+        }
+    }
+
+    fn set_snippet(
+        clients: &mut ClientRepo<G>,
+        cohort_id: Option<CohortId>,
+        referrer: Option<Referrer>,
+        snippet: Arc<str>,
+    ) -> Result<AdminUpdate, &'static str> {
+        if snippet.len() > 2000 {
+            Err("snippet too long")
+        } else {
+            clients.snippets.insert((cohort_id, referrer), snippet);
+            Ok(AdminUpdate::SnippetSet)
+        }
+    }
+
     /// Request summary of metrics for the current calendar calendar hour.
     fn request_summary(
         infrastructure: &mut Infrastructure<G>,
-        filter: Option<MetricFilterDto>,
+        filter: Option<MetricFilter>,
     ) -> Result<AdminUpdate, &'static str> {
         let current = MetricRepo::get_metrics(infrastructure, filter);
 
@@ -235,7 +275,7 @@ impl<G: GameArenaService> AdminRepo<G> {
     /// which metrics are incomplete).
     fn request_day(
         metrics: &MetricRepo<G>,
-        filter: Option<MetricFilterDto>,
+        filter: Option<MetricFilter>,
     ) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::DayRequested(
             metrics
@@ -246,23 +286,64 @@ impl<G: GameArenaService> AdminRepo<G> {
         ))
     }
 
+    fn request_category_inner<T: Hash + Eq + Copy>(
+        &self,
+        initial: impl IntoIterator<Item = T>,
+        extract: impl Fn(&Bundle<Metrics>) -> &HashMap<T, Metrics>,
+        metrics: &MetricRepo<G>,
+    ) -> Box<[(T, f32)]> {
+        let initial = initial.into_iter();
+        let mut hash: HashMap<T, u32> = HashMap::with_capacity(initial.size_hint().0);
+        for tracked in initial {
+            hash.insert(tracked, 0);
+        }
+        let mut total = 0u32;
+        for bundle in iter::once(&metrics.current).chain(metrics.history.iter()) {
+            for (&key, metrics) in extract(&bundle.bundle).iter() {
+                *hash.entry(key).or_default() += metrics.visits.total;
+            }
+            total += bundle.bundle.total.visits.total;
+        }
+        let mut list: Vec<(T, u32)> = hash.into_iter().collect();
+        // Sort in reverse so higher counts are first.
+        list.sort_unstable_by_key(|(_, count)| u32::MAX - count);
+        let mut percents: Vec<_> = list
+            .into_iter()
+            .map(|(v, count)| (v, count as f32 / total as f32))
+            .collect();
+        percents.truncate(20);
+        percents.into_boxed_slice()
+    }
+
     /// Request a list of referrers, sorted by percentage, and truncated to a reasonable limit.
-    fn request_referrers(&self, players: &PlayerRepo<G>) -> Result<AdminUpdate, &'static str> {
-        let mut referrers =
-            ClientRepo::filter_map_reduce(players, |client_data| client_data.metrics.referrer);
-        referrers.truncate(20);
+    fn request_referrers(&self, metrics: &MetricRepo<G>) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::ReferrersRequested(
-            referrers.into_boxed_slice(),
+            self.request_category_inner(
+                Referrer::TRACKED.map(|s| Referrer::from_str(s).unwrap()),
+                |bundle| &bundle.by_referrer,
+                metrics,
+            ),
         ))
     }
 
     /// Request a list of user agents, sorted by percentage.
-    fn request_user_agents(&self, players: &PlayerRepo<G>) -> Result<AdminUpdate, &'static str> {
-        let user_agents =
-            ClientRepo::filter_map_reduce(players, |client_data| client_data.metrics.user_agent_id);
+    fn request_user_agents(&self, metrics: &MetricRepo<G>) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::UserAgentsRequested(
-            user_agents.into_boxed_slice(),
+            self.request_category_inner(
+                UserAgentId::iter(),
+                |bundle| &bundle.by_user_agent_id,
+                metrics,
+            ),
         ))
+    }
+
+    /// Request a list of regions, sorted by percentage.
+    fn request_regions(&self, metrics: &MetricRepo<G>) -> Result<AdminUpdate, &'static str> {
+        Ok(AdminUpdate::RegionsRequested(self.request_category_inner(
+            RegionId::iter(),
+            |bundle| &bundle.by_region_id,
+            metrics,
+        )))
     }
 
     /// Send a chat to all players on the server, or a specific player (in which case, will send a
@@ -330,6 +411,36 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::DistributeLoadSet(distribute_load))
     }
 
+    fn set_game_client(
+        &mut self,
+        game_client: EmbeddedMiniCdn,
+        status: &mut StatusRepo,
+    ) -> Result<AdminUpdate, &'static str> {
+        if game_client.get("index.html").is_none() {
+            Err("no index.html")
+        } else {
+            let cdn = MiniCdn::Embedded(game_client);
+            status.client_hash = static_size_and_hash(&cdn).1;
+            *self.game_client.write().unwrap() = cdn;
+            Ok(AdminUpdate::GameClientSet(status.client_hash))
+        }
+    }
+
+    /// Advertises a different client hash (which must be compatible!).
+    fn override_client_hash(
+        &mut self,
+        server_id: Option<ServerId>,
+        system: &Option<SystemRepo<G>>,
+        status: &mut StatusRepo,
+    ) -> Result<AdminUpdate, &'static str> {
+        status.client_hash = server_id
+            .zip(system.as_ref())
+            .and_then(|(server_id, system)| system.servers.get(&server_id))
+            .and_then(|server| server.status.client_hash())
+            .unwrap_or(status.original_client_hash);
+        Ok(AdminUpdate::ClientHashOverridden(status.client_hash))
+    }
+
     /// Requests the currently-set server to redirect to.
     fn request_redirect(&self) -> Result<AdminUpdate, &'static str> {
         Ok(AdminUpdate::RedirectRequested(
@@ -362,8 +473,11 @@ impl<G: GameArenaService> AdminRepo<G> {
         Ok(AdminUpdate::RedirectSet(redirect))
     }
 
-    #[cfg(unix)]
     fn start_profile(&mut self) -> Result<(), &'static str> {
+        #[cfg(not(unix))]
+        return Err("profile only available on Unix");
+
+        #[cfg(unix)]
         if self.profile.is_some() {
             Err("profile already started")
         } else {
@@ -373,8 +487,11 @@ impl<G: GameArenaService> AdminRepo<G> {
         }
     }
 
-    #[cfg(unix)]
     fn finish_profile(&mut self) -> Result<AdminUpdate, &'static str> {
+        #[cfg(not(unix))]
+        return Err("profile only available on Unix");
+
+        #[cfg(unix)]
         if let Some(profile) = self.profile.as_mut() {
             if let Ok(report) = profile.report().build() {
                 self.profile = None;
@@ -407,16 +524,38 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
         let request = msg.request;
         let database = self.database();
         match request {
+            AdminRequest::RequestSnippets => Box::pin(fut::ready(AdminRepo::request_snippets(
+                &self.context_service.context.clients,
+            ))),
+            AdminRequest::ClearSnippet {
+                cohort_id,
+                referrer,
+            } => Box::pin(fut::ready(AdminRepo::clear_snippet(
+                &mut self.context_service.context.clients,
+                cohort_id,
+                referrer,
+            ))),
+            AdminRequest::SetSnippet {
+                cohort_id,
+                referrer,
+                snippet,
+            } => Box::pin(fut::ready(AdminRepo::set_snippet(
+                &mut self.context_service.context.clients,
+                cohort_id,
+                referrer,
+                snippet,
+            ))),
             // Handle asynchronous requests (i.e. those that access database).
             AdminRequest::RequestSeries {
                 game_id,
+                filter,
                 period_start,
                 period_stop,
                 resolution,
             } => Box::pin(
                 async move {
                     database
-                        .get_metrics_between(game_id, period_start, period_stop)
+                        .get_metrics_between(game_id, filter, period_start, period_stop)
                         .await
                 }
                 .into_actor(self)
@@ -468,20 +607,24 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                 self.admin
                     .mute_player(player_id, minutes, &self.context_service.context.players),
             )),
+            AdminRequest::RequestServerId => Box::pin(fut::ready(Ok(
+                AdminUpdate::ServerIdRequested(self.server_id),
+            ))),
             AdminRequest::RequestServers => {
                 Box::pin(fut::ready(AdminRepo::request_servers(&self.system)))
             }
             AdminRequest::RequestSummary { filter } => {
                 Box::pin(fut::ready(AdminRepo::request_summary(self, filter)))
             }
-            AdminRequest::RequestReferrers => Box::pin(fut::ready(
-                self.admin
-                    .request_referrers(&self.context_service.context.players),
-            )),
-            AdminRequest::RequestUserAgents => Box::pin(fut::ready(
-                self.admin
-                    .request_user_agents(&self.context_service.context.players),
-            )),
+            AdminRequest::RequestReferrers => {
+                Box::pin(fut::ready(self.admin.request_referrers(&self.metrics)))
+            }
+            AdminRequest::RequestRegions => {
+                Box::pin(fut::ready(self.admin.request_regions(&self.metrics)))
+            }
+            AdminRequest::RequestUserAgents => {
+                Box::pin(fut::ready(self.admin.request_user_agents(&self.metrics)))
+            }
             AdminRequest::SendChat {
                 player_id,
                 alias,
@@ -504,13 +647,19 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
             AdminRequest::SetDistributeLoad(distribute_load) => {
                 Box::pin(fut::ready(self.admin.set_distribute_load(distribute_load)))
             }
+            AdminRequest::OverrideClientHash(server_id) => Box::pin(fut::ready(
+                self.admin
+                    .override_client_hash(server_id, &self.system, &mut self.status),
+            )),
+            AdminRequest::SetGameClient(client) => Box::pin(fut::ready(
+                self.admin.set_game_client(client, &mut self.status),
+            )),
             AdminRequest::RequestRedirect => Box::pin(fut::ready(self.admin.request_redirect())),
             AdminRequest::SetRedirect(server_id) => Box::pin(fut::ready(self.admin.set_redirect(
                 server_id,
                 self.server_id,
                 self.system.as_mut(),
             ))),
-            #[cfg(unix)]
             AdminRequest::RequestProfile => {
                 if let Err(e) = self.admin.start_profile() {
                     Box::pin(fut::ready(Err(e)))

@@ -9,15 +9,16 @@ use std::time::Duration;
 
 pub type TicksRepr = u16;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Ticks(pub TicksRepr);
+/// Ticks, generic over frequency. Each game should define a type alias with a specific frequency.
+#[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct GenTicks<const FREQUENCY_HZ: TicksRepr>(pub TicksRepr);
 
 /// Ticks efficiently stores an unsigned duration.
-impl Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> GenTicks<FREQUENCY_HZ> {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(1);
     pub const MAX: Self = Self(TicksRepr::MAX);
-    pub const FREQUENCY_HZ: Ticks = Ticks(10);
+    pub const FREQUENCY_HZ: Self = GenTicks(FREQUENCY_HZ);
     pub const PERIOD_SECS: f32 = 1.0 / (Self::FREQUENCY_HZ.0 as f32);
 
     /// Converts fractional seconds to a duration, which can be quite lossy.
@@ -26,8 +27,13 @@ impl Ticks {
     }
 
     /// Converts whole seconds to a duration.
-    pub const fn from_whole_secs(secs: u16) -> Self {
+    pub const fn from_whole_secs(secs: TicksRepr) -> Self {
         Self(secs * Self::FREQUENCY_HZ.0)
+    }
+
+    /// Returns some absolute number of ticks.
+    pub const fn from_repr(ticks: TicksRepr) -> Self {
+        Self(ticks)
     }
 
     /// Returns the duration as fractional seconds.
@@ -55,15 +61,22 @@ impl Ticks {
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
         self.0.checked_add(rhs.0).map(Self)
     }
-}
 
-impl Default for Ticks {
-    fn default() -> Self {
-        Self::ZERO
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        self.0.checked_sub(rhs.0).map(Self)
+    }
+
+    pub fn next(self) -> Self {
+        self.wrapping_add(Self::ONE)
+    }
+
+    /// Returns true if self % period == Self::ZERO.
+    pub fn every(self, period: Self) -> bool {
+        self % period == Self::ZERO
     }
 }
 
-impl Add for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Add for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
@@ -71,13 +84,13 @@ impl Add for Ticks {
     }
 }
 
-impl AddAssign for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> AddAssign for GenTicks<FREQUENCY_HZ> {
     fn add_assign(&mut self, other: Self) {
         self.0 += other.0;
     }
 }
 
-impl Sub for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Sub for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
@@ -85,13 +98,13 @@ impl Sub for Ticks {
     }
 }
 
-impl SubAssign for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> SubAssign for GenTicks<FREQUENCY_HZ> {
     fn sub_assign(&mut self, other: Self) {
         self.0 -= other.0;
     }
 }
 
-impl Mul for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Mul for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
@@ -99,7 +112,7 @@ impl Mul for Ticks {
     }
 }
 
-impl Mul<f32> for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Mul<f32> for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn mul(self, other: f32) -> Self::Output {
@@ -107,13 +120,13 @@ impl Mul<f32> for Ticks {
     }
 }
 
-impl MulAssign<f32> for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> MulAssign<f32> for GenTicks<FREQUENCY_HZ> {
     fn mul_assign(&mut self, other: f32) {
         *self = *self * other;
     }
 }
 
-impl Div for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Div for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
@@ -121,7 +134,7 @@ impl Div for Ticks {
     }
 }
 
-impl Rem for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Rem for GenTicks<FREQUENCY_HZ> {
     type Output = Self;
 
     fn rem(self, rhs: Self) -> Self::Output {
@@ -129,13 +142,13 @@ impl Rem for Ticks {
     }
 }
 
-impl fmt::Debug for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> fmt::Debug for GenTicks<FREQUENCY_HZ> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:.1} seconds", self.to_secs())
     }
 }
 
-impl Serialize for Ticks {
+impl<const FREQUENCY_HZ: TicksRepr> Serialize for GenTicks<FREQUENCY_HZ> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -148,7 +161,7 @@ impl Serialize for Ticks {
     }
 }
 
-impl<'de> Deserialize<'de> for Ticks {
+impl<'de, const FREQUENCY_HZ: TicksRepr> Deserialize<'de> for GenTicks<FREQUENCY_HZ> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -156,9 +169,9 @@ impl<'de> Deserialize<'de> for Ticks {
         if deserializer.is_human_readable() {
             deserializer
                 .deserialize_f32(F32Visitor)
-                .map(Ticks::from_secs)
+                .map(GenTicks::from_secs)
         } else {
-            deserializer.deserialize_u16(U16Visitor).map(Ticks)
+            deserializer.deserialize_u16(U16Visitor).map(GenTicks)
         }
     }
 }

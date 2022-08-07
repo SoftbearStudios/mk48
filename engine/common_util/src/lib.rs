@@ -6,11 +6,6 @@
 
 pub mod angle;
 pub mod range;
+pub mod serde;
 pub mod ticks;
 pub mod x_vec2;
-
-mod unused_altitude;
-mod unused_collision2d;
-mod unused_coord2d;
-mod unused_transform2d;
-mod unused_velocity2d;

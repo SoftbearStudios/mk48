@@ -1,15 +1,16 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::renderer::attribute::Attribs;
+use crate::renderer::attribs::Attribs;
 use crate::renderer::index::Index;
 use crate::renderer::vertex::Vertex;
+use bytemuck::Pod;
+use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::mem::size_of;
-use std::slice;
 use web_sys::{
-    OesVertexArrayObject as OesVAO, WebGlBuffer, WebGlRenderingContext as Gl,
-    WebGlVertexArrayObject,
+    AngleInstancedArrays as Aia, OesVertexArrayObject as OesVAO, WebGlBuffer,
+    WebGlRenderingContext as Gl, WebGlVertexArrayObject,
 };
 
 pub type Quad<I> = [I; 4];
@@ -89,66 +90,210 @@ impl<V: Vertex, I: Index> MeshBuffer<V, I> {
     }
 }
 
-/// RenderBuffer facilitates buffering a mesh to the GPU.
-/// TODO find a better name because it's too similar to WebGlRenderBuffer.
-pub struct RenderBuffer<V: Vertex, I: Index = u16> {
-    vertices: WebGlBuffer,
-    vertices_capacity: usize, // The amount of capacity in vertices that is available in the buffer.
-    indices: WebGlBuffer,
-    indices_capacity: usize, // The amount of capacity in indices that is available in the buffer.
-    vao: WebGlVertexArrayObject,
-    index_count: u32,
-    vertex_count: u32,
-    vertex: PhantomData<V>,
-    index: PhantomData<I>,
+pub(crate) enum GpuBufferType {
+    Array,
+    Element,
 }
 
-impl<V: Vertex, I: Index> RenderBuffer<V, I> {
-    pub fn new(gl: &Gl, oes: &OesVAO) -> Self {
-        let buffer = Self {
-            vertices: gl.create_buffer().unwrap(),
-            vertices_capacity: 0,
-            indices: gl.create_buffer().unwrap(),
-            indices_capacity: 0,
-            vao: oes.create_vertex_array_oes().unwrap(),
-            index_count: 0,
-            vertex_count: 0,
-            vertex: PhantomData,
-            index: PhantomData,
-        };
+impl GpuBufferType {
+    pub(crate) const fn to(self) -> bool {
+        match self {
+            Self::Array => true,
+            Self::Element => false,
+        }
+    }
 
-        // Make sure array was unbound.
+    const fn fr(v: bool) -> Self {
+        match v {
+            true => Self::Array,
+            false => Self::Element,
+        }
+    }
+
+    const fn target(self) -> u32 {
+        match self {
+            Self::Array => Gl::ARRAY_BUFFER,
+            Self::Element => Gl::ELEMENT_ARRAY_BUFFER,
+        }
+    }
+
+    const fn parameter(self) -> u32 {
+        match self {
+            Self::Array => Gl::ARRAY_BUFFER_BINDING,
+            Self::Element => Gl::ELEMENT_ARRAY_BUFFER_BINDING,
+        }
+    }
+}
+
+pub(crate) struct GpuBuffer<E: Pod, const B: bool> {
+    elements: WebGlBuffer,
+    length: u32,   // The amount of valid elements in the buffer.
+    capacity: u32, // The amount of capacity (in elements) that is available in the buffer.
+    element: PhantomData<E>,
+}
+
+impl<E: Pod, const B: bool> GpuBuffer<E, B> {
+    pub fn new(gl: &Gl) -> Self {
+        Self {
+            elements: gl.create_buffer().unwrap(),
+            length: 0,
+            capacity: 0,
+            element: PhantomData,
+        }
+    }
+
+    pub(crate) fn bind<'a>(&'a self, gl: &'a Gl) -> GpuBufferBinding<'a, E, B> {
+        GpuBufferBinding::new(gl, self)
+    }
+
+    pub(crate) fn len(&self) -> u32 {
+        self.length
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+
+    /// Only used once for an optimization in instance.rs.
+    pub(crate) fn _elements(&self) -> &WebGlBuffer {
+        &self.elements
+    }
+
+    pub(crate) fn buffer(&mut self, gl: &Gl, elements: &[E]) {
+        self.length = elements.len().try_into().unwrap();
+
+        // This can easily mess up the bind_buffer calls.
         debug_assert!(gl
             .get_parameter(OesVAO::VERTEX_ARRAY_BINDING_OES)
             .unwrap()
             .is_null());
 
-        // Make sure both bindings were cleared.
+        // Make sure element's binding was cleared.
         debug_assert!(gl
-            .get_parameter(Gl::ARRAY_BUFFER_BINDING)
+            .get_parameter(GpuBufferType::fr(B).parameter())
             .unwrap()
             .is_null());
+
+        // Don't bind if empty (length set earlier).
+        if !self.is_empty() {
+            // Buffer elements.
+            let target = GpuBufferType::fr(B).target();
+            gl.bind_buffer(target, Some(&self.elements));
+
+            // Allocate buffer to nearest power of 2 (never shrinks).
+            let new_cap = elements.len().next_power_of_two().try_into().unwrap();
+            if new_cap > self.capacity {
+                gl.buffer_data_with_i32(
+                    target,
+                    (new_cap * size_of::<E>() as u32) as i32,
+                    Gl::DYNAMIC_DRAW,
+                );
+                self.capacity = new_cap;
+            }
+
+            let b = |a| gl.buffer_sub_data_with_i32_and_array_buffer_view(target, 0, a);
+
+            unsafe {
+                match GpuBufferType::fr(B) {
+                    GpuBufferType::Array => {
+                        b(&js_sys::Float32Array::view(bytemuck::cast_slice(elements)))
+                    }
+                    GpuBufferType::Element => match std::mem::size_of::<E>() {
+                        1 => b(&js_sys::Uint8Array::view(bytemuck::cast_slice(elements))),
+                        2 => b(&js_sys::Uint16Array::view(bytemuck::cast_slice(elements))),
+                        4 => b(&js_sys::Uint32Array::view(bytemuck::cast_slice(elements))),
+                        _ => panic!("invalid index size"),
+                    },
+                }
+            }
+
+            // Unbind (not required in release mode).
+            #[cfg(debug_assertions)]
+            gl.bind_buffer(target, None);
+        }
+    }
+}
+
+pub(crate) struct GpuBufferBinding<'a, E: Pod, const B: bool> {
+    gl: &'a Gl,
+    element: PhantomData<E>,
+}
+
+impl<'a, E: Pod, const B: bool> GpuBufferBinding<'a, E, B> {
+    fn new(gl: &'a Gl, buffer: &GpuBuffer<E, B>) -> Self {
+        // Make sure buffer element's binding was cleared.
         debug_assert!(gl
-            .get_parameter(Gl::ELEMENT_ARRAY_BUFFER_BINDING)
+            .get_parameter(GpuBufferType::fr(B).parameter())
+            .unwrap()
+            .is_null());
+
+        // Bind buffer's elements.
+        gl.bind_buffer(GpuBufferType::fr(B).target(), Some(&buffer.elements));
+
+        Self {
+            gl,
+            element: PhantomData,
+        }
+    }
+}
+
+impl<'a, V: Vertex> GpuBufferBinding<'a, V, { GpuBufferType::Array.to() }> {
+    pub(crate) fn bind_attribs(&self) -> Attribs<'a> {
+        let mut attribs = Attribs::new::<V>(self.gl);
+        V::bind_attribs(&mut attribs);
+        attribs
+    }
+
+    pub(crate) fn bind_attribs_instanced(&self, aia: &Aia, previous: Attribs<'a>) {
+        V::bind_attribs(&mut Attribs::new_instanced::<V>(self.gl, aia, previous));
+    }
+}
+
+impl<'a, E: Pod, const B: bool> Drop for GpuBufferBinding<'a, E, B> {
+    fn drop(&mut self) {
+        // Unbind (not required in release mode).
+        #[cfg(debug_assertions)]
+        self.gl.bind_buffer(GpuBufferType::fr(B).target(), None);
+    }
+}
+
+/// RenderBuffer facilitates buffering a mesh to the GPU.
+/// TODO find a better name because it's too similar to WebGlRenderBuffer.
+pub struct RenderBuffer<V: Vertex, I: Index = u16> {
+    pub(crate) vertices: GpuBuffer<V, { GpuBufferType::Array.to() }>,
+    pub(crate) indices: GpuBuffer<I, { GpuBufferType::Element.to() }>,
+    vao: WebGlVertexArrayObject,
+}
+
+impl<V: Vertex, I: Index> RenderBuffer<V, I> {
+    pub fn new(gl: &Gl, oes: &OesVAO) -> Self {
+        let buffer = Self {
+            vertices: GpuBuffer::new(gl),
+            indices: GpuBuffer::new(gl),
+            vao: oes.create_vertex_array_oes().unwrap(),
+        };
+
+        // Make sure VAO was unbound.
+        debug_assert!(gl
+            .get_parameter(OesVAO::VERTEX_ARRAY_BINDING_OES)
             .unwrap()
             .is_null());
 
         oes.bind_vertex_array_oes(Some(&buffer.vao));
 
-        // Bind buffers to vao.
-        gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&buffer.vertices));
-        V::bind_attribs(&mut Attribs::new(gl));
-        gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, Some(&buffer.indices));
+        // Bind array buffer.
+        let array_binding = buffer.vertices.bind(gl);
+        array_binding.bind_attribs();
 
-        // Unbind ALWAYS required (unlike all other render unbinds).
+        // Bind element buffer.
+        let element_binding = buffer.indices.bind(gl);
+
+        // Unbinding VAO is ALWAYS required (unlike all other render unbinds).
         oes.bind_vertex_array_oes(None);
 
-        // Unbind both buffers (not required in release mode).
-        #[cfg(debug_assertions)]
-        {
-            gl.bind_buffer(Gl::ARRAY_BUFFER, None);
-            gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, None);
-        }
+        // Unbind both buffers.
+        drop(array_binding);
+        drop(element_binding);
 
         buffer
     }
@@ -169,85 +314,11 @@ impl<V: Vertex, I: Index> RenderBuffer<V, I> {
 
     /// Copies vertices and indices into the render buffer.
     /// If indices is empty it performs array based rendering.
+    // TODO get primitive.
     pub fn buffer(&mut self, gl: &Gl, vertices: &[V], indices: &[I]) {
         assert!(!vertices.is_empty(), "buffering no vertices");
-
-        self.index_count = indices.len() as u32;
-        self.vertex_count = vertices.len() as u32;
-
-        // This can easily mess up the bind_buffer calls.
-        debug_assert!(gl
-            .get_parameter(OesVAO::VERTEX_ARRAY_BINDING_OES)
-            .unwrap()
-            .is_null());
-
-        // Make sure vertex binding was cleared.
-        debug_assert!(gl
-            .get_parameter(Gl::ARRAY_BUFFER_BINDING)
-            .unwrap()
-            .is_null());
-
-        // Buffer vertices.
-        gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&self.vertices));
-
-        // Allocate buffer to nearest power of 2 (never shrinks).
-        let new_cap = vertices.len().next_power_of_two();
-        if new_cap > self.vertices_capacity {
-            gl.buffer_data_with_i32(
-                Gl::ARRAY_BUFFER,
-                (new_cap * size_of::<V>()) as i32,
-                Gl::DYNAMIC_DRAW,
-            );
-            self.vertices_capacity = new_cap;
-        }
-
-        if self.vertex_count > 0 {
-            unsafe {
-                // Points to raw rust memory so can't allocate while in use.
-                let vert_array = js_sys::Float32Array::view(floats_from_vertices(vertices));
-                gl.buffer_sub_data_with_i32_and_array_buffer_view(Gl::ARRAY_BUFFER, 0, &vert_array);
-            }
-        }
-
-        // Unbind (not required in release mode).
-        #[cfg(debug_assertions)]
-        gl.bind_buffer(Gl::ARRAY_BUFFER, None);
-
-        // Make sure index binding was cleared.
-        debug_assert!(gl
-            .get_parameter(Gl::ELEMENT_ARRAY_BUFFER_BINDING)
-            .unwrap()
-            .is_null());
-
-        // Buffer indices.
-        gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, Some(&self.indices));
-
-        // Allocate buffer to nearest power of 2 (never shrinks).
-        let new_cap = indices.len().next_power_of_two();
-        if new_cap > self.indices_capacity {
-            gl.buffer_data_with_i32(
-                Gl::ELEMENT_ARRAY_BUFFER,
-                (new_cap * size_of::<I>()) as i32,
-                Gl::DYNAMIC_DRAW,
-            );
-            self.indices_capacity = new_cap;
-        }
-
-        if self.index_count > 0 {
-            unsafe {
-                // Points to raw rust memory so can't allocate while in use.
-                let elem_array = I::view(indices);
-                gl.buffer_sub_data_with_i32_and_array_buffer_view(
-                    Gl::ELEMENT_ARRAY_BUFFER,
-                    0,
-                    &elem_array,
-                );
-            }
-        }
-
-        // Unbind (not required in release mode).
-        #[cfg(debug_assertions)]
-        gl.bind_buffer(Gl::ELEMENT_ARRAY_BUFFER, None);
+        self.vertices.buffer(gl, vertices);
+        self.indices.buffer(gl, indices);
     }
 }
 
@@ -274,16 +345,16 @@ impl<'a, V: Vertex, I: Index> RenderBufferBinding<'a, V, I> {
     }
 
     pub fn draw(&self, primitive: u32) {
-        if self.buffer.index_count != 0 {
+        if !self.buffer.indices.is_empty() {
             self.gl.draw_elements_with_i32(
                 primitive,
-                self.buffer.index_count as i32,
+                self.buffer.indices.len() as i32,
                 I::gl_enum(),
                 0,
             );
-        } else if self.buffer.vertex_count != 0 {
+        } else if !self.buffer.vertices.is_empty() {
             self.gl
-                .draw_arrays(primitive, 0, self.buffer.vertex_count as i32)
+                .draw_arrays(primitive, 0, self.buffer.vertices.len() as i32)
         }
     }
 }
@@ -292,27 +363,5 @@ impl<'a, V: Vertex, I: Index> Drop for RenderBufferBinding<'a, V, I> {
     fn drop(&mut self) {
         // Unbind ALWAYS required (unlike all other render unbinds).
         self.oes_vao.bind_vertex_array_oes(None);
-    }
-}
-
-/// Reinterprets a slice of floats as a slice of vertices, panicking if the
-/// given number of floats is not evenly divided by the vertex size.
-#[allow(unused)]
-pub fn vertices_from_floats<V: Vertex>(floats: &[f32]) -> &[V] {
-    assert_eq!(floats.len() % V::floats(), 0);
-
-    unsafe {
-        let ptr = &floats[0] as *const f32 as *const V;
-        let len = floats.len() / V::floats();
-        slice::from_raw_parts(ptr, len)
-    }
-}
-
-/// Opposite of vertices_from_floats.
-pub fn floats_from_vertices<V: Vertex>(vertices: &[V]) -> &[f32] {
-    unsafe {
-        let ptr = &vertices[0] as *const V as *const f32;
-        let len = vertices.len() * V::floats();
-        slice::from_raw_parts(ptr, len)
     }
 }

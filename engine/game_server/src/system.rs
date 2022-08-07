@@ -18,7 +18,7 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{error, info, warn};
 use rand::prelude::IteratorRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::redirect::Policy;
 use reqwest::Client;
@@ -49,7 +49,7 @@ pub struct SystemRepo<G: GameArenaService> {
 }
 
 #[derive(Debug)]
-pub struct ServerData {
+pub(crate) struct ServerData {
     /// Public IP address of server.
     pub ip: IpAddr,
     /// Best guess for [`RegionId`] of server.
@@ -89,26 +89,50 @@ impl ServerData {
 }
 
 #[derive(Debug)]
-pub enum ServerStatus {
+pub(crate) enum ServerStatus {
     /// Server could not be reached after a certain number of tries.
     Unreachable { tries: u8 },
     /// Server is unhealthy for a certain number of consecutive tries.
     Unhealthy {
         tries: u8,
-        redirect_server_id: Option<ServerId>,
-        client_hash: Option<u64>,
-        player_count: Option<u32>,
+        advertisement: ServerAdvertisement,
     },
     /// Server status reporting is reachable but incompatible, no judgement about health.
     Incompatible,
     /// Server is healthy, and self-reported the following details.
     Healthy {
-        redirect_server_id: Option<ServerId>,
-        client_hash: Option<u64>,
-        player_count: Option<u32>,
+        advertisement: ServerAdvertisement,
         /// We only accept dying server ids from a healthy server.
         dying_server_ids: Vec<ServerId>,
     },
+}
+
+/// Fields that a healthy/unhealthy server may advertise about itself.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ServerAdvertisement {
+    pub(crate) redirect_server_id: Option<ServerId>,
+    pub(crate) client_hash: Option<u64>,
+    pub(crate) player_count: Option<u32>,
+}
+
+impl ServerStatus {
+    pub(crate) fn advertisement(&self) -> Option<&ServerAdvertisement> {
+        match self {
+            ServerStatus::Healthy { advertisement, .. }
+            | ServerStatus::Unhealthy { advertisement, .. } => Some(advertisement),
+            _ => None,
+        }
+    }
+
+    /// Returns the client hash advertised by this server, if it is known.
+    pub(crate) fn client_hash(&self) -> Option<u64> {
+        self.advertisement().and_then(|ad| ad.client_hash)
+    }
+
+    /// Returns the player count advertised by this server, if it is known.
+    pub(crate) fn player_count(&self) -> Option<u32> {
+        self.advertisement().and_then(|ad| ad.player_count)
+    }
 }
 
 struct PingResult {
@@ -125,18 +149,14 @@ enum PingResultStatus {
     /// Self-reported unhealthy.
     Unhealthy {
         region_id: Option<RegionId>,
-        redirect_server_id: Option<ServerId>,
-        client_hash: Option<u64>,
-        player_count: Option<u32>,
+        advertisement: ServerAdvertisement,
     },
     /// Protocol error.
     Incompatible,
     /// Self-reported healthy.
     Healthy {
         region_id: Option<RegionId>,
-        redirect_server_id: Option<ServerId>,
-        client_hash: Option<u64>,
-        player_count: Option<u32>,
+        advertisement: ServerAdvertisement,
         dying_server_ids: Vec<ServerId>,
     },
 }
@@ -199,9 +219,12 @@ impl<G: GameArenaService> SystemRepo<G> {
             .iter()
             .filter_map(|(&server_id, server)| {
                 if let &ServerStatus::Healthy {
-                    redirect_server_id,
-                    client_hash,
-                    player_count,
+                    advertisement:
+                        ServerAdvertisement {
+                            redirect_server_id,
+                            client_hash,
+                            player_count,
+                        },
                     ..
                 } = &server.status
                 {
@@ -371,22 +394,23 @@ impl<G: GameArenaService> SystemRepo<G> {
                         .or(serde_json::from_slice::<StatusResponse>(body.as_ref()))
                     {
                         Ok(status) => {
+                            let advertisement = ServerAdvertisement {
+                                redirect_server_id: status.redirect_server_id,
+                                client_hash: status.client_hash,
+                                player_count: status.player_count,
+                            };
                             if status.healthy {
                                 info!("watchdog {:?} is healthy", server_id);
                                 PingResultStatus::Healthy {
                                     region_id: status.region_id,
-                                    redirect_server_id: status.redirect_server_id,
-                                    client_hash: status.client_hash,
-                                    player_count: status.player_count,
+                                    advertisement,
                                     dying_server_ids: status.dying_server_ids,
                                 }
                             } else {
                                 warn!("watchdog {:?} is unhealthy", server_id);
                                 PingResultStatus::Unhealthy {
                                     region_id: status.region_id,
-                                    redirect_server_id: status.redirect_server_id,
-                                    client_hash: status.client_hash,
-                                    player_count: status.player_count,
+                                    advertisement,
                                 }
                             }
                         }
@@ -454,9 +478,7 @@ impl<G: GameArenaService> SystemRepo<G> {
             }
             PingResultStatus::Unhealthy {
                 region_id,
-                redirect_server_id,
-                client_hash,
-                player_count,
+                advertisement,
             } => {
                 if let Some(region_id) = region_id {
                     // Take the other server's word for its region.
@@ -470,17 +492,13 @@ impl<G: GameArenaService> SystemRepo<G> {
                 .saturating_add(1);
                 ServerStatus::Unhealthy {
                     tries,
-                    redirect_server_id,
-                    client_hash,
-                    player_count,
+                    advertisement,
                 }
             }
             PingResultStatus::Incompatible => ServerStatus::Incompatible,
             PingResultStatus::Healthy {
                 region_id,
-                redirect_server_id,
-                client_hash,
-                player_count,
+                advertisement,
                 dying_server_ids,
             } => {
                 if let Some(region_id) = region_id {
@@ -488,9 +506,7 @@ impl<G: GameArenaService> SystemRepo<G> {
                     server.region_id = Some(region_id);
                 }
                 ServerStatus::Healthy {
-                    redirect_server_id,
-                    client_hash,
-                    player_count,
+                    advertisement,
                     dying_server_ids,
                 }
             }
@@ -737,7 +753,7 @@ impl<G: GameArenaService> SystemRepo<G> {
                         }
                     };
 
-                    match IpAddr::from_str(&string) {
+                    match IpAddr::from_str(string.trim()) {
                         Ok(ip) => Some(ip),
                         Err(e) => {
                             info!("checker {} returned {:?}", checker, e);
@@ -773,6 +789,36 @@ impl<G: GameArenaService> SystemRepo<G> {
 
         arg_max
     }
+
+    /// Iterates available servers, their absolute priorities, and player counts, in an undefined
+    /// order.
+    fn iter_server_priorities(
+        system: &Option<SystemRepo<G>>,
+        requested_server_id: Option<ServerId>,
+        invitation_server_id: Option<ServerId>,
+        ideal_region_id: Option<RegionId>,
+    ) -> impl Iterator<Item = (ServerId, i8, u32)> + '_ {
+        system
+            .iter()
+            .flat_map(|system| system.previous.iter())
+            .map(move |server| {
+                let mut priority = 0;
+
+                if let Some(ideal_region_id) = ideal_region_id {
+                    priority = ideal_region_id.distance(server.region_id) as i8;
+                }
+
+                if Some(server.server_id) == requested_server_id {
+                    priority = -1;
+                }
+
+                if Some(server.server_id) == invitation_server_id {
+                    priority = -2;
+                }
+
+                (server.server_id, priority, server.player_count)
+            })
+    }
 }
 
 /// Asks the server about the distributed system of servers.
@@ -799,42 +845,55 @@ impl<G: GameArenaService> Handler<SystemRequest> for Infrastructure<G> {
             .ip
             .and_then(|ip| SystemRepo::<G>::ip_to_region_id(ip)));
 
-        let mut ideal_server_ids = Vec::new();
-        let mut ideal_servers_priority = i8::MAX;
-        if let Some(system) = self.system.as_ref() {
-            // Iterate available (alive, compatible) servers.
-            for server in system.previous.iter() {
-                let mut priority = 0;
+        let ideal_server_id = SystemRepo::iter_server_priorities(
+            &self.system,
+            request.server_id,
+            invitation_server_id,
+            ideal_region_id,
+        )
+        .min_by_key(|&(_, priority, player_count)| {
+            (
+                priority,
+                if self.admin.distribute_load {
+                    player_count
+                } else {
+                    0
+                },
+            )
+        })
+        .map(
+            |(ideal_server_id, ideal_server_priority, ideal_server_player_count)| {
+                if self.admin.distribute_load {
+                    let mut rng = thread_rng();
 
-                if let Some(ideal_region_id) = ideal_region_id {
-                    priority = ideal_region_id.distance(server.region_id) as i8;
-                }
+                    // Prime the RNG a bit.
+                    let use_player_count = rng.gen::<bool>();
+                    rng.gen::<u64>();
 
-                if Some(server.server_id) == request.server_id {
-                    priority = -1;
-                }
+                    let result = SystemRepo::iter_server_priorities(
+                        &self.system,
+                        request.server_id,
+                        invitation_server_id,
+                        ideal_region_id,
+                    )
+                    .filter(|&(_, priority, player_count)| {
+                        priority == ideal_server_priority
+                            && (!use_player_count || player_count == ideal_server_player_count)
+                    })
+                    .map(|(server_id, _, _)| server_id)
+                    .choose(&mut rng);
 
-                if Some(server.server_id) == invitation_server_id {
-                    priority = -2;
-                }
-
-                if priority <= ideal_servers_priority {
-                    if priority < ideal_servers_priority {
-                        ideal_server_ids.clear();
+                    if let Some(result) = result {
+                        result
+                    } else {
+                        debug_assert!(false, "server id rug pull");
+                        ideal_server_id
                     }
-                    ideal_server_ids.push(server.server_id);
-                    ideal_servers_priority = priority;
+                } else {
+                    ideal_server_id
                 }
-            }
-        }
-
-        let mut iter = ideal_server_ids.into_iter();
-
-        let ideal_server_id = if self.admin.distribute_load {
-            iter.choose(&mut thread_rng())
-        } else {
-            iter.next()
-        };
+            },
+        );
 
         SystemResponse {
             server_id: ideal_server_id.or(self.server_id),

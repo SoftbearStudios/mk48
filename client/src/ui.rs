@@ -182,7 +182,7 @@ impl DeathReasonModel {
                 player: Some(alias),
                 entity: None,
             },
-            DeathReason::Entity(entity_type) => DeathReasonModel {
+            DeathReason::Obstacle(entity_type) => DeathReasonModel {
                 death_type: "collision",
                 player: None,
                 entity: Some(*entity_type),

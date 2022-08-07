@@ -5,13 +5,14 @@
 #![allow(dead_code)]
 
 use crate::database_schema::{
-    GameIdScoreType, Metrics, MetricsItem, Score, ScoreItem, ScoreType, SessionItem,
+    GameIdMetricFilter, GameIdScoreType, IpItem, LoginItem, Metrics, MetricsItem, Score, ScoreItem,
+    ScoreType, SessionItem,
 };
 use aws_config::default_provider::credentials::DefaultCredentialsChain;
 use aws_config::TimeoutConfig;
 use aws_sdk_dynamodb::model::AttributeValue;
 use aws_sdk_dynamodb::{Client, Region};
-use core_protocol::dto::{MetricsDataPointDto, MetricsSummaryDto};
+use core_protocol::dto::{MetricFilter, MetricsDataPointDto, MetricsSummaryDto};
 use core_protocol::id::*;
 use core_protocol::name::*;
 use core_protocol::serde_util::StrVisitor;
@@ -20,6 +21,7 @@ use serde::de::DeserializeOwned;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::mem;
+use std::net::IpAddr;
 use std::time::Duration;
 
 /// A DynamoDB database.
@@ -37,9 +39,12 @@ pub enum Error {
 
 impl Database {
     const REGION: &'static str = "us-east-1";
+    const IPS_TABLE_NAME: &'static str = "core_ips";
+    const LOGINS_TABLE_NAME: &'static str = "core_logins";
+    const METRICS_TABLE_NAME: &'static str = "core_metrics";
     const SESSIONS_TABLE_NAME: &'static str = "core_sessions";
     const SCORES_TABLE_NAME: &'static str = "core_scores";
-    const METRICS_TABLE_NAME: &'static str = "core_metrics";
+    //const USERS_TABLE_NAME: &'static str = "core_users";
 
     pub async fn new(read_only: bool) -> Self {
         let credentials_provider = DefaultCredentialsChain::builder()
@@ -164,6 +169,39 @@ impl Database {
         match req.send().await {
             Err(e) => Err(Error::Dynamo(e.into())),
             Ok(_) => Ok(()),
+        }
+    }
+
+    pub async fn get<HK: Serialize, O: DeserializeOwned>(
+        &self,
+        table: &'static str,
+        hash_name: &'static str,
+        hash_value: HK,
+    ) -> Result<Option<O>, Error> {
+        let hash_ser: AttributeValue = match serde_dynamo::to_attribute_value(hash_value) {
+            Err(e) => return Err(Error::Serde(e)),
+            Ok(key_ser) => key_ser,
+        };
+
+        let mut get_item_output = match self
+            .client
+            .get_item()
+            .table_name(table)
+            .key(hash_name, hash_ser)
+            .send()
+            .await
+        {
+            Ok(output) => output,
+            Err(e) => return Err(Error::Dynamo(e.into())),
+        };
+
+        if let Some(item) = mem::take(&mut get_item_output.item) {
+            match serde_dynamo::from_item(item) {
+                Err(e) => Err(Error::Serde(e)),
+                Ok(de) => Ok(Some(de)),
+            }
+        } else {
+            Ok(None)
         }
     }
 
@@ -483,15 +521,43 @@ impl Database {
         self.put(session, Self::SESSIONS_TABLE_NAME).await
     }
 
+    pub async fn get_login(
+        &self,
+        login_type: LoginType,
+        id: String,
+    ) -> Result<Option<LoginItem>, Error> {
+        self.get2(Self::LOGINS_TABLE_NAME, "login_type", login_type, "id", id)
+            .await
+    }
+
+    pub async fn put_login(&self, login: LoginItem) -> Result<(), Error> {
+        self.put(login, Self::LOGINS_TABLE_NAME).await
+    }
+
+    pub async fn get_ip(&self, ip: IpAddr) -> Result<Option<IpItem>, Error> {
+        self.get(Self::IPS_TABLE_NAME, "ip", ip).await
+    }
+
+    pub async fn put_ip(&self, ip: IpItem) -> Result<(), Error> {
+        self.put(ip, Self::IPS_TABLE_NAME).await
+    }
+
     pub async fn get_metrics_between(
         &self,
         game_id: GameId,
+        metric_filter: Option<MetricFilter>,
         period_start: Option<UnixTime>,
         period_stop: Option<UnixTime>,
     ) -> Result<Vec<MetricsItem>, Error> {
         self.query_hash_range(
             Self::METRICS_TABLE_NAME,
-            ("game_id", game_id),
+            (
+                "game_id",
+                GameIdMetricFilter {
+                    game_id,
+                    metric_filter,
+                },
+            ),
             ("timestamp", period_start, period_stop),
             true,
         )
@@ -506,7 +572,7 @@ impl Database {
                 .get2(
                     Self::METRICS_TABLE_NAME,
                     "game_id",
-                    metrics_item.game_id,
+                    metrics_item.game_id_metric_filter,
                     "timestamp",
                     metrics_item.timestamp,
                 )
@@ -518,7 +584,7 @@ impl Database {
 
             let new_metrics_item = if let Some(old_metrics_item) = old.clone() {
                 MetricsItem {
-                    game_id: metrics_item.game_id,
+                    game_id_metric_filter: metrics_item.game_id_metric_filter,
                     timestamp: metrics_item.timestamp,
                     metrics: old_metrics_item.metrics + metrics_item.metrics.clone(),
                 }
@@ -544,7 +610,7 @@ impl Database {
                 request = request
                     .condition_expression("#arenas_cached.#total = :arenas_cached_total")
                     .expression_attribute_names("#arenas_cached", "arenas_cached")
-                    .expression_attribute_names("#total", "total")
+                    .expression_attribute_names("#total", "t")
                     .expression_attribute_values(
                         ":arenas_cached_total",
                         to_av(old.arenas_cached.total)?,

@@ -20,11 +20,11 @@ resource "linode_domain_record" "home_ipv4" {
 }
 */
 
-resource "linode_domain_record" "servers_new_ipv4" {
+resource "linode_domain_record" "servers_ipv4" {
   for_each = var.servers
   domain_id = linode_domain.main.id
   name = each.key
   record_type = "A"
-  target = linode_instance.servers_new[each.key].ip_address
+  target = linode_instance.servers[each.key].ip_address
   ttl_sec = 120
 }

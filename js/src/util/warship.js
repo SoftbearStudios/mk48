@@ -85,7 +85,7 @@ export function hasUpgrades(type) {
 }
 
 export function levelToScore(level) {
-	// Must match server code
+	// Must match rust code
 	return (level * level + Math.pow(2, Math.max(level - 3, 0)) - 2) * 10;
 }
 

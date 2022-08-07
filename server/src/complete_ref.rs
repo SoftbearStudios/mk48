@@ -100,11 +100,12 @@ impl<'a, I: Iterator<Item = ContactRef<'a>>> CompleteRef<'a, I> {
                             *range.end()
                         }
                     } else {
-                        Ticks(5)
+                        Ticks::from_repr(5)
                     };
 
-                    let send = counter.wrapping_add(Ticks(contact.id().get() as TicksRepr))
-                        % (modulus + Ticks(1))
+                    let send = counter
+                        .wrapping_add(Ticks::from_repr(contact.id().get() as TicksRepr))
+                        % (modulus + Ticks::ONE)
                         == Ticks::ZERO;
                     send.then(|| contact.into_contact())
                 })

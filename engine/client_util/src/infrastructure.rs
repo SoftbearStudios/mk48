@@ -14,6 +14,7 @@ use crate::reconn_web_socket::ReconnWebSocket;
 use crate::renderer::renderer::Renderer;
 use crate::setting::CommonSettings;
 use crate::setting::Settings;
+use crate::visibility::VisibilityEvent;
 use common_util::range::map_ranges;
 use core_protocol::id::{PlayerId, ServerId, TeamId};
 use core_protocol::name::TeamName;
@@ -23,9 +24,12 @@ use core_protocol::rpc::{
 };
 use core_protocol::web_socket::WebSocketProtocol;
 use glam::{IVec2, Vec2};
+use js_sys::Function;
 use std::panic;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent};
+use web_sys::{
+    window, Event, FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent,
+};
 
 pub struct Infrastructure<G: GameClient> {
     game: G,
@@ -63,6 +67,11 @@ impl<G: GameClient> Infrastructure<G> {
     }
 
     pub fn frame(&mut self, time_seconds: f32) {
+        #[cfg(feature = "audio")]
+        self.context
+            .audio
+            .set_volume_setting(self.context.common_settings.volume);
+
         let elapsed_seconds = (time_seconds - self.context.client.update_seconds).clamp(0.001, 0.5);
         self.context.client.update_seconds = time_seconds;
 
@@ -73,37 +82,50 @@ impl<G: GameClient> Infrastructure<G> {
             .socket
             .update(&mut self.context.state, time_seconds)
         {
-            if let &Update::Client(ClientUpdate::SessionCreated {
-                arena_id,
-                session_id,
-                server_id,
-                ..
-            }) = &inbound
-            {
-                // Create an invitation so that the player doesn't have to wait for one later.
-                self.context
-                    .send_to_server(Request::Invitation(InvitationRequest::CreateInvitation));
-
-                let (host, server_id) = Context::<G>::compute_websocket_host(
-                    &self.context.common_settings,
+            match &inbound {
+                &Update::Client(ClientUpdate::SessionCreated {
+                    arena_id,
+                    cohort_id,
+                    session_id,
                     server_id,
-                    &*self.context.frontend,
-                );
-                self.context.socket.reset_host(host);
-                self.context
-                    .common_settings
-                    .set_server_id(server_id, &mut self.context.browser_storages);
+                    ..
+                }) => {
+                    // Create an invitation so that the player doesn't have to wait for one later.
+                    self.context
+                        .send_to_server(Request::Invitation(InvitationRequest::CreateInvitation));
 
-                if self.context.socket.is_closed()
-                    || Some((arena_id, session_id)) != self.context.common_settings.session_tuple()
-                {
+                    let (host, server_id) = Context::<G>::compute_websocket_host(
+                        &self.context.common_settings,
+                        server_id,
+                        &*self.context.frontend,
+                    );
+                    self.context.socket.reset_host(host);
                     self.context
                         .common_settings
-                        .set_arena_id(Some(arena_id), &mut self.context.browser_storages);
+                        .set_cohort_id(Some(cohort_id), &mut self.context.browser_storages);
                     self.context
                         .common_settings
-                        .set_session_id(Some(session_id), &mut self.context.browser_storages);
+                        .set_server_id(server_id, &mut self.context.browser_storages);
+
+                    if self.context.socket.is_closed()
+                        || Some((arena_id, session_id))
+                            != self.context.common_settings.session_tuple()
+                    {
+                        self.context
+                            .common_settings
+                            .set_arena_id(Some(arena_id), &mut self.context.browser_storages);
+                        self.context
+                            .common_settings
+                            .set_session_id(Some(session_id), &mut self.context.browser_storages);
+                    }
                 }
+                Update::Client(ClientUpdate::EvalSnippet(snippet)) => {
+                    // Do NOT use `eval`, since it runs in the local scope and therefore
+                    // prevents minification.
+                    let _ = Function::new_no_args(&snippet).call0(&JsValue::NULL);
+                    // TODO: send result back to server.
+                }
+                _ => {}
             }
 
             if let Update::Game(update) = &inbound {
@@ -230,6 +252,13 @@ impl<G: GameClient> Infrastructure<G> {
                 self.context.mouse.pinch_distance = None;
 
                 if target_touches.length() <= 1 {
+                    // Emulate mouse move to localize the touch.
+                    let first = target_touches.item(0);
+                    if let Some(first) = first {
+                        self.mouse_move(first.client_x(), first.client_y());
+                        self.context.mouse.pinch_distance = None;
+                    }
+
                     let e = GameClientMouseEvent::Button {
                         button: MouseButton::Left,
                         down,
@@ -270,6 +299,10 @@ impl<G: GameClient> Infrastructure<G> {
                             {
                                 let delta = 0.03 * (previous_pinch_distance - pinch_distance);
                                 self.raw_zoom(delta);
+                            } else {
+                                // Emulate mouse move to localize the pinch to zoom in the center.
+                                let center = ((first + second) * 0.5).as_ivec2();
+                                self.mouse_move(center.x, center.y);
                             }
 
                             self.context.mouse.pinch_distance = Some(pinch_distance);
@@ -284,6 +317,22 @@ impl<G: GameClient> Infrastructure<G> {
             }
             _ => {}
         }
+    }
+
+    /// For detecting when the browser tab becomes hidden.
+    pub fn visibility_change(&mut self, _: Event) {
+        // Written with the intention that errors bias towards visible=true.
+        let visible = window()
+            .unwrap()
+            .document()
+            .map(|d| d.visibility_state() != web_sys::VisibilityState::Hidden)
+            .unwrap_or(true);
+        let e = VisibilityEvent::Visible(visible);
+        self.game
+            .peek_visibility(&e, &mut self.context, &self.renderer);
+        #[cfg(feature = "audio")]
+        self.context.audio.peek_visibility(&e);
+        self.context.visibility.apply(e)
     }
 
     /// Creates a mouse wheel event with the given delta.
@@ -355,11 +404,14 @@ impl<G: GameClient> Infrastructure<G> {
         self.raw_zoom(steps as f32 * 0.5)
     }
 
+    /// Sends any request to the server.
+    pub fn send_request(&mut self, request: Request<G::GameRequest>) {
+        self.context.socket.send(request);
+    }
+
     /// Sends a command to the server to send a chat message.
     pub fn send_chat(&mut self, message: String, whisper: bool) {
-        self.context
-            .socket
-            .send(Request::Chat(ChatRequest::Send { message, whisper }));
+        self.send_request(Request::Chat(ChatRequest::Send { message, whisper }));
     }
 
     /// Sends a command to the server to create a new team.

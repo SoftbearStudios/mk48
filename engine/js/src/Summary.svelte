@@ -13,6 +13,7 @@
 <script>
     import Nav from './Nav.svelte';
     import {referrers} from './Referrers.svelte';
+    import {regions} from './Regions.svelte';
     import {userAgents} from './UserAgents.svelte';
     import {replace} from 'svelte-spa-router';
 
@@ -20,9 +21,24 @@
 </script>
 
 <Nav>
+    <select on:change={e => replace(`/summary/${e.target.value == "*" ? "*" : JSON.stringify({CohortId: parseInt(e.target.value)})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        <option>1</option>
+        <option>2</option>
+        <option>3</option>
+        <option>4</option>
+    </select>
+
     <select on:change={e => replace(`/summary/${e.target.value == "*" ? "*" : JSON.stringify({Referrer: e.target.value})}`)} value={'*'}>
         <option value={'*'}>Any</option>
         {#each $referrers as r}
+            <option value={r[0]}>{r[0]}</option>
+        {/each}
+    </select>
+
+    <select on:change={e => replace(`/day/${e.target.value == "*" ? "*" : JSON.stringify({RegionId: e.target.value})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        {#each $regions as r}
             <option value={r[0]}>{r[0]}</option>
         {/each}
     </select>
@@ -36,6 +52,12 @@
 </Nav>
 
 <main>
+    {#await adminRequest('RequestServerId')}
+    {:then data}
+        <h2>Server: {data.ServerIdRequested ? data.ServerIdRequested : 'localhost'}</h2>
+    {:catch err}
+    {/await}
+
     {#await adminRequest({'RequestSummary': {game_id: $game, filter: !params.filter || params.filter === '*' ? undefined : JSON.parse(params.filter)}})}
     {:then data}
         <table>

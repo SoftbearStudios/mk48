@@ -1,17 +1,18 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#![feature(derive_default_enum)]
 #![feature(drain_filter)]
 #![feature(must_not_suspend)]
 #![feature(hash_raw_entry)]
 #![feature(hash_drain_filter)]
 #![feature(array_zip)]
-#![feature(bool_to_option)]
 #![feature(label_break_value)]
 #![feature(mixed_integer_ops)]
 
+extern crate core;
+
 pub mod apply;
+#[cfg(feature = "audio")]
 pub mod audio;
 pub mod browser_storage;
 pub mod context;
@@ -29,6 +30,7 @@ pub mod reconn_web_socket;
 pub mod renderer;
 pub mod rgb;
 pub mod setting;
+pub mod visibility;
 pub mod web_socket;
 
 /// Log to javascript console. Use this instead of println!()

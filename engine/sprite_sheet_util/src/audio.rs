@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use lazy_static::lazy_static;
-use rayon::prelude::*;
 use sprite_sheet::{AudioSprite, AudioSpriteSheet};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
@@ -13,24 +11,26 @@ use std::iter;
 use std::process::{Command, Stdio};
 
 pub struct Sound {
-    name: &'static str,
+    pub name: &'static str,
     /// Source file relative to directory.
-    source: &'static str,
+    pub source: &'static str,
 
     // Author to credit.
-    author: Option<&'static str>,
+    pub author: Option<&'static str>,
     // Url to credit.
-    url: Option<&'static str>,
+    pub url: Option<&'static str>,
 
     /// Trim start seconds.
-    start: Option<f32>,
+    pub start: Option<f32>,
     /// Trim end seconds.
-    end: Option<f32>,
+    pub end: Option<f32>,
+    /// Whether the looping section starts.
+    pub loop_start: Option<f32>,
 
     /// Adjust volume (negative decreases, positive increases)
-    volume: f32,
+    pub volume: f32,
     /// Adjust pitch (negative decreases, positive increases)
-    pitch: f32,
+    pub pitch: f32,
 }
 
 impl Default for Sound {
@@ -42,6 +42,7 @@ impl Default for Sound {
             url: None,
             start: None,
             end: None,
+            loop_start: None,
             volume: 0.0,
             pitch: 0.0,
         }
@@ -69,9 +70,10 @@ impl PartialEq for Sound {
 impl Eq for Sound {}
 
 pub fn pack_audio_sprite_sheet(
-    sounds: impl Iterator<Item = Sound>,
+    sounds: impl IntoIterator<Item = Sound>,
     channels: usize,
     sample_rate: usize,
+    input_directory: &str,
     output_audio: &str,
     output_data: &str,
     output_manifest: &str,
@@ -99,8 +101,9 @@ pub fn pack_audio_sprite_sheet(
     writeln!(manifest).unwrap();
 
     let raws: BTreeMap<_, _> = sounds
+        .into_iter()
         .map(|sound| {
-            let path = format!("../assets/sounds/{}", sound.source);
+            let path = format!("{}/{}", input_directory, sound.source);
             let raw = read_raw_audio(&path, &sound, channels, sample_rate);
             (sound, raw)
         })
@@ -111,12 +114,15 @@ pub fn pack_audio_sprite_sheet(
         .map(|(sound, raw)| {
             const SIZEOF_FLOAT16: usize = 2;
 
+            let start = audio.len() as f32 / (channels * sample_rate * SIZEOF_FLOAT16) as f32;
+
             let sprite = AudioSprite {
-                start: audio.len() as f32 / (channels * sample_rate * SIZEOF_FLOAT16) as f32,
+                start,
+                loop_start: sound.loop_start.map(|ls| start + ls),
                 duration: raw.len() as f32 / (channels * sample_rate * SIZEOF_FLOAT16) as f32,
             };
 
-            audio.extend(raw.into_iter());
+            audio.extend(raw);
             // Gap of silence (half second).
             audio.extend(iter::repeat(0u8).take(channels * sample_rate * SIZEOF_FLOAT16 / 2));
 
@@ -161,8 +167,7 @@ fn read_raw_audio(src: &str, sound: &Sound, channels: usize, sample_rate: usize)
 
     let mut command = Command::new("ffmpeg");
 
-    command.arg("-i").arg(src).arg("-vn");
-
+    // Seek in input file.
     if let Some(start) = sound.start {
         command.arg("-ss").arg(format!("{}", start));
     }
@@ -171,23 +176,32 @@ fn read_raw_audio(src: &str, sound: &Sound, channels: usize, sample_rate: usize)
         command.arg("-to").arg(format!("{}", end));
     }
 
+    // Input file.
+    command.arg("-i").arg(src);
+
+    // No video.
+    command.arg("-vn");
+
+    // The following two args should be removed, but that would require
+    // adjusting pitch values.
+    command.arg("-ab").arg("128k");
+
+    // Output this many channels.
+    command.arg("-ac").arg(&format!("{}", channels));
+
+    // Change volume, tempo, etc.
+    command.arg("-af").arg(format!(
+        "volume={:.02},asetrate={},atempo={:.02},aresample={}",
+        volume_factor,
+        (sample_rate as f32 * pitch_factor) as usize,
+        1.0 / pitch_factor,
+        sample_rate,
+    ));
+
+    // Output 16 bit, little endian floats.
+    command.arg("-f").arg("s16le");
+
     let output = command
-        // The following two args should be removed, but that would require
-        // adjusting pitch values.
-        .arg("-ab")
-        .arg("128k")
-        .arg("-ac")
-        .arg(&format!("{}", channels))
-        .arg("-af")
-        .arg(format!(
-            "volume={:.02},asetrate={},atempo={:.02},aresample={}",
-            volume_factor,
-            (sample_rate as f32 * pitch_factor) as usize,
-            1.0 / pitch_factor,
-            sample_rate,
-        ))
-        .arg("-f")
-        .arg("s16le")
         .arg("pipe:")
         .stdout(Stdio::piped())
         .output()

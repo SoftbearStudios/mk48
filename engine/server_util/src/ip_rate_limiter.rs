@@ -16,7 +16,7 @@ pub struct IpRateLimiter {
 
 impl IpRateLimiter {
     /// Rate limit must be at least one millisecond.
-    /// Burst must be less than 255.
+    /// Burst must be less than the max value of the datatype.
     pub fn new(rate_limit: Duration, burst: Units) -> Self {
         Self::from(RateLimiterProps::new(rate_limit, burst))
     }

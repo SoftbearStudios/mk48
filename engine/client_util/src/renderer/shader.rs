@@ -248,7 +248,7 @@ impl<'a> ShaderBinding<'a> {
     }
 
     /// Sets a mat4 uniform.
-    pub fn uniform_matrix4f(&mut self, name: &'static str, m: &Mat4) {
+    pub fn uniform_matrix4f(&self, name: &'static str, m: &Mat4) {
         let r = self.shader.uniform(self.gl, name);
         let u = r[name].as_ref();
         self.gl

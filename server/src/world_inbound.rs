@@ -54,17 +54,16 @@ impl CommandTrait for Spawn {
 
         if !(player.is_bot() && rng.gen()) {
             // Default to spawning near the center of the world, with more points making you spawn further north.
-            let vertical_bias = map_ranges(
+            let raw_spawn_y = map_ranges(
                 score_to_level(player.score) as f32,
-                1.0..(EntityData::MAX_BOAT_LEVEL + 1) as f32,
-                -0.75..0.75,
+                1.5..(EntityData::MAX_BOAT_LEVEL - 1) as f32,
+                -0.75 * world.radius..ARCTIC.min(0.75 * world.radius),
                 true,
             );
-            debug_assert!((-1.0..=1.0).contains(&vertical_bias));
+            debug_assert!((-world.radius..=world.radius).contains(&raw_spawn_y));
 
             // Don't spawn in wrong area.
-            let spawn_y =
-                clamp_y_to_strict_area_border(self.entity_type, world.radius * vertical_bias);
+            let spawn_y = clamp_y_to_strict_area_border(self.entity_type, raw_spawn_y);
 
             if spawn_y.abs() > world.radius {
                 return Err("unable to spawn this type of boat");
@@ -74,11 +73,12 @@ impl CommandTrait for Spawn {
             let world_half_width_at_spawn_y = (world.radius.powi(2) - spawn_y.powi(2)).sqrt();
             debug_assert!(world_half_width_at_spawn_y <= world.radius);
 
-            // Randomize horizontal a bit.
+            // Randomize horizontal a bit. This value will end up in the range
+            // [-world_half_width_at_spawn_y / 2, world_half_width_at_spawn_y / 2].
             let spawn_x = (rng.gen::<f32>() - 0.5) * world_half_width_at_spawn_y;
 
             spawn_position = Vec2::new(spawn_x, spawn_y);
-            spawn_radius = 0.25 * world.radius;
+            spawn_radius = world.radius * (1.0 / 3.0);
         }
 
         debug_assert!(spawn_position.length() <= world.radius);
@@ -103,7 +103,7 @@ impl CommandTrait for Spawn {
             } => {
                 // Don't spawn too far away from where you died.
                 spawn_position = *position;
-                spawn_radius = (0.4 * world.radius).clamp(500.0, 3000.0);
+                spawn_radius = (0.4 * world.radius).clamp(1200.0, 3000.0).min(world.radius);
 
                 // Don't spawn right where you died either.
                 let exclusion_seconds =
@@ -139,7 +139,7 @@ impl CommandTrait for Spawn {
 
                     if let Some(exclusion_zone) = exclusion_zone {
                         if entity.transform.position.distance_squared(exclusion_zone)
-                            < 800f32.powi(2)
+                            < 1100f32.powi(2)
                         {
                             return false;
                         }
@@ -164,15 +164,17 @@ impl CommandTrait for Spawn {
 
         let mut boat = Entity::new(self.entity_type, Some(Arc::clone(player_tuple)));
         boat.transform.position = spawn_position;
-        #[cfg(debug_assertions)]
-        let begin = std::time::Instant::now();
+        //#[cfg(debug_assertions)]
+        //let begin = std::time::Instant::now();
         if world.spawn_here_or_nearby(boat, spawn_radius, exclusion_zone) {
+            /*
             #[cfg(debug_assertions)]
             println!(
                 "took {:?} to spawn a {:?}",
                 begin.elapsed(),
                 self.entity_type
             );
+             */
             Ok(())
         } else {
             Err("failed to find enough space to spawn")

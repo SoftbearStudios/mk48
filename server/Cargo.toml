@@ -54,6 +54,7 @@ env_logger = "0.9"
 lazy_static = "1"
 rustrict = {version = "0", features=["customize"], default-features=false}
 bitvec = "1.0.0"
+minicdn = "0.1"
 
 [dev-dependencies]
 image = { version = "0.24", features = [ "png" ], default-features=false }

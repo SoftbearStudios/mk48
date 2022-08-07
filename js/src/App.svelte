@@ -54,8 +54,8 @@
 			if (invitationId != null) {
 				params.invitation_id = invitationId;
 			}
-			if (storage.serverId && !isNaN(storage.serverId)) {
-				params.server_id = storage.serverId;
+			if (sessionStorage && sessionStorage.serverId && !isNaN(sessionStorage.serverId)) {
+				params.server_id = sessionStorage.serverId;
 			}
 			const response = await fetch(`/system/?${new URLSearchParams(params).toString()}`);
 			const url = new URL(response.url);
@@ -82,6 +82,7 @@
 	import LevelsDialog from './dialog/LevelsDialog.svelte';
 	import PrivacyDialog from './dialog/PrivacyDialog.svelte';
 	import ProgressSpinner from './overlay/ProgressSpinner.svelte';
+	import LanguageMenu from './component/LanguageMenu.svelte';
 	import XButton from './component/XButton.svelte';
 	import RespawnMenu from './overlay/RespawnMenu.svelte';
 	import Router from 'svelte-spa-router';
@@ -353,6 +354,9 @@
 	<WarningPanel message={$t('panel.splash.connectionLost')} />
 {:else if $state.status == 'spawning'}
 	<SpawnOverlay {onSpawn} />
+	<div id="language_picker">
+		<LanguageMenu state={$state}/>
+	</div>
 	<HelpLinks {onCopyInvitationLink}/>
 {:else if $state.status.playing}
 	<Chat bind:this={chatRef} state={$state} {onMutePlayer} {onReportAbuse} {onSendChat}/>
@@ -375,6 +379,7 @@
 {:else if $state.status.respawning}
 	<XButton on:click={() => client && client.event('OverrideRespawn')}/>
 	<RespawnMenu respawnLevel={$state.status.respawning.respawnLevel} state={$state} {onSpawn}/>
+	<Sidebar onZoom={client.zoom} {onCopyInvitationLink}/>
 	<HelpLinks {onCopyInvitationLink}/>
 {:else}
 	<WarningPanel message="Invalid state {JSON.stringify($state)}"/>
@@ -421,6 +426,12 @@
 		position: absolute;
 		width: 100%;
 		height: 100%;
+	}
+
+	#language_picker {
+		position: absolute;
+		top: 0.5rem;
+		right: 0.5rem;
 	}
 
 	div.bar {

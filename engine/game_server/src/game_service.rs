@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::context::Context;
-use crate::player::PlayerTuple;
-use common_util::ticks::Ticks;
+use crate::player::{PlayerRepo, PlayerTuple};
 use core_protocol::id::{GameId, PlayerId, TeamId};
 use core_protocol::name::PlayerAlias;
 use serde::de::DeserializeOwned;
@@ -16,6 +15,8 @@ use std::time::Duration;
 /// A modular game service (representing one arena).
 pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     const GAME_ID: GameId;
+    /// The length of a tick in seconds.
+    const TICK_PERIOD_SECS: f32;
     /// How long a player can remain in limbo after they lose connection.
     const LIMBO: Duration = Duration::from_secs(6);
     /// Start player score at this.
@@ -28,9 +29,6 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     const LIVEBOARD_BOTS: bool = false;
     /// Leaderboard won't be touched if player count is below.
     const LEADERBOARD_MIN_PLAYERS: usize = 10;
-    /// Maximum number of players in a team before no more can be accepted.
-    /// Set to zero to disable teams.
-    const TEAM_MEMBERS_MAX: usize = 6;
     /// Maximum number of players trying to join a team at once.
     const TEAM_JOINERS_MAX: usize = 6;
     /// Maximum number of teams a player may try to join at once, before old requests are cancelled.
@@ -55,26 +53,43 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
         PlayerAlias::new_unsanitized("Guest")
     }
 
+    /// Returning zero would disable teams.
+    fn team_members_max(_players_online: usize) -> usize {
+        6
+    }
+
     /// Called when a player joins the game.
-    fn player_joined(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
+    fn player_joined(
+        &mut self,
+        player_tuple: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Self>,
+    ) {
+        let _ = player_tuple;
+    }
 
     /// Called when a player issues a command.
     fn player_command(
         &mut self,
         command: Self::GameRequest,
         player_tuple: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Self>,
     ) -> Option<Self::GameUpdate>;
 
     /// Called when a player's [`TeamId`] changes.
     fn player_changed_team(
         &mut self,
-        _player_tuple: &Arc<PlayerTuple<Self>>,
-        _old_team: Option<TeamId>,
+        player_tuple: &Arc<PlayerTuple<Self>>,
+        old_team: Option<TeamId>,
+        _players: &PlayerRepo<Self>,
     ) {
+        let _ = player_tuple;
+        let _ = old_team;
     }
 
     /// Called when a player leaves the game. Responsible for clearing player data as necessary.
-    fn player_left(&mut self, _player_tuple: &Arc<PlayerTuple<Self>>) {}
+    fn player_left(&mut self, player_tuple: &Arc<PlayerTuple<Self>>, _players: &PlayerRepo<Self>) {
+        let _ = player_tuple;
+    }
 
     /// Gets a client a.k.a. real player's [`GameUpdate`].
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
@@ -82,21 +97,30 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
     /// Expected, but not necessarily required, to be idempotent.
     fn get_game_update(
         &self,
-        counter: Ticks,
         player_tuple: &Arc<PlayerTuple<Self>>,
         client_data: &mut Self::ClientData,
+        _players: &PlayerRepo<Self>,
     ) -> Option<Self::GameUpdate>;
 
     /// Returns true iff the player is considered to be "alive" i.e. they cannot change their alias.
     fn is_alive(&self, player_tuple: &Arc<PlayerTuple<Self>>) -> bool;
     /// Before sending.
-    fn tick(&mut self, context: &Context<Self>);
+    fn tick(&mut self, context: &mut Context<Self>);
     /// After sending.
-    fn post_update(&mut self, _context: &Context<Self>) {}
+    fn post_update(&mut self, context: &mut Context<Self>) {
+        let _ = context;
+    }
 }
 
 /// Implemented by game bots.
 pub trait Bot<G: GameArenaService>: Default + Unpin + Sized + Send {
+    /// See bot.rs for explanation.
+    const DEFAULT_MIN_BOTS: usize = 30;
+    /// See bot.rs for explanation.
+    const DEFAULT_MAX_BOTS: usize = usize::MAX;
+    /// See bot.rs for explanation.
+    const DEFAULT_BOT_PERCENT: usize = 80;
+
     type Input<'a>
     where
         G: 'a;
@@ -104,8 +128,8 @@ pub trait Bot<G: GameArenaService>: Default + Unpin + Sized + Send {
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
     fn get_input<'a>(
         game: &'a G,
-        counter: Ticks,
         player_tuple: &'a Arc<PlayerTuple<G>>,
+        _players: &'a PlayerRepo<G>,
     ) -> Self::Input<'a>;
 
     /// None indicates quitting.
@@ -113,7 +137,21 @@ pub trait Bot<G: GameArenaService>: Default + Unpin + Sized + Send {
         &mut self,
         update: Self::Input<'a>,
         player_id: PlayerId,
-    ) -> Option<G::GameRequest>;
+        _players: &'a PlayerRepo<G>,
+    ) -> BotAction<G::GameRequest>;
+}
+
+#[derive(Debug)]
+pub enum BotAction<GR> {
+    Some(GR),
+    None,
+    Quit,
+}
+
+impl<GR> Default for BotAction<GR> {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 // What follows is testing related code.
@@ -140,8 +178,8 @@ impl Bot<MockGame> for MockGameBot {
         &mut self,
         _update: <MockGame as GameArenaService>::BotUpdate<'_>,
         _player_id: PlayerId,
-    ) -> Option<<MockGame as GameArenaService>::GameRequest> {
-        Some(())
+    ) -> BotAction<<MockGame as GameArenaService>::GameRequest> {
+        BotAction::None
     }
 }
 

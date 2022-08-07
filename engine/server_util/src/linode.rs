@@ -9,6 +9,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::str::FromStr;
 use std::time::Duration;
 
 pub struct Linode {
@@ -28,7 +29,7 @@ impl Linode {
         );
         default_headers.insert(
             reqwest::header::USER_AGENT,
-            HeaderValue::from_str("mk48.io server").unwrap(),
+            HeaderValue::from_str("softbear game server").unwrap(),
         );
 
         Self {
@@ -140,10 +141,16 @@ impl Cloud for Linode {
         // May be more capacity than required, but always enough.
         let mut ret = HashMap::with_capacity(list.data.len());
 
-        for record in list.data {
+        for record in list
+            .data
+            .into_iter()
+            .filter(|record| record.record.typ == LinodeDomainRecordType::A)
+        {
+            let ip = IpAddr::from_str(&record.record.target)
+                .map_err(|_| "could not parse ip of A record")?;
             ret.entry(record.record.name)
                 .or_insert_with(|| Vec::with_capacity(1))
-                .push(record.record.target);
+                .push(ip);
         }
 
         Ok(ret)
@@ -157,7 +164,11 @@ impl Cloud for Linode {
     ) -> Result<(), &'static str> {
         let domain_id = self.get_domain_id(domain).await?;
 
-        let list: LinodeListDomainRecordsResponse = self.list_domains_records(domain_id).await?;
+        let mut list: LinodeListDomainRecordsResponse =
+            self.list_domains_records(domain_id).await?;
+
+        list.data
+            .retain(|record| record.record.typ == LinodeDomainRecordType::A);
 
         let mut old = list.data.iter().filter(|r| r.record.name == sub_domain);
 
@@ -165,13 +176,15 @@ impl Cloud for Linode {
             DnsUpdate::Set(ip) => {
                 let mut new = Some(|| LinodeDomainRecord {
                     name: sub_domain.to_owned(),
-                    target: ip,
+                    target: ip.to_string(),
                     ttl_sec: Self::TTL,
                     typ: LinodeDomainRecordType::A,
                 });
 
                 for record in old {
-                    if record.record.target == ip {
+                    let record_ip = IpAddr::from_str(&record.record.target)
+                        .map_err(|_| "could not parse IP address of A record")?;
+                    if record_ip == ip {
                         new = None;
                     } else if let Some(new) = new.take() {
                         self.update_domain_record(domain_id, record.id, new())
@@ -186,10 +199,14 @@ impl Cloud for Linode {
                 }
             }
             DnsUpdate::Add(ip) => {
-                if !old.any(|r| r.record.target == ip) {
+                if !old.any(|r| {
+                    IpAddr::from_str(&r.record.target)
+                        .map(|record_ip| record_ip == ip)
+                        .unwrap_or(false)
+                }) {
                     let new = LinodeDomainRecord {
                         name: sub_domain.to_owned(),
-                        target: ip,
+                        target: ip.to_string(),
                         ttl_sec: Self::TTL,
                         typ: LinodeDomainRecordType::A,
                     };
@@ -199,7 +216,10 @@ impl Cloud for Linode {
             }
             DnsUpdate::Remove(ip) => {
                 for record in old {
-                    if record.record.target == ip {
+                    if IpAddr::from_str(&record.record.target)
+                        .map_err(|_| "could not parse A record ip")?
+                        == ip
+                    {
                         self.delete_domain_record(domain_id, record.id).await?;
                     }
                 }
@@ -234,7 +254,7 @@ struct LinodeListDomainRecordsResponse {
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 struct LinodeDomainRecord {
     name: String,
-    target: IpAddr,
+    target: String,
     ttl_sec: usize,
     #[serde(rename = "type")]
     typ: LinodeDomainRecordType,

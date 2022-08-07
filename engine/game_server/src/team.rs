@@ -54,8 +54,8 @@ impl<G: GameArenaService> TeamData<G> {
     }
 
     /// Returns if the team has the maximum possible amount of members.
-    pub fn is_full(&self) -> bool {
-        self.members.len() >= G::TEAM_MEMBERS_MAX
+    pub fn is_full(&self, players_online: usize) -> bool {
+        self.members.len() >= G::team_members_max(players_online)
     }
 
     /// Returns if the team has the maximum possible amount of joiners a.k.a. requests.
@@ -197,7 +197,7 @@ impl<G: GameArenaService> TeamRepo<G> {
         if !team.is_captain(req_player_id) {
             return Err("not captain");
         }
-        if accept && team.is_full() {
+        if accept && team.is_full(players.real_players_live) {
             return Err("team full");
         }
         if !team.joiners.remove(joiner_player_id) {
@@ -218,7 +218,10 @@ impl<G: GameArenaService> TeamRepo<G> {
             // into the team.
             team.members.insert_back(joiner_player_id);
 
-            debug_assert!(team.members.len() <= G::TEAM_MEMBERS_MAX, "team overfull");
+            debug_assert!(
+                team.members.len() <= G::team_members_max(players.real_players_live),
+                "team overfull"
+            );
 
             self.assign_team_and_cancel_joins(joiner_player, team_id);
 
@@ -308,8 +311,8 @@ impl<G: GameArenaService> TeamRepo<G> {
         team_name: TeamName,
         players: &mut PlayerRepo<G>,
     ) -> Result<TeamUpdate, &'static str> {
-        if G::TEAM_MEMBERS_MAX == 0 {
-            return Err("teams are disabled");
+        if G::team_members_max(players.real_players_live) == 0 {
+            return Err("teams are currently disabled");
         }
 
         let req_player = players
@@ -529,21 +532,24 @@ impl<G: GameArenaService> TeamRepo<G> {
     }
 
     /// Computes current set of team dtos.
-    fn compute_team_dtos(&self) -> Vec<TeamDto> {
+    fn compute_team_dtos(&self, players: &PlayerRepo<G>) -> Vec<TeamDto> {
         self.teams
             .iter()
             .map(|(&team_id, team_data)| TeamDto {
                 team_id,
                 name: team_data.name,
-                full: team_data.is_full(),
+                full: team_data.is_full(players.real_players_live),
                 closed: team_data.is_closed(),
             })
             .collect()
     }
 
     /// Computes a diff, and updates cached dtos.
-    pub(crate) fn delta(&mut self) -> Option<(Arc<[TeamDto]>, Arc<[TeamId]>)> {
-        let current_players = self.compute_team_dtos();
+    pub(crate) fn delta(
+        &mut self,
+        players: &PlayerRepo<G>,
+    ) -> Option<(Arc<[TeamDto]>, Arc<[TeamId]>)> {
+        let current_players = self.compute_team_dtos(players);
 
         if let Some((added, removed)) =
             diff_small_n(&self.previous, &current_players, |dto| dto.team_id)

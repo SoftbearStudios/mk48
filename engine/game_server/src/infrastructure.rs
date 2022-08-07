@@ -4,6 +4,7 @@
 use crate::admin::AdminRepo;
 use crate::client::ClientRepo;
 use crate::context_service::ContextService;
+use crate::discord::{DiscordBotRepo, DiscordOauth2Repo};
 use crate::game_service::GameArenaService;
 use crate::invitation::InvitationRepo;
 use crate::leaderboard::LeaderboardRepo;
@@ -12,15 +13,15 @@ use crate::status::StatusRepo;
 use crate::system::SystemRepo;
 use actix::AsyncContext;
 use actix::{Actor, Context as ActorContext};
-use common_util::ticks::Ticks;
 use core_protocol::id::{ArenaId, RegionId, ServerId};
 use log::{error, info};
-use server_util::benchmark::{benchmark_scope, Timer};
+use minicdn::MiniCdn;
 use server_util::database::Database;
 use server_util::rate_limiter::RateLimiterProps;
 use std::num::NonZeroU32;
 use std::process;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 /// An entire game server.
@@ -32,6 +33,8 @@ pub struct Infrastructure<G: GameArenaService> {
     /// API.
     pub(crate) database: &'static Database,
     pub(crate) system: Option<SystemRepo<G>>,
+    pub(crate) discord_bot: Option<&'static DiscordBotRepo>,
+    pub(crate) discord_oauth2: Option<&'static DiscordOauth2Repo>,
 
     /// Game specific stuff. In the future, there could be multiple of these.
     pub(crate) context_service: ContextService<G>,
@@ -61,7 +64,7 @@ impl<G: GameArenaService> Actor for Infrastructure<G> {
         // TODO: Investigate whether this only affects performance or can affect correctness.
         ctx.set_mailbox_capacity(50);
 
-        ctx.run_interval(Ticks::ONE.to_duration(), Self::update);
+        ctx.run_interval(Duration::from_secs_f32(G::TICK_PERIOD_SECS), Self::update);
     }
 
     fn stopped(&mut self, _ctx: &mut Self::Context) {
@@ -77,12 +80,17 @@ impl<G: GameArenaService> Infrastructure<G> {
     pub async fn new(
         server_id: Option<ServerId>,
         system: Option<SystemRepo<G>>,
+        discord_bot: Option<DiscordBotRepo>,
+        discord_oauth2: Option<&'static DiscordOauth2Repo>,
         client_hash: u64,
         region_id: Option<RegionId>,
         database_read_only: bool,
-        min_players: usize,
+        min_bots: Option<usize>,
+        max_bots: Option<usize>,
+        bot_percent: Option<usize>,
         chat_log: Option<String>,
         trace_log: Option<String>,
+        game_client: Arc<RwLock<MiniCdn>>,
         allow_web_socket_json: &'static AtomicBool,
         client_authenticate: RateLimiterProps,
     ) -> Self {
@@ -94,14 +102,18 @@ impl<G: GameArenaService> Infrastructure<G> {
         Self {
             server_id,
             region_id,
-            /// Leak the box, because static lifetime facilitates async code. This will probably
+            /// Leak the boxes, because static lifetime facilitates async code. This will probably
             /// only ever happen once, and it will last for the lifetime of the program.
             database: Box::leak(Box::new(Database::new(database_read_only).await)),
             system,
-            admin: AdminRepo::new(allow_web_socket_json),
+            discord_bot: discord_bot.map(|b| &*Box::leak(Box::new(b))),
+            discord_oauth2,
+            admin: AdminRepo::new(game_client, allow_web_socket_json),
             context_service: ContextService::new(
                 arena_id,
-                min_players,
+                min_bots,
+                max_bots,
+                bot_percent,
                 chat_log,
                 trace_log,
                 client_authenticate,
@@ -117,14 +129,12 @@ impl<G: GameArenaService> Infrastructure<G> {
     /// Call once every tick.
     pub fn update(&mut self, ctx: &mut <Infrastructure<G> as Actor>::Context) {
         let now = Instant::now();
-        if now.duration_since(self.last_update) < Duration::from_secs_f32(Ticks::PERIOD_SECS * 0.5)
+        if now.duration_since(self.last_update) < Duration::from_secs_f32(G::TICK_PERIOD_SECS * 0.5)
         {
             // Less than half a tick elapsed. Drop this update on the floor, to avoid jerking.
             return;
         }
         self.last_update = now;
-
-        benchmark_scope!("infrastructure_update");
 
         let status = &self.status;
         let server_delta = self.system.as_mut().and_then(|system| system.delta(status));
@@ -136,7 +146,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             server_delta,
         );
         self.leaderboard.clear_deltas();
-        self.status.health.record_tick();
+        self.status.health.record_tick(G::TICK_PERIOD_SECS);
 
         // These are all rate-limited internally.
         LeaderboardRepo::update_to_database(self, ctx);

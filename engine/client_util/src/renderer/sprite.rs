@@ -10,7 +10,6 @@ use crate::renderer::vertex::PosUvAlpha;
 use common_util::angle::Angle;
 use glam::{Mat3, Vec2};
 use sprite_sheet::UvSpriteSheet;
-use std::array;
 use web_sys::WebGlRenderingContext as Gl;
 
 /// Renders sprites from a spritesheet.
@@ -79,17 +78,15 @@ impl SpriteLayer {
             Vec2::new(0.5, -0.5),
         ];
 
-        self.mesh
-            .vertices
-            .extend(
-                array::IntoIter::new(positions)
-                    .zip(sprite.uvs.iter())
-                    .map(|(pos, &uv)| PosUvAlpha {
-                        pos: matrix.transform_point2(pos),
-                        uv,
-                        alpha,
-                    }),
-            );
+        self.mesh.vertices.extend(
+            IntoIterator::into_iter(positions)
+                .zip(sprite.uvs.iter())
+                .map(|(pos, &uv)| PosUvAlpha {
+                    pos: matrix.transform_point2(pos),
+                    uv,
+                    alpha,
+                }),
+        );
     }
 }
 

@@ -2,17 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::renderer::buffer::{RenderBuffer, RenderBufferBinding};
+use crate::renderer::camera::Camera;
+use crate::renderer::index::Index;
 use crate::renderer::shader::{Shader, ShaderBinding};
 use crate::renderer::texture::{Texture, TextureBinding, TextureFormat};
 use crate::renderer::vertex::{PosUv, Vertex};
-use glam::{uvec2, UVec2, Vec2, Vec4};
+pub use engine_macros::Layer;
+use glam::{uvec2, IVec2, UVec2, Vec2, Vec4};
 use serde::Serialize;
 use std::cell::Cell;
 use std::mem;
 use wasm_bindgen::JsCast;
 use web_sys::{
-    HtmlCanvasElement, OesElementIndexUint, OesStandardDerivatives, OesVertexArrayObject,
-    WebGlRenderingContext as Gl,
+    AngleInstancedArrays, HtmlCanvasElement, OesElementIndexUint, OesStandardDerivatives,
+    OesVertexArrayObject, WebGlRenderingContext as Gl,
 };
 
 /// For compiling shaders in parallel.
@@ -35,9 +38,29 @@ pub trait Layer {
     fn render(&mut self, renderer: &Renderer);
 }
 
-use crate::renderer::camera::Camera;
-use crate::renderer::index::Index;
-pub use engine_macros::Layer;
+pub trait LayerWrapper {
+    type Inner: Layer;
+
+    fn inner(&mut self) -> &mut Self::Inner;
+}
+
+impl<L, T> Layer for T
+where
+    L: Layer,
+    T: LayerWrapper<Inner = L>,
+{
+    fn pre_prepare(&mut self, r: &Renderer) {
+        self.inner().pre_render(r)
+    }
+
+    fn pre_render(&mut self, r: &Renderer) {
+        self.inner().pre_render(r)
+    }
+
+    fn render(&mut self, r: &Renderer) {
+        self.inner().render(r)
+    }
+}
 
 /// A general WebGL renderer, focused on 2d for now.
 pub struct Renderer {
@@ -47,6 +70,7 @@ pub struct Renderer {
     /// WebGL context.
     pub(crate) gl: Gl,
     /// WebGL extensions.
+    pub(crate) aia: Option<AngleInstancedArrays>,
     pub(crate) khr: Option<KhrParallelShaderCompile>,
     pub(crate) oes_vao: OesVertexArrayObject,
     /// Camera information.
@@ -117,6 +141,7 @@ impl Renderer {
             canvas,
             cached_canvas_size: Cell::new(None),
             gl,
+            aia: None,
             khr,
             oes_vao,
             camera: Camera::new(false),
@@ -147,6 +172,18 @@ impl Renderer {
             .get_shader_precision_format(Gl::FRAGMENT_SHADER, Gl::MEDIUM_FLOAT)
             .unwrap();
         precison.precision() < 23
+    }
+
+    /// Call early on if using instancing.
+    pub fn enable_angle_instanced_arrays(&mut self) {
+        let angle = self
+            .gl
+            .get_extension("ANGLE_instanced_arrays")
+            .unwrap()
+            .unwrap()
+            .unchecked_into::<AngleInstancedArrays>();
+
+        self.aia = Some(angle);
     }
 
     /// Call early on if any custom shaders need OES standard derivatives.
@@ -235,6 +272,16 @@ impl Renderer {
         let viewport = self.canvas_size();
         self.camera.update(center, zoom, viewport);
         self.aligned_camera.update(center, zoom, viewport);
+    }
+
+    /// Convert a position in world space to view space (-1..1).
+    pub fn to_view_position(&self, world_position: Vec2) -> Vec2 {
+        self.camera.view_matrix.transform_point2(world_position)
+    }
+
+    pub fn to_client_position(&self, world_position: Vec2) -> IVec2 {
+        let zero_to_one = (self.to_view_position(world_position) + 1.0) * 0.5;
+        (zero_to_one * self.camera.viewport.as_vec2()).as_ivec2()
     }
 
     /// Convert a position in view space (-1..1) to world space.

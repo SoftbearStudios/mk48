@@ -36,6 +36,12 @@ new4: target/release/server
 	scp $(SCP_OPTS) target/release/server root@194.195.115.239:/root/server1
 	ssh $(SSH_OPTS) root@194.195.115.239 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
+client1:
+	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../js/public --url https://1.mk48.io/admin
+
+client4:
+	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../js/public --url https://4.mk48.io/admin
+
 ssh2:
 	ssh $(SSH_OPTS) root@96.126.107.185
 

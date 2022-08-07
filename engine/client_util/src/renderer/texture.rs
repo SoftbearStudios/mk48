@@ -234,6 +234,7 @@ impl Texture {
     }
 
     /// Loads an RBGA texture from a URL.
+    /// TODO load dimensions with callback from image.
     pub(crate) fn load(
         gl: &Gl,
         img_src: &str,
@@ -294,8 +295,56 @@ impl Texture {
 
                 gl.pixel_storei(Gl::UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
-                if gl
-                    .tex_image_2d_with_u32_and_u32_and_image(
+                let dimensions = UVec2::new(img2.width(), img2.height());
+
+                // Polyfill: clamp to max texture size to avoid errors.
+                let max_dimensions = UVec2::splat(
+                    gl.get_parameter(Gl::MAX_TEXTURE_SIZE)
+                        .map(|v: JsValue| v.as_f64().unwrap_or_default() as u32)
+                        .unwrap_or(0)
+                        .max(2048),
+                ); // 2048 is minimum size supported by all browsers.
+                let old_dim = dimensions;
+                let dimensions = dimensions.min(max_dimensions);
+
+                // Resize with canvas if needed.
+                if dimensions != old_dim {
+                    let document = web_sys::window().unwrap().document().unwrap();
+                    let canvas = document.create_element("canvas").unwrap();
+                    let canvas: web_sys::HtmlCanvasElement = canvas
+                        .dyn_into::<web_sys::HtmlCanvasElement>()
+                        .map_err(|_| ())
+                        .unwrap();
+                    canvas.set_width(dimensions.x);
+                    canvas.set_height(dimensions.y);
+
+                    let context = canvas
+                        .get_context("2d")
+                        .unwrap()
+                        .unwrap()
+                        .dyn_into::<CanvasRenderingContext2d>()
+                        .unwrap();
+                    context
+                        .draw_image_with_html_image_element_and_dw_and_dh(
+                            &img2,
+                            0.0,
+                            0.0,
+                            dimensions.x as f64,
+                            dimensions.y as f64,
+                        )
+                        .expect("failed to resize image");
+
+                    gl.tex_image_2d_with_u32_and_u32_and_canvas(
+                        Gl::TEXTURE_2D,
+                        level,
+                        internal_format as i32,
+                        src_format,
+                        src_type,
+                        &canvas,
+                    )
+                    .expect("failed to load resized image");
+                } else {
+                    gl.tex_image_2d_with_u32_and_u32_and_image(
                         Gl::TEXTURE_2D,
                         level,
                         internal_format as i32,
@@ -303,12 +352,10 @@ impl Texture {
                         src_type,
                         &img2,
                     )
-                    .is_err()
-                {
-                    panic!("failed to load image");
+                    .expect("failed to load image");
                 }
 
-                let is_pow2 = img2.width().is_power_of_two() && img2.height().is_power_of_two();
+                let is_pow2 = dimensions.x.is_power_of_two() && dimensions.y.is_power_of_two();
                 if is_pow2 {
                     gl.generate_mipmap(Gl::TEXTURE_2D);
                     gl.tex_parameteri(

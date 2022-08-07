@@ -8,6 +8,7 @@ use std::sync::Arc;
 /// level_to_score converts a boat level to a score required to upgrade to it.
 pub const fn level_to_score(level: u8) -> u32 {
     // For reference, https://www.desmos.com/calculator/8cwxdws7fp
+    // Must match JS.
     ((level as u32).pow(2) + 2u32.pow(level.saturating_sub(3) as u32) - 2) * 10
 }
 
@@ -52,7 +53,7 @@ pub(crate) fn lose_n_levels(score: u32, n: u8) -> u32 {
     }
 }
 
-/// respawn_score returns how much score is kept when a boat dies.
+/// respawn_score returns how much score is kept when a boat owned by a real player dies.
 pub fn respawn_score(score: u32) -> u32 {
     /*
     let levels_to_lose = match score_to_level(score) {

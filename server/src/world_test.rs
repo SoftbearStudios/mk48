@@ -6,7 +6,7 @@ use common::entity::EntityKind;
 use common::world::ARCTIC;
 use glam::Vec2;
 use image::{Rgba, RgbaImage};
-use imageproc::drawing::draw_polygon_mut;
+use imageproc::drawing::{draw_polygon_mut, Blend};
 use imageproc::point::Point;
 use maybe_parallel_iterator::IntoMaybeParallelIterator;
 use std::sync::Mutex;
@@ -42,7 +42,7 @@ impl World {
             }
         }
 
-        let canvas = Mutex::new(canvas);
+        let canvas = Mutex::new(Blend(canvas));
 
         // Entities.
         self.entities
@@ -51,44 +51,40 @@ impl World {
             .for_each(|(_, entity): (EntityIndex, &Entity)| {
                 let position = entity.transform.position;
                 let normal = entity.transform.direction.to_vec();
-                let half_length = normal * entity.data().length;
-                let half_width = normal.perp() * entity.data().width;
 
-                let corners = [
-                    position + half_length * 0.5 + half_width * 0.5,
-                    position - half_length * 0.5 + half_width * 0.5,
-                    position - half_length * 0.5 - half_width * 0.5,
-                    position + half_length * 0.5 - half_width * 0.5,
-                ];
+                let draw_rect = |margin: f32, color: Rgba<u8>| {
+                    let half_length = normal * (entity.data().length + margin);
+                    let half_width = normal.perp() * (entity.data().width + margin);
 
-                let mut corner_pixels = corners.map(|pos| {
-                    // -1 to 1 valid
-                    let scaled = (pos - center) / radius;
-                    let pixel = ((scaled + 1.0) * resolution as f32 * 0.5).as_ivec2();
-                    Point::new(pixel.x, resolution as i32 - pixel.y - 1)
-                });
+                    let corners = [
+                        position + half_length * 0.5 + half_width * 0.5,
+                        position - half_length * 0.5 + half_width * 0.5,
+                        position - half_length * 0.5 - half_width * 0.5,
+                        position + half_length * 0.5 - half_width * 0.5,
+                    ];
 
-                if corner_pixels[0] == corner_pixels[3] {
-                    // Don't panic draw_polygon_mut!
-                    corner_pixels[0].x -= 1;
+                    let mut corner_pixels = corners.map(|pos| {
+                        // -1 to 1 valid
+                        let scaled = (pos - center) / radius;
+                        let pixel = ((scaled + 1.0) * resolution as f32 * 0.5).as_ivec2();
+                        Point::new(pixel.x, resolution as i32 - pixel.y - 1)
+                    });
+
+                    if corner_pixels[0] == corner_pixels[3] {
+                        // Don't panic draw_polygon_mut!
+                        corner_pixels[0].x -= 1;
+                    }
+
+                    draw_polygon_mut(&mut *canvas.lock().unwrap(), &corner_pixels, color);
+                };
+
+                draw_rect(0.0, Rgba::from([255, 255, 255, 255]));
+                if entity.data().kind == EntityKind::Boat {
+                    draw_rect(100.0, Rgba::from([255, 255, 255, 128]));
                 }
-
-                #[allow(unused)]
-                let color =
-                    if entity.data().kind == EntityKind::Boat && !entity.borrow_player().is_bot() {
-                        [255, 128, 128, 255]
-                    } else {
-                        [128, 255, 128, 255]
-                    };
-
-                draw_polygon_mut(
-                    &mut *canvas.lock().unwrap(),
-                    &corner_pixels,
-                    Rgba::from([255, 255, 255, 255]),
-                );
             });
 
-        canvas.into_inner().unwrap()
+        canvas.into_inner().unwrap().0
     }
 }
 
@@ -99,8 +95,8 @@ mod tests {
     use crate::Server;
     use common::entity::{EntityData, EntityType};
     use common::protocol::{Command, Spawn};
+    use common::ticks::Ticks;
     use common::util::level_to_score;
-    use common_util::ticks::Ticks;
     use core_protocol::id::PlayerId;
     use game_server::player::{PlayerData, PlayerTuple};
     use glam::Vec2;
@@ -112,11 +108,11 @@ mod tests {
     #[test]
     fn test_render() {
         test_render_with(0, 256);
-        test_render_with(10, 512);
+        test_render_with(10, 1024);
         test_render_with(50, 1024);
         test_render_with(100, 2048);
-        test_render_with(200, 2048);
-        test_render_with(500, 2048);
+        test_render_with(200, 4096);
+        test_render_with(500, 4096);
     }
 
     fn test_render_with(player_count: usize, resolution: u32) {

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entities::EntityIndex;
-use crate::entity::Entity;
 use crate::player::{Flags, Status};
 use crate::world::World;
-use crate::world_mutation::Mutation;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
@@ -21,8 +19,6 @@ use common_util::range::map_ranges;
 use glam::Vec2;
 use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
 use rand::Rng;
-use server_util::benchmark::Timer;
-use server_util::benchmark_scope;
 use std::sync::{Arc, Mutex};
 
 /// Fate terminates the physics for a particular entity with a single fate.
@@ -37,35 +33,15 @@ impl World {
     /// on the number of boats). This is currently the only safe location for entity positions to change, due
     /// to the implementation of `Entities`.
     pub fn physics(&mut self, delta: Ticks) {
-        benchmark_scope!("physics");
-
         let delta_seconds = delta.to_secs();
         let border_radius = self.radius; // Avoids double borrow.
         let border_radius_squared = self.radius.powi(2);
         let terrain = &self.terrain;
 
         // Collected updates (order doesn't matter).
-        let limited_reloads = Mutex::new(Vec::new()); // Of form (player_entity_index, limited_entity_type).
-                                                      // Of form (mutation, entity index to award points to).
         let terrain_mutations = Mutex::new(Vec::new());
         let barrel_spawns = Mutex::new(Vec::new());
         let reset_flags = Mutex::new(Vec::new());
-
-        // Call when any entity that is potentially a weapon is removed, to make sure it is reloaded
-        // if it is a limited armament. No need to call if the player is definitely not alive.
-        let potential_limited_reload = |potentially_limited_entity: &Entity| {
-            if !potentially_limited_entity.data().limited {
-                // Not actually limited.
-                return;
-            }
-            let player = potentially_limited_entity.borrow_player();
-            if let Status::Alive { entity_index, .. } = player.data.status {
-                limited_reloads
-                    .lock()
-                    .unwrap()
-                    .push((entity_index, potentially_limited_entity.entity_type));
-            }
-        };
 
         let mut fates: Vec<_> = self
             .entities
@@ -88,7 +64,6 @@ impl World {
                                 Some((index, Fate::DowngradeHq))
                             }
                         } else {
-                            potential_limited_reload(entity);
                             Some((index, Fate::Remove(DeathReason::Unknown)))
                         };
                     }
@@ -96,14 +71,13 @@ impl World {
 
                 if entity.player.is_some() {
                     let player = entity.borrow_player();
-                    if (data.limited && !player.data.status.is_alive())
+
+                    // Remove limited entities if player upgrades or is dead.
+                    // Remove all of player's entities when player leaves.
+                    if (data.limited
+                        && (player.data.flags.upgraded || !player.data.status.is_alive()))
                         || player.data.flags.left_game
                     {
-                        // Remove limited entities when player is dead.
-                        // Remove all oof player's entities when the player leaves.
-                        return Some((index, Fate::Remove(DeathReason::Unknown)));
-                    } else if data.limited && player.data.flags.upgraded {
-                        // Delete limited armaments on upgrade to avoid accumulating too many.
                         return Some((index, Fate::Remove(DeathReason::Unknown)));
                     }
                 }
@@ -183,8 +157,6 @@ impl World {
                                 EntitySubKind::Mine => {
                                     // Delete mines when leaving populated team.
                                     if entity.borrow_player().data.flags.left_populated_team {
-                                        // Current mines aren't limited but they could be in the future.
-                                        potential_limited_reload(entity);
                                         return Some((index, Fate::Remove(DeathReason::Unknown)));
                                     }
                                 }
@@ -237,7 +209,6 @@ impl World {
                 if let Some(collision) = collision {
                     // All non-boats die instantly to terrain.
                     if data.kind != EntityKind::Boat {
-                        potential_limited_reload(entity);
                         return Some((index, Fate::Remove(DeathReason::Terrain)));
                     }
 
@@ -356,7 +327,6 @@ impl World {
 
                     // Everything but boats is instantly killed by border
                     if dead {
-                        potential_limited_reload(entity);
                         return Some((index, Fate::Remove(DeathReason::Border)));
                     }
                 }
@@ -394,16 +364,6 @@ impl World {
             })
             .collect();
 
-        // Must do before removing any entities (and invalidating indices).
-        for (player_entity_index, limited_entity_type) in limited_reloads.into_inner().unwrap() {
-            Mutation::reload_limited_armament(
-                self,
-                player_entity_index,
-                limited_entity_type,
-                false,
-            );
-        }
-
         for (mutation, award_entity_index) in terrain_mutations.into_inner().unwrap() {
             if self.terrain.modify(mutation).unwrap_or(false) {
                 if let Some(index) = award_entity_index {
@@ -430,52 +390,12 @@ impl World {
             );
         }
 
-        for player in reset_flags.into_inner().unwrap() {
-            player.borrow_player_mut().data.flags = Flags::default();
-        }
-
         // Sorted in reverse to remove correctly.
         fates.maybe_par_sort_unstable_by(|a, b| b.0.cmp(&a.0));
 
         for (index, fate) in fates {
             match fate {
                 Fate::Remove(reason) => {
-                    let entity = &self.entities[index];
-                    let data = entity.data();
-                    match data.kind {
-                        EntityKind::Boat => {
-                            Mutation::boat_died(
-                                self,
-                                index,
-                                matches!(reason, DeathReason::Terrain | DeathReason::Border),
-                            );
-                        }
-                        EntityKind::Weapon => {
-                            // Dying weapons may leave a mark on the terrain.
-                            match data.sub_kind {
-                                EntitySubKind::Torpedo
-                                | EntitySubKind::Missile
-                                | EntitySubKind::Shell
-                                | EntitySubKind::Rocket => {
-                                    if rng.gen_bool(data.damage.clamp(0.0, 1.0) as f64) {
-                                        // Modify terrain slightly in front of death, to account for finite tick rate.
-                                        // Should be more correct, on average.
-                                        let pos = entity.transform.position
-                                            + (entity.transform.velocity.to_mps()
-                                                * delta_seconds
-                                                * 0.5);
-                                        self.terrain.modify(TerrainMutation::conditional(
-                                            pos,
-                                            -20.0 * data.damage,
-                                            Altitude(-10)..=Altitude::MAX,
-                                        ));
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                        _ => {}
-                    }
                     self.remove(index, reason);
                 }
                 Fate::MoveSector => {
@@ -496,6 +416,11 @@ impl World {
             .for_each(|(index, entity)| {
                 assert!(!index.changed(entity));
             });
+
+        // Clear flags at end so they can be asserted in Mutation::reload_limited_armament.
+        for player in reset_flags.into_inner().unwrap() {
+            player.borrow_player_mut().data.flags = Flags::default();
+        }
     }
 }
 

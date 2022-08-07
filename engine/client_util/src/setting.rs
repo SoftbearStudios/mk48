@@ -1,5 +1,6 @@
 use crate::browser_storage::BrowserStorages;
-use core_protocol::id::{ArenaId, ServerId, SessionId};
+use core_protocol::id::{ArenaId, CohortId, LanguageId, ServerId, SessionId};
+use core_protocol::name::PlayerAlias;
 use core_protocol::web_socket::WebSocketProtocol;
 pub use engine_macros::Settings;
 use wasm_bindgen::JsValue;
@@ -30,30 +31,54 @@ impl Settings for () {
 /// Settings of the infrastructure, common to all games.
 #[derive(Settings)]
 pub struct CommonSettings {
+    /// Alias preference.
+    #[setting(unquote)]
+    pub alias: Option<PlayerAlias>,
+    /// Language preference.
+    #[setting(unquote)]
+    pub language: LanguageId,
+    /// Volume preference (0 to 1).
+    #[setting(range = "0.0..1.0", finite)]
+    pub volume: f32,
+    /// Last [`CohortId`].
+    pub cohort_id: Option<CohortId>,
     /// Last-used/chosen [`ServerId`].
     #[setting(volatile)]
     pub server_id: Option<ServerId>,
     /// Not manually set by the player.
     pub arena_id: Option<ArenaId>,
     /// Not manually set by the player. Not accessible via arbitrary getter/setter as doing so would
-    /// pull BigUint64Array into the JS shim, invalidating compatibility with old devices.
+    /// pull BigUint64Array into the JS shim, breaking compatibility with old devices.
     #[setting(no_serde_wasm_bindgen)]
     pub session_id: Option<SessionId>,
     /// Whether to set antialias rendering option.
     pub antialias: bool,
     /// Websocket protocol.
-    #[setting(no_serde_wasm_bindgen, volatile)]
+    #[setting(no_serde_wasm_bindgen, unquote, volatile)]
     pub protocol: WebSocketProtocol,
+    /// Whether team menu is open.
+    pub team_dialog_shown: bool,
+    /// Whether chat menu is open.
+    pub chat_dialog_shown: bool,
+    /// Whether leaderboard menu is open.
+    pub leaderboard_dialog_shown: bool,
 }
 
 impl Default for CommonSettings {
     fn default() -> Self {
         Self {
+            alias: None,
+            language: LanguageId::default(),
+            volume: 0.5,
+            cohort_id: None,
             server_id: None,
             arena_id: None,
             session_id: None,
             antialias: true,
             protocol: WebSocketProtocol::default(),
+            team_dialog_shown: true,
+            chat_dialog_shown: true,
+            leaderboard_dialog_shown: true,
         }
     }
 }

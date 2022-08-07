@@ -40,6 +40,7 @@ pub struct BackgroundLayer<C: BackgroundContext> {
     pub context: C,
     shader: Shader,
     frame_cache: Option<FrameCache>,
+    shader_loaded: bool,
 }
 
 impl<C: BackgroundContext> BackgroundLayer<C> {
@@ -63,6 +64,7 @@ impl<C: BackgroundContext> BackgroundLayer<C> {
             context,
             shader,
             frame_cache,
+            shader_loaded: false,
         }
     }
 }
@@ -95,12 +97,19 @@ impl<C: BackgroundContext> Layer for BackgroundLayer<C> {
         // Write to frame cache or main screen.
         'write: {
             if let Some(mut shader) = renderer.bind_shader(&self.shader) {
+                let just_loaded = !self.shader_loaded;
+                self.shader_loaded = true;
+
                 let mut buffer = renderer.background_buffer.as_ref().unwrap();
                 let mut camera = &renderer.camera;
 
                 let _fbb = if let Some(frame_cache) = &mut self.frame_cache {
                     // Update the frame cached (resize texture and compute read/write buffers).
-                    let invalidation = self.context.take_invalidation();
+                    let mut invalidation = self.context.take_invalidation();
+                    if just_loaded {
+                        invalidation = Some(Invalidation::All);
+                    }
+
                     frame_cache.update(
                         renderer,
                         renderer.aligned_camera.delta_pixels,
@@ -144,6 +153,9 @@ impl<C: BackgroundContext> Layer for BackgroundLayer<C> {
                 buffer
                     .bind(&renderer.gl, &renderer.oes_vao)
                     .draw(Gl::TRIANGLES);
+            } else {
+                // First shader wasn't loaded so don't bother writing frame cache to main screen.
+                return;
             }
         }
 
@@ -454,7 +466,7 @@ impl FrameCache {
             ..(viewport.y - inv_scroll.y.checked_sub(rect_end.y).unwrap_or(0));
 
         // Iter the 4 rects (zero area rects are elided).
-        std::array::IntoIter::new([
+        IntoIterator::into_iter([
             ranges_to_rect(&x_range, &y_range),
             ranges_to_rect(&x_range2, &y_range),
             ranges_to_rect(&x_range, &y_range2),

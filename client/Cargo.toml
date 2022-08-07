@@ -2,11 +2,16 @@
 name = "client"
 version = "0.1.0"
 authors = ["Softbear, Inc."]
-edition = "2018"
+edition = "2021"
 license = "AGPL-3.0-or-later"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+lto = "fat"
+opt-level = 's'
+codegen-units = 1
 
 [dependencies]
 js-sys = "0.3"
@@ -25,6 +30,7 @@ common_util = {path="../engine/common_util"}
 core_protocol = {path="../engine/core_protocol"}
 arrayvec = "0.7"
 sprite_sheet = {path="../engine/sprite_sheet"}
+engine_macros = {path="../engine/engine_macros"}
 itertools = "0.10"
 
 [dependencies.web-sys]

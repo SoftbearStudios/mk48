@@ -17,8 +17,11 @@ glam = { version = "0.18", features = ["serde"] }
 variant_count = "1.1"
 rand = "0.8"
 unicode_categories = "0.1"
-rustrict = {version = "0.4.15", default-features = false}
+rustrict = {version = "0.4.18", default-features = false}
 lazy_static = "1.4"
+# Must sync features with game_server
+minicdn = {version = "0.1.13", features = ["mime", "etag", "gzip", "brotli", "webp", "serde"], optional = true}
 
 [features]
-server = ["actix", "rustrict/censor", "rustrict/width"]
+admin = ["minicdn"]
+server = ["actix", "admin", "rustrict/censor", "rustrict/width"]

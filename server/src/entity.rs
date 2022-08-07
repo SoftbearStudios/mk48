@@ -117,24 +117,27 @@ impl Entity {
 
         let extension = self.extension_mut();
 
-        // Keep armament (lack of) reloads. Use usize ot avoid overflow.
+        // Keep time until armaments reload. Use u32 to avoid overflow.
         // Start by counting the total ticks left to reload (for non-limited armaments).
         let mut total_reload = 0;
         for (i, reload) in extension.reloads.iter().enumerate() {
             if !old_data.armaments[i].entity_type.data().limited {
-                total_reload += reload.0 as usize;
+                total_reload += reload.0 as u32;
             }
         }
+
+        // Penalty for upgrading with fired weapons to nerf upgrading during fights (see #168).
+        total_reload = total_reload * 3 / 2;
 
         // Change the extension to correspond with the new type.
         extension.change_entity_type(entity_type);
 
-        // Finish (un)reloading.
+        // Finish by (un)reloading.
         for (i, reload) in extension.reloads_mut().iter_mut().enumerate() {
             let armament = &new_data.armaments[i];
             if !armament.entity_type.data().limited {
-                let to_consume = (armament.reload().0 as usize).min(total_reload);
-                *reload = Ticks(to_consume as TicksRepr);
+                let to_consume = (armament.reload().0 as u32).min(total_reload);
+                *reload = Ticks::from_repr(to_consume as TicksRepr);
                 total_reload -= to_consume;
                 if total_reload == 0 {
                     break;
@@ -356,13 +359,6 @@ impl Entity {
             Ticks::MAX
         } else {
             a.reload()
-
-            /*
-            // Submerged submarines reload slower
-            if entity.Owner.ext.altitude() < 0 {
-                reload *= 2
-            }
-             */
         };
 
         self.extension_mut().reloads_mut()[index] = reload;
@@ -376,11 +372,12 @@ impl Entity {
     /// Reloads arbitrary armaments/groups by a certain amount.
     pub fn reload(&mut self, amount: Ticks) {
         let armaments = &self.data().armaments;
-        let extension = self.extension_mut();
-        let reloads = extension.reloads_mut();
+        let reloads = self.extension_mut().reloads_mut();
         if reloads.is_empty() {
             return;
         }
+
+        // Split reloads into ranges of similar armaments to reload in parallel.
         let mut current = &armaments[0];
         let mut start = 0;
 
@@ -388,37 +385,28 @@ impl Entity {
             if next.is_similar_to(current) {
                 continue;
             }
-            Self::reload_range(reloads, amount, start, end);
+            Self::reload_range(&mut reloads[start..end], amount);
             current = next;
             start = end;
         }
 
         // Final iteration
-        Self::reload_range(reloads, amount, start, armaments.len());
+        Self::reload_range(&mut reloads[start..], amount);
     }
 
-    fn reload_range(reloads: &mut [Ticks], mut amount: Ticks, start: usize, end: usize) {
-        while amount != Ticks::ZERO {
-            let mut i = None;
-
+    fn reload_range(reloads: &mut [Ticks], mut amount: Ticks) {
+        while amount > Ticks::ZERO {
             // Find the armament with the lowest consumption (to prioritize full reloads).
-            // Limited are ticks max and won't be counted.
-            let mut consumption = Ticks::MAX;
-            for (j, c) in reloads[start..end].iter_mut().enumerate() {
-                if *c != Ticks::ZERO && *c < consumption {
-                    i = Some(j + start);
-                    consumption = *c;
-                }
-            }
+            // Skip reloaded (Ticks::ZERO) and limited (Ticks::MAX) armaments.
+            let reload = reloads
+                .iter_mut()
+                .filter(|&&mut r| !matches!(r, Ticks::ZERO | Ticks::MAX))
+                .min_by_key(|&&mut r| r);
 
-            if let Some(i) = i {
-                debug_assert_eq!(reloads[i], consumption);
-
-                let consume = consumption.min(amount);
-                consumption -= consume;
-                amount -= consume;
-
-                reloads[i] = consumption;
+            if let Some(reload) = reload {
+                let consumed = (*reload).min(amount);
+                *reload -= consumed;
+                amount -= consumed;
             } else {
                 // No armament has yet to be fully replenished, so this range is done.
                 break;
@@ -435,12 +423,6 @@ impl Entity {
 
         self.ticks = self.ticks.saturating_add(amount).min(data.max_health());
         self.ticks == data.max_health()
-    }
-
-    /// Returns whether a given amount of damage would kill an entity.
-    #[allow(dead_code)]
-    pub fn would_kill(&self, damage: Ticks) -> bool {
-        self.ticks.saturating_add(damage) >= self.data().max_health()
     }
 
     /// Apply damage to ultimately kill an entity in kill_time, assuming delta ticks elapsed. Returns true if now dead.
@@ -606,28 +588,18 @@ impl Entity {
         self.player.as_ref().unwrap() == other.player.as_ref().unwrap()
     }
 
-    /// can_land_on returns true if and only if self, an aircraft, can land on boat.
-    pub fn can_land_on(&self, boat: &Self) -> bool {
+    /// Returns Some(pad_index) iff self, an aircraft, can land on boat.
+    pub fn landing_pad(&self, boat: &Self) -> Option<usize> {
         let data = self.data();
         let boat_data = boat.data();
         let boat_extension = boat.extension();
         for (i, armament) in boat_data.armaments.iter().enumerate() {
-            if armament.entity_type != self.entity_type {
+            if armament.entity_type != self.entity_type || !data.limited {
                 // Irrelevant armament.
                 continue;
             }
 
-            // Minimum ticks to be considered eligible for receiving an aircraft.
-            let minimum = if data.limited {
-                // Limit armaments are *only* considered deployed if consumption = Ticks::MAX
-                Ticks::MAX
-            } else {
-                // Unlimited armaments already reload naturally, but allow them to land anyway, even
-                // if they are one tick away from reloading.
-                Ticks::ONE
-            };
-
-            if boat_extension.reloads[i] < minimum {
+            if boat_extension.reloads[i] < Ticks::MAX {
                 // Armament is not in need of landing an aircraft.
                 continue;
             }
@@ -639,11 +611,11 @@ impl Entity {
                 if data.sub_kind == EntitySubKind::Heli
                     || (self.transform.direction - transform.direction).abs() < Angle::PI_2
                 {
-                    return true;
+                    return Some(i);
                 }
             }
         }
-        false
+        None
     }
 
     /// Constant used for checking whether, for example, a weapon becomes visible regardless of

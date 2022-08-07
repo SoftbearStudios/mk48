@@ -16,8 +16,14 @@ pub trait Metric: Sized + Add + Default {
 }
 
 /// A metric representing something countable.
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DiscreteMetric {
+    #[serde(rename = "t")]
+    pub total: u32,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct DiscreteMetricSummary {
     pub total: u32,
 }
 
@@ -37,11 +43,11 @@ impl DiscreteMetric {
 }
 
 impl Metric for DiscreteMetric {
-    type Summary = Self;
+    type Summary = DiscreteMetricSummary;
     type DataPoint = (u32,);
 
     fn summarize(&self) -> Self::Summary {
-        *self
+        DiscreteMetricSummary { total: self.total }
     }
 
     fn data_point(&self) -> Self::DataPoint {
@@ -62,8 +68,11 @@ impl Add for DiscreteMetric {
 /// A metric tracking the maximum and minimum of something discrete.
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct DiscreteExtremaMetric {
+    #[serde(rename = "c")]
     pub count: u32,
+    #[serde(rename = "l")]
     pub min: u32,
+    #[serde(rename = "h")]
     pub max: u32,
 }
 
@@ -120,8 +129,11 @@ impl Add for DiscreteExtremaMetric {
 /// A metric tracking the maximum and minimum of something.
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct ExtremaMetric {
+    #[serde(rename = "c")]
     pub count: u32,
+    #[serde(rename = "l")]
     pub min: f32,
+    #[serde(rename = "h")]
     pub max: f32,
 }
 
@@ -176,11 +188,13 @@ impl Add for ExtremaMetric {
 }
 
 /// A metric tracking the ratio of data satisfying a condition to all data.
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RatioMetric {
     /// Total population size.
+    #[serde(rename = "t")]
     pub total: u32,
     /// Number meeting the condition
+    #[serde(rename = "c")]
     pub count: u32,
 }
 
@@ -243,9 +257,12 @@ impl Add for RatioMetric {
 /// Can be aggregated by adding all fields.
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct ContinuousMetric {
+    #[serde(rename = "c")]
     pub count: u32,
     // These values get large, so use f64 instead of f32.
+    #[serde(rename = "t")]
     pub total: f64,
+    #[serde(rename = "s")]
     pub squared_total: f64,
 }
 
@@ -316,12 +333,17 @@ impl Add for ContinuousMetric {
 }
 
 /// A metric combining `ContinuousMetric` and `ExtremaMetric`.
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContinuousExtremaMetric {
+    #[serde(rename = "c")]
     pub count: u32,
+    #[serde(rename = "l")]
     pub min: f32,
+    #[serde(rename = "h")]
     pub max: f32,
+    #[serde(rename = "t")]
     pub total: f64,
+    #[serde(rename = "s")]
     pub squared_total: f64,
 }
 
@@ -404,18 +426,27 @@ impl Add for ContinuousExtremaMetric {
 const BUCKET_COUNT: usize = 10;
 const BUCKET_SIZE: usize = 1;
 
-#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramMetric {
-    buckets: [u32; BUCKET_COUNT], // How many samples have value 0.0-9.99, 10.0-19.99, ... ?
-    overflow: u32,                // How many samples have value below the min bucket?
-    underflow: u32,               // How many samples have value above the max bucket?
+    /// How many samples have value 0.0-9.99, 10.0-19.99, ... ?
+    #[serde(rename = "b")]
+    buckets: [u32; BUCKET_COUNT],
+    /// How many samples have value below the min bucket?
+    #[serde(rename = "o")]
+    overflow: u32,
+    /// How many samples have value above the max bucket?
+    #[serde(rename = "u")]
+    underflow: u32,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct HistogramMetricSummary {
-    buckets: [f32; BUCKET_COUNT], // What percent samples have value 0.0-9.99, 10.0-19.99, ... ?
-    overflow: f32,                // What percent samples have value below the min bucket?
-    underflow: f32,               // What percent samples have value above the max bucket?
+    /// What percent samples have value 0.0-9.99, 10.0-19.99, ... ?
+    buckets: [f32; BUCKET_COUNT],
+    /// What percent samples have value below the min bucket?
+    overflow: f32,
+    /// What percent samples have value above the max bucket?
+    underflow: f32,
 }
 
 impl HistogramMetric {

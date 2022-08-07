@@ -3,7 +3,6 @@
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
-use crate::player::Status;
 use crate::world::World;
 use crate::world_mutation::Mutation;
 use arrayvec::ArrayVec;
@@ -17,8 +16,6 @@ use common::util::hash_u32_to_f32;
 use common::velocity::Velocity;
 use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
 use rand::{thread_rng, Rng};
-use server_util::benchmark::Timer;
-use server_util::benchmark_scope;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -64,31 +61,10 @@ impl World {
 
     /// update_entities_and_others performs updates on each pair of entities, with some exceptions.
     pub fn physics_radius(&mut self, delta: Ticks) {
-        benchmark_scope!("physics_radius");
-
         let delta_seconds = delta.to_secs();
 
         // TODO: look into lock free data structures.
         let mutations = Mutex::new(Vec::new());
-
-        // Call when any entity that is potentially a weapon is removed, to make sure it is reloaded
-        // if it is a limited armament. No need to call if the player is definitely not alive.
-        let potential_limited_reload = |potentially_limited_entity: &Entity, instant: bool| {
-            if !potentially_limited_entity.data().limited {
-                // Not actually limited.
-                return;
-            }
-            let player = potentially_limited_entity.borrow_player();
-            if let Status::Alive { entity_index, .. } = player.data.status {
-                mutations.lock().unwrap().push((
-                    entity_index,
-                    Mutation::ReloadLimited {
-                        entity_type: potentially_limited_entity.entity_type,
-                        instant,
-                    },
-                ));
-            }
-        };
 
         self.entities
             .par_iter()
@@ -334,7 +310,6 @@ impl World {
 
                                         if weapon_data.sub_kind == EntitySubKind::RocketTorpedo {
                                             // ASROC expires when dropping torpedo.
-                                            potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "asroc");
                                         }
                                     }
@@ -349,7 +324,6 @@ impl World {
                                     if d2 <= r2 {
                                         let chance = (1.0 - d2/r2) * target_data.anti_aircraft * delta.to_secs();
                                         if thread_rng().gen_bool((chance as f64).clamp(0.0, 1.0)) {
-                                            potential_limited_reload(weapon, false);
                                             debug_remove!(weapon, "shot down");
                                         }
                                     }
@@ -357,11 +331,11 @@ impl World {
                             }
                         } else if boats.len() == 1 && weapons.len() == 1 && boats[0].has_same_player(weapons[0]) &&
                             weapons[0].data().kind == EntityKind::Aircraft &&
-                            weapons[0].ticks > Ticks::from_secs(5.0) && weapons[0].can_land_on(boats[0]) {
+                            weapons[0].ticks > Ticks::from_secs(5.0) {
 
-                            // Reload instantly since landed.
-                            potential_limited_reload(weapons[0], true);
-                            debug_remove!(weapons[0], "landed");
+                            if let Some(pad) = weapons[0].landing_pad(boats[0]) {
+                                mutate(weapons[0], Mutation::Remove(DeathReason::Landing(pad)));
+                            }
                         }
 
                         /*
@@ -403,7 +377,12 @@ impl World {
 
                         // Collecting your own coins does not have auxiliary benefits.
                         if !friendly {
-                            mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.5)));
+                            // Regenerating due to oil rigs is too OP, as it makes ships immune from
+                            // submarines.
+                            // https://discord.com/channels/847143438939717663/847150517938946058/989645078043693146
+                            if collectibles[0].entity_type != EntityType::Barrel {
+                                mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.5)));
+                            }
                             mutate(boats[0], Mutation::Reload(collectibles[0].data().reload));
                         }
                     } else if boats.len() == 2 {
@@ -518,7 +497,6 @@ impl World {
                                 damage,
                             ),
                         );
-                        potential_limited_reload(weapons[0], false);
                         debug_remove!(weapons[0], "hit");
                     } else if boats.len() == 1 && obstacles.len() == 1 {
                         let pos_diff = (boats[0].transform.position - obstacles[0].transform.position).normalize_or_zero();
@@ -559,7 +537,6 @@ impl World {
                                     panic!("boat's should be removed very intentionally; encountered {:?} -> {:?}", entity.entity_type, other_entity.entity_type);
                                 }
                                 _ => {
-                                    potential_limited_reload(e, false);
                                     debug_remove!(e, "generic");
                                 }
                             }

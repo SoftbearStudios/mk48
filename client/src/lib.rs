@@ -5,7 +5,6 @@
 #![feature(hash_drain_filter)]
 #![feature(drain_filter)]
 #![feature(must_not_suspend)]
-#![feature(bool_to_option)]
 #![feature(binary_heap_into_iter_sorted)]
 
 mod animation;

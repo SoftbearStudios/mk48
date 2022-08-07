@@ -287,7 +287,7 @@ impl BackgroundContext for Mk48OverlayContext {
 fn generate_vegetation<'a>(
     terrain_bytes: &'a [u8],
     view: TerrainView,
-) -> impl Iterator<Item = SortableSprite> + 'a {
+) -> impl Iterator<Item = SortableSprite> + '_ {
     let center = view.center;
     let width = view.dimensions.x as usize;
     let height = view.dimensions.y as usize;
@@ -297,8 +297,8 @@ fn generate_vegetation<'a>(
     let step_log2 = (step - 1).count_ones();
 
     // Round starting coords down to step.
-    let start_x = center.0 as isize - (width / 2) as isize & !(step as isize - 1);
-    let start_y = center.1 as isize - (height / 2) as isize & !(step as isize - 1);
+    let start_x = (center.0 as isize - (width / 2) as isize) & !(step as isize - 1);
+    let start_y = (center.1 as isize - (height / 2) as isize) & !(step as isize - 1);
 
     // Don't need to round down because step by already handles it.
     let end_x = center.0 as isize + ((width + 1) / 2) as isize;

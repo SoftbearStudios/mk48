@@ -8,6 +8,8 @@ use crate::UnixTime;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::net::IpAddr;
+use std::num::NonZeroU64;
+use std::sync::Arc;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InvitationDto {
@@ -201,6 +203,8 @@ pub struct AdminPlayerDto {
     pub player_id: PlayerId,
     pub team_id: Option<TeamId>,
     pub region_id: Option<RegionId>,
+    pub discord_id: Option<NonZeroU64>,
+    pub moderator: bool,
     pub score: u32,
     pub plays: u32,
     pub fps: Option<f32>,
@@ -243,6 +247,7 @@ pub struct AdminServerDto {
     pub redirect_server_id: Option<ServerId>,
     pub region_id: Option<RegionId>,
     pub ip: IpAddr,
+    /// Routed by DNS to the home page.
     pub home: bool,
     pub reachable: bool,
     /// Round trip time in milliseconds.
@@ -264,6 +269,29 @@ impl Ord for AdminServerDto {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SnippetDto {
+    pub cohort_id: Option<CohortId>,
+    pub referrer: Option<Referrer>,
+    pub snippet: Arc<str>,
+}
+
+impl PartialOrd for SnippetDto {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for SnippetDto {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let mut diff = self.cohort_id.cmp(&other.cohort_id);
+        if diff == Ordering::Equal {
+            diff = self.referrer.cmp(&other.referrer)
+        }
+        diff
+    }
+}
+
 /// The Team Data Transfer Object (DTO) binds team ID to team name.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TeamDto {
@@ -276,8 +304,10 @@ pub struct TeamDto {
 }
 
 /// Filter daily metrics.
+// TODO: Not a DTO?
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub enum MetricFilterDto {
+pub enum MetricFilter {
+    CohortId(CohortId),
     Referrer(Referrer),
     RegionId(RegionId),
     UserAgentId(UserAgentId),

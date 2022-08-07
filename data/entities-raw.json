@@ -56,7 +56,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 900
+		"lifespan": 600
 	},
 	"oilPlatform": {
 		"label": "Oil Platform",
@@ -64,7 +64,7 @@
 		"subkind": "structure",
 		"length": 90,
 		"width": 90,
-		"lifespan": 900,
+		"lifespan": 600,
 		"exhausts": [
 			{
 				"positionForward": 7,
@@ -391,7 +391,22 @@
 		"sensors": {
 			"visual": {}
 		},
-		"armaments": [],
+		"armaments": [
+			{
+				"type": "mark18",
+				"positionForward": 45.1688,
+				"positionSide": 7.4,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "mark18",
+				"positionForward": 44.5688,
+				"positionSide": 7.5,
+				"angle": 90,
+				"symmetrical": true
+			}
+		],
 		"turrets": [
 			{
 				"type": "markBVIII",
@@ -2508,6 +2523,13 @@
 			{
 				"type": "82r",
 				"positionForward": -40.4359,
+				"positionSide": 8,
+				"angle": 90,
+				"symmetrical": true
+			},
+			{
+				"type": "82r",
+				"positionForward": -41.0359,
 				"positionSide": 8,
 				"angle": 90,
 				"symmetrical": true

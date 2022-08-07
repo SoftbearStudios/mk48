@@ -21,6 +21,10 @@ impl Interpolated {
         }
     }
 
+    pub fn reset(&mut self) {
+        *self = Self::new(self.max_delta_time);
+    }
+
     // Gets the interpolated value from the current value and the time.
     pub fn update(&mut self, current: f32, time: f32) -> f32 {
         // Initialize with current if None.
@@ -44,8 +48,7 @@ impl Interpolated {
             self.last_time = time;
         }
 
-        let now = self.now(time);
-        now
+        self.now(time)
     }
 
     // Gets the current value at a time.

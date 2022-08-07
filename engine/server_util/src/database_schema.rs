@@ -1,15 +1,20 @@
 use aws_sdk_dynamodb::model::AttributeValue;
-use core_protocol::dto::{MetricsDataPointDto, MetricsSummaryDto};
-use core_protocol::id::{ArenaId, GameId, PlayerId, ServerId, SessionId, UserAgentId};
+use common_util::serde::is_default;
+use core_protocol::dto::{MetricFilter, MetricsDataPointDto, MetricsSummaryDto};
+use core_protocol::id::{
+    ArenaId, CohortId, GameId, LoginType, PlayerId, ServerId, SessionId, UserAgentId, UserId,
+};
 use core_protocol::metrics::{
     ContinuousExtremaMetric, DiscreteMetric, HistogramMetric, Metric, RatioMetric,
 };
 use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::serde_util::StrVisitor;
-use core_protocol::UnixTime;
+use core_protocol::{get_unix_time_now, UnixTime};
 use derive_more::Add;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::DeserializeOwned;
+use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
 use std::iter::Sum;
+use std::net::IpAddr;
 use variant_count::VariantCount;
 
 /// The type of leaderboard score, for a particular game.
@@ -119,6 +124,8 @@ pub struct SessionItem {
     pub alias: PlayerAlias,
     /// Hash key.
     pub arena_id: ArenaId,
+    #[serde(default)]
+    pub cohort_id: CohortId,
     pub date_created: UnixTime,
     pub date_previous: Option<UnixTime>,
     pub date_renewed: UnixTime,
@@ -140,109 +147,109 @@ pub struct SessionItem {
 #[derive(Clone, Debug, Default, Add, Deserialize, Serialize)]
 pub struct Metrics {
     /// Number of active abuse reports.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub abuse_reports: DiscreteMetric,
     /// How many arenas are in cache.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub arenas_cached: DiscreteMetric,
     /// How many megabits per second received.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub bandwidth_rx: ContinuousExtremaMetric,
     /// How many megabits per second transmitted.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub bandwidth_tx: ContinuousExtremaMetric,
     /// Ratio of new players that leave without ever playing.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub bounce: RatioMetric,
     /// How many concurrent players.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub concurrent: ContinuousExtremaMetric,
     /// How many connections are open.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub connections: ContinuousExtremaMetric,
     /// Fraction of total CPU time used by processes in the current operating system.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub cpu: ContinuousExtremaMetric,
     /// Fraction of total CPU time stolen by the hypervisor.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub cpu_steal: ContinuousExtremaMetric,
     /// Ratio of new players that play only once and leave quickly.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub flop: RatioMetric,
     /// Client frames per second.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub fps: ContinuousExtremaMetric,
     /// Ratio of new players who were invited to new players who were not.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub invited: RatioMetric,
     /// Number of invitations in RAM cache.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub invitations_cached: DiscreteMetric,
     /// Ratio of players with FPS below 24 to all players.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub low_fps: RatioMetric,
     /// Minutes per completed play (a measure of engagement).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub minutes_per_play: ContinuousExtremaMetric,
     /// Minutes played, per visit, during the metrics period.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub minutes_per_visit: ContinuousExtremaMetric,
     /// Ratio of unique players that are new to players that are not.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub new: RatioMetric,
-    /// Ration of players with no referrer to all players.
+    /// Ratio of players with no referrer to all players.
     #[serde(default)]
     pub no_referrer: RatioMetric,
     /// Ratio of previous players that leave without playing (e.g. to peek at player count).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub peek: RatioMetric,
     /// How many players (for now, [`PlayerId`]) are in memory cache.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub players_cached: DiscreteMetric,
     /// Plays per visit (a measure of engagement).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub plays_per_visit: ContinuousExtremaMetric,
     /// Plays total (aka impressions).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub plays_total: DiscreteMetric,
     /// Percent of available server RAM required by service.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub ram: ContinuousExtremaMetric,
     /// Number of times session was renewed.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub renews: DiscreteMetric,
     /// Player retention in days.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub retention_days: ContinuousExtremaMetric,
     /// Player retention histogram.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub retention_histogram: HistogramMetric,
     /// Network latency round trip time in seconds.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub rtt: ContinuousExtremaMetric,
     /// Score per completed play.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub score: ContinuousExtremaMetric,
     /// Total sessions in cache.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub sessions_cached: DiscreteMetric,
     /// Seconds per tick.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub spt: ContinuousExtremaMetric,
     /// Ratio of plays that end team-less to plays that don't.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub teamed: RatioMetric,
     /// Ratio of inappropriate messages to total.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub toxicity: RatioMetric,
     /// Server ticks per second.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub tps: ContinuousExtremaMetric,
     /// Uptime in (fractional) days.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub uptime: ContinuousExtremaMetric,
     /// Visits
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub visits: DiscreteMetric,
 }
 
@@ -337,12 +344,152 @@ impl Sum for Metrics {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct GameIdMetricFilter {
+    pub game_id: GameId,
+    pub metric_filter: Option<MetricFilter>,
+}
+
+impl Serialize for GameIdMetricFilter {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
+        fn ser<T: Serialize>(t: T) -> Option<String> {
+            let av: AttributeValue = serde_dynamo::to_attribute_value(t).ok()?;
+            // TODO: Unecessary string clone
+            av.as_s().ok().map(Clone::clone)
+        }
+
+        let game_id_string =
+            ser(self.game_id).ok_or_else(|| ser::Error::custom("failed to serialize game id"))?;
+        let string = match self.metric_filter {
+            Some(filter) => match filter {
+                MetricFilter::CohortId(cohort_id) => {
+                    format!("{}/cohort_id/{}", game_id_string, cohort_id)
+                }
+                MetricFilter::Referrer(referrer) => {
+                    format!("{}/referrer/{}", game_id_string, referrer)
+                }
+                MetricFilter::RegionId(region_id) => format!(
+                    "{}/region_id/{}",
+                    game_id_string,
+                    ser(region_id)
+                        .ok_or_else(|| ser::Error::custom("failed to serialize region id"))?,
+                ),
+                MetricFilter::UserAgentId(user_agent_id) => format!(
+                    "{}/user_agent_id/{}",
+                    game_id_string,
+                    ser(user_agent_id)
+                        .ok_or_else(|| ser::Error::custom("failed to serialize user agent id"))?,
+                ),
+            },
+            None => game_id_string,
+        };
+        serializer.serialize_str(&string)
+    }
+}
+
+impl<'de> Deserialize<'de> for GameIdMetricFilter {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(StrVisitor).and_then(|s| {
+            fn de<T: DeserializeOwned>(s: &str) -> Option<T> {
+                serde_dynamo::from_attribute_value(AttributeValue::S(String::from(s))).ok()
+            }
+
+            let mut split = s.split('/');
+            let mut ret = Self {
+                game_id: split
+                    .next()
+                    .and_then(de)
+                    .ok_or_else(|| de::Error::custom("invalid game_id"))?,
+                metric_filter: None,
+            };
+
+            if let Some(filter) = split.next() {
+                let filter_value = split
+                    .next()
+                    .ok_or(de::Error::custom("missing filter value"))?;
+
+                ret.metric_filter = Some(match filter {
+                    "cohort_id" => MetricFilter::CohortId(
+                        filter_value
+                            .parse()
+                            .map_err(|_| de::Error::custom("invalid cohort id"))?,
+                    ),
+                    "referrer" => MetricFilter::Referrer(
+                        filter_value
+                            .parse()
+                            .map_err(|_| de::Error::custom("invalid referrer"))?,
+                    ),
+                    "region_id" => MetricFilter::RegionId(
+                        de(filter_value).ok_or_else(|| de::Error::custom("invalid region id"))?,
+                    ),
+                    "user_agent_id" => MetricFilter::UserAgentId(
+                        de(filter_value).ok_or_else(|| de::Error::custom("invalid user agent"))?,
+                    ),
+                    _ => return Err(de::Error::custom("invalid filter")),
+                });
+            }
+
+            Ok(ret)
+        })
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MetricsItem {
     /// Hash key.
-    pub game_id: GameId,
+    // Rename for backwards compatibility.
+    #[serde(rename = "game_id")]
+    pub game_id_metric_filter: GameIdMetricFilter,
     /// Sort key.
     pub timestamp: UnixTime,
     #[serde(flatten)]
     pub metrics: Metrics,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct IpItem {
+    /// Hash key.
+    pub ip: IpAddr,
+    /// Creation time in Unix seconds.
+    pub created: u64,
+    /// HTTP requests.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub requests: u32,
+    /// Websocket requests.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub websockets: u32,
+    /// How long to restrict chat until, in Unix seconds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub safe_chat_until: Option<u64>,
+    /// Expiry in Unix seconds.
+    pub ttl: u64,
+}
+
+impl IpItem {
+    pub fn update_ttl(&mut self) {
+        self.ttl = if let Some(save_chat_until) = self.safe_chat_until {
+            self.ttl.max(save_chat_until)
+        } else {
+            self.ttl
+        }
+        .max(get_unix_time_now() / 1000 + 7 * 24 * 3600)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UserItem {
+    pub user_id: UserId,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct LoginItem {
+    pub login_type: LoginType,
+    pub id: String,
+    pub user_id: UserId,
 }

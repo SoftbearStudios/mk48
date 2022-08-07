@@ -9,18 +9,51 @@
     import Chart from './Chart.svelte';
     import Nav from './Nav.svelte';
     import {replace} from 'svelte-spa-router';
+    import {referrers} from './Referrers.svelte';
+    import {regions} from './Regions.svelte';
+    import {userAgents} from './UserAgents.svelte';
 
     export let params = {};
 </script>
 
 <Nav>
-    <select on:change={event => replace(`/series/${event.target.value}/${params.resolution}`)} value={params.period}>
+    <select on:change={e => replace(`/series/${params.period}/${params.resolution}/${e.target.value == "*" ? "*" : JSON.stringify({CohortId: parseInt(e.target.value)})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        <option>1</option>
+        <option>2</option>
+        <option>3</option>
+        <option>4</option>
+    </select>
+
+    <select on:change={e => replace(`/series/${params.period}/${params.resolution}/${e.target.value == "*" ? "*" : JSON.stringify({Referrer: e.target.value})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        {#each $referrers as r}
+            <option value={r[0]}>{r[0]}</option>
+        {/each}
+    </select>
+
+    <select on:change={e => replace(`/series/${params.period}/${params.resolution}/${e.target.value == "*" ? "*" : JSON.stringify({RegionId: e.target.value})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        {#each $regions as r}
+            <option value={r[0]}>{r[0]}</option>
+        {/each}
+    </select>
+
+
+    <select on:change={e => replace(`/series/${params.period}/${params.resolution}/${e.target.value == "*" ? "*" : JSON.stringify({UserAgentId: e.target.value})}`)} value={'*'}>
+        <option value={'*'}>Any</option>
+        {#each $userAgents as u}
+            <option value={u[0]}>{u[0]}</option>
+        {/each}
+    </select>
+
+    <select on:change={event => replace(`/series/${event.target.value}/${params.resolution}/${params.filter}`)} value={params.period}>
         {#each periods as p}
             <option value={p}>{p}</option>
         {/each}
     </select>
 
-    <select on:change={event => replace(`/series/${params.period}/${event.target.value}`)} value={params.resolution}>
+    <select on:change={event => replace(`/series/${params.period}/${event.target.value}/${params.filter}`)} value={params.resolution}>
         {#each resolutions as r}
             <option value={r}>{r}</option>
         {/each}
@@ -28,7 +61,7 @@
 </Nav>
 
 <main>
-    {#await adminRequest({'RequestSeries': {game_id: $game, period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, '6 hours': 6, day: 24, week: 24 * 7}[params.resolution]}})}
+    {#await adminRequest({'RequestSeries': {game_id: $game, filter: !params.filter || params.filter === '*' ? undefined : JSON.parse(params.filter), period_start: Date.now() - {week: 7 * DAY, month: 30 * DAY, quarter: 90 * DAY}[params.period], resolution: {hour: 1, '6 hours': 6, day: 24, week: 24 * 7}[params.resolution]}})}
     {:then data}
         {#if data.SeriesRequested.length > 0}
             <div class="charts">

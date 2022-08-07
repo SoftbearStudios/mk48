@@ -9,7 +9,7 @@ pub struct RateLimiter {
     state: RateLimiterState,
 }
 
-/// A [`u64`] is chosen for being the widest type that doesn't increase the size of
+/// A [`u32`] is chosen for being the widest type that doesn't increase the size of
 /// [`RateLimiterState`] or [`RateLimiterProps`] on a 64-bit system, and it is natively accepted
 /// by [`Duration::saturating_mul`].
 pub type Units = u32;

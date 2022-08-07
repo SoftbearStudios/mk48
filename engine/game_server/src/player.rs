@@ -12,9 +12,9 @@ use core_protocol::dto::{InvitationDto, PlayerDto};
 use core_protocol::id::{PlayerId, TeamId};
 use core_protocol::name::PlayerAlias;
 use core_protocol::rpc::{PlayerRequest, PlayerUpdate};
-use server_util::benchmark::{benchmark_scope, Timer};
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -172,8 +172,6 @@ impl<G: GameArenaService> PlayerRepo<G> {
         teams: &mut TeamRepo<G>,
         metrics: &mut MetricRepo<G>,
     ) {
-        benchmark_scope!("update_alive");
-
         for pt in self.iter() {
             let is_alive = service.is_alive(pt);
             let mut p = pt.borrow_player_mut();
@@ -212,7 +210,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
             drop(p);
 
             if current_team_id != previous_team_id {
-                service.player_changed_team(pt, previous_team_id);
+                service.player_changed_team(pt, previous_team_id, self);
             }
         }
     }
@@ -466,5 +464,19 @@ impl<G: GameArenaService> PlayerData<G> {
     pub fn is_out_of_game(&self) -> bool {
         !self.was_ever_alive
             || self.not_alive_duration().unwrap_or(Duration::ZERO) > Duration::from_secs(30)
+    }
+}
+
+impl<G: GameArenaService> Deref for PlayerData<G> {
+    type Target = G::PlayerData;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<G: GameArenaService> DerefMut for PlayerData<G> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }

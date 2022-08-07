@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::animation::Animation;
+use crate::audio::Audio;
 use crate::game::{Mk48Game, RendererLayer};
-use client_util::audio::AudioLayer;
+use client_util::audio::AudioPlayer;
 use client_util::context::Context;
 use client_util::renderer::particle::Particle;
 use common::contact::{Contact, ContactTrait};
@@ -189,7 +190,7 @@ impl Mk48Game {
         &mut self,
         player_position: Vec2,
         contact: &Contact,
-        audio_layer: &AudioLayer,
+        audio_layer: &AudioPlayer<Audio>,
         animations: &mut Vec<Animation>,
         time_seconds: f32,
     ) {
@@ -209,7 +210,7 @@ impl Mk48Game {
                     _ => "splash",
                 },
                 EntityKind::Collectible => {
-                    audio_layer.play_with_volume("collect", volume);
+                    audio_layer.play_with_volume(Audio::Collect, volume);
                     return;
                 }
                 _ => return,
@@ -217,9 +218,9 @@ impl Mk48Game {
 
             let data = entity_type.data();
             if data.kind == EntityKind::Boat {
-                audio_layer.play_with_volume("explosion_long", volume);
+                audio_layer.play_with_volume(Audio::ExplosionLong, volume);
             } else {
-                audio_layer.play_with_volume("explosion_short", volume);
+                audio_layer.play_with_volume(Audio::ExplosionShort, volume);
             }
 
             // The more damage/health the entity has the larger its explosion is.
@@ -251,7 +252,7 @@ impl Mk48Game {
         contact: &Contact,
         player_position: Vec2,
         context: &Context<Mk48Game>,
-        audio_layer: &AudioLayer,
+        audio_layer: &AudioPlayer<Audio>,
     ) {
         let position_diff = contact.transform().position - player_position;
         let direction = Angle::from(position_diff);
@@ -266,18 +267,18 @@ impl Mk48Game {
             match data.kind {
                 EntityKind::Boat => {
                     if !friendly && inbound && context.state.game.entity_id.is_some() {
-                        audio_layer.play_with_volume("alarm_slow", 0.25 * volume.max(0.5));
+                        audio_layer.play_with_volume(Audio::AlarmSlow, 0.25 * volume.max(0.5));
                     }
                 }
                 EntityKind::Weapon => match data.sub_kind {
                     EntitySubKind::Torpedo => {
                         if friendly {
-                            audio_layer.play_with_volume("torpedo_launch", volume.min(0.5));
-                            audio_layer.play_with_volume_and_delay("splash", volume, 0.1);
+                            audio_layer.play_with_volume(Audio::TorpedoLaunch, volume.min(0.5));
+                            audio_layer.play_with_volume_and_delay(Audio::Splash, volume, 0.1);
                         }
                         if data.sensors.sonar.range > 0.0 {
                             audio_layer.play_with_volume_and_delay(
-                                "sonar3",
+                                Audio::Sonar3,
                                 volume,
                                 if friendly { 1.0 } else { 0.0 },
                             );
@@ -289,22 +290,22 @@ impl Mk48Game {
                             && context.state.game.entity_id.is_some()
                             && self.alarm_fast_rate_limiter.ready()
                         {
-                            audio_layer.play_with_volume("alarm_fast", volume.max(0.5));
+                            audio_layer.play_with_volume(Audio::AlarmFast, volume.max(0.5));
                         }
-                        audio_layer.play_with_volume("rocket", volume);
+                        audio_layer.play_with_volume(Audio::Rocket, volume);
                     }
                     EntitySubKind::Sam | EntitySubKind::RocketTorpedo => {
-                        audio_layer.play_with_volume("rocket", volume);
+                        audio_layer.play_with_volume(Audio::Rocket, volume);
                     }
                     EntitySubKind::DepthCharge | EntitySubKind::Mine => {
-                        audio_layer.play_with_volume("splash", volume);
+                        audio_layer.play_with_volume(Audio::Splash, volume);
                         if !friendly && context.state.game.entity_id.is_some() {
-                            audio_layer.play_with_volume("alarm_slow", volume.max(0.5));
+                            audio_layer.play_with_volume(Audio::AlarmSlow, volume.max(0.5));
                         }
                     }
                     EntitySubKind::Shell => {
                         audio_layer.play_with_volume(
-                            "shell",
+                            Audio::Shell,
                             volume * map_ranges(data.length, 0.5..1.5, 0.5..1.0, true),
                         );
                     }
@@ -312,12 +313,12 @@ impl Mk48Game {
                 },
                 EntityKind::Aircraft => {
                     if !friendly && inbound {
-                        audio_layer.play_with_volume("alarm_slow", 0.1 * volume.max(0.5));
+                        audio_layer.play_with_volume(Audio::AlarmSlow, 0.1 * volume.max(0.5));
                     }
                 }
                 EntityKind::Decoy => {
                     if data.sub_kind == EntitySubKind::Sonar {
-                        audio_layer.play_with_volume("sonar3", volume);
+                        audio_layer.play_with_volume(Audio::Sonar3, volume);
                     }
                 }
                 _ => {}

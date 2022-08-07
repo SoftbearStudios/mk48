@@ -2,6 +2,7 @@
 
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
+use yew::virtual_dom::AttrValue;
 use yew::{html, use_state, Callback, Children, Properties};
 use yew_icons::{Icon, IconId};
 
@@ -10,7 +11,12 @@ pub struct SectionProps {
     pub children: Children,
     #[prop_or(true)]
     pub closable: bool,
-    pub name: String,
+    pub name: AttrValue,
+    #[prop_or(true)]
+    pub open: bool,
+    /// If [`Some`], open is reactive.
+    #[prop_or(None)]
+    pub on_open_changed: Option<Callback<bool>>,
     #[prop_or(None)]
     pub on_left_arrow: Option<Callback<()>>,
     #[prop_or(None)]
@@ -21,14 +27,22 @@ pub struct SectionProps {
 
 #[styled_component(Section)]
 pub fn section(props: &SectionProps) -> Html {
-    let open = use_state(|| true);
+    let open_state = use_state(|| props.open);
+    let open = if props.on_open_changed.is_some() {
+        props.open
+    } else {
+        *open_state
+    };
 
     let onclick = props.closable.then(|| {
-        let open = open.clone();
-        Callback::from(move |_| open.set(!*open))
+        if let Some(on_open_changed) = props.on_open_changed.clone() {
+            Callback::from(move |_| {
+                let _ = on_open_changed.emit(!open);
+            })
+        } else {
+            Callback::from(move |_| open_state.set(!open))
+        }
     });
-
-    let div_css_class = css!(r#""#);
 
     let h2_css_class = css!(
         r#"
@@ -82,28 +96,20 @@ pub fn section(props: &SectionProps) -> Html {
                 class={h2_css_class}
                 {onclick}
                 >
-                if *open && left_click.is_some() {
+                if open && left_click.is_some() {
                     <span class={span_css_class.clone()} onclick={left_click}>
                         <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }
                 {&props.name}
-                if *open && right_click.is_some() {
+                if open && right_click.is_some() {
                     <span class={span_css_class} onclick={right_click}>
                         <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }
             </h2>
-            {
-                if *open {
-                    html! {
-                        <div class={div_css_class}>
-                            {props.children.clone()}
-                        </div>
-                    }
-                } else {
-                    html! {}
-                }
+            if open {
+                {props.children.clone()}
             }
         </>
     }

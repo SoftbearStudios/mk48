@@ -1,8 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::renderer::attribute::Attribs;
-use crate::renderer::buffer::floats_from_vertices;
+use crate::renderer::attribs::Attribs;
 use crate::renderer::vertex::Vertex;
 use std::borrow::{Borrow, Cow};
 use std::collections::VecDeque;
@@ -69,7 +68,7 @@ impl<V: Vertex + Copy> PointRenderDeque<V> {
 
         // Bind buffer to vao.
         gl.bind_buffer(Gl::ARRAY_BUFFER, Some(&deque.vertices));
-        V::bind_attribs(&mut Attribs::new(gl));
+        V::bind_attribs(&mut Attribs::new::<V>(gl));
 
         // Unbind ALWAYS required (unlike all other render unbinds).
         oes.bind_vertex_array_oes(None);
@@ -143,7 +142,7 @@ impl<V: Vertex + Copy> PointRenderDeque<V> {
 
                 unsafe {
                     // Points to raw rust memory so can't allocate while in use.
-                    let vert_array = js_sys::Float32Array::view(floats_from_vertices(vertices));
+                    let vert_array = js_sys::Float32Array::view(bytemuck::cast_slice(vertices));
                     gl.buffer_sub_data_with_i32_and_array_buffer_view(
                         Gl::ARRAY_BUFFER,
                         offset,
@@ -203,7 +202,7 @@ impl<V: Vertex + Copy> PointRenderDeque<V> {
 
                     unsafe {
                         // Points to raw rust memory so can't allocate while in use.
-                        let vert_array = js_sys::Float32Array::view(floats_from_vertices(slice));
+                        let vert_array = js_sys::Float32Array::view(bytemuck::cast_slice(slice));
                         gl.buffer_sub_data_with_i32_and_array_buffer_view(
                             Gl::ARRAY_BUFFER,
                             offset,

@@ -17,10 +17,11 @@ use actix::{
     Message, ResponseActFuture, WrapFuture,
 };
 use atomic_refcell::AtomicRefCell;
-use common_util::ticks::Ticks;
 use core_protocol::dto::{InvitationDto, ServerDto};
 use core_protocol::get_unix_time_now;
-use core_protocol::id::{ArenaId, InvitationId, PlayerId, ServerId, SessionId, UserAgentId};
+use core_protocol::id::{
+    ArenaId, CohortId, InvitationId, PlayerId, ServerId, SessionId, UserAgentId,
+};
 use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::rpc::{
     ClientRequest, ClientUpdate, LeaderboardUpdate, LiveboardUpdate, PlayerUpdate, Request,
@@ -29,7 +30,7 @@ use core_protocol::rpc::{
 use futures::stream::FuturesUnordered;
 use log::{error, info, warn};
 use maybe_parallel_iterator::IntoMaybeParallelRefIterator;
-use server_util::benchmark::{benchmark_scope, Timer};
+use rust_embed::RustEmbed;
 use server_util::database_schema::SessionItem;
 use server_util::generate_id::{generate_id, generate_id_64};
 use server_util::ip_rate_limiter::IpRateLimiter;
@@ -38,11 +39,12 @@ use server_util::rate_limiter::{RateLimiter, RateLimiterProps};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fs::OpenOptions;
-use std::hash::Hash;
 use std::io::Write;
 use std::marker::PhantomData;
 use std::net::IpAddr;
+use std::num::NonZeroU64;
 use std::ops::Deref;
+use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
@@ -57,10 +59,15 @@ pub struct ClientRepo<G: GameArenaService> {
     prune_rate_limiter: RateLimiter,
     database_rate_limiter: RateLimiter,
     pending_session_write: Vec<SessionItem>,
+    pub(crate) snippets: HashMap<(Option<CohortId>, Option<Referrer>), Arc<str>>,
     /// Where to log traces to.
     trace_log: Option<String>,
     _spooky: PhantomData<G>,
 }
+
+#[derive(RustEmbed)]
+#[folder = "../js/public/referrer/"]
+struct ReferrerSnippet;
 
 impl<G: GameArenaService> ClientRepo<G> {
     pub fn new(trace_log: Option<String>, authenticate: RateLimiterProps) -> Self {
@@ -69,9 +76,52 @@ impl<G: GameArenaService> ClientRepo<G> {
             prune_rate_limiter: RateLimiter::new(Duration::from_secs(1), 0),
             database_rate_limiter: RateLimiter::new(Duration::from_secs(30), 0),
             pending_session_write: Vec::new(),
+            snippets: Self::load_default_snippets(),
             trace_log,
             _spooky: PhantomData,
         }
+    }
+
+    fn load_default_snippets() -> HashMap<(Option<CohortId>, Option<Referrer>), Arc<str>> {
+        let mut hash_map = HashMap::new();
+        for key in ReferrerSnippet::iter() {
+            let value = ReferrerSnippet::get(&key).map(|f| f.data);
+            if let Some(value) = value {
+                // key is like "default.js" or "1.foo.js" where "foo" is a referrer (referrer cannot contain ".").
+                let segs: Vec<&str> = key.split(".").collect();
+                let n = segs.len();
+                if n < 2 || n > 3 || segs[n - 1].to_lowercase() != "js" {
+                    error!("invalid snippet key: {:?}", key);
+                    continue;
+                }
+                let cohort_id = if n == 3 {
+                    segs[0].parse().ok().map(CohortId)
+                } else {
+                    None
+                };
+                let referrer = if segs[n - 2].to_lowercase() == "default" {
+                    None
+                } else {
+                    Referrer::new(segs[n - 2])
+                };
+
+                match str::from_utf8(&value) {
+                    Ok(js_src) => {
+                        log::info!(
+                            "referrer snippet for cohort {:?}, referrer {:?} is {}",
+                            cohort_id,
+                            referrer,
+                            js_src
+                        );
+                        hash_map.insert((cohort_id, referrer), js_src.to_string().into());
+                    }
+                    Err(e) => {
+                        error!("invalid UTF-8 in referrer JS file: {:?}", e);
+                    }
+                }
+            }
+        }
+        hash_map
     }
 
     /// Updates sessions to database (internally rate-limited).
@@ -151,6 +201,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let session_item = SessionItem {
             alias: client.alias,
             arena_id,
+            cohort_id: client.metrics.cohort_id,
             date_created: client.metrics.date_created,
             date_previous: client.metrics.date_previous,
             date_renewed: client.metrics.date_renewed,
@@ -211,6 +262,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let _ = register_observer.send(ObserverUpdate::Send {
             message: Update::Client(ClientUpdate::SessionCreated {
                 arena_id,
+                cohort_id: client.metrics.cohort_id,
                 server_id,
                 session_id: client.session_id,
                 player_id,
@@ -221,6 +273,28 @@ impl<G: GameArenaService> ClientRepo<G> {
         *client.data.borrow_mut() = G::ClientData::default();
         client.chat.forget_state();
         client.team.forget_state();
+
+        // If there is a JS snippet for the cohort and referrer, send it to client for eval.
+        let snippet = client
+            .metrics
+            .referrer
+            .and_then(|referrer| {
+                self.snippets
+                    .get(&(Some(client.metrics.cohort_id), Some(referrer)))
+            })
+            .or_else(|| {
+                client
+                    .metrics
+                    .referrer
+                    .and_then(|referrer| self.snippets.get(&(None, Some(referrer))))
+            })
+            .or_else(|| self.snippets.get(&(Some(client.metrics.cohort_id), None)))
+            .or_else(|| self.snippets.get(&(None, None)));
+        if let Some(snippet) = snippet {
+            let _ = register_observer.send(ObserverUpdate::Send {
+                message: Update::Client(ClientUpdate::EvalSnippet(snippet.clone())),
+            });
+        }
 
         // Change status to connected.
         let new_status = ClientStatus::Connected {
@@ -244,13 +318,13 @@ impl<G: GameArenaService> ClientRepo<G> {
                 drop(player);
 
                 // We previously left the game, so now we have to rejoin.
-                game.player_joined(player_tuple);
+                game.player_joined(player_tuple, &*players);
             }
             ClientStatus::LeavingLimbo { .. } => {
                 drop(player);
 
                 // We previously left the game, so now we have to rejoin.
-                game.player_joined(player_tuple);
+                game.player_joined(player_tuple, &*players);
             }
         }
 
@@ -330,12 +404,9 @@ impl<G: GameArenaService> ClientRepo<G> {
         liveboard: &mut LiveboardRepo<G>,
         leaderboard: &LeaderboardRepo<G>,
         server_delta: Option<(Arc<[ServerDto]>, Arc<[ServerId]>)>,
-        counter: Ticks,
     ) {
-        benchmark_scope!("update_clients");
-
         let player_update = players.delta(&*teams);
-        let team_update = teams.delta();
+        let team_update = teams.delta(&*players);
         let immut_players = &*players;
         let player_chat_team_updates: HashMap<PlayerId, _> = players
             .iter_player_ids()
@@ -361,6 +432,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         let liveboard_update = liveboard.delta(&*players, &*teams);
         let leaderboard_update: Vec<_> = leaderboard.deltas_nondestructive().collect();
 
+        let players = &*players;
         players.players.maybe_par_iter().for_each(
             move |(player_id, player_tuple): (&PlayerId, &Arc<PlayerTuple<G>>)| {
                 let player = player_tuple.borrow_player();
@@ -373,9 +445,9 @@ impl<G: GameArenaService> ClientRepo<G> {
                 // In limbo or will be soon (not connected, cannot send an update).
                 if let ClientStatus::Connected { observer } = &client_data.status {
                     if let Some(update) = game.get_game_update(
-                        counter,
                         player_tuple,
                         &mut *client_data.data.borrow_mut(),
+                        players,
                     ) {
                         let _ = observer.send(ObserverUpdate::Send {
                             message: Update::Game(update),
@@ -493,15 +565,14 @@ impl<G: GameArenaService> ClientRepo<G> {
         server_id: Option<ServerId>,
         arena_id: ArenaId,
     ) {
-        benchmark_scope!("prune_clients");
-
         let now = Instant::now();
 
         if self.prune_rate_limiter.should_limit_rate_with_now(now) {
             return;
         }
 
-        let to_forget: Vec<PlayerId> = players
+        let immut_players = &*players;
+        let to_forget: Vec<PlayerId> = immut_players
             .players
             .iter()
             .filter(|&(&player_id, player_tuple)| {
@@ -517,7 +588,7 @@ impl<G: GameArenaService> ClientRepo<G> {
                             if &now >= expiry {
                                 client_data.status = ClientStatus::LeavingLimbo { since: now };
                                 drop(player);
-                                service.player_left(player_tuple);
+                                service.player_left(player_tuple, immut_players);
                             }
                             false
                         }
@@ -561,32 +632,6 @@ impl<G: GameArenaService> ClientRepo<G> {
         }
     }
 
-    /// Filter-map-reduce all [`ClientData<G>`]'s.
-    ///
-    /// That is to say, apply a function that optionally produces some type T. Return a sorted
-    /// mapping of T to the fraction of corresponding clients.
-    pub(crate) fn filter_map_reduce<T: Hash + Eq>(
-        players: &PlayerRepo<G>,
-        fmr: impl Fn(&PlayerClientData<G>) -> Option<T>,
-    ) -> Vec<(T, f32)> {
-        let mut hash: HashMap<T, u32> = HashMap::new();
-        let mut total = 0u32;
-        for player_data in players.iter_borrow() {
-            if let Some(client_data) = player_data.client() {
-                total += 1;
-                if let Some(v) = fmr(client_data) {
-                    *hash.entry(v).or_insert(0) += 1;
-                }
-            }
-        }
-        let mut list: Vec<(T, u32)> = hash.into_iter().collect();
-        // Sort in reverse so higher counts are first.
-        list.sort_unstable_by_key(|(_, count)| u32::MAX - count);
-        list.into_iter()
-            .map(|(v, count)| (v, count as f32 / total as f32))
-            .collect()
-    }
-
     /// Handles [`G::Command`]'s.
     fn handle_game_command(
         player_id: PlayerId,
@@ -597,7 +642,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         if let Some(player_data) = players.get(player_id) {
             // Game updates for all players are usually processed at once, but we also allow
             // one-off responses.
-            Ok(service.player_command(command, player_data))
+            Ok(service.player_command(command, player_data, players))
         } else {
             Err("nonexistent observer")
         }
@@ -785,11 +830,19 @@ pub struct PlayerClientData<G: GameArenaService> {
     pub(crate) alias: PlayerAlias,
     /// Connection state.
     pub(crate) status: ClientStatus<G>,
+    /// Discord user id.
+    pub(crate) discord_id: Option<NonZeroU64>,
+    /// Is moderator for in-game chat?
+    pub(crate) moderator: bool,
     /// Previous database item.
     pub(crate) session_item: Option<SessionItem>,
+    /// Metrics-related information associated with each client.
     pub(crate) metrics: ClientMetricData<G>,
+    /// Invitation-related information associated with each client.
     pub(crate) invitation: ClientInvitationData,
+    /// Chat-related information associated with each client.
     pub(crate) chat: ClientChatData,
+    /// Team-related information associated with each client.
     pub(crate) team: ClientTeamData,
     /// Players this client has reported.
     pub(crate) reported: HashSet<PlayerId>,
@@ -820,6 +873,8 @@ impl<G: GameArenaService> PlayerClientData<G> {
         session_id: SessionId,
         metrics: ClientMetricData<G>,
         invitation: Option<InvitationDto>,
+        discord_id: Option<NonZeroU64>,
+        moderator: bool,
     ) -> Self {
         Self {
             session_id,
@@ -827,6 +882,8 @@ impl<G: GameArenaService> PlayerClientData<G> {
             status: ClientStatus::Pending {
                 expiry: Instant::now() + Duration::from_secs(10),
             },
+            discord_id,
+            moderator,
             session_item: None,
             metrics,
             invitation: ClientInvitationData::new(invitation),
@@ -953,12 +1010,18 @@ pub struct Authenticate {
     pub arena_id_session_id: Option<(ArenaId, SessionId)>,
     /// Invitation?
     pub invitation_id: Option<InvitationId>,
+    /// Oauth2 code.
+    pub oauth2_code: Option<Oauth2Code>,
+}
+
+pub enum Oauth2Code {
+    Discord(String),
 }
 
 impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
     type Result = ResponseActFuture<Self, Result<PlayerId, &'static str>>;
 
-    fn handle(&mut self, msg: Authenticate, _ctx: &mut ActorContext<Self>) -> Self::Result {
+    fn handle(&mut self, mut msg: Authenticate, _ctx: &mut ActorContext<Self>) -> Self::Result {
         let arena_id = self.context_service.context.arena_id;
         let clients = &mut self.context_service.context.clients;
         let players = &self.context_service.context.players;
@@ -989,11 +1052,41 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
             });
 
         let arena_id_session_id = msg.arena_id_session_id;
+        let oauth2_code = std::mem::take(&mut msg.oauth2_code);
         let database = self.database();
+        let discord_bot = self.discord_bot;
+        let discord_oauth2 = self.discord_oauth2;
 
         Box::pin(
             async move {
-                if cached_session_id_player_id.is_some() {
+                let discord_id = if let Some((Oauth2Code::Discord(code), discord_oauth2)) =
+                    oauth2_code.zip(discord_oauth2)
+                {
+                    match discord_oauth2.authenticate(code).await {
+                        Ok(id) => Some(id),
+                        Err(e) => {
+                            warn!("{}", e);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                let is_moderator =
+                    if let Some((discord_id, discord_bot)) = discord_id.zip(discord_bot) {
+                        match discord_bot.is_moderator(discord_id).await {
+                            Ok(is_moderator) => is_moderator,
+                            Err(e) => {
+                                warn!("{}", e);
+                                false
+                            }
+                        }
+                    } else {
+                        false
+                    };
+
+                let session_item = if cached_session_id_player_id.is_some() {
                     // No need to load from database because session is in memory.
                     Result::Ok(None)
                 } else if let Some((arena_id, session_id)) = arena_id_session_id {
@@ -1001,10 +1094,12 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
                 } else {
                     // Cannot load from database because (arena_id, session_id) is unavailable.
                     Result::Ok(None)
-                }
+                };
+
+                (discord_id, is_moderator, session_item)
             }
             .into_actor(self)
-            .map(move |db_result, act, _ctx| {
+            .map(move |(discord_id, is_moderator, db_result), act, _ctx| {
                 let invitation = msg
                     .invitation_id
                     .and_then(|id| act.invitations.get(id).cloned());
@@ -1058,13 +1153,22 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
                     Entry::Occupied(mut occupied) => {
                         if let Some(client) = occupied.get_mut().borrow_player_mut().client_mut() {
                             client.metrics.date_renewed = get_unix_time_now();
+                            if let Some(discord_id) = discord_id {
+                                client.discord_id = Some(discord_id);
+                                client.moderator = is_moderator;
+                            }
                         } else {
                             debug_assert!(false, "impossible to be a bot since session was valid");
                         }
                     }
                     Entry::Vacant(vacant) => {
-                        let client =
-                            PlayerClientData::new(session_id, client_metric_data, invitation_dto);
+                        let client = PlayerClientData::new(
+                            session_id,
+                            client_metric_data,
+                            invitation_dto,
+                            discord_id,
+                            is_moderator,
+                        );
                         let pd = PlayerData::new(player_id, Some(Box::new(client)));
                         let pt = Arc::new(PlayerTuple::new(pd));
                         vacant.insert(pt);

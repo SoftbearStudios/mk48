@@ -18,6 +18,12 @@
 <Nav/>
 
 <main>
+    {#await adminRequest('RequestServerId')}
+    {:then data}
+        <h2>Server: {data.ServerIdRequested ? data.ServerIdRequested : 'localhost'}</h2>
+    {:catch err}
+    {/await}
+
     <table>
         {#each $referrers as referrer}
             <tr>

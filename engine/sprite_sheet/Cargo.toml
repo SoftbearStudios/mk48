@@ -8,4 +8,4 @@ license = "AGPL-3.0-or-later"
 [dependencies]
 serde = "1.0.130"
 serde_json = "1.0.67"
-glam = "0.18.0"
+glam = {version = "0.18", features = ["serde"]}

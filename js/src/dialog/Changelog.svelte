@@ -14,6 +14,29 @@
 
 	<h2>2021</h2>
 
+	<h3>7/10/2022</h3>
+
+	<ul>
+		<li>Add torpedoes to "Dreadnought" and "Type 055" where realistic.</li>
+		<li>Fix several spawning issues, and try harder to avoid bad spawn locations.</li>
+		<li>Make maximum team size depend on number of players online. It now ranges from 4 to 8, instead of always being 6.</li>
+		<li>Oil barrels no longer regenerate health.</li>
+		<li>Oil rigs de-spawn slightly faster when no players are nearby.</li>
+		<li>Fix bug allowing rocket torpedoes to have guidance.</li>
+		<li>Add language picker to splash screen.</li>
+	</ul>
+
+	<h3>6/4/2022</h3>
+
+	<ul>
+		<li>Improve spawning location algorithm.</li>
+		<li>Don't clear server preference on refresh or settings change.</li>
+		<li>Submarines can submerge slightly faster (less delay).</li>
+		<li>Reset surfacing animation when respawning.</li>
+		<li>Improve player distribution among multiple servers.</li>
+		<li>Make bots lose more points when they are sunk, to encourage more low level bots.</li>
+	</ul>
+
 	<h3>6/2/2022</h3>
 
 	<ul>

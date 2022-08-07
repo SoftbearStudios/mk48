@@ -79,6 +79,14 @@
         }
     }
 
+    async function overrideClientHash() {
+        let server_id = parseInt(prompt("Override client hash (from server id)"));
+        const response = await adminRequest({OverrideClientHash: isNaN(server_id) || server_id < 1 || server_id > 255 ? null : server_id});
+        if (response.ClientHashOverridden) {
+            alert(`Client hash overridden to ${response.ClientHashOverridden}`);
+        }
+    }
+
     function checkmark(bool) {
         return bool ? '✔' : '✗';
     }
@@ -140,6 +148,7 @@
     {:else}
         <button on:click={() => setDistributeLoad(true)}>Engage Load Distribution</button>
     {/if}
+    <button on:click={() => overrideClientHash()}>Override Client Hash</button>
 </main>
 
 <style>

@@ -6,7 +6,6 @@ use crate::entity_extension::EntityExtension;
 use crate::player::*;
 use crate::protocol::*;
 use crate::world::World;
-use crate::world_mutation::Mutation;
 use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
@@ -14,10 +13,8 @@ use common::ticks::Ticks;
 use core_protocol::id::*;
 use game_server::context::Context;
 use game_server::game_service::GameArenaService;
-use game_server::player::PlayerTuple;
+use game_server::player::{PlayerRepo, PlayerTuple};
 use log::warn;
-use server_util::benchmark::Timer;
-use server_util::benchmark_scope;
 use std::cell::UnsafeCell;
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,6 +22,7 @@ use std::time::Duration;
 /// A game server.
 pub struct Server {
     pub world: World,
+    pub counter: Ticks,
 }
 
 /// Stores a player, and metadata related to it. Data stored here may only be accessed when processing,
@@ -43,6 +41,7 @@ unsafe impl Sync for PlayerExtension {}
 
 impl GameArenaService for Server {
     const GAME_ID: GameId = GameId::Mk48;
+    const TICK_PERIOD_SECS: f32 = Ticks::PERIOD_SECS;
 
     /// How long a player can remain in limbo after they lose connection.
     const LIMBO: Duration = Duration::from_secs(6);
@@ -63,17 +62,38 @@ impl GameArenaService for Server {
             world: World::new(World::target_radius(
                 min_players as f32 * EntityType::FairmileD.data().visual_area(),
             )),
+            counter: Ticks::ZERO,
         }
     }
 
-    fn player_joined(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
+    fn team_members_max(players: usize) -> usize {
+        match players {
+            100..=usize::MAX => 8,
+            80..=99 => 7,
+            60..=79 => 6,
+            50..=59 => 5,
+            _ => 4,
+        }
+    }
+
+    fn player_joined(
+        &mut self,
+        player_tuple: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Server>,
+    ) {
         let mut player = player_tuple.borrow_player_mut();
         player.data.flags.left_game = false;
         #[cfg(debug_assertions)]
         {
             use common::entity::EntityData;
             use common::util::level_to_score;
-            player.score = level_to_score(EntityData::MAX_BOAT_LEVEL);
+            use rand::{thread_rng, Rng};
+            let highest_level_score = level_to_score(EntityData::MAX_BOAT_LEVEL);
+            player.score = if player.is_bot() {
+                thread_rng().gen_range(0..=highest_level_score)
+            } else {
+                highest_level_score
+            };
         }
     }
 
@@ -81,6 +101,7 @@ impl GameArenaService for Server {
         &mut self,
         update: Self::GameRequest,
         player: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Server>,
     ) -> Option<Update> {
         if let Err(e) = update.as_command().apply(&mut self.world, player) {
             warn!("Command resulted in {}", e);
@@ -92,6 +113,7 @@ impl GameArenaService for Server {
         &mut self,
         player_tuple: &Arc<PlayerTuple<Self>>,
         old_team: Option<TeamId>,
+        _players: &PlayerRepo<Server>,
     ) {
         if old_team.is_some() {
             player_tuple
@@ -102,11 +124,14 @@ impl GameArenaService for Server {
         }
     }
 
-    fn player_left(&mut self, player_tuple: &Arc<PlayerTuple<Self>>) {
+    fn player_left(
+        &mut self,
+        player_tuple: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Server>,
+    ) {
         let mut player = player_tuple.borrow_player_mut();
-        if let Status::Alive { entity_index, .. } = player.data.status {
+        if player.status.is_alive() {
             drop(player);
-            Mutation::boat_died(&mut self.world, entity_index, true);
         } else {
             player.data.status = Status::Spawning;
             drop(player);
@@ -123,14 +148,14 @@ impl GameArenaService for Server {
 
     fn get_game_update(
         &self,
-        counter: Ticks,
         player: &Arc<PlayerTuple<Self>>,
         client_data: &mut Self::ClientData,
+        _players: &PlayerRepo<Server>,
     ) -> Option<Self::GameUpdate> {
         Some(
             self.world
                 .get_player_complete(player)
-                .into_update(counter, &mut client_data.loaded_chunks),
+                .into_update(self.counter, &mut client_data.loaded_chunks),
         )
     }
 
@@ -140,8 +165,8 @@ impl GameArenaService for Server {
     }
 
     /// update runs server ticks.
-    fn tick(&mut self, _context: &Context<Self>) {
-        benchmark_scope!("tick");
+    fn tick(&mut self, _context: &mut Context<Self>) {
+        self.counter = self.counter.next();
 
         self.world.update(Ticks::ONE);
 
@@ -149,7 +174,7 @@ impl GameArenaService for Server {
         self.world.terrain.pre_update();
     }
 
-    fn post_update(&mut self, _context: &Context<Self>) {
+    fn post_update(&mut self, _context: &mut Context<Self>) {
         // Needs to be after clients receive updates.
         self.world.terrain.post_update();
     }

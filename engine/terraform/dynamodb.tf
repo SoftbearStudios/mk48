@@ -70,3 +70,61 @@ resource "aws_dynamodb_table" "metrics" {
     enabled = true
   }
 }
+
+resource "aws_dynamodb_table" "users" {
+  name = "core_users"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "user_id"
+
+  attribute {
+    name = "user_id"
+    type = "N"
+  }
+
+  stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+resource "aws_dynamodb_table" "logins" {
+  name = "core_logins"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "login_type"
+  range_key = "id"
+
+  attribute {
+    name = "login_type"
+    type = "S"
+  }
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+}
+
+resource "aws_dynamodb_table" "ips" {
+  name = "core_ips"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "ip"
+
+  attribute {
+    name = "ip"
+    type = "S"
+  }
+
+  stream_enabled = true
+  stream_view_type = "NEW_IMAGE"
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+}

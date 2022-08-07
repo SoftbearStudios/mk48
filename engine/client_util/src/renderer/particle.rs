@@ -6,6 +6,7 @@ use crate::renderer::renderer::Layer;
 use crate::renderer::renderer::Renderer;
 use crate::renderer::shader::Shader;
 use crate::renderer::vertex::Vertex;
+use bytemuck::{Pod, Zeroable};
 use glam::{vec3, vec4, Vec2};
 
 /// Particle represents a single particle and contains information about how to update it.
@@ -74,17 +75,15 @@ impl ParticleLayer {
     }
 }
 
-/// Particle representation for GPU.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Pod, Zeroable, Vertex)]
 #[repr(C)]
-#[derive(Vertex)]
 struct ParticleVertex {
-    pub position: Vec2,
-    pub velocity: Vec2,
-    pub color: f32,
-    pub radius: f32,
-    pub smoothness: f32,
-    pub created: f32,
+    position: Vec2,
+    velocity: Vec2,
+    color: f32,
+    radius: f32,
+    smoothness: f32,
+    created: f32,
 }
 
 impl Layer for ParticleLayer {

@@ -3,7 +3,6 @@
 
 use crate::angle::Angle;
 use glam::Vec2;
-use rand::prelude::ThreadRng;
 use rand::Rng;
 use std::ops::Range;
 
@@ -69,7 +68,7 @@ pub fn lerp(start: f32, end: f32, amount: f32) -> f32 {
 }
 
 /// Samples a point from a circle with the given radius.
-pub fn gen_radius(rng: &mut ThreadRng, radius: f32) -> Vec2 {
+pub fn gen_radius(rng: &mut impl Rng, radius: f32) -> Vec2 {
     rng.gen::<Angle>().to_vec() * (rng.gen::<f32>().sqrt() * radius)
 }
 

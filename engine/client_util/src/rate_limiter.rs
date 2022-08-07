@@ -47,4 +47,32 @@ impl RateLimiter {
         self.elapsed %= self.period;
         ret
     }
+
+    /// Takes how much time passed, in seconds, since last update. Returns a iterator of possibly
+    /// multiple times to do the rate-limited action. Useful if called less frequently than period.
+    /// Will iterate up to a second worth of updates max.
+    pub fn iter_updates(&mut self, elapsed: f32) -> impl Iterator<Item = ()> {
+        self.update(elapsed);
+        let iterations = (self.elapsed / self.period) as usize;
+        self.elapsed -= iterations as f32 * self.period;
+        std::iter::repeat(()).take(iterations.min((1.0 / self.period) as usize) as usize)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_iter_updates() {
+        let mut limiter = RateLimiter::new(0.1);
+        // Starts with 1 ready (see RateLimiter::new).
+        assert!(limiter.update_ready(0.0));
+        assert_eq!(limiter.iter_updates(10.0).count(), 10);
+
+        assert!(!limiter.update_ready(0.06));
+        assert!(limiter.update_ready(0.06));
+        assert!(!limiter.update_ready(0.06));
+        assert_eq!(limiter.iter_updates(0.15).count(), 2);
+    }
 }
