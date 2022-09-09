@@ -203,11 +203,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Active {sensors} helps you see more, but may also give away your position",
+						"hint": "(Z) Active {sensors} helps you see more, but may also give away your position",
 						"label": "Active sensors"
 					},
 					"surface": {
-						"hint": "You can surface your ship whenever you want, but diving is sometimes limited by the depth of the water.",
+						"hint": "(R) You can surface your ship whenever you want, but diving is sometimes limited by the depth of the water.",
 						"label": "Surface"
 					}
 				}
@@ -512,11 +512,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Los {sensors} activos te ayudan a ver más, pero también pueden revelar tu posición",
+						"hint": "(R) Los {sensors} activos te ayudan a ver más, pero también pueden revelar tu posición",
 						"label": "Sensores activos"
 					},
 					"surface": {
-						"hint": "Puede salir a la superficie de su barco cuando lo desee, pero el buceo a veces está limitado por la profundidad del agua.",
+						"hint": "(Z) Puede salir a la superficie de su barco cuando lo desee, pero el buceo a veces está limitado por la profundidad del agua.",
 						"label": "Superficie"
 					}
 				}
@@ -820,11 +820,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Les {sensors} actifs vous aident à voir plus, mais peuvent également révéler votre position",
+						"hint": "(R) Les {sensors} actifs vous aident à voir plus, mais peuvent également révéler votre position",
 						"label": "Capteurs actifs"
 					},
 					"surface": {
-						"hint": "Vous pouvez faire surfacer votre bateau quand vous le souhaitez, mais la plongée est parfois limitée par la profondeur de l'eau.",
+						"hint": "(Z) Vous pouvez faire surfacer votre bateau quand vous le souhaitez, mais la plongée est parfois limitée par la profondeur de l'eau.",
 						"label": "Surface"
 					}
 				}
@@ -1128,11 +1128,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Активные {sensors} помогают вам видеть больше, но также могут выдавать ваше местоположение",
+						"hint": "(R) Активные {sensors} помогают вам видеть больше, но также могут выдавать ваше местоположение",
 						"label": "Активные датчики"
 					},
 					"surface": {
-						"hint": "Вы можете всплыть на поверхность своего корабля, когда захотите, но погружение иногда ограничивается глубиной воды.",
+						"hint": "(Z) Вы можете всплыть на поверхность своего корабля, когда захотите, но погружение иногда ограничивается глубиной воды.",
 						"label": "Поверхность"
 					}
 				}
@@ -1436,11 +1436,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "活跃的 {sensors} 可以帮助您看到更多，但也可能会泄露您的位置",
+						"hint": "(R) 活跃的 {sensors} 可以帮助您看到更多，但也可能会泄露您的位置",
 						"label": "有源传感器"
 					},
 					"surface": {
-						"hint": "您可以随时浮出水面，但潜水有时会受到水深的限制。",
+						"hint": "(Z) 您可以随时浮出水面，但潜水有时会受到水深的限制。",
 						"label": "表面"
 					}
 				}
@@ -1744,11 +1744,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Dein {sensors} hilft dir mehr zu sehen, aber es verrät auch deine Position.",
+						"hint": "(R) Dein {sensors} hilft dir mehr zu sehen, aber es verrät auch deine Position.",
 						"label": "Aktive Sensoren"
 					},
 					"surface": {
-						"hint": "Du kannst jederzeit auftauchen aber die Tauchtiefe ist von der Wassertiefe begrenzt.",
+						"hint": "(Z) Du kannst jederzeit auftauchen aber die Tauchtiefe ist von der Wassertiefe begrenzt.",
 						"label": "Tauchen"
 					}
 				}
@@ -2053,11 +2053,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "{sensors} đang hoạt động giúp bạn nhìn thấy nhiều hơn, nhưng cũng có thể làm mất đi vị trí của bạn",
+						"hint": "(R) {sensors} đang hoạt động giúp bạn nhìn thấy nhiều hơn, nhưng cũng có thể làm mất đi vị trí của bạn",
 						"label": "Cảm biến hoạt động"
 					},
 					"surface": {
-						"hint": "Bạn có thể nổi con tàu của mình bất cứ khi nào bạn muốn, nhưng việc lặn đôi khi bị giới hạn bởi độ sâu của nước.",
+						"hint": "(Z) Bạn có thể nổi con tàu của mình bất cứ khi nào bạn muốn, nhưng việc lặn đôi khi bị giới hạn bởi độ sâu của nước.",
 						"label": "Mặt"
 					}
 				}
@@ -2361,11 +2361,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "アクティブな{sensors}は、より多くの情報を確認するのに役立ちますが、自分の位置を示す可能性もあります",
+						"hint": "(R) アクティブな{sensors}は、より多くの情報を確認するのに役立ちますが、自分の位置を示す可能性もあります",
 						"label": "アクティブセンサー"
 					},
 					"surface": {
-						"hint": "いつでも船を浮上させることができますが、ダイビングは水深によって制限されることがあります。",
+						"hint": "(Z) いつでも船を浮上させることができますが、ダイビングは水深によって制限されることがあります。",
 						"label": "水面"
 					}
 				}
@@ -2662,11 +2662,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "I {sensors} attivi ti aiutano a vedere di più, ma possono anche rivelare la tua posizione",
+						"hint": "(R) I {sensors} attivi ti aiutano a vedere di più, ma possono anche rivelare la tua posizione",
 						"label": "Sensori attivi"
 					},
 					"surface": {
-						"hint": "Puoi far emergere la tua nave quando vuoi, ma le immersioni a volte sono limitate dalla profondità dell'acqua.",
+						"hint": "(Z) Puoi far emergere la tua nave quando vuoi, ma le immersioni a volte sono limitate dalla profondità dell'acqua.",
 						"label": "Superficie"
 					}
 				}
@@ -2936,11 +2936,11 @@
 			"ship": {
 				"action": {
 					"active": {
-						"hint": "Active {sensors} helps bork see but also helps others see bork",
+						"hint": "(R) Active {sensors} helps bork see but also helps others see bork",
 						"label": "Sensors go brrr"
 					},
 					"surface": {
-						"hint": "Bork can go up and down, except if the water is too shallow..."
+						"hint": "(Z) Bork can go up and down, except if the water is too shallow..."
 					}
 				}
 			},
