@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::console_log;
 use core_protocol::web_socket::WebSocketProtocol;
+use js_hooks::console_error;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::cell::RefCell;
-use std::mem;
 use std::ops::Deref;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
@@ -27,7 +26,8 @@ struct ProtoWebSocketInner<I, O> {
     protocol: WebSocketProtocol,
     state: State,
     outbound_buffer: Vec<O>,
-    inbound_buffer: Vec<I>, // Only used in State::Opening.
+    /// Only used in State::Opening.
+    inbound_buffer: Vec<I>,
 }
 
 /// Websocket that obeys a protocol consisting of an inbound and outbound message.
@@ -59,20 +59,40 @@ where
 
         let onmessage_callback = Closure::wrap(Box::new(move |e: MessageEvent| {
             // Handle difference Text/Binary,...
-            let update = if let Ok(array_buffer) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
+            let result = if let Ok(array_buffer) = e.data().dyn_into::<js_sys::ArrayBuffer>() {
                 //console_log!("message event, received arraybuffer: {:?}", abuf);
                 let buf = js_sys::Uint8Array::new(&array_buffer).to_vec();
-                bincode::deserialize(&buf).unwrap()
-            } else if let Ok(t) = e.data().dyn_into::<js_sys::JsString>() {
-                //console_log!("message event, received Text: {:?}", txt);
-                let text: String = t.into();
-                serde_json::from_str::<I>(&text).unwrap()
+                bincode::deserialize(&buf).map_err(|e| e.to_string())
+            } else if let Ok(_t) = e.data().dyn_into::<js_sys::JsString>() {
+                #[cfg(feature = "json")]
+                {
+                    let t = _t;
+                    //console_log!("message event, received Text: {:?}", txt);
+
+                    let text: String = t.into();
+                    serde_json::from_str::<I>(&text).map_err(|e| e.to_string())
+                }
+                #[cfg(not(feature = "json"))]
+                {
+                    console_error!("message event, json not supported");
+                    return;
+                }
             } else {
-                console_log!("message event, received Unknown: {:?}", e.data());
+                console_error!("message event, received Unknown: {:?}", e.data());
                 return;
             };
 
-            inner_copy.deref().borrow_mut().inbound_buffer.push(update);
+            let mut inner = inner_copy.deref().borrow_mut();
+            match result {
+                Ok(update) => inner.inbound_buffer.push(update),
+                Err(e) => {
+                    console_error!("error decoding websocket data: {}", e);
+                    // Mark as closed without actually closing. This may keep a player's session
+                    // alive for longer, so they can save their progress by refreshing. The
+                    // refresh menu should encourage this.
+                    inner.state = State::Closed;
+                }
+            }
         }) as Box<dyn FnMut(MessageEvent)>);
         // set message event handler on WebSocket
         local_inner
@@ -96,9 +116,7 @@ where
         let onopen_callback = Closure::once(move || {
             let mut inner = inner_copy.deref().borrow_mut();
             inner.state = State::Open;
-            let mut outbounds = Vec::new();
-            mem::swap(&mut outbounds, &mut inner.outbound_buffer);
-            for outbound in outbounds {
+            for outbound in std::mem::take(&mut inner.outbound_buffer) {
                 Self::do_send(&inner.socket, outbound, inner.protocol);
             }
         });
@@ -160,9 +178,7 @@ where
     /// Gets buffered updates.
     pub fn receive_updates(&mut self) -> Vec<I> {
         let mut inner = self.inner.deref().borrow_mut();
-        let mut inbounds = Vec::new();
-        mem::swap(&mut inbounds, &mut inner.inbound_buffer);
-        inbounds
+        std::mem::take(&mut inner.inbound_buffer)
     }
 
     /// Send a message or buffer it if the websocket is still opening.
@@ -171,7 +187,7 @@ where
         match inner.state {
             State::Opening => inner.outbound_buffer.push(msg),
             State::Open => Self::do_send(&inner.socket, msg, inner.protocol),
-            _ => console_log!("cannot send on closed websocket."),
+            _ => console_error!("cannot send on closed websocket."),
         }
     }
 
@@ -181,13 +197,14 @@ where
             WebSocketProtocol::Binary => {
                 let buf = bincode::serialize(&msg).unwrap();
                 if socket.send_with_u8_array(&buf).is_err() {
-                    console_log!("error sending binary on ws");
+                    console_error!("error sending binary on ws");
                 }
             }
+            #[cfg(feature = "json")]
             WebSocketProtocol::Json => {
                 let buf = serde_json::to_string(&msg).unwrap();
                 if socket.send_with_str(&buf).is_err() {
-                    console_log!("error sending text on ws");
+                    console_error!("error sending text on ws");
                 }
             }
         }
@@ -213,7 +230,7 @@ impl<I, O> ProtoWebSocket<I, O> {
                 drop(inner);
                 let _ = clone.close();
             }
-            _ => console_log!("cannot close closed websocket."),
+            _ => console_error!("cannot close closed websocket."),
         }
     }
 }

@@ -14,17 +14,25 @@ use heapless::HistoryBuffer;
 use log::error;
 use rustrict::{BlockReason, ContextProcessingOptions, ContextRateLimitOptions};
 use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 use std::fs::OpenOptions;
+use std::io::Write;
 use std::marker::PhantomData;
+use std::net::IpAddr;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// Component of [`Context`] dedicated to chat.
 pub struct ChatRepo<G> {
     /// For new players' chat to start full.
     recent: HistoryBuffer<Arc<MessageDto>, 16>,
+    /// Safe mode (profanity filter setting) is on until this time.
+    safe_mode_until: Option<Instant>,
+    /// Slow mode (more aggressive rate limits for all players) is on until this time.
+    slow_mode_until: Option<Instant>,
     /// Log all chats here.
-    log_path: Option<String>,
+    log_path: Option<Arc<str>>,
     _spooky: PhantomData<G>,
 }
 
@@ -69,7 +77,9 @@ impl<G: GameArenaService> ChatRepo<G> {
     pub fn new(log_path: Option<String>) -> Self {
         Self {
             recent: HistoryBuffer::new(),
-            log_path,
+            safe_mode_until: None,
+            slow_mode_until: None,
+            log_path: log_path.map(Into::into),
             _spooky: PhantomData,
         }
     }
@@ -119,6 +129,83 @@ impl<G: GameArenaService> ChatRepo<G> {
         }
     }
 
+    /// Clamps minutes to a day, and then returns an instant in the future (if overflow occurs, returns old instant).
+    fn minutes_to_instant(minutes: u32, old: Option<Instant>) -> Option<Instant> {
+        let new = Instant::now().checked_add(Duration::from_secs(minutes as u64 * 60));
+        new.or(old)
+    }
+
+    fn restrict_player(
+        &mut self,
+        req_player_id: PlayerId,
+        restrict_player_id: PlayerId,
+        minutes: u32,
+        players: &PlayerRepo<G>,
+    ) -> Result<ChatUpdate, &'static str> {
+        if req_player_id == restrict_player_id {
+            return Err("cannot restrict self");
+        }
+        let req_player = players
+            .borrow_player(req_player_id)
+            .ok_or("nonexistent player")?;
+        let req_client = req_player.client().ok_or("not a real player")?;
+        if !req_client.moderator {
+            return Err("permission denied");
+        }
+        let mut restrict_player = players
+            .borrow_player_mut(restrict_player_id)
+            .ok_or("nonexistent player")?;
+        let restrict_client = restrict_player.client_mut().ok_or("not a real player")?;
+        let minutes = minutes.min(1440);
+        if let Some(restrict_until) =
+            Self::minutes_to_instant(minutes, restrict_client.chat.context.restricted_until())
+        {
+            restrict_client.chat.context.restrict_until(restrict_until);
+            Ok(ChatUpdate::PlayerRestricted {
+                player_id: restrict_player_id,
+                minutes,
+            })
+        } else {
+            Err("overflow")
+        }
+    }
+
+    fn set_safe_mode(
+        &mut self,
+        req_player_id: PlayerId,
+        minutes: u32,
+        players: &PlayerRepo<G>,
+    ) -> Result<ChatUpdate, &'static str> {
+        let req_player = players
+            .borrow_player(req_player_id)
+            .ok_or("nonexistent player")?;
+        let req_client = req_player.client().ok_or("not a real player")?;
+        if !req_client.moderator {
+            return Err("permission denied");
+        }
+        let clamped = minutes.min(60);
+        self.safe_mode_until = Self::minutes_to_instant(clamped, None);
+        Ok(ChatUpdate::SafeModeSet(clamped))
+    }
+
+    fn set_slow_mode(
+        &mut self,
+        req_player_id: PlayerId,
+        minutes: u32,
+        players: &PlayerRepo<G>,
+    ) -> Result<ChatUpdate, &'static str> {
+        let req_player = players
+            .borrow_player(req_player_id)
+            .ok_or("nonexistent player")?;
+        let req_client = req_player.client().ok_or("not a real player")?;
+        if !req_client.moderator {
+            return Err("permission denied");
+        }
+        let clamped = minutes.min(120);
+        self.slow_mode_until = Self::minutes_to_instant(clamped, None);
+        Ok(ChatUpdate::SlowModeSet(clamped))
+    }
+
     /// Send a chat to all players, or one's team (whisper).
     fn send_chat(
         &mut self,
@@ -129,9 +216,34 @@ impl<G: GameArenaService> ChatRepo<G> {
         teams: &TeamRepo<G>,
         metrics: &mut MetricRepo<G>,
     ) -> Result<ChatUpdate, &'static str> {
+        if let Some(text) = self.try_execute_command(req_player_id, &message, players) {
+            if let Some(mut req_player) = players.borrow_player_mut(req_player_id) {
+                let alias = req_player.alias();
+                if let Some(req_client) = req_player.client_mut() {
+                    self.log_chat(req_client.ip_address, alias, &message, whisper, "executed");
+                    let message = MessageDto {
+                        alias: G::authority_alias(),
+                        date_sent: get_unix_time_now(),
+                        player_id: None,
+                        team_captain: false,
+                        team_name: None,
+                        text,
+                        whisper,
+                    };
+                    req_client.chat.receive(&Arc::new(message));
+                } else {
+                    debug_assert!(false, "bot issued command");
+                }
+            } else {
+                debug_assert!(false, "nonexistent player issued command");
+            }
+            return Ok(ChatUpdate::Sent);
+        }
+
         let mut req_player = players
             .borrow_player_mut(req_player_id)
             .ok_or("nonexistent player")?;
+
         let team = req_player.team_id().and_then(|t| teams.get(t));
 
         if !req_player.is_alive() {
@@ -145,17 +257,28 @@ impl<G: GameArenaService> ChatRepo<G> {
         // If the team no longer exists, no members should exist.
         debug_assert_eq!(req_player.team_id().is_some(), team.is_some());
 
-        let options = ContextProcessingOptions {
-            character_limit: NonZeroUsize::new(150),
-            rate_limit: if whisper {
-                None
-            } else {
-                Some(ContextRateLimitOptions::default())
-            },
-            ..Default::default()
-        };
+        let result = if let Some(req_client) = req_player.client_mut() {
+            let options = ContextProcessingOptions {
+                character_limit: NonZeroUsize::new(150),
+                safe_mode_until: self.safe_mode_until.filter(|_| !req_client.moderator),
+                rate_limit: if whisper {
+                    None
+                } else {
+                    Some(
+                        if self
+                            .slow_mode_until
+                            .map(|t| !req_client.moderator && t > Instant::now())
+                            .unwrap_or(false)
+                        {
+                            ContextRateLimitOptions::slow_mode()
+                        } else {
+                            ContextRateLimitOptions::default()
+                        },
+                    )
+                },
+                ..Default::default()
+            };
 
-        let (result, was_toxic) = if let Some(req_client) = req_player.client_mut() {
             let before = req_client.chat.context.total_inappropriate();
 
             let result = req_client
@@ -166,24 +289,30 @@ impl<G: GameArenaService> ChatRepo<G> {
             let was_toxic = req_client.chat.context.total_inappropriate() > before;
             metrics.mutate_with(|m| m.toxicity.push(was_toxic), &req_client.metrics);
 
-            (result, was_toxic)
+            let verdict = match &result {
+                Ok(_) if was_toxic => "toxic",
+                Ok(_) => "ok",
+                Err(BlockReason::Inappropriate(_)) => "inappropriate",
+                Err(BlockReason::Unsafe { .. }) => "unsafe",
+                Err(BlockReason::Repetitious(_)) => "repetitious",
+                Err(BlockReason::Spam(_)) => "spam",
+                Err(BlockReason::Muted(_)) => "muted",
+                Err(BlockReason::Empty) => "empty",
+                _ => "???",
+            };
+
+            self.log_chat(
+                req_client.ip_address,
+                req_player.alias(),
+                &message,
+                whisper,
+                verdict,
+            );
+
+            result
         } else {
-            (Ok(message.clone()), false)
+            Ok(message)
         };
-
-        let verdict = match &result {
-            Ok(_) if was_toxic => "toxic",
-            Ok(_) => "ok",
-            Err(BlockReason::Inappropriate(_)) => "inappropriate",
-            Err(BlockReason::Unsafe(_)) => "unsafe",
-            Err(BlockReason::Repetitious(_)) => "repetitious",
-            Err(BlockReason::Spam(_)) => "spam",
-            Err(BlockReason::Muted(_)) => "muted",
-            Err(BlockReason::Empty) => "empty",
-            _ => "???",
-        };
-
-        self.log_chat(req_player.alias(), &message, whisper, verdict);
 
         match result {
             Ok(text) => {
@@ -265,6 +394,15 @@ impl<G: GameArenaService> ChatRepo<G> {
             ChatRequest::Send { message, whisper } => {
                 self.send_chat(req_player_id, message, whisper, players, teams, metrics)
             }
+            ChatRequest::SetSafeMode(minutes) => {
+                self.set_safe_mode(req_player_id, minutes, &*players)
+            }
+            ChatRequest::SetSlowMode(minutes) => {
+                self.set_slow_mode(req_player_id, minutes, &*players)
+            }
+            ChatRequest::RestrictPlayer { player_id, minutes } => {
+                self.restrict_player(req_player_id, player_id, minutes, players)
+            }
         }
     }
 
@@ -303,26 +441,122 @@ impl<G: GameArenaService> ChatRepo<G> {
     }
 
     /// Logs a chat message to a file (provided that a logging path has been configured).
-    pub(crate) fn log_chat(&self, alias: PlayerAlias, message: &str, whisper: bool, verdict: &str) {
+    pub(crate) fn log_chat(
+        &self,
+        ip: IpAddr,
+        alias: PlayerAlias,
+        message: &str,
+        whisper: bool,
+        verdict: &str,
+    ) {
         if let Some(log_path) = &self.log_path {
             let ctx = if whisper { "team" } else { "global" };
+            let log_path = Arc::clone(log_path);
+            let mut line = Vec::with_capacity(256);
+            let mut writer = csv::Writer::from_writer(&mut line);
+            if let Err(e) = writer.write_record(&[
+                &format!("{}", get_unix_time_now()),
+                &format!("{:?}", G::GAME_ID),
+                &ip.to_string(),
+                ctx,
+                verdict,
+                alias.as_str(),
+                message,
+            ]) {
+                error!("error composing chat line: {:?}", e);
+            }
+            drop(writer);
 
-            match OpenOptions::new().create(true).append(true).open(log_path) {
-                Ok(file) => {
-                    let mut wtr = csv::Writer::from_writer(file);
-                    if let Err(e) = wtr.write_record(&[
-                        &format!("{}", get_unix_time_now()),
-                        &format!("{:?}", G::GAME_ID),
-                        ctx,
-                        verdict,
-                        alias.as_str(),
-                        message,
-                    ]) {
-                        error!("error logging chat: {:?}", e);
-                    }
+            tokio::task::spawn_blocking(move || {
+                if let Err(e) = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&*log_path)
+                    .and_then(move |mut file| file.write_all(&line))
+                {
+                    error!("error logging chat: {:?}", e);
                 }
-                Err(e) => error!("error logging chat: {:?}", e),
+            });
+        }
+    }
+
+    fn try_execute_command(
+        &mut self,
+        req_player_id: PlayerId,
+        message: &str,
+        players: &PlayerRepo<G>,
+    ) -> Option<String> {
+        struct FormattedDuration(Duration);
+
+        impl Display for FormattedDuration {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                // Don't round down immediately after setting time.
+                let d = self.0.saturating_add(Duration::from_millis(500));
+                if d >= Duration::from_secs(3600) {
+                    write!(f, "{}h", d.as_secs() / 3600)
+                } else if d >= Duration::from_secs(60) {
+                    write!(f, "{}m", d.as_secs() / 60)
+                } else {
+                    write!(f, "{}s", d.as_secs().max(1))
+                }
             }
         }
+
+        fn parse_minutes(arg: &str) -> Option<u32> {
+            if matches!(arg, "none" | "off") {
+                Some(0)
+            } else {
+                arg.parse::<u32>()
+                    .ok()
+                    .or_else(|| arg.strip_suffix('m').and_then(|s| s.parse().ok()))
+                    .or_else(|| {
+                        arg.strip_suffix('h')
+                            .and_then(|s| s.parse::<u32>().ok())
+                            .and_then(|n| n.checked_mul(60))
+                    })
+            }
+        }
+
+        let print_until_status = |name: &str, until: Option<Instant>| {
+            if let Some(duration) =
+                until.and_then(|instant| instant.checked_duration_since(Instant::now()))
+            {
+                format!(
+                    "{} enabled for the next {}",
+                    name,
+                    FormattedDuration(duration)
+                )
+            } else {
+                format!("{} disabled", name)
+            }
+        };
+
+        let command = message.strip_prefix('/')?;
+        let mut words = command.split_ascii_whitespace();
+        let first = words.next()?;
+
+        macro_rules! until {
+            ($name: literal, $getter: ident, $setter: ident) => {{
+                match words.next() {
+                    None => print_until_status($name, self.$getter),
+                    Some(arg) => {
+                        if let Some(minutes) = parse_minutes(arg) {
+                            self.$setter(req_player_id, minutes, players)
+                                .map(|_| print_until_status($name, self.$getter))
+                                .map_err(String::from)
+                                .into_ok_or_err()
+                        } else {
+                            String::from("failed to parse argument as minutes")
+                        }
+                    }
+                }
+            }};
+        }
+
+        Some(match first {
+            "slow" => until!("slow mode", slow_mode_until, set_slow_mode),
+            "safe" => until!("safe mode", safe_mode_until, set_safe_mode),
+            _ => String::from("unrecognized command"),
+        })
     }
 }

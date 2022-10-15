@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::sprite::SortableSprite;
-use client_util::renderer::background::{BackgroundContext, Invalidation};
-use client_util::renderer::renderer::Renderer;
-use client_util::renderer::shader::{Shader, ShaderBinding};
-use client_util::renderer::texture::{Texture, TextureFormat};
 use common::entity::{EntityId, EntityType};
 use common::terrain::{Coord, RelativeCoord, Terrain};
 use common::transform::Transform;
@@ -13,6 +9,8 @@ use common::velocity::Velocity;
 use common::{terrain, world};
 use common_util::angle::{Angle, AngleRepr};
 use glam::{uvec2, vec2, vec3, Mat3, UVec2, Vec2};
+use renderer::{LayerShader, Shader, ShaderBinding, Texture, TextureFormat};
+use renderer2d::{BackgroundContext, Camera2d, Invalidation, Renderer2d};
 use std::convert::TryInto;
 
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
@@ -66,24 +64,27 @@ impl Mk48BackgroundContext {
     const SAND_COLOR: [u8; 3] = [213, 176, 107];
     const SNOW_COLOR: [u8; 3] = [233, 235, 237];
 
-    pub fn new(renderer: &Renderer, animations: bool, wave_quality: u8) -> Self {
-        let terrain_texture = renderer.new_empty_texture(TextureFormat::Alpha, true);
+    pub fn new(renderer: &Renderer2d, animations: bool, wave_quality: u8) -> Self {
+        let terrain_texture = Texture::new_empty(renderer, TextureFormat::Alpha, true);
 
-        let grass_texture = renderer.load_texture(
+        let grass_texture = Texture::load(
+            renderer,
             "/grass.png",
-            UVec2::splat(512),
+            TextureFormat::Rgba,
             Some(Mk48BackgroundContext::GRASS_COLOR),
             true,
         );
-        let sand_texture = renderer.load_texture(
+        let sand_texture = Texture::load(
+            renderer,
             "/sand.png",
-            UVec2::splat(512),
+            TextureFormat::Rgba,
             Some(Mk48BackgroundContext::SAND_COLOR),
             true,
         );
-        let snow_texture = renderer.load_texture(
+        let snow_texture = Texture::load(
+            renderer,
             "/snow.png",
-            UVec2::splat(512),
+            TextureFormat::Rgba,
             Some(Mk48BackgroundContext::SNOW_COLOR),
             true,
         );
@@ -110,7 +111,7 @@ impl Mk48BackgroundContext {
         zoom: f32,
         terrain: &mut Terrain,
         terrain_reset: bool,
-        renderer: &Renderer,
+        renderer: &Renderer2d,
     ) -> impl Iterator<Item = SortableSprite> + '_ {
         let view = TerrainView::new(camera, renderer.aspect_ratio(), zoom);
         let view_changed = view != self.last_view;
@@ -129,8 +130,8 @@ impl Mk48BackgroundContext {
                 0,
             ));
 
-            renderer.realloc_texture_with_opt_bytes(
-                &mut self.terrain_texture,
+            self.terrain_texture.realloc_with_opt_bytes(
+                renderer,
                 view.dimensions,
                 Some(&self.last_terrain),
             );
@@ -143,7 +144,7 @@ impl Mk48BackgroundContext {
         }
 
         // Only create invalidations if frame cache is enabled and they'll be used.
-        if self.frame_cache_enabled() {
+        if self.cache_frame() {
             // Invalidate frame cache when terrain is reset (aka switch servers).
             if terrain_reset {
                 self.invalidation = Some(Invalidation::All);
@@ -183,8 +184,8 @@ impl Mk48BackgroundContext {
     }
 }
 
-impl BackgroundContext for Mk48BackgroundContext {
-    fn create_shader(&self, renderer: &mut Renderer) -> Shader {
+impl LayerShader<Camera2d> for Mk48BackgroundContext {
+    fn create(&self, renderer: &Renderer2d) -> Shader {
         let background_frag_template = include_str!("./shaders/background.frag");
         let mut background_frag_source = String::with_capacity(background_frag_template.len() + 40);
 
@@ -197,13 +198,15 @@ impl BackgroundContext for Mk48BackgroundContext {
 
         background_frag_source += background_frag_template;
 
-        renderer.create_shader(
+        // Don't cache shader because it's dynamic.
+        Shader::new(
+            renderer,
             include_str!("./shaders/background.vert"),
             &background_frag_source,
         )
     }
 
-    fn prepare(&mut self, renderer: &Renderer, shader: &mut ShaderBinding) {
+    fn prepare(&mut self, renderer: &Renderer2d, shader: &ShaderBinding) {
         let matrix = self.last_view.world_space_to_uv_space();
         shader.uniform_matrix3f("uTexture", &matrix);
 
@@ -217,8 +220,10 @@ impl BackgroundContext for Mk48BackgroundContext {
         shader.uniform_texture("uSand", &self.sand_texture, 2);
         shader.uniform_texture("uSnow", &self.snow_texture, 3);
     }
+}
 
-    fn frame_cache_enabled(&self) -> bool {
+impl BackgroundContext for Mk48BackgroundContext {
+    fn cache_frame(&self) -> bool {
         !self.animations
     }
 
@@ -266,15 +271,15 @@ impl Mk48OverlayContext {
     }
 }
 
-impl BackgroundContext for Mk48OverlayContext {
-    fn create_shader(&self, renderer: &mut Renderer) -> Shader {
+impl LayerShader<Camera2d> for Mk48OverlayContext {
+    fn create(&self, renderer: &Renderer2d) -> Shader {
         renderer.create_shader(
             include_str!("./shaders/overlay.vert"),
             include_str!("./shaders/overlay.frag"),
         )
     }
 
-    fn prepare(&mut self, _: &Renderer, shader: &mut ShaderBinding) {
+    fn prepare(&mut self, _: &Renderer2d, shader: &ShaderBinding) {
         shader.uniform3f(
             "uAbove_uArea_uBorder",
             vec3(self.u_above, self.u_area, self.u_border),
@@ -282,6 +287,8 @@ impl BackgroundContext for Mk48OverlayContext {
         shader.uniform2f("uRestrict_uVisual", vec2(self.u_restrict, self.u_visual));
     }
 }
+
+impl BackgroundContext for Mk48OverlayContext {}
 
 /// Generates trees, coral, etc. for visible terrain.
 fn generate_vegetation<'a>(

@@ -692,7 +692,7 @@ mod test {
         assert!(teams
             .handle_team_request(
                 nonexistent_player_id,
-                TeamRequest::Create(TeamName::new("test")),
+                TeamRequest::Create(TeamName::new_sanitized("test")),
                 &mut players
             )
             .is_err());
@@ -701,7 +701,7 @@ mod test {
 
         let team1_id = match teams.handle_team_request(
             existing_players[0].0,
-            TeamRequest::Create(TeamName::new("test1")),
+            TeamRequest::Create(TeamName::new_sanitized("test1")),
             &mut players,
         ) {
             Ok(TeamUpdate::Created(team1_id, _)) => team1_id,
@@ -713,21 +713,21 @@ mod test {
 
         let res = teams.handle_team_request(
             existing_players[0].0,
-            TeamRequest::Create(TeamName::new("test2")),
+            TeamRequest::Create(TeamName::new_sanitized("test2")),
             &mut players,
         );
         assert!(res.is_err(), "{:?}", res);
 
         let res = teams.handle_team_request(
             existing_players[1].0,
-            TeamRequest::Create(TeamName::new("test1")),
+            TeamRequest::Create(TeamName::new_sanitized("test1")),
             &mut players,
         );
         assert!(res.is_err(), "{:?}", res);
 
         let _team2_id = if let Ok(TeamUpdate::Created(team2_id, _)) = teams.handle_team_request(
             existing_players[1].0,
-            TeamRequest::Create(TeamName::new("test2")),
+            TeamRequest::Create(TeamName::new_sanitized("test2")),
             &mut players,
         ) {
             team2_id
@@ -786,9 +786,9 @@ mod test {
         }
 
         let team_names = vec![
-            TeamName::new("one"),
-            TeamName::new("two"),
-            TeamName::new("three"),
+            TeamName::new_sanitized("one"),
+            TeamName::new_sanitized("two"),
+            TeamName::new_sanitized("three"),
         ];
 
         for _ in 0..50000 {

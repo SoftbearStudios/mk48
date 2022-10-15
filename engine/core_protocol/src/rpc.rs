@@ -4,9 +4,9 @@
 use crate::dto::*;
 use crate::id::*;
 use crate::name::*;
+use crate::owned::{Dedup, Owned};
 use crate::web_socket::WebSocketProtocol;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 /// See https://docs.rs/actix/latest/actix/dev/trait.MessageResponse.html
 macro_rules! actix_response {
@@ -61,7 +61,7 @@ actix_response!(SystemResponse);
 #[derive(Serialize, Deserialize)]
 pub struct LeaderboardResponse {
     /// Eventually consistent global leaderboard.
-    pub leaderboard: Arc<[LeaderboardDto]>,
+    pub leaderboard: Owned<[LeaderboardDto]>,
     /// Eventually consistent player count across all servers.
     pub players: u32,
 }
@@ -157,105 +157,6 @@ pub enum Update<GU> {
     Team(TeamUpdate),
 }
 
-/// Admin requests are from the admin interface to the core service.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg(feature = "admin")]
-pub enum AdminRequest {
-    ClearSnippet {
-        cohort_id: Option<CohortId>,
-        referrer: Option<Referrer>,
-    },
-    MutePlayer {
-        player_id: PlayerId,
-        minutes: usize,
-    },
-    /// Set client hash to that of this server. Sending [`None`] will reset to default.
-    OverrideClientHash(Option<ServerId>),
-    OverridePlayerAlias {
-        player_id: PlayerId,
-        alias: PlayerAlias,
-    },
-    RequestAllowWebSocketJson,
-    RequestDay {
-        filter: Option<MetricFilter>,
-    },
-    RequestDistributeLoad,
-    RequestGames,
-    RequestPlayers,
-    RequestProfile,
-    RequestRedirect,
-    RequestReferrers,
-    RequestRegions,
-    RequestSeries {
-        game_id: GameId,
-        filter: Option<MetricFilter>,
-        period_start: Option<crate::UnixTime>,
-        period_stop: Option<crate::UnixTime>,
-        // Resolution in hours.
-        resolution: Option<std::num::NonZeroU8>,
-    },
-    /// Qualifies the result of RequestDay and RequestSummary.
-    RequestServerId,
-    RequestServers,
-    RequestSnippets,
-    RequestSummary {
-        filter: Option<MetricFilter>,
-    },
-    RequestUserAgents,
-    RestrictPlayer {
-        player_id: PlayerId,
-        minutes: usize,
-    },
-    SendChat {
-        // If None, goes to all players.
-        player_id: Option<PlayerId>,
-        alias: PlayerAlias,
-        message: String,
-    },
-    SetAllowWebSocketJson(bool),
-    SetDistributeLoad(bool),
-    SetGameClient(minicdn::EmbeddedMiniCdn),
-    SetRedirect(Option<ServerId>),
-    SetSnippet {
-        cohort_id: Option<CohortId>,
-        referrer: Option<Referrer>,
-        snippet: Arc<str>,
-    },
-}
-
-/// Admin related responses from the server.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg(feature = "admin")]
-pub enum AdminUpdate {
-    AllowWebSocketJsonRequested(bool),
-    AllowWebSocketJsonSet(bool),
-    ChatSent,
-    ClientHashOverridden(u64),
-    DayRequested(Arc<[(crate::UnixTime, MetricsDataPointDto)]>),
-    DistributeLoadRequested(bool),
-    DistributeLoadSet(bool),
-    GameClientSet(u64),
-    GamesRequested(Box<[(GameId, f32)]>),
-    HttpServerRestarting,
-    PlayerAliasOverridden(PlayerAlias),
-    PlayerMuted(usize),
-    PlayerRestricted(usize),
-    PlayersRequested(Box<[AdminPlayerDto]>),
-    ProfileRequested(String),
-    RedirectRequested(Option<ServerId>),
-    RedirectSet(Option<ServerId>),
-    ReferrersRequested(Box<[(Referrer, f32)]>),
-    RegionsRequested(Box<[(RegionId, f32)]>),
-    SeriesRequested(Arc<[(crate::UnixTime, MetricsDataPointDto)]>),
-    ServerIdRequested(Option<ServerId>),
-    ServersRequested(Box<[AdminServerDto]>),
-    SnippetCleared,
-    SnippetSet,
-    SnippetsRequested(Box<[SnippetDto]>),
-    SummaryRequested(MetricsSummaryDto),
-    UserAgentsRequested(Box<[(UserAgentId, f32)]>),
-}
-
 /// Team related requests from the client to the server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TeamRequest {
@@ -272,7 +173,7 @@ pub enum TeamRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum TeamUpdate {
     Accepted(PlayerId),
-    AddedOrUpdated(Arc<[TeamDto]>),
+    AddedOrUpdated(Owned<[TeamDto]>),
     Created(TeamId, TeamName),
     /// A complete enumeration of joiners, for the team captain only.
     Joiners(Box<[PlayerId]>),
@@ -282,17 +183,30 @@ pub enum TeamUpdate {
     Kicked(PlayerId),
     Left,
     /// A complete enumeration of team members, in order (first is captain).
-    Members(Arc<[PlayerId]>),
+    Members(Owned<[PlayerId]>),
     Promoted(PlayerId),
     Rejected(PlayerId),
-    Removed(Arc<[TeamId]>),
+    Removed(Owned<[TeamId]>),
 }
 
 /// Chat related request from client to server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChatRequest {
+    /// Avoid seeing this player's messages.
     Mute(PlayerId),
-    Send { message: String, whisper: bool },
+    /// For moderators only.
+    RestrictPlayer { player_id: PlayerId, minutes: u32 },
+    /// Send a chat message.
+    Send {
+        message: String,
+        /// Whether messages should only be visible to sender's team.
+        whisper: bool,
+    },
+    /// Chat will be in safe mode for this many more minutes. For moderators only.
+    SetSafeMode(u32),
+    /// Chat will be in slow mode for this many more minutes. For moderators only.
+    SetSlowMode(u32),
+    /// Resume seeing this player's messages.
     Unmute(PlayerId),
 }
 
@@ -300,7 +214,10 @@ pub enum ChatRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChatUpdate {
     Muted(PlayerId),
-    Received(Box<[Arc<MessageDto>]>),
+    PlayerRestricted { player_id: PlayerId, minutes: u32 },
+    Received(Box<[Dedup<MessageDto>]>),
+    SafeModeSet(u32),
+    SlowModeSet(u32),
     Sent,
     Unmuted(PlayerId),
 }
@@ -316,8 +233,8 @@ pub enum PlayerRequest {
 pub enum PlayerUpdate {
     Reported(PlayerId),
     Updated {
-        added: Arc<[PlayerDto]>,
-        removed: Arc<[PlayerId]>,
+        added: Owned<[PlayerDto]>,
+        removed: Owned<[PlayerId]>,
         real_players: u32,
     },
 }
@@ -326,7 +243,7 @@ pub enum PlayerUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LeaderboardUpdate {
     // The leaderboard contains high score players, but not teams, for prior periods.
-    Updated(PeriodId, Arc<[LeaderboardDto]>),
+    Updated(PeriodId, Owned<[LeaderboardDto]>),
 }
 
 /// Liveboard related update from server to client.
@@ -334,8 +251,8 @@ pub enum LeaderboardUpdate {
 pub enum LiveboardUpdate {
     // The liveboard contains high score players and their teams in the current game.
     Updated {
-        added: Arc<[LiveboardDto]>,
-        removed: Arc<[PlayerId]>,
+        added: Owned<[LiveboardDto]>,
+        removed: Owned<[PlayerId]>,
     },
 }
 
@@ -363,7 +280,7 @@ pub enum ClientRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientUpdate {
     AliasSet(PlayerAlias),
-    EvalSnippet(Arc<str>),
+    EvalSnippet(Owned<str>),
     FpsTallied,
     SessionCreated {
         arena_id: ArenaId,
@@ -378,6 +295,115 @@ pub enum ClientUpdate {
 /// General update from server to client.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SystemUpdate {
-    Added(Arc<[ServerDto]>),
-    Removed(Arc<[ServerId]>),
+    Added(Owned<[ServerDto]>),
+    Removed(Owned<[ServerId]>),
+}
+
+#[cfg(feature = "admin")]
+pub use admin::*;
+#[cfg(feature = "admin")]
+mod admin {
+    use super::*;
+
+    /// Admin requests are from the admin interface to the core service.
+    #[derive(Clone, Debug, Deserialize)]
+    pub enum AdminRequest {
+        ClearSnippet {
+            cohort_id: Option<CohortId>,
+            referrer: Option<Referrer>,
+        },
+        MutePlayer {
+            player_id: PlayerId,
+            minutes: usize,
+        },
+        /// Set client hash to that of this server. Sending [`None`] will reset to default.
+        OverrideClientHash(Option<ServerId>),
+        OverridePlayerAlias {
+            player_id: PlayerId,
+            alias: PlayerAlias,
+        },
+        OverridePlayerModerator {
+            player_id: PlayerId,
+            moderator: bool,
+        },
+        RequestAllowWebSocketJson,
+        RequestDay {
+            filter: Option<MetricFilter>,
+        },
+        RequestDistributeLoad,
+        RequestGames,
+        RequestPlayers,
+        RequestProfile,
+        RequestRedirect,
+        RequestReferrers,
+        RequestRegions,
+        RequestSeries {
+            game_id: GameId,
+            filter: Option<MetricFilter>,
+            period_start: Option<crate::UnixTime>,
+            period_stop: Option<crate::UnixTime>,
+            // Resolution in hours.
+            resolution: Option<std::num::NonZeroU8>,
+        },
+        /// Qualifies the result of RequestDay and RequestSummary.
+        RequestServerId,
+        RequestServers,
+        RequestSnippets,
+        RequestSummary {
+            filter: Option<MetricFilter>,
+        },
+        RequestUserAgents,
+        RestrictPlayer {
+            player_id: PlayerId,
+            minutes: usize,
+        },
+        SendChat {
+            // If None, goes to all players.
+            player_id: Option<PlayerId>,
+            alias: PlayerAlias,
+            message: String,
+        },
+        SetAllowWebSocketJson(bool),
+        SetDistributeLoad(bool),
+        SetGameClient(minicdn::EmbeddedMiniCdn),
+        SetRedirect(Option<ServerId>),
+        SetSnippet {
+            cohort_id: Option<CohortId>,
+            referrer: Option<Referrer>,
+            snippet: Owned<str>,
+        },
+    }
+
+    /// Admin related responses from the server.
+    #[derive(Clone, Debug, Serialize)]
+    pub enum AdminUpdate {
+        AllowWebSocketJsonRequested(bool),
+        AllowWebSocketJsonSet(bool),
+        ChatSent,
+        ClientHashOverridden(u64),
+        DayRequested(Owned<[(crate::UnixTime, MetricsDataPointDto)]>),
+        DistributeLoadRequested(bool),
+        DistributeLoadSet(bool),
+        GameClientSet(u64),
+        GamesRequested(Box<[(GameId, f32)]>),
+        HttpServerRestarting,
+        PlayerAliasOverridden(PlayerAlias),
+        PlayerModeratorOverridden(bool),
+        PlayerMuted(usize),
+        PlayerRestricted(usize),
+        PlayersRequested(Box<[AdminPlayerDto]>),
+        ProfileRequested(String),
+        RedirectRequested(Option<ServerId>),
+        RedirectSet(Option<ServerId>),
+        ReferrersRequested(Box<[(Referrer, f32)]>),
+        RegionsRequested(Box<[(RegionId, f32)]>),
+        SeriesRequested(Owned<[(crate::UnixTime, MetricsDataPointDto)]>),
+        ServerIdRequested(Option<ServerId>),
+        ServersRequested(Box<[AdminServerDto]>),
+        SnippetCleared,
+        SnippetSet,
+        SnippetsRequested(Box<[SnippetDto]>),
+        SummaryRequested(MetricsSummaryDto),
+        UserAgentsRequested(Box<[(UserAgentId, f32)]>),
+    }
 }

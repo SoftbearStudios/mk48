@@ -59,6 +59,11 @@ where
         self.inner.is_open()
     }
 
+    pub fn is_reconnecting(&self) -> bool {
+        matches!(self.inner.state(), State::Opening | State::Error)
+            && (1..=Self::MAX_TRIES).contains(&self.tries)
+    }
+
     /// Returns whether the underlying connection is closed and reconnection attempts have been
     /// exhausted.
     pub fn is_terminated(&self) -> bool {
@@ -106,16 +111,13 @@ where
     /// Attempts to reestablish a connection if necessary. This does not and should not preserve
     /// pending messages.
     fn reconnect_if_necessary(&mut self, state: &mut S, time_seconds: f32) {
-        //crate::console_log!("status: {:?}, tries: {}, until: {}", self.inner.state(), self.tries, self.next_try - time_seconds);
-
         if self.inner.state() == State::Open {
             // Reconnected, forget tries.
             self.tries = 0;
             self.next_try = time_seconds + Self::SECONDS_PER_TRY * 0.5;
-        } else if self.inner.is_error()
-            && self.tries < Self::MAX_TRIES
-            && time_seconds > self.next_try
-        {
+        } else if time_seconds < self.next_try {
+            // Wait...
+        } else if self.inner.is_error() && self.tries < Self::MAX_TRIES {
             // Try again.
             self.inner = ProtoWebSocket::new(&self.host, self.inner.protocol());
             if let Some(p) = self.preamble.as_ref() {

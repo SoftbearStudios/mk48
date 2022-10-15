@@ -1,8 +1,9 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 pub mod chat;
-pub mod connection_lost;
+pub mod fatal_error;
 pub mod leaderboard;
-pub mod progress_spinner;
+pub(crate) mod reconnecting;
 pub mod spawn;
 pub mod team;

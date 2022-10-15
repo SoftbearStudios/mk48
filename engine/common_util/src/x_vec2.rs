@@ -3,6 +3,7 @@
 
 use glam::{IVec2, UVec2, Vec2};
 use serde::{Deserialize, Serialize};
+use std::convert::{TryFrom, TryInto};
 use std::hash::{Hash, Hasher};
 use std::ops::*;
 
@@ -299,10 +300,26 @@ impl From<U8Vec2> for U16Vec2 {
     }
 }
 
+// TODO replace with From impl.
 impl Into<UVec2> for U16Vec2 {
     #[inline]
     fn into(self) -> UVec2 {
         UVec2::new(self.x as u32, self.y as u32)
+    }
+}
+
+impl TryFrom<UVec2> for U16Vec2 {
+    type Error = <u32 as TryInto<u16>>::Error;
+
+    fn try_from(v: UVec2) -> Result<Self, Self::Error> {
+        Ok(Self::new(v.x.try_into()?, v.y.try_into()?))
+    }
+}
+
+impl U16Vec2 {
+    #[inline]
+    pub fn as_uvec2(self) -> UVec2 {
+        self.into()
     }
 }
 
@@ -329,9 +346,25 @@ impl From<I8Vec2> for I16Vec2 {
     }
 }
 
+// TODO replace with From impl.
 impl Into<IVec2> for I16Vec2 {
     #[inline]
     fn into(self) -> IVec2 {
         IVec2::new(self.x as i32, self.y as i32)
+    }
+}
+
+impl TryFrom<IVec2> for I16Vec2 {
+    type Error = <i32 as TryInto<i16>>::Error;
+
+    fn try_from(v: IVec2) -> Result<Self, Self::Error> {
+        Ok(Self::new(v.x.try_into()?, v.y.try_into()?))
+    }
+}
+
+impl I16Vec2 {
+    #[inline]
+    pub fn as_ivec2(self) -> IVec2 {
+        self.into()
     }
 }

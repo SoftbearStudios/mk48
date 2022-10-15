@@ -28,6 +28,19 @@
         }
     }
 
+    async function overrideModerator(playerId, moderator) {
+        const response = await adminRequest({OverridePlayerModerator: {player_id: playerId, moderator}});
+        if (typeof response.PlayerModeratorOverridden === 'boolean') {
+            const player = players.find(p => p.player_id == playerId);
+            if (player != null) {
+                player.moderator = response.PlayerModeratorOverridden;
+
+                // Reactivity
+                players = players;
+            }
+        }
+    }
+
     async function mute(playerId, minutes) {
         const response = await adminRequest({MutePlayer: {player_id: playerId, minutes}});
         if (typeof response.PlayerMuted === 'number') {
@@ -128,6 +141,7 @@
                 <th>Score</th>
                 <th>Plays</th>
                 <th>Region ID</th>
+                <th>IP</th>
                 <th>FPS</th>
                 <th>RTT</th>
                 <th>Msgs.</th>
@@ -143,13 +157,14 @@
             {#each players as player}
                 <tr>
                     <td>{player.player_id}</td>
-                    <td on:click={() => overrideAlias(player.player_id, player.alias)}>{player.alias}</td>
+                    <td class='clickable' on:click={() => overrideAlias(player.player_id, player.alias)}>{player.alias}</td>
                     <td>{player.team_id == null ? '-' : player.team_id}</td>
                     <td>{player.discord_id == null ? '-' : player.discord_id}</td>
-                    <td>{checkmark(player.moderator)}</td>
+                    <td class='clickable' on:click={() => overrideModerator(player.player_id, player.moderator ? false : true)}>{checkmark(player.moderator)}</td>
                     <td>{player.score}</td>
                     <td>{player.plays}</td>
                     <td>{maybe(player.region_id)}</td>
+                    <td>{player.ip_address}</td>
                     <td>{maybe(player.fps)}</td>
                     <td>{maybe(player.rtt)}</td>
                     <td>{player.messages}</td>
@@ -205,5 +220,9 @@
 
     select.mod {
         width: max-content;
+    }
+
+    .clickable {
+        cursor: pointer;
     }
 </style>

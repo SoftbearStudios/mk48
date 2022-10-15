@@ -1,30 +1,25 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::armament::FireRateLimiter;
+use crate::armament::{group_armaments, FireRateLimiter, Group};
 use crate::audio::Audio;
 use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
 use crate::interpolated::Interpolated;
 use crate::interpolated_contact::InterpolatedContact;
+use crate::particle::{Mk48Particle, Mk48ParticleContext, Mk48ParticleLayer};
 use crate::settings::Mk48Settings;
 use crate::sprite::SortableSprite;
 use crate::state::Mk48State;
-use crate::ui::{DeathReasonModel, UiEvent, UiProps, UiState, UiStatus};
+use crate::ui::{
+    InstructionsProps, UiEvent, UiProps, UiState, UiStatus, UiStatusPlaying, UiStatusRespawning,
+};
 use client_util::context::Context;
 use client_util::fps_monitor::FpsMonitor;
 use client_util::game_client::GameClient;
 use client_util::joystick::Joystick;
-use client_util::keyboard::Key;
+use client_util::keyboard::{Key, KeyboardEvent};
 use client_util::mouse::{MouseButton, MouseEvent};
 use client_util::rate_limiter::RateLimiter;
-use client_util::renderer::background::{BackgroundContext, BackgroundLayer};
-use client_util::renderer::graphic::GraphicLayer;
-use client_util::renderer::particle::{Particle, ParticleLayer};
-use client_util::renderer::renderer::Layer;
-use client_util::renderer::renderer::Renderer;
-use client_util::renderer::sprite::SpriteLayer;
-use client_util::renderer::text::TextLayer;
-use client_util::rgb::{gray, rgb, rgba};
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
@@ -33,20 +28,25 @@ use common::guidance::Guidance;
 use common::protocol::{Command, Control, Fire, Hint, Pay, Spawn, Update, Upgrade};
 use common::ticks::Ticks;
 use common::transform::Transform;
-use common::util::score_to_level;
 use common::velocity::Velocity;
 use common::world::strict_area_border;
 use common_util::range::{gen_radius, lerp, map_ranges};
 use core_protocol::id::{GameId, TeamId};
-use core_protocol::name::PlayerAlias;
-use glam::{Mat2, UVec2, Vec2, Vec4, Vec4Swizzles};
+use glam::{Mat2, Vec2, Vec4, Vec4Swizzles};
 use rand::{thread_rng, Rng};
+use renderer::{gray, rgb, rgba, Layer, Texture, TextureFormat};
+use renderer2d::{
+    BackgroundContext, BackgroundLayer, Camera2d, GraphicLayer, ParticleLayer, Renderer2d,
+    SpriteLayer, TextLayer,
+};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
 pub struct Mk48Game {
-    /// Can't reverse on first control when you spawn.
+    /// Can't reverse on first control when you spawn. Also for UI instructions.
     pub first_control: bool,
+    /// For UI instructions.
+    pub first_zoom: bool,
     /// Holding mouse down, for the purpose of deciding whether to start reversing.
     pub holding: bool,
     /// Currently in mouse control reverse mode.
@@ -78,15 +78,17 @@ pub struct Mk48Game {
     pub fire_rate_limiter: FireRateLimiter,
     /// FPS counter
     pub fps_counter: FpsMonitor,
+    ui_state: UiState,
 }
 
 /// Order of fields is order of rendering.
 #[derive(Layer)]
+#[layer(Camera2d)]
 pub struct RendererLayer {
     background: BackgroundLayer<Mk48BackgroundContext>,
-    pub sea_level_particles: ParticleLayer,
+    pub sea_level_particles: Mk48ParticleLayer,
     sprites: SpriteLayer,
-    pub airborne_particles: ParticleLayer,
+    pub airborne_particles: Mk48ParticleLayer,
     airborne_graphics: GraphicLayer,
     overlay: BackgroundLayer<Mk48OverlayContext>,
     graphics: GraphicLayer,
@@ -97,8 +99,10 @@ pub fn wind() -> Vec2 {
     Vec2::new(7.0, 1.5)
 }
 
-// Back 75 degrees is reverse angle.
+/// Back 75 degrees is reverse angle.
 const REVERSE_ANGLE: f32 = PI * 3.0 / 8.0;
+pub const SURFACE_KEY: Key = Key::R;
+pub const ACTIVE_KEY: Key = Key::Z;
 
 impl Mk48Game {
     // Don't reverse early on, when the player doesn't have a great idea of their orientation.
@@ -119,9 +123,9 @@ impl GameClient for Mk48Game {
     type Audio = Audio;
     type GameRequest = Command;
     type RendererLayer = RendererLayer;
+    type Camera = Camera2d;
     type GameState = Mk48State;
     type UiEvent = UiEvent;
-    type UiState = UiState;
     type UiProps = UiProps;
     type GameUpdate = Update;
     type GameSettings = Mk48Settings;
@@ -134,6 +138,7 @@ impl GameClient for Mk48Game {
 
         Self {
             first_control: false,
+            first_zoom: false,
             holding: false,
             reversing: false,
             interpolated_altitude: Interpolated::new(0.2),
@@ -143,15 +148,17 @@ impl GameClient for Mk48Game {
             respawn_overridden: false,
             last_control: None,
             control_rate_limiter: RateLimiter::new(0.1),
-            ui_props_rate_limiter: RateLimiter::new(0.25),
+            ui_props_rate_limiter: RateLimiter::new(0.15),
             alarm_fast_rate_limiter: RateLimiter::new(10.0),
             peek_update_sound_counter: 0,
             fire_rate_limiter: FireRateLimiter::new(),
             fps_counter: FpsMonitor::new(1.0),
+            ui_state: UiState::default(),
         }
     }
 
-    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::GameSettings {
+    #[allow(deprecated)]
+    fn init_settings(&mut self, renderer: &mut Renderer2d) -> Self::GameSettings {
         let animations = !renderer.fragment_uses_mediump();
         let wave_quality = renderer.fragment_has_highp() as u8;
 
@@ -164,14 +171,19 @@ impl GameClient for Mk48Game {
 
     fn init_layer(
         &mut self,
-        renderer: &mut Renderer,
+        renderer: &mut Renderer2d,
         context: &mut Context<Self>,
     ) -> Self::RendererLayer {
         renderer.set_background_color(Vec4::new(0.0, 0.20784314, 0.45490196, 1.0));
 
         let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
-        let sprite_texture =
-            renderer.load_texture("/sprites_webgl.png", UVec2::new(2048, 2048), None, false);
+        let sprite_texture = Texture::load(
+            renderer,
+            "/sprites_webgl.png",
+            TextureFormat::Rgba,
+            None,
+            false,
+        );
 
         let background_context = Mk48BackgroundContext::new(
             renderer,
@@ -188,9 +200,12 @@ impl GameClient for Mk48Game {
 
         RendererLayer {
             background: BackgroundLayer::new(renderer, background_context),
-            sea_level_particles: ParticleLayer::new(renderer, Vec2::ZERO),
+            sea_level_particles: ParticleLayer::new(
+                renderer,
+                Mk48ParticleContext { wind: Vec2::ZERO },
+            ),
             sprites: SpriteLayer::new(renderer, sprite_texture, sprite_sheet),
-            airborne_particles: ParticleLayer::new(renderer, wind()),
+            airborne_particles: ParticleLayer::new(renderer, Mk48ParticleContext { wind: wind() }),
             airborne_graphics: GraphicLayer::new(renderer),
             overlay: BackgroundLayer::new(renderer, overlay_context),
             graphics: GraphicLayer::new(renderer),
@@ -203,7 +218,7 @@ impl GameClient for Mk48Game {
         &mut self,
         update: &Update,
         context: &mut Context<Self>,
-        renderer: &Renderer,
+        renderer: &Renderer2d,
         _layer: &mut Self::RendererLayer,
     ) {
         self.peek_update_sound_counter = self.peek_update_sound_counter.saturating_add(1);
@@ -243,14 +258,16 @@ impl GameClient for Mk48Game {
                 if play_sounds {
                     self.play_new_contact_audio(
                         contact,
-                        renderer.camera_center(),
+                        renderer.camera.center,
                         &*context,
                         &context.audio,
                     );
                 }
                 if contact.player_id() == context.state.core.player_id && contact.is_boat() {
                     context.state.game.entity_id = Some(contact.id());
-                    self.first_control = true; // Just spawned so reset this.
+                    // Just spawned so reset these.
+                    self.first_control = true;
+                    self.first_zoom = true;
                     self.interpolated_altitude.reset();
                 }
                 context
@@ -295,7 +312,7 @@ impl GameClient for Mk48Game {
             if play_sounds {
                 let time_seconds = context.client.update_seconds;
                 self.play_lost_contact_audio_and_animations(
-                    renderer.camera_center(),
+                    renderer.camera.center,
                     &contact,
                     &context.audio,
                     &mut context.state.game.animations,
@@ -304,7 +321,7 @@ impl GameClient for Mk48Game {
             }
         }
 
-        let player_position = renderer.camera_center();
+        let player_position = renderer.camera.center;
         let player_altitude = context
             .state
             .game
@@ -391,14 +408,58 @@ impl GameClient for Mk48Game {
         }
     }
 
+    fn peek_keyboard(&mut self, event: &KeyboardEvent, context: &mut Context<Self>) {
+        if event.down {
+            if let Some(contact) = context.state.game.player_contact() {
+                let entity_type = contact.entity_type().unwrap();
+                let consumptions: Vec<bool> = contact.reloads().iter().map(|b| *b).collect();
+                let groups = group_armaments(&entity_type.data().armaments, &consumptions);
+                match event.key {
+                    Key::R => {
+                        self.ui_state.submerge = !self.ui_state.submerge;
+                    }
+                    Key::Z => {
+                        self.ui_state.active = !self.ui_state.active;
+                    }
+                    Key::Tab => {
+                        self.ui_state.armament = groups
+                            .get(
+                                self.ui_state
+                                    .armament
+                                    .and_then(|current| {
+                                        groups.iter().position(|Group { entity_type, .. }| {
+                                            *entity_type == current
+                                        })
+                                    })
+                                    .map(|idx| (groups.len() + idx + 1) % groups.len())
+                                    .unwrap_or(0),
+                            )
+                            .map(|Group { entity_type, .. }| *entity_type);
+                    }
+                    _ => {
+                        if let Some(digit) = event.key.digit_with_ten() {
+                            if let Some(armament) = groups
+                                .get((digit.get() - 1) as usize)
+                                .map(|Group { entity_type, .. }| *entity_type)
+                            {
+                                self.ui_state.armament = Some(armament);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fn peek_mouse(
         &mut self,
         event: &MouseEvent,
         _context: &mut Context<Self>,
-        _renderer: &Renderer,
+        _renderer: &Renderer2d,
     ) {
         if let MouseEvent::Wheel(delta) = event {
             self.zoom(*delta);
+            self.first_zoom = false;
         }
     }
 
@@ -406,7 +467,7 @@ impl GameClient for Mk48Game {
         &mut self,
         elapsed_seconds: f32,
         context: &mut Context<Self>,
-        renderer: &mut Renderer,
+        renderer: &mut Renderer2d,
         layer: &mut Self::RendererLayer,
     ) {
         // Allow more sounds to be played in peek.
@@ -420,12 +481,9 @@ impl GameClient for Mk48Game {
         self.update_camera(
             context.state.game.player_contact(),
             elapsed_seconds,
-            layer.background.context.frame_cache_enabled(),
+            layer.background.context.cache_frame(),
         );
         let (camera, _) = self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
-
-        // Cannot borrow entire context, do this instead.
-        let connection_lost = context.connection_lost();
 
         // Update audio volume.
         if Self::maybe_contact_mut(
@@ -490,7 +548,7 @@ impl GameClient for Mk48Game {
 
         // Set camera before update layers so they don't get last frame's camera.
         // TODO decouple update and render.
-        renderer.set_camera(camera, zoom);
+        renderer.camera.update(camera, zoom, renderer.canvas_size());
 
         let (visual_range, visual_restriction, area) =
             if let Some(c) = context.state.game.player_interpolated_contact() {
@@ -627,7 +685,7 @@ impl GameClient for Mk48Game {
                         contact,
                         &context.state.game.contacts,
                         &context.state.core,
-                        renderer.camera_center(),
+                        renderer.camera.center,
                         &mut layer.airborne_particles,
                     );
                 }
@@ -637,7 +695,7 @@ impl GameClient for Mk48Game {
                         let armament = &data.armaments[i];
                         if armament.hidden
                             || armament.vertical
-                            || !(armament.external || (friendly && !context.ui.cinematic))
+                            || !(armament.external || (friendly && !context.settings.cinematic))
                         {
                             continue;
                         }
@@ -689,7 +747,7 @@ impl GameClient for Mk48Game {
                         // Is this player's own boat?
                         if context.state.core.player_id.is_some()
                             && contact.player_id() == context.state.core.player_id
-                            && !context.ui.cinematic
+                            && !context.settings.cinematic
                         {
                             // Radii
                             let hud_color = rgba(255, 255, 255, 255 / 3);
@@ -698,21 +756,21 @@ impl GameClient for Mk48Game {
 
                             // Throttle rings.
                             // 1. Inner
-                            layer.graphics.add_circle(
+                            layer.graphics.draw_circle(
                                 contact.transform().position,
                                 data.radii().start,
                                 hud_thickness,
                                 hud_color,
                             );
                             // 2. Outer
-                            layer.graphics.add_circle(
+                            layer.graphics.draw_circle(
                                 contact.transform().position,
                                 data.radii().end,
                                 hud_thickness,
                                 hud_color,
                             );
                             // 3. Actual speed
-                            layer.graphics.add_circle(
+                            layer.graphics.draw_circle(
                                 contact.transform().position,
                                 map_ranges(
                                     contact.transform().velocity.abs().to_mps(),
@@ -733,7 +791,7 @@ impl GameClient for Mk48Game {
                                     .guidance()
                                     .velocity_target
                                     .max(data.speed * Velocity::MAX_REVERSE_SCALE);
-                                layer.graphics.add_circle(
+                                layer.graphics.draw_circle(
                                     contact.transform().position,
                                     map_ranges(
                                         velocity_target.abs().to_mps(),
@@ -774,7 +832,7 @@ impl GameClient for Mk48Game {
                                 let start = radii.start + hud_thickness * 0.5;
                                 let end = radii.end - hud_thickness * 0.5;
 
-                                layer.graphics.add_line(
+                                layer.graphics.draw_line(
                                     contact.transform().position + dir_mat * Vec2::new(start, 0.0),
                                     contact.transform().position + dir_mat * Vec2::new(end, 0.0),
                                     hud_thickness,
@@ -806,7 +864,7 @@ impl GameClient for Mk48Game {
                                     let direction = direction + REVERSE_ANGLE * m;
                                     let dir_mat = Mat2::from_angle(direction);
 
-                                    layer.graphics.add_line_gradient(
+                                    layer.graphics.draw_line_gradient(
                                         position + dir_mat * Vec2::new(range.start, 0.0),
                                         position + dir_mat * Vec2::new(range.end, 0.0),
                                         hud_thickness,
@@ -818,9 +876,10 @@ impl GameClient for Mk48Game {
 
                             // Turret azimuths.
                             // Pre-borrow to not borrow all of context (will be fixed eventually).
-                            let ui_armament = context.ui.armament;
+                            let ui_armament = self.ui_state.armament;
                             if let Some((i, mouse_pos)) =
-                                context.mouse.world_position.and_then(|mouse_pos| {
+                                context.mouse.view_position.and_then(|view_pos| {
+                                    let mouse_pos = renderer.camera.to_world_position(view_pos);
                                     self.find_best_armament(contact, false, mouse_pos, ui_armament)
                                         .zip(Some(mouse_pos))
                                 })
@@ -853,7 +912,7 @@ impl GameClient for Mk48Game {
                                             let dir_mat = Mat2::from_angle(turret_direction);
                                             let line_thickness = hud_thickness * 2.0;
 
-                                            layer.graphics.add_line(
+                                            layer.graphics.draw_line(
                                                 transform.position
                                                     + dir_mat * Vec2::new(inner, 0.0),
                                                 transform.position
@@ -880,7 +939,7 @@ impl GameClient for Mk48Game {
                                             .to_radians();
 
                                         if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
-                                            layer.graphics.add_arc(
+                                            layer.graphics.draw_arc(
                                                 transform.position,
                                                 middle,
                                                 right_back..if right_front > right_back {
@@ -893,7 +952,7 @@ impl GameClient for Mk48Game {
                                             );
                                         }
                                         if turret.azimuth_fl + turret.azimuth_bl < Angle::PI {
-                                            layer.graphics.add_arc(
+                                            layer.graphics.draw_arc(
                                                 transform.position,
                                                 middle,
                                                 left_front..if left_back > left_front {
@@ -946,7 +1005,7 @@ impl GameClient for Mk48Game {
                                                 };
                                             let scale = Vec2::new(scale_x, scale);
 
-                                            layer.graphics.add_triangle(
+                                            layer.graphics.draw_triangle(
                                                 center,
                                                 scale,
                                                 angle_radians - PI * 0.5,
@@ -954,7 +1013,7 @@ impl GameClient for Mk48Game {
                                             );
                                         } else {
                                             let inner: f32 = 0.11 * data.width;
-                                            layer.graphics.add_circle(
+                                            layer.graphics.draw_circle(
                                                 transform.position,
                                                 inner,
                                                 inner * 0.55,
@@ -964,7 +1023,7 @@ impl GameClient for Mk48Game {
 
                                         if is_vertical {
                                             let inner: f32 = 0.055 * data.width;
-                                            layer.graphics.add_filled_circle(
+                                            layer.graphics.draw_filled_circle(
                                                 transform.position,
                                                 inner,
                                                 color,
@@ -989,7 +1048,7 @@ impl GameClient for Mk48Game {
                             let thickness = 0.0075 * zoom;
 
                             // Background of health bar.
-                            layer.graphics.add_rounded_line(
+                            layer.graphics.draw_rounded_line(
                                 offset_x(center, length * -0.5),
                                 offset_x(center, length * 0.5),
                                 thickness,
@@ -998,7 +1057,7 @@ impl GameClient for Mk48Game {
                             );
 
                             // Health indicator.
-                            layer.graphics.add_rounded_line(
+                            layer.graphics.draw_rounded_line(
                                 offset_x(center, length * -0.5),
                                 offset_x(center, length * (health - 0.5)),
                                 thickness,
@@ -1026,8 +1085,8 @@ impl GameClient for Mk48Game {
                             format!("{}", contact.player_id().unwrap().0.get())
                         };
 
-                        layer.text.add(
-                            text,
+                        layer.text.draw(
+                            &text,
                             contact.transform().position
                                 + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
                             0.035 * zoom,
@@ -1037,7 +1096,7 @@ impl GameClient for Mk48Game {
                     EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
                         let triangle_position = contact.transform().position
                             + Vec2::new(0.0, overlay_vertical_position);
-                        layer.graphics.add_triangle(
+                        layer.graphics.draw_triangle(
                             triangle_position + Vec2::new(0.0, 0.01 * zoom),
                             Vec2::splat(0.02 * zoom),
                             180f32.to_radians(),
@@ -1113,7 +1172,7 @@ impl GameClient for Mk48Game {
                             let velocity = direction_vector * (speed * 0.75)
                                 + tangent_vector * (speed * r * spread);
 
-                            layer.add(Particle {
+                            layer.add(Mk48Particle {
                                 position,
                                 velocity,
                                 radius: 1.0,
@@ -1128,7 +1187,7 @@ impl GameClient for Mk48Game {
                 if !contact.altitude().is_submerged() {
                     for exhaust in data.exhausts.iter() {
                         for _ in 0..amount * 2 {
-                            layer.airborne_particles.add(Particle {
+                            layer.airborne_particles.add(Mk48Particle {
                                 position: contact.transform().position
                                     + direction_vector * exhaust.position_forward
                                     + tangent_vector * exhaust.position_side
@@ -1146,12 +1205,12 @@ impl GameClient for Mk48Game {
                     }
                 }
             } else {
-                layer.sprites.add(
+                layer.sprites.draw(
                     "contact",
                     None,
                     contact.transform().position,
                     Vec2::splat(10.0),
-                    contact.transform().direction,
+                    contact.transform().direction.to_radians(),
                     1.0,
                 );
             }
@@ -1173,12 +1232,12 @@ impl GameClient for Mk48Game {
         // Sort sprites by altitude.
         sortable_sprites.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
         for s in sortable_sprites {
-            layer.sprites.add(
+            layer.sprites.draw(
                 s.sprite,
                 s.frame,
                 s.transform.position,
                 s.dimensions,
-                s.transform.direction,
+                s.transform.direction.to_radians(),
                 s.alpha,
             );
         }
@@ -1187,15 +1246,22 @@ impl GameClient for Mk48Game {
         let aim_target = context
             .mouse
             .view_position
-            .map(|p| renderer.to_world_position(p));
+            .map(|p| renderer.camera.to_world_position(p));
 
         // Send command later, when lifetimes allow.
         let mut control: Option<Command> = None;
 
-        let status = if let Some(player_contact) = Self::maybe_contact_mut(
+        let player_contact = Self::maybe_contact_mut(
             &mut context.state.game.contacts,
             context.state.game.entity_id,
-        ) {
+        );
+
+        crate::armament::update(
+            player_contact.as_ref().and_then(|c| c.model.entity_type()),
+            &mut self.ui_state.armament,
+        );
+
+        let status = if let Some(player_contact) = player_contact {
             let mut guidance = None;
 
             {
@@ -1293,14 +1359,23 @@ impl GameClient for Mk48Game {
             // Re-borrow as immutable.
             let player_contact = context.state.game.player_contact().unwrap();
 
-            let status = UiStatus::Playing {
+            let status = UiStatus::Playing(UiStatusPlaying {
                 entity_type: player_contact.entity_type().unwrap(),
                 position: player_contact.transform().position.into(),
                 direction: player_contact.transform().direction,
                 velocity: player_contact.transform().velocity,
                 altitude: player_contact.altitude(),
-                armament_consumption: Some(player_contact.reloads().iter().map(|b| *b).collect()),
-            };
+                submerge: self.ui_state.submerge,
+                active: self.ui_state.active,
+                instruction_props: yew::props!(InstructionsProps {
+                    touch: context.mouse.touch_screen,
+                    basics: self.first_control,
+                    zoom: self.first_zoom,
+                }),
+                armament: self.ui_state.armament,
+                armament_consumption: player_contact.reloads().iter().map(|b| *b).collect(),
+                team_proximity,
+            });
 
             if self.control_rate_limiter.update_ready(elapsed_seconds) {
                 let left_click = context.mouse.take_click(MouseButton::Left);
@@ -1312,13 +1387,9 @@ impl GameClient for Mk48Game {
 
                 let current_control = Control {
                     guidance: Some(*player_contact.guidance()), // TODO don't send if hasn't changed.
-                    submerge: if player_contact.data().sub_kind == EntitySubKind::Submarine {
-                        context.ui.altitude_target != Altitude::ZERO
-                    } else {
-                        false
-                    },
+                    submerge: self.ui_state.submerge,
                     aim_target,
-                    active: context.ui.active,
+                    active: self.ui_state.active,
                     pay: context.keyboard.is_down(Key::C).then_some(Pay),
                     fire: if left_click
                         || context
@@ -1331,7 +1402,7 @@ impl GameClient for Mk48Game {
                             player_contact,
                             true,
                             aim_target.unwrap_or_default(),
-                            context.ui.armament,
+                            self.ui_state.armament,
                         )
                         .map(|i| {
                             self.fire_rate_limiter.fired(i as u8);
@@ -1368,20 +1439,15 @@ impl GameClient for Mk48Game {
             self.respawn_overridden = false;
 
             status
-        } else if connection_lost {
-            UiStatus::Offline
         } else if let Some(death_reason) = context
             .state
             .game
             .death_reason
             .as_ref()
             .filter(|_| !self.respawn_overridden)
-            .and_then(|reason| DeathReasonModel::from_death_reason(reason).ok())
+            .cloned()
         {
-            UiStatus::Respawning {
-                death_reason,
-                respawn_level: score_to_level(context.state.game.score),
-            }
+            UiStatus::Respawning(UiStatusRespawning { death_reason })
         } else {
             UiStatus::Spawning
         };
@@ -1394,54 +1460,54 @@ impl GameClient for Mk48Game {
         self.fire_rate_limiter.update(elapsed_seconds);
 
         if self.ui_props_rate_limiter.update_ready(elapsed_seconds) {
-            self.update_ui_props(context, status, &team_proximity);
+            self.update_ui_props(context, status);
         }
     }
 
-    fn peek_ui(
+    fn ui(
         &mut self,
-        event: &UiEvent,
+        event: UiEvent,
         context: &mut Context<Self>,
         _layer: &mut Self::RendererLayer,
     ) {
         match event {
             UiEvent::Spawn { alias, entity_type } => {
-                context.send_set_alias(PlayerAlias::new_unsanitized(alias));
-                context.send_to_game(Command::Spawn(Spawn {
-                    entity_type: *entity_type,
-                }))
+                context.send_set_alias(alias);
+                context.send_to_game(Command::Spawn(Spawn { entity_type }));
+            }
+            UiEvent::Respawn(entity_type) => {
+                context.send_to_game(Command::Spawn(Spawn { entity_type }));
             }
             UiEvent::Upgrade(entity_type) => {
                 context.audio.play(Audio::Upgrade);
-                context.send_to_game(Command::Upgrade(Upgrade {
-                    entity_type: *entity_type,
-                }))
+                context.send_to_game(Command::Upgrade(Upgrade { entity_type }));
             }
             UiEvent::Active(active) => {
                 if let Some(contact) = context.state.game.player_contact() {
-                    if *active && contact.data().sensors.sonar.range >= 0.0 {
+                    if active && contact.data().sensors.sonar.range >= 0.0 {
                         context.audio.play(Audio::Sonar1);
                     }
                 }
+                self.ui_state.active = active;
             }
-            UiEvent::AltitudeTarget(altitude_norm) => {
-                let altitude = Altitude::from_norm(*altitude_norm);
+            UiEvent::Submerge(submerge) => {
                 if let Some(contact) = context.state.game.player_contact() {
                     if contact.data().sub_kind == EntitySubKind::Submarine {
-                        if !context.ui.altitude_target.is_submerged() && altitude.is_submerged() {
+                        if !self.ui_state.submerge && submerge {
                             context.audio.play(Audio::Dive);
-                        } else if context.ui.altitude_target.is_submerged()
-                            && !altitude.is_submerged()
-                        {
+                        } else if self.ui_state.submerge && !submerge {
                             context.audio.play(Audio::Surface);
                         }
                     }
                 }
+                self.ui_state.submerge = submerge;
             }
             UiEvent::OverrideRespawn => {
                 self.respawn_overridden = true;
             }
-            _ => {}
+            UiEvent::Armament(armament) => {
+                self.ui_state.armament = armament;
+            }
         }
     }
 }

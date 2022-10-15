@@ -22,7 +22,6 @@ resource "aws_iam_user_policy" "servers" {
       ],
       "Effect": "Allow",
       "Resource": [
-        "${aws_dynamodb_table.ips.arn}",
         "${aws_dynamodb_table.logins.arn}",
         "${aws_dynamodb_table.metrics.arn}",
         "${aws_dynamodb_table.sessions.arn}",

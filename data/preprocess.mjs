@@ -431,4 +431,4 @@ for (const entityType of Object.keys(entityDatas)) {
 	});
 }
 
-fs.writeFileSync('../js/src/data/entities.json', JSON.stringify(entityDatas, null, '\t'));
+fs.writeFileSync('./entities.json', JSON.stringify(entityDatas, null, '\t'));

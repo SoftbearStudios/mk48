@@ -5,11 +5,11 @@ use crate::apply::Apply;
 use crate::context::Context;
 use crate::keyboard::KeyboardEvent;
 use crate::mouse::MouseEvent;
-use crate::renderer::renderer::{Layer, Renderer};
 use crate::setting::Settings;
 use crate::visibility::VisibilityEvent;
 use core_protocol::id::GameId;
 use core_protocol::rpc::ClientUpdate;
+use renderer::{Camera, Layer, Renderer};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -23,29 +23,29 @@ pub trait GameClient: Sized + 'static {
     /// Game-specific command to server.
     type GameRequest: 'static + Serialize + Clone;
     /// Game-specific render layer.
-    type RendererLayer: Layer;
+    type RendererLayer: Layer<Self::Camera>;
+    /// Game-specific camera.
+    type Camera: Camera;
     /// Game-specific state.
     type GameState: Apply<Self::GameUpdate>;
     /// Event from game UI.
-    type UiEvent: DeserializeOwned;
-    /// State of game UI.
-    type UiState: Apply<Self::UiEvent>;
+    type UiEvent;
     /// Properties sent to game UI.
     type UiProps: 'static;
     /// Game-specific update from server.
     type GameUpdate: 'static + DeserializeOwned;
     /// Game-specific settings
-    type GameSettings: Settings;
+    type GameSettings: Settings + Clone + PartialEq + Default;
 
     fn new() -> Self;
 
     /// Creates the (game-specific) settings.
-    fn init_settings(&mut self, renderer: &mut Renderer) -> Self::GameSettings;
+    fn init_settings(&mut self, renderer: &mut Renderer<Self::Camera>) -> Self::GameSettings;
 
     /// Creates the (game-specific) render layer.
     fn init_layer(
         &mut self,
-        renderer: &mut Renderer,
+        renderer: &mut Renderer<Self::Camera>,
         context: &mut Context<Self>,
     ) -> Self::RendererLayer;
 
@@ -57,7 +57,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         inbound: &Self::GameUpdate,
         _context: &mut Context<Self>,
-        _renderer: &Renderer,
+        _renderer: &Renderer<Self::Camera>,
         _layer: &mut Self::RendererLayer,
     ) {
         let _ = inbound;
@@ -71,7 +71,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         event: &MouseEvent,
         _context: &mut Context<Self>,
-        _renderer: &Renderer,
+        _renderer: &Renderer<Self::Camera>,
     ) {
         let _ = event;
     }
@@ -81,7 +81,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         event: &VisibilityEvent,
         _context: &mut Context<Self>,
-        _renderer: &Renderer,
+        _renderer: &Renderer<Self::Camera>,
     ) {
         let _ = event;
     }
@@ -91,7 +91,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         _elapsed_seconds: f32,
         _context: &Context<Self>,
-        _renderer: &mut Renderer,
+        _renderer: &mut Renderer<Self::Camera>,
         _renderer_layer: &mut Self::RendererLayer,
     ) {
     }
@@ -101,7 +101,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         elapsed_seconds: f32,
         context: &mut Context<Self>,
-        renderer: &mut Renderer,
+        renderer: &mut Renderer<Self::Camera>,
         renderer_layer: &mut Self::RendererLayer,
     ) {
         self.update(elapsed_seconds, context, &*renderer);
@@ -109,9 +109,9 @@ pub trait GameClient: Sized + 'static {
     }
 
     /// Peek at a UI event before it is applied to `UiState`.
-    fn peek_ui(
+    fn ui(
         &mut self,
-        _event: &Self::UiEvent,
+        _event: Self::UiEvent,
         _context: &mut Context<Self>,
         _layer: &mut Self::RendererLayer,
     ) {
@@ -122,7 +122,7 @@ pub trait GameClient: Sized + 'static {
         &mut self,
         _elapsed_seconds: f32,
         _context: &mut Context<Self>,
-        _renderer: &Renderer,
+        _renderer: &Renderer<Self::Camera>,
     ) {
     }
 }

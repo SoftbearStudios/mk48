@@ -1,5 +1,6 @@
 [package]
 name = "upload_game_client"
+workspace = ".."
 version = "0.1.0"
 edition = "2021"
 

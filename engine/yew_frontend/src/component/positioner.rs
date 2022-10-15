@@ -1,4 +1,5 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use stylist::yew::styled_component;
 use yew::virtual_dom::AttrValue;
@@ -87,7 +88,7 @@ pub enum Align {
 }
 
 impl Align {
-    fn as_css(self) -> &'static str {
+    pub fn as_css(self) -> &'static str {
         match self {
             Align::Left => "text-align: left;",
             Align::Center => "text-align: center;",

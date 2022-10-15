@@ -1,5 +1,8 @@
-// For interpolating fixed time steps to client fps.
-// Adds a delay of 1 fixed update.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/// For interpolating fixed time steps to client fps.
+/// Adds a delay of 1 fixed update.
 pub struct Interpolated {
     previous: Option<f32>,
     last: f32,           // last new value

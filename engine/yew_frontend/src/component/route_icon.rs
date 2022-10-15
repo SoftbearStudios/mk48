@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
 use yew::{function_component, html, Callback, Properties};
@@ -30,6 +33,6 @@ pub fn route_icon<R: Routable + Copy + 'static>(props: &RouteIconProps<R>) -> Ht
     };
 
     html! {
-        <Icon icon_id={props.icon_id} title={props.title.clone()} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none;"}/>
+        <Icon icon_id={props.icon_id} title={props.title.clone()} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none; vertical-align: bottom;"}/>
     }
 }

@@ -81,7 +81,7 @@ impl<G: GameArenaService> From<&Authenticate> for ClientMetricData<G> {
             cohort_id: thread_rng().gen(),
             user_agent_id: auth.user_agent_id,
             referrer: auth.referrer,
-            region_id: auth.ip_address.and_then(SystemRepo::<G>::ip_to_region_id),
+            region_id: SystemRepo::<G>::ip_to_region_id(auth.ip_address),
             fps: None,
             rtt: None,
             date_created: get_unix_time_now(),
@@ -567,7 +567,7 @@ impl<G: GameArenaService> MetricRepo<G> {
             },
             by_cohort_id: collect!(by_cohort_id, CohortId),
             by_referrer: collect!(by_referrer, Referrer, |referrer: Referrer| {
-                Referrer::TRACKED.iter().any(|&t| referrer.0.as_str() == t)
+                Referrer::TRACKED.iter().any(|&t| referrer.as_str() == t)
             }),
             by_region_id: collect!(by_region_id, RegionId),
             by_user_agent_id: collect!(by_user_agent_id, UserAgentId),

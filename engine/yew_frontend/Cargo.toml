@@ -1,55 +1,59 @@
 [package]
 name = "yew_frontend"
+workspace = ".."
 version = "0.1.0"
 edition = "2021"
 
+[features]
+audio = [ "client_util/audio" ]
+default = [ "zoom" ]
+zoom = [ "yew_icons/BootstrapZoomIn", "yew_icons/BootstrapZoomOut" ]
+
 [dependencies]
-yew = "0.19.3"
-yew_icons = {version = "0.4.1", features = [
-    "BootstrapDiscord",
-    "BootstrapGithub",
-    "BootstrapGear",
-    "BootstrapVolumeMute",
-    "BootstrapVolumeDownFill",
-    "BootstrapVolumeUpFill",
-    "BootstrapZoomIn",
-    "BootstrapZoomOut",
-    "FontAwesomeSolidSquareCaretLeft",
-    "FontAwesomeSolidSquareCaretRight",
-    "LipisFlagIcons4X3Gb",
-    "LipisFlagIcons4X3Cn",
-    "LipisFlagIcons4X3Es",
-    "LipisFlagIcons4X3Ru",
-    "LipisFlagIcons4X3Vn",
-    "LipisFlagIcons4X3De",
-    "LipisFlagIcons4X3Jp",
-    "LipisFlagIcons4X3Fr",
-    "LipisFlagIcons4X3In",
-    "LipisFlagIcons4X3It",
-    "LipisFlagIcons4X3Ye",
-]}
+client_util = { path = "../client_util", default-features = false }
+core_protocol = { path = "../core_protocol" }
+engine_macros = { path = "../engine_macros" }
 gloo = "0.7"
 gloo-events = "0.1"
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-core_protocol = {path = "../core_protocol"}
-client_util = {path = "../client_util"}
+gloo-render = "0.1"
+itertools = "0.10"
+js-sys = "0.3"
+js_hooks = { path = "../js_hooks" }
 serde = "1.0"
 serde_json = "1.0"
 serde_urlencoded = "0.7"
-gloo-render = "0.1"
-stylist = {version = "0.10", features = ["yew_integration", "macros"], default-features = false}
+stylist = { version = "0.10", features = [ "yew_integration", "macros" ], default-features = false }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+yew = "0.19.3"
+yew_icons = { version = "0.4.1", features = [
+    "BootstrapDiscord",
+    "BootstrapGear",
+    "BootstrapGithub",
+    "BootstrapGlobe2",
+    "BootstrapPersonPlus",
+    "BootstrapVolumeDownFill",
+    "BootstrapVolumeMute",
+    "BootstrapVolumeUpFill",
+    "FontAwesomeSolidSquareCaretLeft",
+    "FontAwesomeSolidSquareCaretRight",
+]}
 yew-router = "0.16.0"
 
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
-    'Location',
-    'UiEvent',
-    'FocusEvent',
-    'Window',
-    'HtmlSelectElement',
-    'Navigator',
     'Clipboard',
+    'FocusEvent',
+    'HtmlSelectElement',
+    'Location',
+    'MessageEvent',
+    'Navigator',
+    'PromiseRejectionEvent',
+    'UiEvent',
     'VisibilityState',
+    'Window',
 ]
+
+[dev-dependencies]
+rand = "0.8"

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::component::link_icon::LinkIcon;
 use yew::virtual_dom::AttrValue;
 use yew::{function_component, html, Properties};

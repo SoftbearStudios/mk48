@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// Resettable data build from updates.
 pub trait Apply<U>: Default {
     /// Applies an inbound update to the state.

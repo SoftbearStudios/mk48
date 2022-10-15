@@ -1,0 +1,14 @@
+[package]
+name = "renderer2d"
+workspace = ".."
+version = "0.1.0"
+edition = "2021"
+authors = ["Softbear, Inc."]
+license = "AGPL-3.0-or-later"
+
+[dependencies]
+bytemuck = "1.9"
+glam = "0.18"
+js_hooks = { path = "../js_hooks" }
+renderer = { path = "../renderer" }
+sprite_sheet = { path = "../sprite_sheet" }

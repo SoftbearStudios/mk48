@@ -18,29 +18,60 @@ use core_protocol::id::{CohortId, PlayerId, RegionId, ServerId, UserAgentId};
 use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::rpc::{AdminRequest, AdminUpdate};
 use core_protocol::{get_unix_time_now, UnixTime};
-use log::warn;
+use log::{error, info, warn};
 use minicdn::{EmbeddedMiniCdn, MiniCdn};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use server_util::database_schema::Metrics;
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::iter;
 use std::marker::PhantomData;
+use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use std::{fs, iter};
 
 /// Responsible for the admin interface.
 pub struct AdminRepo<G: GameArenaService> {
+    config_file: Option<String>,
     game_client: Arc<RwLock<MiniCdn>>,
+    /// Accept incoming JSON websocket traffic (likely used by 3rd-party bots, not used by default clients).
     allow_web_socket_json: &'static AtomicBool,
+    /// Which server id to redirect to, if available.
     pub(crate) redirect_server_id_preference: Option<ServerId>,
-    /// Route players to other available servers.
+    /// Route players to other available servers (bias towards emptier servers).
     pub(crate) distribute_load: bool,
     #[cfg(unix)]
     profile: Option<pprof::ProfilerGuard<'static>>,
     _spooky: PhantomData<G>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ConfigFile {
+    allow_web_socket_json: bool,
+    redirect_server_id_preference: Option<ServerId>,
+    distribute_load: bool,
+}
+
+impl ConfigFile {
+    fn load(path: &str) -> Result<Self, String> {
+        toml::from_str(
+            std::str::from_utf8(&fs::read(path).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())
+    }
+}
+
+impl Default for ConfigFile {
+    fn default() -> Self {
+        Self {
+            allow_web_socket_json: true,
+            redirect_server_id_preference: None,
+            distribute_load: false,
+        }
+    }
 }
 
 /// An authenticated question to the [`AdminRepo`].
@@ -63,16 +94,55 @@ impl ParameterizedAdminRequest {
 impl<G: GameArenaService> AdminRepo<G> {
     pub fn new(
         game_client: Arc<RwLock<MiniCdn>>,
+        config_file: Option<String>,
         allow_web_socket_json: &'static AtomicBool,
     ) -> Self {
+        let config = config_file
+            .as_deref()
+            .and_then(|path| {
+                ConfigFile::load(path)
+                    .inspect_err(|e| error!("error loading admin config file: {}", e))
+                    .ok()
+            })
+            .unwrap_or_default();
+
+        info!("admin config is: {:?}", config);
+
+        allow_web_socket_json.store(config.allow_web_socket_json, Ordering::Relaxed);
+
         Self {
             game_client,
+            config_file,
             allow_web_socket_json,
-            redirect_server_id_preference: None,
-            distribute_load: false,
+            redirect_server_id_preference: config.redirect_server_id_preference,
+            distribute_load: config.distribute_load,
             #[cfg(unix)]
             profile: None,
             _spooky: PhantomData,
+        }
+    }
+
+    fn log_save_config_file(&self) {
+        if let Err(e) = self.try_save_config_file() {
+            error!("error saving admin config file: {}", e)
+        }
+    }
+
+    fn try_save_config_file(&self) -> Result<(), String> {
+        if let Some(path) = self.config_file.as_deref() {
+            let config = ConfigFile {
+                allow_web_socket_json: self.allow_web_socket_json.load(Ordering::Relaxed),
+                redirect_server_id_preference: self.redirect_server_id_preference,
+                distribute_load: self.distribute_load,
+            };
+
+            info!("saving admin config: {:?}", config);
+
+            let contents = toml::to_string(&config).map_err(|e| e.to_string())?;
+
+            fs::write(path, contents).map_err(|e| e.to_string())
+        } else {
+            Ok(())
         }
     }
 
@@ -97,6 +167,7 @@ impl<G: GameArenaService> AdminRepo<G> {
                             team_id: player.team_id(),
                             region_id: client.metrics.region_id,
                             discord_id: client.discord_id,
+                            ip_address: client.ip_address,
                             moderator: client.moderator,
                             score: player.score,
                             plays: client.metrics.plays,
@@ -131,6 +202,21 @@ impl<G: GameArenaService> AdminRepo<G> {
         let censored = PlayerAlias::new_sanitized(alias.as_str());
         client.alias = censored;
         Ok(AdminUpdate::PlayerAliasOverridden(censored))
+    }
+
+    /// (Temporarily) overrides the moderator status of a given real player.
+    fn override_player_moderator(
+        &self,
+        player_id: PlayerId,
+        moderator: bool,
+        players: &PlayerRepo<G>,
+    ) -> Result<AdminUpdate, &'static str> {
+        let mut player = players
+            .borrow_player_mut(player_id)
+            .ok_or("nonexistent player")?;
+        let client = player.client_mut().ok_or("not a real player")?;
+        client.moderator = moderator;
+        Ok(AdminUpdate::PlayerModeratorOverridden(moderator))
     }
 
     /// Mutes a given real player for a configurable amount of minutes (0 means disable mute).
@@ -236,7 +322,7 @@ impl<G: GameArenaService> AdminRepo<G> {
         referrer: Option<Referrer>,
         snippet: Arc<str>,
     ) -> Result<AdminUpdate, &'static str> {
-        if snippet.len() > 2000 {
+        if snippet.len() > 4096 {
             Err("snippet too long")
         } else {
             clients.snippets.insert((cohort_id, referrer), snippet);
@@ -355,7 +441,13 @@ impl<G: GameArenaService> AdminRepo<G> {
         message: String,
         context: &mut Context<G>,
     ) -> Result<AdminUpdate, &'static str> {
-        context.chat.log_chat(alias, &message, false, "ok");
+        context.chat.log_chat(
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            alias,
+            &message,
+            false,
+            "ok",
+        );
 
         let message = MessageDto {
             alias,
@@ -397,6 +489,7 @@ impl<G: GameArenaService> AdminRepo<G> {
     ) -> Result<AdminUpdate, &'static str> {
         self.allow_web_socket_json
             .store(allow_web_socket_json, Ordering::Relaxed);
+        self.log_save_config_file();
         Ok(AdminUpdate::AllowWebSocketJsonSet(allow_web_socket_json))
     }
 
@@ -408,6 +501,7 @@ impl<G: GameArenaService> AdminRepo<G> {
     /// Changes the load distribution setting.
     fn set_distribute_load(&mut self, distribute_load: bool) -> Result<AdminUpdate, &'static str> {
         self.distribute_load = distribute_load;
+        self.log_save_config_file();
         Ok(AdminUpdate::DistributeLoadSet(distribute_load))
     }
 
@@ -469,6 +563,8 @@ impl<G: GameArenaService> AdminRepo<G> {
         } else {
             warn!("no system configured, cannot actually set redirect.");
         }
+
+        self.log_save_config_file();
 
         Ok(AdminUpdate::RedirectSet(redirect))
     }
@@ -596,6 +692,14 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
                     &self.context_service.context.players,
                 )))
             }
+            AdminRequest::OverridePlayerModerator {
+                player_id,
+                moderator,
+            } => Box::pin(fut::ready(self.admin.override_player_moderator(
+                player_id,
+                moderator,
+                &self.context_service.context.players,
+            ))),
             AdminRequest::RestrictPlayer { player_id, minutes } => {
                 Box::pin(fut::ready(self.admin.restrict_player(
                     player_id,

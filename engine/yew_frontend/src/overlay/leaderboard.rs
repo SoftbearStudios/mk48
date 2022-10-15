@@ -1,15 +1,27 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::component::section::Section;
+use crate::component::section::{Section, SectionArrow};
 use crate::translation::{t, Translation};
 use crate::Ctw;
-use core_protocol::id::PeriodId;
+use core_protocol::dto::LiveboardDto;
+use core_protocol::id::{LanguageId, PeriodId};
 use std::ops::Deref;
 use stylist::yew::styled_component;
 use yew::prelude::*;
 
 #[derive(PartialEq, Properties)]
 pub struct LeaderboardProps {
+    /// Override the default liveboard label.
+    #[prop_or(LanguageId::liveboard_label)]
+    pub liveboard_label: fn(LanguageId) -> &'static str,
+    /// Override the default leaderboard label.
+    #[prop_or(LanguageId::leaderboard_label)]
+    pub leaderboard_label: fn(LanguageId, PeriodId) -> &'static str,
+    /// If Some, this score will be attributed to the local player.
+    pub show_my_score: Option<u32>,
+    #[prop_or(true)]
+    pub mode_arrow: bool,
     pub children: Option<Children>,
     #[prop_or(LeaderboardProps::fmt_precise)]
     pub fmt_score: fn(u32) -> String,
@@ -21,13 +33,14 @@ impl LeaderboardProps {
     }
 
     pub fn fmt_abbreviated(score: u32) -> String {
-        let power = score.max(1).log(1000);
+        let power = score.max(1).ilog(1000);
         if power == 0 {
             score.to_string()
         } else {
             let units = ["", "k", "m", "b"];
             let power_of_1000 = 1000u32.pow(power);
             let unit = units[power as usize];
+            // TODO: Round down not up.
             let fraction = score as f32 / power_of_1000 as f32;
             format!("{:.1}{}", fraction, unit)
         }
@@ -82,21 +95,49 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
     "#
     );
 
+    let fake_style = css!(
+        r#"
+        opacity: 0.6;
+        "#
+    );
+
     let mode = use_state(Mode::default);
 
-    let on_right_arrow = {
+    let right_arrow = if props.mode_arrow {
         let mode = mode.clone();
-        Callback::from(move |_| {
+        SectionArrow::always(Callback::from(move |_| {
             mode.set(mode.deref().next());
-        })
+        }))
+    } else {
+        SectionArrow::None
     };
 
+    let t = t();
     let core_state = Ctw::use_core_state();
 
     let (name, items) = match *mode {
         Mode::Liveboard => {
-            let name = t().liveboard_label();
-            let items = core_state.liveboard.iter().filter_map(|dto| {
+            let name = (props.liveboard_label)(t);
+            let extra = props
+                .show_my_score
+                .zip(core_state.player().filter(|player| {
+                    core_state
+                        .liveboard
+                        .iter()
+                        .all(|dto| dto.player_id != player.player_id)
+                }))
+                .map(|(score, player)| {
+                    (
+                        LiveboardDto {
+                            player_id: player.player_id,
+                            score,
+                            team_captain: player.team_captain,
+                            team_id: player.team_id,
+                        },
+                        true,
+                    )
+                });
+            let items = core_state.liveboard.iter().map(|dto| (dto.clone(), false)).chain(extra).filter_map(|(dto, fake)| {
                 core_state
                     .player_or_bot(dto.player_id)
                     .map(|player| {
@@ -105,7 +146,7 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
                             .and_then(|team_id| core_state.teams.get(&team_id))
                             .map(|team_dto| team_dto.name);
                         html_nested! {
-                            <tr>
+                            <tr class={fake.then(|| fake_style.clone())}>
                                 <td class="name">{team_name.map(|team_name| format!("[{}] {}", team_name, player.alias)).unwrap_or(player.alias.to_string())}</td>
                                 <td class="score">{(props.fmt_score)(dto.score)}</td>
                             </tr>
@@ -116,11 +157,7 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
             (name, items)
         }
         Mode::Leaderboard(period_id) => {
-            let name = match period_id {
-                PeriodId::AllTime => t().leaderboard_all_time_label(),
-                PeriodId::Daily => t().leaderboard_daily_label(),
-                PeriodId::Weekly => t().leaderboard_weekly_label(),
-            };
+            let name = (props.leaderboard_label)(t, period_id);
 
             let items = core_state
                 .leaderboard(period_id)
@@ -141,7 +178,7 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
 
     // TODO: <Section ... bind:open={$leaderboardShown}>
     html! {
-        <Section {name} {on_right_arrow}>
+        <Section {name} {right_arrow}>
             <table class={table_css_class}>
                 {items}
             </table>
@@ -149,7 +186,7 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
                 if let Some(children) = props.children.as_ref() {
                     {children.clone()}
                 } else {
-                    {t().online(core_state.real_players)}
+                    {t.online(core_state.real_players)}
                 }
             </p>
         </Section>

@@ -1,19 +1,36 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::component::section::Section;
 use crate::event::event_target;
 use crate::translation::{t, Translation};
 use crate::Ctw;
 use core_protocol::dto::{PlayerDto, TeamDto};
-use core_protocol::id::{PlayerId, TeamId};
+use core_protocol::id::{LanguageId, PlayerId, TeamId};
 use core_protocol::name::TeamName;
 use core_protocol::rpc::TeamRequest;
+use itertools::Itertools;
+use std::cmp::Ordering;
+use std::collections::HashMap;
 use stylist::yew::styled_component;
 use web_sys::{FocusEvent, HtmlInputElement, InputEvent};
-use yew::{classes, html, html_nested, use_state, virtual_dom::AttrValue, Html};
+use yew::{classes, html, html_nested, use_state, virtual_dom::AttrValue, Html, Properties};
 
+#[derive(PartialEq, Properties)]
+pub struct TeamOverlayProps {
+    /// Override the default label.
+    #[prop_or(LanguageId::team_label)]
+    pub label: fn(LanguageId) -> &'static str,
+    /// Override the default placeholder.
+    #[prop_or(LanguageId::team_name_placeholder)]
+    pub name_placeholder: fn(LanguageId) -> &'static str,
+    #[prop_or_default]
+    pub team_proximity: HashMap<TeamId, f32>,
+}
+
+/// TODO: Rename to TeamOverlay.
 #[styled_component(TeamsOverlay)]
-pub fn teams_overlay() -> Html {
+pub fn team_overlay(props: &TeamOverlayProps) -> Html {
     let button_css_class = css!(
         r#"
         border-radius: 0.25em;
@@ -105,6 +122,7 @@ pub fn teams_overlay() -> Html {
     "#
     );
 
+    let t = t();
     let ctw = Ctw::use_ctw();
     let core_state = Ctw::use_core_state();
     let team_id = core_state.team_id();
@@ -165,12 +183,39 @@ pub fn teams_overlay() -> Html {
         }
     };
 
+    let seed = core_state
+        .player_id
+        .map(|player_id| player_id.0.get())
+        .unwrap_or(0);
+    let cmp_teams =
+        |&(a, team_a): &(&TeamId, &TeamDto), &(b, team_b): &(&TeamId, &TeamDto)| -> Ordering {
+            team_a
+                .closed
+                .cmp(&team_b.closed)
+                .then(team_a.full.cmp(&team_b.full))
+                .then_with(|| {
+                    props
+                        .team_proximity
+                        .get(a)
+                        .unwrap_or(&f32::INFINITY)
+                        .partial_cmp(props.team_proximity.get(b).unwrap_or(&f32::INFINITY))
+                        .unwrap_or_else(|| {
+                            debug_assert!(false, "NaN team proximity");
+                            Ordering::Equal
+                        })
+                        .then_with(|| {
+                            // Use a seed so different players see a different set of options.
+                            (a.0.get() ^ seed).cmp(&(b.0.get() ^ seed))
+                        })
+                })
+        };
+
     const CHECK_MARK: &'static str = "✔";
     const X_MARK: &'static str = "✘";
 
     // TODO (use settings): on_open_changed={|o| ctw.dialogs.teams = o}}
     html! {
-        <Section name={team_name.map(|n| AttrValue::Owned(n.to_string())).unwrap_or(AttrValue::Static(t().team_label()))} open={ctw.setting_cache.team_dialog_shown}>
+        <Section name={team_name.map(|n| AttrValue::Owned(n.to_string())).unwrap_or(AttrValue::Static((props.label)(t)))} open={ctw.setting_cache.team_dialog_shown}>
             if team_name.is_some() {
                 <table class={table_css_class}>
                     {core_state.members.iter().filter_map(|player_id| core_state.player_or_bot(*player_id)).map(|PlayerDto{alias, player_id, team_captain, ..}| {
@@ -181,7 +226,7 @@ pub fn teams_overlay() -> Html {
                                 <td class={classes!(name_css_class.clone(), team_captain.then(|| owner_css_class.clone()))}>{alias}</td>
                                 if i_am_team_captain {
                                     <td><button class={classes!(button_css_class.clone(), hidden_css_class.clone())}>{CHECK_MARK}</button></td>
-                                    <td><button class={classes!(button_css_class.clone(), team_captain.then(|| hidden_css_class.clone()))} onclick={move |_| on_kick_from_team(player_id)} title={t().team_kick_hint()}>{X_MARK}</button></td>
+                                    <td><button class={classes!(button_css_class.clone(), team_captain.then(|| hidden_css_class.clone()))} onclick={move |_| on_kick_from_team(player_id)} title={t.team_kick_hint()}>{X_MARK}</button></td>
                                 }
                             </tr>
                         }
@@ -192,17 +237,17 @@ pub fn teams_overlay() -> Html {
                         html_nested!{
                             <tr class={tr_css_class.clone()}>
                                 <td class={classes!(name_css_class.clone(), name_pending_css_class.clone())}>{alias}</td>
-                                <td><button class={classes!(button_css_class.clone(), false.then(|| disabled_css_class.clone()))} onclick={move |_| on_accept_join_team(player_id)} title={t().team_accept_hint()}>{CHECK_MARK}</button></td>
-                                <td><button class={button_css_class.clone()} onclick={move |_| on_reject_join_team(player_id)} title={t().team_deny_hint()}>{X_MARK}</button></td>
+                                <td><button class={classes!(button_css_class.clone(), false.then(|| disabled_css_class.clone()))} onclick={move |_| on_accept_join_team(player_id)} title={t.team_accept_hint()}>{CHECK_MARK}</button></td>
+                                <td><button class={button_css_class.clone()} onclick={move |_| on_reject_join_team(player_id)} title={t.team_deny_hint()}>{X_MARK}</button></td>
                             </tr>
                         }
                     }).collect::<Html>()}
                 </table>
-                <button onclick={move |_| on_leave_team()} class={button_css_class}>{t().team_leave_hint()}</button>
+                <button onclick={move |_| on_leave_team()} class={button_css_class}>{t.team_leave_hint()}</button>
             } else {
                 <form onsubmit={move |e: FocusEvent| {e.prevent_default(); on_create_team();}}>
                     <table>
-                        {core_state.teams.iter().map(|(_, &TeamDto{closed, name, team_id, ..})| {
+                        {core_state.teams.iter().sorted_by(cmp_teams).take(5).map(|(_, &TeamDto{closed, name, team_id, ..})| {
                             let on_request_join_team = on_request_join_team.clone();
                             let unavailable = closed || core_state.joins.contains(&team_id);
 
@@ -210,17 +255,17 @@ pub fn teams_overlay() -> Html {
                                 <tr>
                                     <td class={name_css_class.clone()}>{name}</td>
                                     <td>
-                                        <button type="button" class={classes!(button_css_class.clone(), unavailable.then(|| hidden_css_class.clone()))} onclick={move |_| on_request_join_team(team_id)}>{t().team_request_hint()}</button>
+                                        <button type="button" class={classes!(button_css_class.clone(), unavailable.then(|| hidden_css_class.clone()))} onclick={move |_| on_request_join_team(team_id)}>{t.team_request_hint()}</button>
                                     </td>
                                 </tr>
                             }
                         }).collect::<Html>()}
                         <tr>
-                            <td class="name">
-                                <input type="text" placeholder={t().team_name_placeholder()} oninput={on_new_team_name_change} value={new_team_name.to_string()} class={input_css_class}/>
+                            <td>
+                                <input type="text" placeholder={(props.name_placeholder)(t)} oninput={on_new_team_name_change} value={new_team_name.to_string()} class={input_css_class}/>
                             </td>
                             <td>
-                                <button disabled={new_team_name.is_empty()} class={button_css_class}>{t().team_create_hint()}</button>
+                                <button disabled={new_team_name.is_empty()} class={button_css_class}>{t.team_create_hint()}</button>
                             </td>
                         </tr>
                     </table>

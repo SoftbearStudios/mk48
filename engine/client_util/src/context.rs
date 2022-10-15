@@ -1,10 +1,11 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::apply::Apply;
-#[cfg(feature = "audio")]
-use crate::audio::AudioPlayer;
 use crate::browser_storage::BrowserStorages;
 use crate::frontend::Frontend;
 use crate::game_client::GameClient;
-use crate::js_hooks::{domain_name_of, host, invitation_id, is_https, referrer, ws_protocol};
+use crate::js_util::{domain_name_of, host, invitation_id, is_https, ws_protocol};
 use crate::keyboard::KeyboardState;
 use crate::mouse::MouseState;
 use crate::reconn_web_socket::ReconnWebSocket;
@@ -17,8 +18,14 @@ use core_protocol::rpc::{
     ChatUpdate, ClientRequest, ClientUpdate, InvitationUpdate, LeaderboardUpdate, LiveboardUpdate,
     PlayerUpdate, Request, SystemUpdate, TeamUpdate, Update, WebSocketQuery,
 };
-use std::collections::{HashMap, VecDeque};
-use web_sys::{window, UrlSearchParams};
+use heapless::HistoryBuffer;
+use std::collections::HashMap;
+use std::marker::PhantomData;
+use std::rc::Rc;
+use web_sys::UrlSearchParams;
+
+#[cfg(feature = "audio")]
+use crate::audio::AudioPlayer;
 
 /// The context (except rendering) of a game.
 pub struct Context<G: GameClient + ?Sized> {
@@ -28,8 +35,6 @@ pub struct Context<G: GameClient + ?Sized> {
     pub state: ServerState<G>,
     /// Server websocket
     pub socket: ReconnWebSocket<Update<G::GameUpdate>, Request<G::GameRequest>, ServerState<G>>,
-    /// Ui.
-    pub ui: G::UiState,
     /// Audio player (volume managed automatically).
     #[cfg(feature = "audio")]
     pub audio: AudioPlayer<G::Audio>,
@@ -58,11 +63,11 @@ pub struct ClientState {
 /// Obtained from server via websocket.
 pub struct ServerState<G: GameClient> {
     pub game: G::GameState,
-    pub core: CoreState,
+    pub core: Rc<CoreState>,
 }
 
 /// Server state specific to core functions
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct CoreState {
     pub cohort_id: Option<CohortId>,
     pub player_id: Option<PlayerId>,
@@ -72,9 +77,9 @@ pub struct CoreState {
     pub joiners: Box<[PlayerId]>,
     pub joins: Box<[TeamId]>,
     /// TODO: Deprecate `pub`
-    pub leaderboards: [Vec<LeaderboardDto>; PeriodId::VARIANT_COUNT],
+    pub leaderboards: [Box<[LeaderboardDto]>; std::mem::variant_count::<PeriodId>()],
     pub liveboard: Vec<LiveboardDto>,
-    pub messages: VecDeque<MessageDto>,
+    pub messages: HistoryBuffer<MessageDto, 9>,
     pub(crate) players: HashMap<PlayerId, PlayerDto>,
     pub real_players: u32,
     pub teams: HashMap<TeamId, TeamDto>,
@@ -85,7 +90,7 @@ impl<G: GameClient> Default for ServerState<G> {
     fn default() -> Self {
         Self {
             game: G::GameState::default(),
-            core: CoreState::default(),
+            core: Default::default(),
         }
     }
 }
@@ -131,6 +136,7 @@ impl CoreState {
                     alias: PlayerAlias::from_bot_player_id(player_id),
                     player_id,
                     team_captain: false,
+                    moderator: false,
                     team_id: None,
                 })
             })
@@ -160,25 +166,22 @@ impl CoreState {
     pub fn leaderboard(&self, period_id: PeriodId) -> &[LeaderboardDto] {
         &self.leaderboards[period_id as usize]
     }
-
-    pub(crate) fn leaderboard_mut(&mut self, period_id: PeriodId) -> &mut Vec<LeaderboardDto> {
-        &mut self.leaderboards[period_id as usize]
-    }
 }
 
 impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
     fn apply(&mut self, update: Update<G::GameUpdate>) {
+        // Use rc_borrow_mut to keep semantics of shared references the same while sharing with
+        // yew_frontend.
+        use rc_borrow_mut::RcBorrowMut;
+        let mut core = Rc::borrow_mut(&mut self.core);
+
         match update {
             Update::Chat(update) => {
                 match update {
                     ChatUpdate::Received(received) => {
-                        for chat in received.iter() {
-                            if self.core.messages.len() >= 9 {
-                                // Keep at or below capacity of 10.
-                                self.core.messages.pop_front();
-                            }
-                            self.core.messages.push_back(MessageDto::clone(chat));
-                        }
+                        // Need to use into_vec since
+                        // https://github.com/rust-lang/rust/issues/59878 is incomplete.
+                        core.messages.extend(received.into_vec());
                     }
                     _ => {}
                 }
@@ -189,8 +192,8 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
                     player_id,
                     ..
                 } => {
-                    self.core.cohort_id = Some(cohort_id);
-                    self.core.player_id = Some(player_id);
+                    core.cohort_id = Some(cohort_id);
+                    core.player_id = Some(player_id);
                 }
                 _ => {}
             },
@@ -199,40 +202,45 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
             }
             Update::Invitation(update) => match update {
                 InvitationUpdate::InvitationCreated(invitation_id) => {
-                    self.core.created_invitation_id = Some(invitation_id);
+                    core.created_invitation_id = Some(invitation_id);
                 }
             },
             Update::Leaderboard(update) => match update {
                 LeaderboardUpdate::Updated(period_id, leaderboard) => {
-                    *self.core.leaderboard_mut(period_id) = leaderboard.iter().cloned().collect();
+                    core.leaderboards[period_id as usize] = leaderboard;
                 }
             },
             Update::Liveboard(update) => {
                 match update {
                     LiveboardUpdate::Updated { added, removed } => {
-                        // Remove items first.
-                        self.core
-                            .liveboard
-                            .drain_filter(|i| removed.contains(&i.player_id));
+                        let liveboard = &mut core.liveboard;
 
-                        // Either update in place or add.
-                        for new_item in added.iter() {
-                            if let Some(old_item) = self
-                                .core
-                                .liveboard
-                                .iter_mut()
-                                .find(|i| i.player_id == new_item.player_id)
-                            {
-                                *old_item = new_item.clone();
-                            } else {
-                                self.core.liveboard.push(new_item.clone());
-                            }
+                        // Remove items that were removed or will be added.
+                        liveboard.retain(|i| {
+                            !(removed.contains(&i.player_id)
+                                || added.iter().any(|a| a.player_id == i.player_id))
+                        });
+
+                        // Only inserting in sorted order, not updating in place.
+                        // Invariant added cannot contain duplicate player ids.
+                        for item in added.into_vec() {
+                            // unwrap_err will never panic because player ids are unique because
+                            // we searched for them with find.
+                            let index = liveboard
+                                .binary_search_by(|other| {
+                                    // Put higher scores higher on leaderboard.
+                                    // If scores are equal, ensure total ordering with player id.
+                                    // NOTE: order of cmp is reversed compared to sort_by.
+                                    item.score
+                                        .cmp(&other.score)
+                                        .then_with(|| other.player_id.cmp(&item.player_id))
+                                })
+                                .inspect(|_| debug_assert!(false))
+                                .into_ok_or_err();
+
+                            // Only inserting in correct position to maintain sorted order.
+                            liveboard.insert(index, item.clone());
                         }
-
-                        // Sort because deltas may reorder. Subtract from max so that larger scores are on top.
-                        self.core
-                            .liveboard
-                            .sort_unstable_by_key(|dto| u32::MAX - dto.score);
                     }
                 }
             }
@@ -242,46 +250,46 @@ impl<G: GameClient> Apply<Update<G::GameUpdate>> for ServerState<G> {
                     removed,
                     real_players,
                 } => {
-                    for player in added.iter() {
-                        self.core.players.insert(player.player_id, player.clone());
+                    for player in added.into_vec() {
+                        core.players.insert(player.player_id, player);
                     }
-                    for remove in removed.iter() {
-                        self.core.players.remove(remove);
+                    for player_id in removed.iter() {
+                        core.players.remove(player_id);
                     }
-                    self.core.real_players = real_players;
+                    core.real_players = real_players;
                 }
                 _ => {}
             },
             Update::System(update) => match update {
                 SystemUpdate::Added(added) => {
-                    for server in added.iter() {
-                        self.core.servers.insert(server.server_id, server.clone());
+                    for server in added.into_vec() {
+                        core.servers.insert(server.server_id, server);
                     }
                 }
                 SystemUpdate::Removed(removed) => {
-                    for remove in removed.iter() {
-                        self.core.servers.remove(remove);
+                    for server_id in removed.iter() {
+                        core.servers.remove(server_id);
                     }
                 }
             },
             Update::Team(update) => match update {
                 TeamUpdate::Members(members) => {
-                    self.core.members = members[..].into();
+                    core.members = members;
                 }
                 TeamUpdate::Joiners(joiners) => {
-                    self.core.joiners = joiners;
+                    core.joiners = joiners;
                 }
                 TeamUpdate::Joins(joins) => {
-                    self.core.joins = joins;
+                    core.joins = joins;
                 }
                 TeamUpdate::AddedOrUpdated(added_or_updated) => {
-                    for team in added_or_updated.iter() {
-                        self.core.teams.insert(team.team_id, team.clone());
+                    for team in added_or_updated.into_vec() {
+                        core.teams.insert(team.team_id, team);
                     }
                 }
                 TeamUpdate::Removed(removed) => {
-                    for remove in removed.iter() {
-                        self.core.teams.remove(remove);
+                    for team_id in removed.iter() {
+                        core.teams.remove(team_id);
                     }
                 }
                 _ => {}
@@ -307,7 +315,6 @@ impl<G: GameClient> Context<G> {
             client: ClientState::default(),
             state: ServerState::default(),
             socket,
-            ui: G::UiState::default(),
             keyboard: KeyboardState::default(),
             mouse: MouseState::default(),
             visibility: VisibilityState::default(),
@@ -325,7 +332,7 @@ impl<G: GameClient> Context<G> {
     ) -> (String, Option<ServerId>) {
         let scheme = ws_protocol(frontend.get_real_encryption().unwrap_or(is_https()));
         let ideal_server_id = override_server_id.or(frontend.get_ideal_server_id());
-        let host = frontend.get_real_host().unwrap_or(host());
+        let host = frontend.get_real_host().unwrap_or_else(host);
 
         let ideal_host = ideal_server_id
             .filter(|_| !host.starts_with("localhost"))
@@ -334,7 +341,7 @@ impl<G: GameClient> Context<G> {
 
         // crate::console_log!("override={:?} ideal server={:?}, host={:?}, ideal_host={:?}", override_server_id, ideal_server_id, host, ideal_host);
 
-        let query = window().unwrap().location().search().ok();
+        let query = js_hooks::window().location().search().ok();
         let params = query.and_then(|query| UrlSearchParams::new_with_str(&query).ok());
         let oauth2_code = params.and_then(|params| params.get("code"));
 
@@ -343,15 +350,15 @@ impl<G: GameClient> Context<G> {
             arena_id: common_settings.arena_id,
             session_id: common_settings.session_id,
             invitation_id: invitation_id(),
-            login_type: oauth2_code.is_some().then(|| LoginType::Discord),
+            login_type: oauth2_code.is_some().then_some(LoginType::Discord),
             login_id: oauth2_code,
-            referrer: referrer(),
+            referrer: frontend.get_real_referrer(),
         };
 
         let web_socket_query_url = serde_urlencoded::to_string(&web_socket_query).unwrap();
 
         (
-            format!("{}://{}/ws/?{}", scheme, ideal_host, web_socket_query_url),
+            format!("{}://{}/ws?{}", scheme, ideal_host, web_socket_query_url),
             ideal_server_id,
         )
     }
@@ -384,5 +391,59 @@ impl<G: GameClient> Context<G> {
     /// Set the props used to render the UI. Javascript must implement part of this.
     pub fn set_ui_props(&mut self, props: G::UiProps) {
         self.frontend.set_ui_props(props);
+    }
+}
+
+#[derive(Clone)]
+pub struct WeakCoreState(std::rc::Weak<CoreState>);
+
+impl Default for WeakCoreState {
+    fn default() -> Self {
+        thread_local! {
+            static DEFAULT_CORE_STATE: Rc<CoreState> = Rc::default();
+        }
+        DEFAULT_CORE_STATE.with(Self::new) // Only allocate zero value once to not cause a leak.
+    }
+}
+
+impl PartialEq for WeakCoreState {
+    fn eq(&self, _other: &Self) -> bool {
+        // std::ptr::eq(self, _other)
+        false // Can't implement Eq because not reflexive but probably doesn't matter...
+    }
+}
+
+impl WeakCoreState {
+    /// Borrow the core state immutably. Unused for now.
+    pub fn as_strong(&self) -> StrongCoreState {
+        StrongCoreState {
+            inner: self.0.upgrade().unwrap(),
+            _spooky: PhantomData,
+        }
+    }
+
+    /// Like [`Self::as_strong`] but consumes self and has a static lifetime.
+    pub fn into_strong(self) -> StrongCoreState<'static> {
+        StrongCoreState {
+            inner: self.0.upgrade().unwrap(),
+            _spooky: PhantomData,
+        }
+    }
+
+    /// Create a [`WeakCoreState`] from a [`Rc<CoreState>`].
+    pub fn new(core: &Rc<CoreState>) -> Self {
+        Self(Rc::downgrade(core))
+    }
+}
+
+pub struct StrongCoreState<'a> {
+    inner: Rc<CoreState>,
+    _spooky: PhantomData<&'a ()>,
+}
+
+impl<'a> std::ops::Deref for StrongCoreState<'a> {
+    type Target = CoreState;
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
     }
 }

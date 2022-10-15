@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use core_protocol::metrics::ContinuousExtremaMetric;
 use log::error;
 use simple_server_status::SimpleServerStatus;
@@ -84,6 +87,9 @@ impl Health {
         let now = Instant::now();
         if let Some(last_tick) = self.last_tick {
             let elapsed = now.duration_since(last_tick).as_secs_f32().clamp(0.0, 10.0);
+            if elapsed > tick_period * 2.0 {
+                error!("long tick lasted: {elapsed:.2}s");
+            }
             self.spt.push(elapsed);
         }
         self.last_tick = Some(now);

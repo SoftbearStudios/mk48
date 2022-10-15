@@ -5,17 +5,22 @@ use client_util::browser_storage::BrowserStorages;
 use client_util::setting::Settings;
 
 /// Settings can be set via Javascript (see util/settings.js and page/Settings.svelte).
-#[derive(Settings)]
+#[derive(Clone, PartialEq, Settings)]
 pub struct Mk48Settings {
-    pub(crate) animations: bool,
+    pub animations: bool,
+    #[setting(no_store)]
+    pub cinematic: bool,
+    pub fps_shown: bool,
     #[setting(range = "0..3")]
-    pub(crate) wave_quality: u8,
+    pub wave_quality: u8,
 }
 
 impl Default for Mk48Settings {
     fn default() -> Self {
         Self {
             animations: true,
+            cinematic: false,
+            fps_shown: false,
             wave_quality: 1,
         }
     }

@@ -350,7 +350,10 @@ impl<G: GameArenaService> SystemRepo<G> {
 
                 let client = client.clone();
                 let request = client
-                    .get(format!("https://{}.{}/status/", server_id.0, system.domain))
+                    .get(format!(
+                        "https://{}.{}/status.json",
+                        server_id.0, system.domain
+                    ))
                     .build()
                     .ok()?;
 
@@ -826,7 +829,7 @@ impl<G: GameArenaService> SystemRepo<G> {
 #[rtype(result = "SystemResponse")]
 pub struct SystemRequest {
     /// The IP address of the client.
-    pub(crate) ip: Option<IpAddr>,
+    pub(crate) ip: IpAddr,
     /// [`ServerId`] preference.
     pub(crate) server_id: Option<ServerId>,
     /// [`RegionId`] preference.
@@ -841,9 +844,9 @@ impl<G: GameArenaService> Handler<SystemRequest> for Infrastructure<G> {
 
     fn handle(&mut self, request: SystemRequest, _: &mut Self::Context) -> Self::Result {
         let invitation_server_id = request.invitation_id.and_then(|id| id.server_id());
-        let ideal_region_id = request.region_id.or(request
-            .ip
-            .and_then(|ip| SystemRepo::<G>::ip_to_region_id(ip)));
+        let ideal_region_id = request
+            .region_id
+            .or_else(|| SystemRepo::<G>::ip_to_region_id(request.ip));
 
         let ideal_server_id = SystemRepo::iter_server_priorities(
             &self.system,

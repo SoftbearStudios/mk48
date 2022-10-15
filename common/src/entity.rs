@@ -144,6 +144,9 @@ pub struct EntityData {
     #[serde(default)]
     pub exhausts: Vec<Exhaust>,
     pub label: String,
+    pub link: Option<String>,
+    #[serde(default)]
+    pub range: f32,
     #[serde(default)]
     pub position_forward: f32,
     #[serde(default)]
@@ -425,7 +428,7 @@ impl Turret {
     }
 }
 
-entity_type!("../../js/src/data/entities.json");
+entity_type!("../../data/entities.json");
 
 impl Serialize for EntityType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -505,8 +508,8 @@ impl EntityType {
 
     /// spawn_options returns an iterator that visits all spawnable entity types and allows a random
     /// choice to be made.
-    pub fn spawn_options(bot: bool) -> impl Iterator<Item = Self> + IteratorRandom {
-        Self::iter().filter(move |t| t.can_spawn_as(0, bot))
+    pub fn spawn_options(score: u32, bot: bool) -> impl Iterator<Item = Self> + IteratorRandom {
+        Self::iter().filter(move |t| t.can_spawn_as(score, bot))
     }
 
     /// upgrade_options returns an iterator that visits all entity types that may be upgraded to
@@ -576,7 +579,7 @@ impl EntityType {
     /// To be called ONLY ONCE, near the beginning of main, before self.data() is called.
     pub unsafe fn init() {
         let map: HashMap<EntityType, EntityData> =
-            serde_json::from_str(include_str!("../../js/src/data/entities.json"))
+            serde_json::from_str(include_str!("../../data/entities.json"))
                 .expect("could not parse entity json");
         let mut vector = Vec::with_capacity(map.len());
 

@@ -3,8 +3,6 @@
 
 use core_protocol::serde_util::{F32Visitor, I16Visitor};
 use glam::{Vec2, Vec2Swizzles};
-use rand::distributions::{Distribution, Standard};
-use rand::Rng;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::f32::consts::PI;
 use std::fmt;
@@ -95,6 +93,18 @@ impl Angle {
     pub fn lerp(self, other: Self, value: f32) -> Self {
         self + (other - self) * value
     }
+
+    /// Increases clockwise with straight up being 0. Output always 0..=359, never 360.
+    pub fn to_bearing(self) -> u16 {
+        ((Self::PI_2 - self).0 as u16 as u32 * 360 / (u16::MAX as u32 + 1)) as u16
+    }
+
+    /// E, NE, SW, etc.
+    pub fn to_cardinal(self) -> &'static str {
+        let idx =
+            ((self.0 as u16).wrapping_add(u16::MAX / 16)) / ((u16::MAX as u32 + 1) / 8) as u16;
+        ["E", "NE", "N", "NW", "W", "SW", "S", "SE"][idx as usize]
+    }
 }
 
 impl Default for Angle {
@@ -161,7 +171,10 @@ impl Mul<f32> for Angle {
     }
 }
 
-impl Distribution<Angle> for Standard {
+#[cfg(feature = "rand")]
+use rand::prelude::*;
+#[cfg(feature = "rand")]
+impl Distribution<Angle> for rand::distributions::Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Angle {
         Angle(rng.gen())
     }
@@ -297,5 +310,29 @@ mod tests {
             Angle::from_radians(-0.5).clamp_magnitude(Angle::from_radians(0.4)),
             Angle::from_radians(-0.4)
         );
+    }
+
+    #[test]
+    fn to_bearing() {
+        assert_eq!(Angle::PI_2.to_bearing(), 0);
+        assert_eq!(Angle::PI.to_bearing(), 270);
+
+        for i in 0..i16::MAX {
+            let b = Angle(i).to_bearing();
+            assert!(b < 360, "{} -> {} >= 360", i, b);
+        }
+    }
+
+    #[test]
+    fn to_cardinal() {
+        // Make sure it doesn't panic.
+        for i in 0..i16::MAX {
+            Angle(i).to_cardinal();
+        }
+
+        assert_eq!(Angle::ZERO.to_cardinal(), "E");
+        assert_eq!(Angle::PI_2.to_cardinal(), "N");
+        assert_eq!(Angle::PI.to_cardinal(), "W");
+        assert_eq!(Angle(u16::MAX as i16).to_cardinal(), "E");
     }
 }

@@ -92,6 +92,7 @@ impl<G: GameArenaService> Infrastructure<G> {
         trace_log: Option<String>,
         game_client: Arc<RwLock<MiniCdn>>,
         allow_web_socket_json: &'static AtomicBool,
+        admin_config_file: Option<String>,
         client_authenticate: RateLimiterProps,
     ) -> Self {
         // TODO: If multiple arenas, generate randomly.
@@ -108,7 +109,7 @@ impl<G: GameArenaService> Infrastructure<G> {
             system,
             discord_bot: discord_bot.map(|b| &*Box::leak(Box::new(b))),
             discord_oauth2,
-            admin: AdminRepo::new(game_client, allow_web_socket_json),
+            admin: AdminRepo::new(game_client, admin_config_file, allow_web_socket_json),
             context_service: ContextService::new(
                 arena_id,
                 min_bots,

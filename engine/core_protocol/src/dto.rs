@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::id::*;
-use crate::metrics::*;
 use crate::name::*;
+use crate::owned::Owned;
 use crate::UnixTime;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
-use std::net::IpAddr;
-use std::num::NonZeroU64;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct InvitationDto {
@@ -100,122 +97,26 @@ pub struct MemberDto {
 /// The Message Data Transfer Object (DTO) is used for chats.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MessageDto {
-    pub alias: PlayerAlias, // For display in case alias is changed or player quits.
+    /// For display in case alias is changed or player quits.
+    pub alias: PlayerAlias,
     pub date_sent: UnixTime,
-    pub player_id: Option<PlayerId>, // For muting sender. None if from server.
+    /// For muting sender. None if from server.
+    pub player_id: Option<PlayerId>,
     pub team_captain: bool,
-    pub team_name: Option<TeamName>, // Don't use team_id in case team is deleted or ID re-used.
+    /// Don't use team_id in case team is deleted or ID re-used.
+    pub team_name: Option<TeamName>,
     pub text: String,
+    /// Whether message is directed to team only.
     pub whisper: bool,
 }
-
-/// The Metrics Data Transfer Object (DTO) contains core server metrics.
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct MetricsSummaryDto {
-    pub abuse_reports: <DiscreteMetric as Metric>::Summary,
-    pub arenas_cached: <DiscreteMetric as Metric>::Summary,
-    pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::Summary,
-    pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::Summary,
-    pub bounce: <RatioMetric as Metric>::Summary,
-    pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
-    pub connections: <ContinuousExtremaMetric as Metric>::Summary,
-    pub cpu: <ContinuousExtremaMetric as Metric>::Summary,
-    pub cpu_steal: <ContinuousExtremaMetric as Metric>::Summary,
-    pub flop: <RatioMetric as Metric>::Summary,
-    pub fps: <ContinuousExtremaMetric as Metric>::Summary,
-    pub invited: <RatioMetric as Metric>::Summary,
-    pub invitations_cached: <DiscreteMetric as Metric>::Summary,
-    pub low_fps: <RatioMetric as Metric>::Summary,
-    pub minutes_per_play: <ContinuousExtremaMetric as Metric>::Summary,
-    pub minutes_per_visit: <ContinuousExtremaMetric as Metric>::Summary,
-    pub new: <RatioMetric as Metric>::Summary,
-    pub no_referrer: <RatioMetric as Metric>::Summary,
-    pub peek: <RatioMetric as Metric>::Summary,
-    pub players_cached: <DiscreteMetric as Metric>::Summary,
-    pub plays_per_visit: <ContinuousExtremaMetric as Metric>::Summary,
-    pub plays_total: <DiscreteMetric as Metric>::Summary,
-    pub ram: <ContinuousExtremaMetric as Metric>::Summary,
-    pub renews: <DiscreteMetric as Metric>::Summary,
-    pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
-    pub retention_histogram: <HistogramMetric as Metric>::Summary,
-    pub rtt: <ContinuousExtremaMetric as Metric>::Summary,
-    pub score: <ContinuousExtremaMetric as Metric>::Summary,
-    pub sessions_cached: <DiscreteMetric as Metric>::Summary,
-    pub spt: <ContinuousExtremaMetric as Metric>::Summary,
-    pub teamed: <RatioMetric as Metric>::Summary,
-    pub toxicity: <RatioMetric as Metric>::Summary,
-    pub tps: <ContinuousExtremaMetric as Metric>::Summary,
-    pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
-    pub visits: <DiscreteMetric as Metric>::Summary,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
-pub struct MetricsDataPointDto {
-    pub abuse_reports: <DiscreteMetric as Metric>::DataPoint,
-    pub arenas_cached: <DiscreteMetric as Metric>::DataPoint,
-    pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub bounce: <RatioMetric as Metric>::DataPoint,
-    pub concurrent: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub connections: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub cpu: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub cpu_steal: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub flop: <RatioMetric as Metric>::DataPoint,
-    pub fps: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub invited: <RatioMetric as Metric>::DataPoint,
-    pub invitations_cached: <DiscreteMetric as Metric>::DataPoint,
-    pub low_fps: <RatioMetric as Metric>::DataPoint,
-    pub minutes_per_play: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub minutes_per_visit: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub new: <RatioMetric as Metric>::DataPoint,
-    pub no_referrer: <RatioMetric as Metric>::DataPoint,
-    pub peek: <RatioMetric as Metric>::DataPoint,
-    pub players_cached: <DiscreteMetric as Metric>::DataPoint,
-    pub plays_per_visit: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub plays_total: <DiscreteMetric as Metric>::DataPoint,
-    pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub renews: <DiscreteMetric as Metric>::DataPoint,
-    pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub rtt: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
-    pub spt: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub teamed: <RatioMetric as Metric>::DataPoint,
-    pub toxicity: <RatioMetric as Metric>::DataPoint,
-    pub tps: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
-    pub visits: <DiscreteMetric as Metric>::DataPoint,
-}
-
 /// The Player Data Transfer Object (DTO) binds player ID to player data.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlayerDto {
     pub alias: PlayerAlias,
+    pub moderator: bool,
     pub player_id: PlayerId,
     pub team_captain: bool,
     pub team_id: Option<TeamId>,
-}
-
-/// The Player Admin Data Transfer Object (DTO) binds player ID to admin player data.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AdminPlayerDto {
-    pub alias: PlayerAlias,
-    pub player_id: PlayerId,
-    pub team_id: Option<TeamId>,
-    pub region_id: Option<RegionId>,
-    pub discord_id: Option<NonZeroU64>,
-    pub moderator: bool,
-    pub score: u32,
-    pub plays: u32,
-    pub fps: Option<f32>,
-    pub rtt: Option<u16>,
-    pub messages: usize,
-    pub inappropriate_messages: usize,
-    pub abuse_reports: usize,
-    /// Remaining minutes muted.
-    pub mute: usize,
-    /// Remaining minutes restricted.
-    pub restriction: usize,
 }
 
 /// The Server Data Transfer Object (DTO) binds server ID to server data.
@@ -240,40 +141,11 @@ impl Ord for ServerDto {
     }
 }
 
-/// Like [`ServerDto`] but more details.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct AdminServerDto {
-    pub server_id: ServerId,
-    pub redirect_server_id: Option<ServerId>,
-    pub region_id: Option<RegionId>,
-    pub ip: IpAddr,
-    /// Routed by DNS to the home page.
-    pub home: bool,
-    pub reachable: bool,
-    /// Round trip time in milliseconds.
-    pub rtt: u16,
-    pub healthy: bool,
-    pub client_hash: Option<u64>,
-    pub player_count: Option<u32>,
-}
-
-impl PartialOrd for AdminServerDto {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for AdminServerDto {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.server_id.cmp(&other.server_id)
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SnippetDto {
     pub cohort_id: Option<CohortId>,
     pub referrer: Option<Referrer>,
-    pub snippet: Arc<str>,
+    pub snippet: Owned<str>,
 }
 
 impl PartialOrd for SnippetDto {
@@ -311,4 +183,144 @@ pub enum MetricFilter {
     Referrer(Referrer),
     RegionId(RegionId),
     UserAgentId(UserAgentId),
+}
+
+#[cfg(feature = "admin")]
+pub use admin::*;
+#[cfg(feature = "admin")]
+mod admin {
+    use super::*;
+    use crate::metrics::*;
+    use std::net::IpAddr;
+    use std::num::NonZeroU64;
+
+    /// The Player Admin Data Transfer Object (DTO) binds player ID to admin player data (for real players, not bots).
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    pub struct AdminPlayerDto {
+        pub alias: PlayerAlias,
+        pub player_id: PlayerId,
+        pub team_id: Option<TeamId>,
+        pub region_id: Option<RegionId>,
+        pub discord_id: Option<NonZeroU64>,
+        pub ip_address: IpAddr,
+        pub moderator: bool,
+        pub score: u32,
+        pub plays: u32,
+        pub fps: Option<f32>,
+        pub rtt: Option<u16>,
+        pub messages: usize,
+        pub inappropriate_messages: usize,
+        pub abuse_reports: usize,
+        /// Remaining minutes muted.
+        pub mute: usize,
+        /// Remaining minutes restricted.
+        pub restriction: usize,
+    }
+
+    /// Like [`ServerDto`] but more details.
+    #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+    pub struct AdminServerDto {
+        pub server_id: ServerId,
+        pub redirect_server_id: Option<ServerId>,
+        pub region_id: Option<RegionId>,
+        pub ip: IpAddr,
+        /// Routed by DNS to the home page.
+        pub home: bool,
+        pub reachable: bool,
+        /// Round trip time in milliseconds.
+        pub rtt: u16,
+        pub healthy: bool,
+        pub client_hash: Option<u64>,
+        pub player_count: Option<u32>,
+    }
+
+    impl PartialOrd for AdminServerDto {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+
+    impl Ord for AdminServerDto {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.server_id.cmp(&other.server_id)
+        }
+    }
+
+    /// The Metrics Data Transfer Object (DTO) contains core server metrics.
+    #[derive(Clone, Copy, Debug, Serialize)]
+    pub struct MetricsSummaryDto {
+        pub abuse_reports: <DiscreteMetric as Metric>::Summary,
+        pub arenas_cached: <DiscreteMetric as Metric>::Summary,
+        pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::Summary,
+        pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::Summary,
+        pub bounce: <RatioMetric as Metric>::Summary,
+        pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
+        pub connections: <ContinuousExtremaMetric as Metric>::Summary,
+        pub cpu: <ContinuousExtremaMetric as Metric>::Summary,
+        pub cpu_steal: <ContinuousExtremaMetric as Metric>::Summary,
+        pub flop: <RatioMetric as Metric>::Summary,
+        pub fps: <ContinuousExtremaMetric as Metric>::Summary,
+        pub invited: <RatioMetric as Metric>::Summary,
+        pub invitations_cached: <DiscreteMetric as Metric>::Summary,
+        pub low_fps: <RatioMetric as Metric>::Summary,
+        pub minutes_per_play: <ContinuousExtremaMetric as Metric>::Summary,
+        pub minutes_per_visit: <ContinuousExtremaMetric as Metric>::Summary,
+        pub new: <RatioMetric as Metric>::Summary,
+        pub no_referrer: <RatioMetric as Metric>::Summary,
+        pub peek: <RatioMetric as Metric>::Summary,
+        pub players_cached: <DiscreteMetric as Metric>::Summary,
+        pub plays_per_visit: <ContinuousExtremaMetric as Metric>::Summary,
+        pub plays_total: <DiscreteMetric as Metric>::Summary,
+        pub ram: <ContinuousExtremaMetric as Metric>::Summary,
+        pub renews: <DiscreteMetric as Metric>::Summary,
+        pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
+        pub retention_histogram: <HistogramMetric as Metric>::Summary,
+        pub rtt: <ContinuousExtremaMetric as Metric>::Summary,
+        pub score: <ContinuousExtremaMetric as Metric>::Summary,
+        pub sessions_cached: <DiscreteMetric as Metric>::Summary,
+        pub spt: <ContinuousExtremaMetric as Metric>::Summary,
+        pub teamed: <RatioMetric as Metric>::Summary,
+        pub toxicity: <RatioMetric as Metric>::Summary,
+        pub tps: <ContinuousExtremaMetric as Metric>::Summary,
+        pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
+        pub visits: <DiscreteMetric as Metric>::Summary,
+    }
+
+    #[derive(Clone, Copy, Debug, Serialize)]
+    pub struct MetricsDataPointDto {
+        pub abuse_reports: <DiscreteMetric as Metric>::DataPoint,
+        pub arenas_cached: <DiscreteMetric as Metric>::DataPoint,
+        pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub bounce: <RatioMetric as Metric>::DataPoint,
+        pub concurrent: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub connections: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub cpu: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub cpu_steal: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub flop: <RatioMetric as Metric>::DataPoint,
+        pub fps: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub invited: <RatioMetric as Metric>::DataPoint,
+        pub invitations_cached: <DiscreteMetric as Metric>::DataPoint,
+        pub low_fps: <RatioMetric as Metric>::DataPoint,
+        pub minutes_per_play: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub minutes_per_visit: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub new: <RatioMetric as Metric>::DataPoint,
+        pub no_referrer: <RatioMetric as Metric>::DataPoint,
+        pub peek: <RatioMetric as Metric>::DataPoint,
+        pub players_cached: <DiscreteMetric as Metric>::DataPoint,
+        pub plays_per_visit: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub plays_total: <DiscreteMetric as Metric>::DataPoint,
+        pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub renews: <DiscreteMetric as Metric>::DataPoint,
+        pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub rtt: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
+        pub spt: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub teamed: <RatioMetric as Metric>::DataPoint,
+        pub toxicity: <RatioMetric as Metric>::DataPoint,
+        pub tps: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub visits: <DiscreteMetric as Metric>::DataPoint,
+    }
 }

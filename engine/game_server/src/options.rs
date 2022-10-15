@@ -1,6 +1,10 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use core_protocol::id::RegionId;
 use log::{warn, LevelFilter};
 use std::net::IpAddr;
+use std::num::NonZeroU64;
 use structopt::StructOpt;
 
 /// Server options, to be specified as arguments.
@@ -41,6 +45,9 @@ pub struct Options {
     /// Log client traces here
     #[structopt(long)]
     pub trace_log: Option<String>,
+    /// Persist admin config here.
+    #[structopt(long)]
+    pub admin_config_file: Option<String>,
     /// Linode personal access token for DNS configuration.
     #[structopt(long)]
     pub linode_personal_access_token: Option<String>,
@@ -55,7 +62,7 @@ pub struct Options {
     pub discord_bot_token: Option<String>,
     /// Discord guild (server) id.
     #[structopt(long, default_value = "847143438939717663")]
-    pub discord_guild_id: String,
+    pub discord_guild_id: NonZeroU64,
     /// Don't write to the database.
     #[structopt(long)]
     pub database_read_only: bool,
@@ -123,7 +130,7 @@ impl Options {
         };
 
         #[cfg(not(unix))]
-        let default_ports = STANDARD_PORTS;
+        let default_ports = (Self::STANDARD_HTTP_PORT, Self::STANDARD_HTTPS_PORT);
 
         let ports = (self.http_port.unwrap_or(default_ports.0), default_ports.1);
         log::info!("HTTP port is {}", ports.0);

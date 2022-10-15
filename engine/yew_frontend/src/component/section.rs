@@ -1,9 +1,10 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
-use yew::{html, use_state, Callback, Children, Properties};
+use yew::{classes, html, use_state, Callback, Children, Properties};
 use yew_icons::{Icon, IconId};
 
 #[derive(PartialEq, Properties)]
@@ -17,12 +18,46 @@ pub struct SectionProps {
     /// If [`Some`], open is reactive.
     #[prop_or(None)]
     pub on_open_changed: Option<Callback<bool>>,
-    #[prop_or(None)]
-    pub on_left_arrow: Option<Callback<()>>,
-    #[prop_or(None)]
-    pub on_right_arrow: Option<Callback<()>>,
-    #[prop_or(false)]
-    pub right_arrow: bool,
+    #[prop_or_default]
+    pub left_arrow: SectionArrow,
+    #[prop_or_default]
+    pub right_arrow: SectionArrow,
+}
+
+#[derive(Default, PartialEq)]
+pub enum SectionArrow {
+    /// Visible and clickable.
+    Active(Callback<MouseEvent>),
+    /// May become active; reserve space to avoid layout shift.
+    Reserved,
+    /// Will never become active.
+    #[default]
+    None,
+}
+
+impl SectionArrow {
+    pub fn always(callback: Callback<MouseEvent>) -> Self {
+        Self::Active(callback)
+    }
+
+    pub fn sometimes(option: Option<Callback<MouseEvent>>) -> Self {
+        option.map(Self::Active).unwrap_or(Self::Reserved)
+    }
+
+    fn unpack(&self, open: bool) -> Option<Option<Callback<MouseEvent>>> {
+        if open {
+            match self {
+                Self::Active(callback) => Some(Some(callback.reform(|e: MouseEvent| {
+                    e.stop_propagation();
+                    e
+                }))),
+                Self::Reserved => Some(None),
+                Self::None => None,
+            }
+        } else {
+            None
+        }
+    }
 }
 
 #[styled_component(Section)]
@@ -75,17 +110,11 @@ pub fn section(props: &SectionProps) -> Html {
     "#
     );
 
-    let left_click = props.on_left_arrow.as_ref().map(|cb| {
-        cb.reform(|e: MouseEvent| {
-            e.stop_propagation();
-        })
-    });
-
-    let right_click = props.on_right_arrow.as_ref().map(|cb| {
-        cb.reform(|e: MouseEvent| {
-            e.stop_propagation();
-        })
-    });
+    let reserved_style = css!(
+        r#"
+        visibility: hidden;
+        "#
+    );
 
     const ICON_WIDTH: &'static str = "1.5rem";
     const ICON_HEIGHT: &'static str = "1.2rem";
@@ -96,14 +125,14 @@ pub fn section(props: &SectionProps) -> Html {
                 class={h2_css_class}
                 {onclick}
                 >
-                if open && left_click.is_some() {
-                    <span class={span_css_class.clone()} onclick={left_click}>
+                if let Some(maybe_callback) = props.left_arrow.unpack(open) {
+                    <span class={classes!(span_css_class.clone(), maybe_callback.is_none().then(|| reserved_style.clone()))} onclick={maybe_callback}>
                         <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }
                 {&props.name}
-                if open && right_click.is_some() {
-                    <span class={span_css_class} onclick={right_click}>
+                if let Some(maybe_callback) = props.right_arrow.unpack(open) {
+                    <span class={classes!(span_css_class, maybe_callback.is_none().then_some(reserved_style))} onclick={maybe_callback}>
                         <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
                     </span>
                 }

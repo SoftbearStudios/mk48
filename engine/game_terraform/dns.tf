@@ -28,3 +28,11 @@ resource "linode_domain_record" "servers_ipv4" {
   target = linode_instance.servers[each.key].ip_address
   ttl_sec = 120
 }
+
+resource "linode_domain_record" "www" {
+  domain_id = linode_domain.main.id
+  name = "www"
+  record_type = "CNAME"
+  target = var.domain
+  ttl_sec = 120
+}

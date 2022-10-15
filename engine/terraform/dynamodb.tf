@@ -105,26 +105,21 @@ resource "aws_dynamodb_table" "logins" {
     type = "S"
   }
 
-  point_in_time_recovery {
-    enabled = true
-  }
-}
-
-resource "aws_dynamodb_table" "ips" {
-  name = "core_ips"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key = "ip"
-
   attribute {
-    name = "ip"
-    type = "S"
+    name = "user_id"
+    type = "N"
+  }
+
+  global_secondary_index {
+    hash_key = "user_id"
+    name = "user_id"
+    projection_type = "ALL"
   }
 
   stream_enabled = true
   stream_view_type = "NEW_IMAGE"
 
-  ttl {
-    attribute_name = "ttl"
-    enabled        = true
+  point_in_time_recovery {
+    enabled = true
   }
 }

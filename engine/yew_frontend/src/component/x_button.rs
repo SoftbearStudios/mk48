@@ -1,4 +1,5 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
@@ -14,9 +15,6 @@ pub fn x_button(props: &XButtonProps) -> Html {
     let class = css!(
         r#"
         font-size: 0.8rem;
-        position: absolute;
-        top: 0.5rem;
-        right: 0.5em;
         width: 2.2em;
         font-weight: bold;
         background-color: #bf0f0f;

@@ -1,3 +1,4 @@
+
 name: Build
 
 on:
@@ -15,20 +16,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: egor-tensin/setup-clang@v1
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly-2022-06-15
-        override: true
-        components: rustfmt, clippy
-    - name: Build Client
-      working-directory: ./js
-      run: npm install && npm run build
-    - name: Build Server
-      run: cargo build --release --manifest-path server/Cargo.toml --verbose
-    - name: Upload Server
-      uses: actions/upload-artifact@v2
-      with:
-        name: server
-        path: server/target/release/server
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2022-08-14
+          override: true
+          components: rust-src, rustfmt, clippy
+      - uses: jetli/trunk-action@v0.1.0
+        with:
+          version: 'v0.15.0'
+      - name: Build Client
+        working-directory: ./client
+        run: trunk build --release
+      - name: Build Admin Client
+        working-directory: ./engine/js
+        run: npm install && npm run build
+      - name: Build Server
+        run: cargo build --release --manifest-path server/Cargo.toml

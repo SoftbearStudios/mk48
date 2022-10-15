@@ -36,6 +36,7 @@ use server_util::generate_id::{generate_id, generate_id_64};
 use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::observer::{ObserverMessage, ObserverUpdate};
 use server_util::rate_limiter::{RateLimiter, RateLimiterProps};
+use std::borrow::Cow;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::fs::OpenOptions;
@@ -61,7 +62,7 @@ pub struct ClientRepo<G: GameArenaService> {
     pending_session_write: Vec<SessionItem>,
     pub(crate) snippets: HashMap<(Option<CohortId>, Option<Referrer>), Arc<str>>,
     /// Where to log traces to.
-    trace_log: Option<String>,
+    trace_log: Option<Arc<str>>,
     _spooky: PhantomData<G>,
 }
 
@@ -77,7 +78,7 @@ impl<G: GameArenaService> ClientRepo<G> {
             database_rate_limiter: RateLimiter::new(Duration::from_secs(30), 0),
             pending_session_write: Vec::new(),
             snippets: Self::load_default_snippets(),
-            trace_log,
+            trace_log: trace_log.map(Into::into),
             _spooky: PhantomData,
         }
     }
@@ -209,6 +210,7 @@ impl<G: GameArenaService> ClientRepo<G> {
             game_id: G::GAME_ID,
             player_id,
             plays: client.metrics.plays + client.metrics.previous_plays,
+            moderator: client.moderator,
             previous_id: client.metrics.session_id_previous,
             referrer: client.metrics.referrer,
             user_agent_id: client.metrics.user_agent_id,
@@ -339,7 +341,8 @@ impl<G: GameArenaService> ClientRepo<G> {
             message: Update::Liveboard(liveboard.initializer()),
         });
 
-        chat.initialize_client(player_id, players);
+        let chat_success = chat.initialize_client(player_id, players);
+        debug_assert!(chat_success);
 
         let _ = register_observer.send(ObserverUpdate::Send {
             message: Update::Player(players.initializer()),
@@ -693,10 +696,10 @@ impl<G: GameArenaService> ClientRepo<G> {
 
     /// Record a client-side error message for investigation.
     fn trace(
+        &self,
         player_id: PlayerId,
         message: String,
         players: &PlayerRepo<G>,
-        trace_log: Option<&str>,
     ) -> Result<ClientUpdate, &'static str> {
         let mut player = players
             .borrow_player_mut(player_id)
@@ -708,30 +711,51 @@ impl<G: GameArenaService> ClientRepo<G> {
         #[cfg(not(debug_assertions))]
         let trace_limit = Some(25);
 
-        if message.len() > 2048 {
+        if message.len() > 4096 {
             Err("trace too long")
         } else if trace_limit
             .map(|limit| client.traces < limit)
             .unwrap_or(true)
         {
-            if let Some(trace_log) = trace_log {
-                match OpenOptions::new().create(true).append(true).open(trace_log) {
-                    Ok(mut file) => {
-                        if let Err(e) = write!(
-                            file,
-                            "{}",
-                            format!(
-                                "ref={:?}, reg={:?}, ua={:?}, msg={}\n",
-                                client.metrics.referrer,
-                                client.metrics.region_id,
-                                client.metrics.user_agent_id,
-                                message
-                            )
-                        ) {
-                            error!("error logging trace to file: {:?}", e);
+            if let Some(trace_log) = self.trace_log.as_ref() {
+                let trace_log = Arc::clone(trace_log);
+                let mut line = Vec::with_capacity(256);
+                let mut writer = csv::Writer::from_writer(&mut line);
+                if let Err(e) = writer.write_record(&[
+                    get_unix_time_now().to_string().as_str(),
+                    &format!("{:?}", G::GAME_ID),
+                    &client.ip_address.to_string(),
+                    &client
+                        .metrics
+                        .region_id
+                        .map(|r| Cow::Owned(format!("{:?}", r)))
+                        .unwrap_or(Cow::Borrowed("?")),
+                    client
+                        .metrics
+                        .referrer
+                        .as_ref()
+                        .map(|r| r.as_str())
+                        .unwrap_or("?"),
+                    &client
+                        .metrics
+                        .user_agent_id
+                        .map(|ua| Cow::Owned(format!("{:?}", ua)))
+                        .unwrap_or(Cow::Borrowed("?")),
+                    &message,
+                ]) {
+                    error!("error composing trace line: {:?}", e);
+                } else {
+                    drop(writer);
+                    tokio::task::spawn_blocking(move || {
+                        if let Err(e) = OpenOptions::new()
+                            .create(true)
+                            .append(true)
+                            .open(&*trace_log)
+                            .and_then(move |mut file| file.write_all(&line))
+                        {
+                            error!("error logging trace: {:?}", e);
                         }
-                    }
-                    Err(e) => error!("could not open file for traces: {:?}", e),
+                    });
                 }
             } else {
                 info!("client_trace: {}", message);
@@ -753,9 +777,7 @@ impl<G: GameArenaService> ClientRepo<G> {
         match request {
             ClientRequest::SetAlias(alias) => Self::set_alias(player_id, alias, players),
             ClientRequest::TallyFps(fps) => Self::tally_fps(player_id, fps, players),
-            ClientRequest::Trace { message } => {
-                Self::trace(player_id, message, players, self.trace_log.as_deref())
-            }
+            ClientRequest::Trace { message } => self.trace(player_id, message, players),
         }
     }
 
@@ -832,8 +854,10 @@ pub struct PlayerClientData<G: GameArenaService> {
     pub(crate) status: ClientStatus<G>,
     /// Discord user id.
     pub(crate) discord_id: Option<NonZeroU64>,
+    /// Ip address.
+    pub(crate) ip_address: IpAddr,
     /// Is moderator for in-game chat?
-    pub(crate) moderator: bool,
+    pub moderator: bool,
     /// Previous database item.
     pub(crate) session_item: Option<SessionItem>,
     /// Metrics-related information associated with each client.
@@ -874,6 +898,7 @@ impl<G: GameArenaService> PlayerClientData<G> {
         metrics: ClientMetricData<G>,
         invitation: Option<InvitationDto>,
         discord_id: Option<NonZeroU64>,
+        ip: IpAddr,
         moderator: bool,
     ) -> Self {
         Self {
@@ -883,6 +908,7 @@ impl<G: GameArenaService> PlayerClientData<G> {
                 expiry: Instant::now() + Duration::from_secs(10),
             },
             discord_id,
+            ip_address: ip,
             moderator,
             session_item: None,
             metrics,
@@ -1001,7 +1027,7 @@ impl<G: GameArenaService> Handler<ObserverMessage<Request<G::GameRequest>, Updat
 #[rtype(result = "Result<PlayerId, &'static str>")]
 pub struct Authenticate {
     /// Client ip address.
-    pub ip_address: Option<IpAddr>,
+    pub ip_address: IpAddr,
     /// User agent.
     pub user_agent_id: Option<UserAgentId>,
     /// Referrer.
@@ -1026,10 +1052,9 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
         let clients = &mut self.context_service.context.clients;
         let players = &self.context_service.context.players;
 
-        if msg
-            .ip_address
-            .map(|ip| clients.authenticate_rate_limiter.should_limit_rate(ip))
-            .unwrap_or(false)
+        if clients
+            .authenticate_rate_limiter
+            .should_limit_rate(msg.ip_address)
         {
             // Should only log IP of malicious actors.
             warn!("IP {:?} was rate limited", msg.ip_address);
@@ -1099,84 +1124,97 @@ impl<G: GameArenaService> Handler<Authenticate> for Infrastructure<G> {
                 (discord_id, is_moderator, session_item)
             }
             .into_actor(self)
-            .map(move |(discord_id, is_moderator, db_result), act, _ctx| {
-                let invitation = msg
-                    .invitation_id
-                    .and_then(|id| act.invitations.get(id).cloned());
-                let invitation_dto = invitation.map(|i| InvitationDto {
-                    player_id: i.player_id,
-                });
+            .map(
+                move |(discord_id, mut is_moderator, db_result), act, _ctx| {
+                    let invitation = msg
+                        .invitation_id
+                        .and_then(|id| act.invitations.get(id).cloned());
+                    let invitation_dto = invitation.map(|i| InvitationDto {
+                        player_id: i.player_id,
+                    });
 
-                let mut client_metric_data = ClientMetricData::from(&msg);
+                    let mut client_metric_data = ClientMetricData::from(&msg);
 
-                let restore_session_id_player_id = if let Ok(Some(session_item)) = db_result {
-                    client_metric_data.supplement(&session_item);
-                    (session_item.arena_id == arena_id)
-                        .then_some((session_item.session_id, session_item.player_id))
-                } else {
-                    None
-                };
-
-                let (session_id, player_id) = if let Some(existing) =
-                    cached_session_id_player_id.or(restore_session_id_player_id)
-                {
-                    existing
-                } else {
-                    let mut session_ids =
-                        HashSet::with_capacity(act.context_service.context.players.real_players);
-
-                    // TODO: O(n) on players.
-                    for player in act.context_service.context.players.iter_borrow() {
-                        if let Some(client_data) = player.client() {
-                            session_ids.insert(client_data.session_id);
-                        }
-                    }
-
-                    let new_session_id = loop {
-                        let session_id = SessionId(generate_id_64());
-                        if !session_ids.contains(&session_id) {
-                            break session_id;
-                        }
+                    let restore_session_id_player_id = if let Ok(Some(session_item)) = db_result {
+                        client_metric_data.supplement(&session_item);
+                        // Restore moderator status.
+                        is_moderator |= session_item.moderator;
+                        (session_item.arena_id == arena_id)
+                            .then_some((session_item.session_id, session_item.player_id))
+                    } else {
+                        None
                     };
 
-                    let new_player_id = loop {
-                        let player_id = PlayerId(generate_id());
-                        if !act.context_service.context.players.contains(player_id) {
-                            break player_id;
-                        }
-                    };
-
-                    (new_session_id, new_player_id)
-                };
-
-                match act.context_service.context.players.players.entry(player_id) {
-                    Entry::Occupied(mut occupied) => {
-                        if let Some(client) = occupied.get_mut().borrow_player_mut().client_mut() {
-                            client.metrics.date_renewed = get_unix_time_now();
-                            if let Some(discord_id) = discord_id {
-                                client.discord_id = Some(discord_id);
-                                client.moderator = is_moderator;
-                            }
-                        } else {
-                            debug_assert!(false, "impossible to be a bot since session was valid");
-                        }
-                    }
-                    Entry::Vacant(vacant) => {
-                        let client = PlayerClientData::new(
-                            session_id,
-                            client_metric_data,
-                            invitation_dto,
-                            discord_id,
-                            is_moderator,
+                    let (session_id, player_id) = if let Some(existing) =
+                        cached_session_id_player_id.or(restore_session_id_player_id)
+                    {
+                        existing
+                    } else {
+                        let mut session_ids = HashSet::with_capacity(
+                            act.context_service.context.players.real_players,
                         );
-                        let pd = PlayerData::new(player_id, Some(Box::new(client)));
-                        let pt = Arc::new(PlayerTuple::new(pd));
-                        vacant.insert(pt);
-                    }
-                }
 
-                Ok(player_id)
-            }),
+                        // TODO: O(n) on players.
+                        for player in act.context_service.context.players.iter_borrow() {
+                            if let Some(client_data) = player.client() {
+                                session_ids.insert(client_data.session_id);
+                            }
+                        }
+
+                        let new_session_id = loop {
+                            let session_id = SessionId(generate_id_64());
+                            if !session_ids.contains(&session_id) {
+                                break session_id;
+                            }
+                        };
+
+                        let new_player_id = loop {
+                            let player_id = PlayerId(generate_id());
+                            if !act.context_service.context.players.contains(player_id) {
+                                break player_id;
+                            }
+                        };
+
+                        (new_session_id, new_player_id)
+                    };
+
+                    match act.context_service.context.players.players.entry(player_id) {
+                        Entry::Occupied(mut occupied) => {
+                            if let Some(client) =
+                                occupied.get_mut().borrow_player_mut().client_mut()
+                            {
+                                client.metrics.date_renewed = get_unix_time_now();
+                                // Update the referrer, such that the correct snippet may be served.
+                                client.metrics.referrer = msg.referrer.or(client.metrics.referrer);
+                                if let Some(discord_id) = discord_id {
+                                    client.discord_id = Some(discord_id);
+                                    client.moderator = is_moderator;
+                                }
+                            } else {
+                                debug_assert!(
+                                    false,
+                                    "impossible to be a bot since session was valid"
+                                );
+                            }
+                        }
+                        Entry::Vacant(vacant) => {
+                            let client = PlayerClientData::new(
+                                session_id,
+                                client_metric_data,
+                                invitation_dto,
+                                discord_id,
+                                msg.ip_address,
+                                is_moderator,
+                            );
+                            let pd = PlayerData::new(player_id, Some(Box::new(client)));
+                            let pt = Arc::new(PlayerTuple::new(pd));
+                            vacant.insert(pt);
+                        }
+                    }
+
+                    Ok(player_id)
+                },
+            ),
         )
     }
 }

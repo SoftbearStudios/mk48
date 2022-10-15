@@ -26,7 +26,7 @@ use std::time::Duration;
 /// Manages updating, saving, and loading leaderboards.
 pub struct LeaderboardRepo<G: GameArenaService> {
     /// Stores cached leaderboards from database and whether they were changed.
-    leaderboards: [(Arc<[LeaderboardDto]>, bool); PeriodId::VARIANT_COUNT],
+    leaderboards: [(Arc<[LeaderboardDto]>, bool); std::mem::variant_count::<PeriodId>()],
     /// Scores that should be committed to database.
     pending: HashMap<(PlayerAlias, PeriodId), u32>,
     take_pending_rate_limit: RateLimiter,

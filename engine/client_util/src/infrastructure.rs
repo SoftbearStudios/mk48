@@ -7,11 +7,9 @@ use crate::context::{Context, ServerState};
 use crate::fps_monitor::FpsMonitor;
 use crate::frontend::Frontend;
 use crate::game_client::GameClient;
-use crate::js_hooks::canvas;
 use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
-use crate::mouse::{MouseButton, MouseButtonState, MouseEvent as GameClientMouseEvent};
+use crate::mouse::{MouseButton, MouseEvent as GameClientMouseEvent};
 use crate::reconn_web_socket::ReconnWebSocket;
-use crate::renderer::renderer::Renderer;
 use crate::setting::CommonSettings;
 use crate::setting::Settings;
 use crate::visibility::VisibilityEvent;
@@ -25,23 +23,36 @@ use core_protocol::rpc::{
 use core_protocol::web_socket::WebSocketProtocol;
 use glam::{IVec2, Vec2};
 use js_sys::Function;
-use std::panic;
+use renderer::Renderer;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
-    window, Event, FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, TouchEvent, WheelEvent,
+    Event, FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, Touch, TouchEvent, WheelEvent,
 };
 
 pub struct Infrastructure<G: GameClient> {
     game: G,
     pub context: Context<G>,
-    renderer: Renderer,
+    /// Id of the [`Touch`] associated with the earliest finger to make contact with the touch
+    /// screen in a gesture, used to emulate left click.
+    left_touch_id: Option<i32>,
+    /// Id of the [`Touch`] associated with the second earliest finger to make contact with the touch
+    /// screen in a gesture, used to emulate right click.
+    right_touch_id: Option<i32>,
+    renderer: Renderer<G::Camera>,
     renderer_layer: G::RendererLayer,
     statistic_fps_monitor: FpsMonitor,
 }
 
 impl<G: GameClient> Infrastructure<G> {
-    pub fn new(mut game: G, frontend: Box<dyn Frontend<G::UiProps> + 'static>) -> Self {
-        panic::set_hook(Box::new(console_error_panic_hook::hook));
+    pub fn new(frontend: Box<dyn Frontend<G::UiProps> + 'static>) -> Result<Self, String> {
+        // Don't try to catch panics if aborting (because it's useless).
+        #[cfg(panic = "unwind")]
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+        #[cfg(feature = "joined")]
+        crate::joined::init();
+
+        let mut game = G::new();
 
         // First load local storage common settings.
         // Not guaranteed to set either or both to Some. Could fail to load.
@@ -49,7 +60,7 @@ impl<G: GameClient> Infrastructure<G> {
         let common_settings = CommonSettings::load(&browser_storages, CommonSettings::default());
 
         // Next create renderer and load game settings with it.
-        let mut renderer = Renderer::new(common_settings.antialias);
+        let mut renderer = Renderer::new(common_settings.antialias)?;
         let game_settings =
             G::GameSettings::load(&browser_storages, game.init_settings(&mut renderer));
 
@@ -57,13 +68,22 @@ impl<G: GameClient> Infrastructure<G> {
         let mut context = Context::new(browser_storages, common_settings, game_settings, frontend);
         let renderer_layer = game.init_layer(&mut renderer, &mut context);
 
-        Self {
+        Ok(Self {
             game,
             context,
+            left_touch_id: None,
+            right_touch_id: None,
             renderer,
             renderer_layer,
             statistic_fps_monitor: FpsMonitor::new(60.0),
-        }
+        })
+    }
+
+    /// Recreates the renderer (with current settings).
+    pub fn recreate_renderer(&mut self) -> Result<(), String> {
+        self.renderer = Renderer::new(self.context.common_settings.antialias)?;
+        self.renderer_layer = self.game.init_layer(&mut self.renderer, &mut self.context);
+        Ok(())
     }
 
     pub fn frame(&mut self, time_seconds: f32) {
@@ -74,8 +94,6 @@ impl<G: GameClient> Infrastructure<G> {
 
         let elapsed_seconds = (time_seconds - self.context.client.update_seconds).clamp(0.001, 0.5);
         self.context.client.update_seconds = time_seconds;
-
-        self.sync_mouse_world_space();
 
         for inbound in self
             .context
@@ -139,14 +157,15 @@ impl<G: GameClient> Infrastructure<G> {
             self.context.state.apply(inbound);
         }
 
-        self.renderer.pre_prepare(&mut self.renderer_layer);
+        self.renderer
+            .pre_prepare(&mut self.renderer_layer, time_seconds);
         self.game.tick(
             elapsed_seconds,
             &mut self.context,
             &mut self.renderer,
             &mut self.renderer_layer,
         );
-        self.renderer.render(&mut self.renderer_layer, time_seconds);
+        self.renderer.render(&mut self.renderer_layer);
 
         if let Some(fps) = self.statistic_fps_monitor.update(elapsed_seconds) {
             self.context
@@ -162,6 +181,7 @@ impl<G: GameClient> Infrastructure<G> {
         }
 
         let type_ = event.type_();
+
         match type_.as_str() {
             "keydown" | "keyup" => {
                 let down = type_ == "keydown";
@@ -207,6 +227,9 @@ impl<G: GameClient> Infrastructure<G> {
     }
 
     pub fn mouse(&mut self, event: MouseEvent) {
+        // these prevent chat from de-focusing:
+        // event.prevent_default();
+        // event.stop_propagation();
         let type_ = event.type_();
 
         match type_.as_str() {
@@ -224,7 +247,12 @@ impl<G: GameClient> Infrastructure<G> {
                 }
             }
             "mousemove" => {
-                self.mouse_move(event.client_x(), event.client_y());
+                self.mouse_move_real(
+                    event.client_x(),
+                    event.client_y(),
+                    event.movement_x(),
+                    event.movement_y(),
+                );
             }
             "mouseleave" => {
                 self.context.mouse.reset();
@@ -240,93 +268,139 @@ impl<G: GameClient> Infrastructure<G> {
     }
 
     pub fn touch(&mut self, event: TouchEvent) {
-        let type_ = event.type_();
+        event.prevent_default();
+        event.stop_propagation();
 
+        // Raw touch event.
+        let touch_event = GameClientMouseEvent::Touch;
+        self.game
+            .peek_mouse(&touch_event, &mut self.context, &mut self.renderer);
+        self.context.mouse.apply(touch_event);
+
+        // Don't care what event type, just consider the current set of touches.
         let target_touches = event.target_touches();
 
-        match type_.as_str() {
-            "touchstart" | "touchend" => {
-                let down = type_ == "touchstart";
+        let mut left_touch = None;
+        let mut right_touch = None;
 
-                // Any change in touch count invalidates pinch to zoom.
-                self.context.mouse.pinch_distance = None;
-
-                if target_touches.length() <= 1 {
-                    // Emulate mouse move to localize the touch.
-                    let first = target_touches.item(0);
-                    if let Some(first) = first {
-                        self.mouse_move(first.client_x(), first.client_y());
-                        self.context.mouse.pinch_distance = None;
-                    }
-
-                    let e = GameClientMouseEvent::Button {
-                        button: MouseButton::Left,
-                        down,
-                        time: self.context.client.update_seconds,
-                    };
-                    self.game.peek_mouse(&e, &mut self.context, &self.renderer);
-                    self.context.mouse.apply(e);
-                } else if self.context.mouse.is_down(MouseButton::Left) {
-                    *self.context.mouse.state_mut(MouseButton::Left) = MouseButtonState::Up;
+        for idx in 0..target_touches.length() {
+            let touch: Touch = match target_touches.item(idx) {
+                Some(touch) => touch,
+                None => {
+                    debug_assert!(false);
+                    continue;
                 }
+            };
+
+            let identifier = touch.identifier();
+            if self.left_touch_id.map(|id| id == identifier).unwrap_or(
+                self.right_touch_id
+                    .map(|id| id != identifier)
+                    .unwrap_or(true),
+            ) {
+                self.left_touch_id = Some(identifier);
+                left_touch = Some(touch);
+            } else if self
+                .right_touch_id
+                .map(|id| id == identifier)
+                .unwrap_or(true)
+            {
+                self.right_touch_id = Some(identifier);
+                right_touch = Some(touch);
             }
-            "touchmove" => {
-                event.prevent_default();
-
-                match target_touches.length() {
-                    1 => {
-                        // Emulate left mouse.
-                        let first = target_touches.item(0);
-                        if let Some(first) = first {
-                            self.mouse_move(first.client_x(), first.client_y());
-                            self.context.mouse.pinch_distance = None;
-                        } else {
-                            debug_assert!(false, "expected 1 touch");
-                        }
-                    }
-                    2 => {
-                        // Emulate wheel (pinch to zoom).
-                        let first: Option<Vec2> = target_touches
-                            .item(0)
-                            .map(|t| IVec2::new(t.client_x(), t.client_y()).as_vec2());
-                        let second: Option<Vec2> = target_touches
-                            .item(1)
-                            .map(|t| IVec2::new(t.client_x(), t.client_y()).as_vec2());
-                        if let Some((first, second)) = first.zip(second) {
-                            let pinch_distance = first.distance(second);
-
-                            if let Some(previous_pinch_distance) = self.context.mouse.pinch_distance
-                            {
-                                let delta = 0.03 * (previous_pinch_distance - pinch_distance);
-                                self.raw_zoom(delta);
-                            } else {
-                                // Emulate mouse move to localize the pinch to zoom in the center.
-                                let center = ((first + second) * 0.5).as_ivec2();
-                                self.mouse_move(center.x, center.y);
-                            }
-
-                            self.context.mouse.pinch_distance = Some(pinch_distance);
-                        } else {
-                            debug_assert!(false, "expected 2 touches");
-                        }
-                    }
-                    _ => {
-                        // 0 and >2 touch gestures are not (yet) supported.
-                    }
-                }
-            }
-            _ => {}
         }
+
+        if let Some((first, second)) = left_touch
+            .as_ref()
+            .map(|t| IVec2::new(t.client_x(), t.client_y()).as_vec2())
+            .zip(
+                right_touch
+                    .as_ref()
+                    .map(|t| IVec2::new(t.client_x(), t.client_y()).as_vec2()),
+            )
+        {
+            let pinch_distance = first.distance(second);
+
+            if let Some(previous_pinch_distance) = self.context.mouse.pinch_distance {
+                let delta = 0.03 * (previous_pinch_distance - pinch_distance);
+                self.raw_zoom(delta);
+            }
+
+            self.context.mouse.pinch_distance = Some(pinch_distance);
+        } else {
+            self.context.mouse.pinch_distance = None;
+        }
+
+        macro_rules! process_touch {
+            ($touch: expr, $mouse_button: expr, $overriden_by: expr, $overrides: expr, $id: ident) => {
+                if let Some(touch) = $touch {
+                    if self.context.mouse.is_down($mouse_button) {
+                        self.mouse_move(touch.client_x(), touch.client_y());
+                    } else {
+                        if let Some(overrides) = $overrides {
+                            if self.context.mouse.is_down(overrides) {
+                                let e = GameClientMouseEvent::Button {
+                                    button: overrides,
+                                    down: false,
+                                    time: self.context.client.update_seconds,
+                                };
+                                self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                                self.context.mouse.apply(e);
+                            }
+                        }
+
+                        if $overriden_by
+                            .map(|overriden_by| !self.context.mouse.is_down(overriden_by))
+                            .unwrap_or(true)
+                        {
+                            self.mouse_move(touch.client_x(), touch.client_y());
+
+                            // Start new click.
+                            let e = GameClientMouseEvent::Button {
+                                button: $mouse_button,
+                                down: true,
+                                time: self.context.client.update_seconds,
+                            };
+                            self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                            self.context.mouse.apply(e);
+                        }
+                    }
+                } else {
+                    self.$id = None;
+                    if self.context.mouse.is_down($mouse_button) {
+                        // Expire old click.
+                        let e = GameClientMouseEvent::Button {
+                            button: $mouse_button,
+                            down: false,
+                            time: self.context.client.update_seconds,
+                        };
+                        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                        self.context.mouse.apply(e);
+                    }
+                }
+            };
+        }
+
+        process_touch!(
+            left_touch,
+            MouseButton::Left,
+            Some(MouseButton::Right),
+            None,
+            left_touch_id
+        );
+        process_touch!(
+            right_touch,
+            MouseButton::Right,
+            None,
+            Some(MouseButton::Left),
+            right_touch_id
+        );
     }
 
     /// For detecting when the browser tab becomes hidden.
     pub fn visibility_change(&mut self, _: Event) {
         // Written with the intention that errors bias towards visible=true.
-        let visible = window()
-            .unwrap()
-            .document()
-            .map(|d| d.visibility_state() != web_sys::VisibilityState::Hidden)
-            .unwrap_or(true);
+        let visible = js_hooks::document().visibility_state() != web_sys::VisibilityState::Hidden;
         let e = VisibilityEvent::Visible(visible);
         self.game
             .peek_visibility(&e, &mut self.context, &self.renderer);
@@ -344,7 +418,7 @@ impl<G: GameClient> Infrastructure<G> {
 
     /// Converts page position (from event) to view position (-1..1).
     fn client_coordinate_to_view(x: i32, y: i32) -> Vec2 {
-        let rect = canvas().unwrap().get_bounding_client_rect();
+        let rect = js_hooks::canvas().get_bounding_client_rect();
 
         Vec2::new(
             map_ranges(
@@ -364,8 +438,15 @@ impl<G: GameClient> Infrastructure<G> {
 
     pub fn ui_event(&mut self, event: G::UiEvent) {
         self.game
-            .peek_ui(&event, &mut self.context, &mut self.renderer_layer);
-        self.context.ui.apply(event);
+            .ui(event, &mut self.context, &mut self.renderer_layer);
+    }
+
+    /// Helper to issue a mouse move event from a real mouse event. Takes client coordinates.
+    fn mouse_move_real(&mut self, x: i32, y: i32, dx: i32, dy: i32) {
+        self.mouse_move(x, y);
+        let e = GameClientMouseEvent::DeltaPixels(IVec2::new(dx, dy).as_vec2());
+        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+        self.context.mouse.apply(e);
     }
 
     /// Helper to issue a mouse move event. Takes client coordinates.
@@ -375,27 +456,10 @@ impl<G: GameClient> Infrastructure<G> {
         let e = GameClientMouseEvent::MoveViewSpace(view_position);
         self.game.peek_mouse(&e, &mut self.context, &self.renderer);
         self.context.mouse.apply(e);
-
-        // If the mouse moves in view space, it also moves in world space.
-        let e2 =
-            GameClientMouseEvent::MoveWorldSpace(self.renderer.to_world_position(view_position));
-        self.game.peek_mouse(&e2, &mut self.context, &self.renderer);
-        self.context.mouse.apply(e2);
-    }
-
-    /// Helper to issue a mouse move world space event if needed.
-    fn sync_mouse_world_space(&mut self) {
-        if let Some(view_position) = self.context.mouse.view_position {
-            let world_position = self.renderer.to_world_position(view_position);
-            if self.context.mouse.world_position != Some(world_position) {
-                let e = GameClientMouseEvent::MoveWorldSpace(world_position);
-                self.game.peek_mouse(&e, &mut self.context, &self.renderer);
-                self.context.mouse.apply(e);
-            }
-        }
     }
 
     pub fn wheel(&mut self, event: WheelEvent) {
+        event.prevent_default();
         // each wheel step is 53 pixels.
         // do 0.5 or 1.0 raw zoom.
         let steps: f64 = event.delta_y() * (1.0 / 53.0);
@@ -486,25 +550,6 @@ impl<G: GameClient> Infrastructure<G> {
     /// Send error message to server.
     pub fn trace(&mut self, message: String) {
         self.context.send_trace(message);
-    }
-
-    /// Gets a game or common setting.
-    pub fn get_setting(&self, key: &str) -> JsValue {
-        let mut ret = self.context.settings.get(key);
-        if ret.is_null() {
-            ret = self.context.common_settings.get(key);
-        }
-        ret
-    }
-
-    /// Sets a game or common setting.
-    pub fn set_setting(&mut self, key: &str, value: JsValue) {
-        self.context
-            .settings
-            .set(key, value.clone(), &mut self.context.browser_storages);
-        self.context
-            .common_settings
-            .set(key, value, &mut self.context.browser_storages);
     }
 
     /// Connects to a different server.

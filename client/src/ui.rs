@@ -2,399 +2,291 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Game;
-use client_util::apply::Apply;
+use crate::translation::Mk48Translation;
+use crate::ui::about_dialog::AboutDialog;
+use crate::ui::changelog_dialog::ChangelogDialog;
+use crate::ui::help_dialog::HelpDialog;
+use crate::ui::hint::Hint;
+pub use crate::ui::instructions::InstructionsProps;
+use crate::ui::levels_dialog::LevelsDialog;
+use crate::ui::logo::logo;
+use crate::ui::respawn_overlay::RespawnOverlay;
+use crate::ui::settings_dialog::SettingsDialog;
+use crate::ui::ship_controls::ShipControls;
+use crate::ui::ships_dialog::ShipsDialog;
+use crate::ui::status_overlay::StatusOverlay;
+use crate::ui::upgrade_overlay::UpgradeOverlay;
 use client_util::context::Context;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
-use common::entity::{EntityKind, EntitySubKind, EntityType};
+use common::entity::EntityType;
 use common::velocity::Velocity;
-use common::world::outside_strict_area;
-use core_protocol::id::{InvitationId, PeriodId, PlayerId, ServerId, TeamId};
-use core_protocol::name::{PlayerAlias, TeamName};
-use glam::{vec2, Vec2};
-use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use core_protocol::id::{LanguageId, TeamId};
+use core_protocol::name::PlayerAlias;
+use engine_macros::SmolRoutable;
+use glam::Vec2;
 use std::collections::HashMap;
+use stylist::yew::styled_component;
+use yew::prelude::*;
+use yew_frontend::component::discord_icon::DiscordIcon;
+use yew_frontend::component::invitation_icon::InvitationIcon;
+use yew_frontend::component::invitation_link::InvitationLink;
+use yew_frontend::component::language_menu::LanguageMenu;
+use yew_frontend::component::positioner::{Align, Flex, Position, Positioner};
+use yew_frontend::component::privacy_link::PrivacyLink;
+use yew_frontend::component::route_link::RouteLink;
+use yew_frontend::component::settings_icon::SettingsIcon;
+use yew_frontend::component::terms_link::TermsLink;
+use yew_frontend::component::volume_icon::VolumeIcon;
+use yew_frontend::component::x_button::XButton;
+use yew_frontend::component::zoom_icon::ZoomIcon;
+use yew_frontend::frontend::Ctw;
+use yew_frontend::frontend::{Gctw, PropertiesWrapper};
+use yew_frontend::overlay::chat::ChatOverlay;
+use yew_frontend::overlay::leaderboard::LeaderboardOverlay;
+use yew_frontend::overlay::spawn::SpawnOverlay;
+use yew_frontend::overlay::team::TeamsOverlay;
+use yew_frontend::translation::{t, Translation};
+use yew_router::{Routable, Switch};
+
+mod about_dialog;
+mod changelog_dialog;
+mod help_dialog;
+mod hint;
+mod instructions;
+mod levels_dialog;
+mod logo;
+mod respawn_overlay;
+mod settings_dialog;
+mod ship_controls;
+mod ship_menu;
+mod ships_dialog;
+mod sprite;
+mod status_overlay;
+mod upgrade_overlay;
+
+#[styled_component(Mk48Ui)]
+pub fn mk48_ui(props: &PropertiesWrapper<UiProps>) -> Html {
+    let cinematic_style = css!(
+        r#"
+        transition: opacity 0.25s;
+
+        :not(:hover) {
+		    opacity: 0;
+	    }
+    "#
+    );
+
+    let gctw = Gctw::<Mk48Game>::use_gctw();
+    let on_play = gctw.send_ui_event_callback.reform(|alias| UiEvent::Spawn {
+        alias,
+        entity_type: EntityType::GFive,
+    });
+
+    let margin = "0.75rem";
+    let status = props.status.clone();
+    let outbound_enabled = Ctw::use_outbound_enabled();
+
+    html! {
+        <>
+            if let UiStatus::Playing(playing) = status {
+                <div class={classes!(gctw.settings_cache.cinematic.then_some(cinematic_style))}>
+                    <Positioner position={Position::BottomMiddle{margin}}>
+                        <StatusOverlay
+                            status={playing.clone()}
+                            score={props.score}
+                            fps={gctw.settings_cache.fps_shown.then_some(props.fps)}
+                        />
+                    </Positioner>
+                    <Positioner position={Position::TopMiddle{margin}}>
+                        <UpgradeOverlay status={playing.clone()} score={props.score}/>
+                    </Positioner>
+                    <Positioner position={Position::BottomLeft{margin}}>
+                        <ShipControls status={playing.clone()}/>
+                    </Positioner>
+                    <Positioner position={Position::CenterRight{margin}} flex={Flex::Column}>
+                        <InvitationIcon/>
+                        <ZoomIcon amount={-4}/>
+                        <ZoomIcon amount={4}/>
+                        <VolumeIcon/>
+                        <SettingsIcon<Mk48Route> route={Mk48Route::Settings}/>
+                        <LanguageMenu/>
+                    </Positioner>
+                    <Positioner position={Position::TopLeft{margin}} max_width="25%">
+                        <TeamsOverlay
+                            team_proximity={playing.team_proximity.clone()}
+                            label={LanguageId::team_fleet_label as fn(LanguageId) -> &'static str}
+                            name_placeholder={LanguageId::team_fleet_name_placeholder as fn(LanguageId) -> &'static str}
+                        />
+                    </Positioner>
+                    <Positioner position={Position::TopRight{margin}} max_width="25%">
+                        <LeaderboardOverlay/>
+                    </Positioner>
+                    <Positioner position={Position::BottomRight{margin}} align={Align::Left} max_width="25%">
+                        <ChatOverlay label={LanguageId::chat_radio_label as fn(LanguageId) -> &'static str}/>
+                    </Positioner>
+                </div>
+                if !gctw.settings_cache.cinematic {
+                    <Hint entity_type={playing.entity_type}/>
+                }
+            } else if let UiStatus::Respawning(respawning) = status {
+                <RespawnOverlay status={respawning} score={props.score}/>
+                <Positioner position={Position::TopRight{margin}} max_width="25%">
+                    <XButton onclick={gctw.send_ui_event_callback.reform(|_| UiEvent::OverrideRespawn)}/>
+                </Positioner>
+            } else {
+                <SpawnOverlay {on_play}>
+                    {logo()}
+                </SpawnOverlay>
+                <Positioner position={Position::TopRight{margin}} flex={Flex::Row}>
+                    <LanguageMenu/>
+                </Positioner>
+            }
+            if !matches!(props.status, UiStatus::Playing(_)) {
+                <Positioner position={Position::BottomLeft{margin}}>
+                    <InvitationLink/>
+                </Positioner>
+                <Positioner position={Position::BottomMiddle{margin}} flex={Flex::Row}>
+                    <RouteLink<Mk48Route> route={Mk48Route::Help}>{t().help_hint()}</RouteLink<Mk48Route>>
+                    <RouteLink<Mk48Route> route={Mk48Route::About}>{t().about_hint()}</RouteLink<Mk48Route>>
+                    <PrivacyLink/>
+                    <TermsLink/>
+                </Positioner>
+                if outbound_enabled {
+                    <Positioner position={Position::BottomRight{margin}} flex={Flex::Row}>
+                        <DiscordIcon/>
+                    </Positioner>
+                }
+            }
+            <div>
+                <Switch<Mk48Route> render={Switch::render(switch)}/>
+            </div>
+        </>
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, SmolRoutable)]
+pub enum Mk48Route {
+    #[at("/about/")]
+    About,
+    #[at("/changelog/")]
+    Changelog,
+    #[at("/help/")]
+    Help,
+    #[at("/ships/")]
+    Ships,
+    #[at("/levels/")]
+    Levels,
+    #[at("/settings/")]
+    Settings,
+    #[not_found]
+    #[at("/")]
+    Home,
+}
 
 /// State of UI inputs.
 pub struct UiState {
     pub active: bool,
-    pub altitude_target: Altitude,
-    pub armament: Option<(EntityKind, EntitySubKind)>,
-    pub cinematic: bool,
+    pub submerge: bool,
+    pub armament: Option<EntityType>,
 }
 
 impl Default for UiState {
     fn default() -> Self {
         Self {
             active: true,
-            altitude_target: Altitude::ZERO,
+            submerge: false,
             armament: None,
-            cinematic: false,
         }
     }
 }
 
-#[derive(Deserialize)]
 pub enum UiEvent {
     Spawn {
-        alias: String,
-        #[serde(rename = "entityType")]
+        alias: PlayerAlias,
         entity_type: EntityType,
     },
+    Respawn(EntityType),
     Upgrade(EntityType),
     /// Sensors active.
     Active(bool),
-    /// Normalized altitude target.
-    AltitudeTarget(f32),
-    Armament(EntityKind, EntitySubKind),
-    Cinematic(bool),
+    Submerge(bool),
+    Armament(Option<EntityType>),
     /// Go from respawning to spawning.
+    #[allow(unused)]
     OverrideRespawn,
 }
 
-impl Apply<UiEvent> for UiState {
-    fn apply(&mut self, update: UiEvent) {
-        match update {
-            UiEvent::Active(active) => self.active = active,
-            UiEvent::AltitudeTarget(altitude_target) => {
-                self.altitude_target = Altitude::from_norm(altitude_target)
-            }
-            UiEvent::Armament(kind, sub_kind) => self.armament = Some((kind, sub_kind)),
-            UiEvent::Cinematic(cinematic) => self.cinematic = cinematic,
-            _ => {}
-        }
-    }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(PartialEq, Clone, Default)]
 pub struct UiProps {
-    pub player_id: Option<PlayerId>,
-    pub team_name: Option<TeamName>,
-    pub invitation_id: Option<InvitationId>,
-    pub score: u32,
-    pub player_count: u32,
     pub fps: f32,
+    pub score: u32,
     pub status: UiStatus,
-    pub chats: Vec<ChatModel>,
-    pub liveboard: Vec<LeaderboardItemModel>,
-    pub leaderboards: HashMap<PeriodId, Vec<LeaderboardItemModel>>,
-    pub team_captain: bool,
-    pub team_full: bool,
-    pub team_members: Vec<TeamPlayerModel>,
-    pub team_join_requests: Vec<TeamPlayerModel>,
-    pub teams: Vec<TeamModel>,
-    pub restrictions: Vec<EntityType>, // Entity types that can't be used.
-    /// Which server client is currently connected to.
-    pub server_id: Option<ServerId>,
-    /// All available (alive, compatible) servers.
-    pub servers: Vec<ServerModel>,
 }
 
 /// Mutually exclusive statuses.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, PartialEq, Clone)]
 pub enum UiStatus {
-    #[serde(rename_all = "camelCase")]
-    Offline,
-    #[serde(rename_all = "camelCase")]
-    Playing {
-        #[serde(rename = "type")]
-        entity_type: EntityType,
-        velocity: Velocity,
-        direction: Angle,
-        position: Vec2Model,
-        altitude: Altitude,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        armament_consumption: Option<Box<[bool]>>,
-    },
-    #[serde(rename_all = "camelCase")]
-    Respawning {
-        death_reason: DeathReasonModel,
-        respawn_level: u8,
-    },
-    #[serde(rename_all = "camelCase")]
+    #[default]
     Spawning,
+    Playing(UiStatusPlaying),
+    Respawning(UiStatusRespawning),
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TeamPlayerModel {
-    pub player_id: PlayerId,
-    pub name: PlayerAlias,
-    pub captain: bool,
+#[derive(PartialEq, Clone)]
+pub struct UiStatusPlaying {
+    pub entity_type: EntityType,
+    pub velocity: Velocity,
+    pub direction: Angle,
+    pub position: Vec2,
+    pub altitude: Altitude,
+    pub submerge: bool,
+    /// Active sensors.
+    pub active: bool,
+    pub instruction_props: InstructionsProps,
+    pub armament: Option<EntityType>,
+    pub armament_consumption: Box<[bool]>,
+    pub team_proximity: HashMap<TeamId, f32>,
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChatModel {
-    pub name: PlayerAlias,
-    pub player_id: Option<PlayerId>,
-    pub team: Option<TeamName>,
-    pub whisper: bool,
-    pub message: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TeamModel {
-    pub team_id: TeamId,
-    pub name: TeamName,
-    pub joining: bool,
-    /// See TeamDto.
-    pub full: bool,
-    /// See TeamDto.
-    pub closed: bool,
-}
-
-#[derive(Serialize)]
-pub struct LeaderboardItemModel {
-    pub name: PlayerAlias,
-    pub team: Option<TeamName>,
-    pub score: u32,
-}
-
-#[derive(Serialize)]
-pub struct DeathReasonModel {
-    #[serde(rename = "type")]
-    pub death_type: &'static str,
-    pub player: Option<PlayerAlias>,
-    pub entity: Option<EntityType>,
-}
-
-impl DeathReasonModel {
-    pub fn from_death_reason(reason: &DeathReason) -> Result<Self, &'static str> {
-        Ok(match reason {
-            DeathReason::Border => DeathReasonModel {
-                death_type: "border",
-                player: None,
-                entity: None,
-            },
-            DeathReason::Terrain => DeathReasonModel {
-                death_type: "terrain",
-                player: None,
-                entity: None,
-            },
-            &DeathReason::Boat(alias) => DeathReasonModel {
-                death_type: "collision",
-                player: Some(alias),
-                entity: None,
-            },
-            DeathReason::Obstacle(entity_type) => DeathReasonModel {
-                death_type: "collision",
-                player: None,
-                entity: Some(*entity_type),
-            },
-            &DeathReason::Ram(alias) => DeathReasonModel {
-                death_type: "ramming",
-                player: Some(alias),
-                entity: None,
-            },
-            &DeathReason::Weapon(alias, entity_type) => DeathReasonModel {
-                death_type: "sinking",
-                player: Some(alias),
-                entity: Some(entity_type),
-            },
-            _ => return Err("invalid death reason for boat"),
-        })
-    }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ServerModel {
-    server_id: ServerId,
-    region: &'static str,
-    players: u32,
-}
-
-/// For serializing a vec2 as {"x": ..., "y": ...} instead of [..., ...]
-#[derive(Serialize)]
-pub struct Vec2Model {
-    x: f32,
-    y: f32,
-}
-
-impl From<Vec2> for Vec2Model {
-    fn from(vec2: Vec2) -> Self {
-        Self {
-            x: vec2.x,
-            y: vec2.y,
-        }
-    }
+#[derive(PartialEq, Clone)]
+pub struct UiStatusRespawning {
+    pub death_reason: DeathReason,
 }
 
 impl Mk48Game {
-    pub(crate) fn update_ui_props(
-        &self,
-        context: &mut Context<Self>,
-        status: UiStatus,
-        team_proximity: &HashMap<TeamId, f32>,
-    ) {
+    pub(crate) fn update_ui_props(&self, context: &mut Context<Self>, status: UiStatus) {
         let props = UiProps {
-            player_id: context.state.core.player_id,
-            team_name: context.state.core.team().map(|t| t.name),
-            invitation_id: context.state.core.created_invitation_id,
-            score: context.state.game.score,
-            player_count: context.state.core.real_players,
             fps: self.fps_counter.last_sample().unwrap_or(0.0),
-            chats: context
-                .state
-                .core
-                .messages
-                .iter()
-                .map(|message| ChatModel {
-                    name: message.alias,
-                    player_id: message.player_id,
-                    team: message.team_name,
-                    message: message.text.clone(),
-                    whisper: message.whisper,
-                })
-                .collect(),
-            liveboard: context
-                .state
-                .core
-                .liveboard
-                .iter()
-                .filter_map(|item| {
-                    let player = context.state.core.only_players().get(&item.player_id);
-                    if let Some(player) = player {
-                        let team_name = player
-                            .team_id
-                            .and_then(|team_id| context.state.core.teams.get(&team_id))
-                            .map(|team| team.name);
-                        Some(LeaderboardItemModel {
-                            name: player.alias,
-                            team: team_name,
-                            score: item.score,
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect(),
-            leaderboards: context
-                .state
-                .core
-                .leaderboards
-                .iter()
-                .enumerate()
-                .map(|(i, leaderboard)| {
-                    let period: PeriodId = i.into();
-                    (
-                        period,
-                        leaderboard
-                            .iter()
-                            .map(|item| LeaderboardItemModel {
-                                name: item.alias,
-                                team: None,
-                                score: item.score,
-                            })
-                            .collect(),
-                    )
-                })
-                .collect(),
-            team_members: if context.state.core.team_id().is_some() {
-                context
-                    .state
-                    .core
-                    .members
-                    .iter()
-                    .filter_map(|&player_id| context.state.core.player_or_bot(player_id))
-                    .map(|p| TeamPlayerModel {
-                        player_id: p.player_id,
-                        name: p.alias,
-                        captain: p.team_captain,
-                    })
-                    .collect()
-            } else {
-                vec![]
-            },
-            team_captain: context.state.core.team_id().is_some()
-                && context
-                    .state
-                    .core
-                    .player()
-                    .map(|p| p.team_captain)
-                    .unwrap_or(false),
-            team_full: context
-                .state
-                .core
-                .team_id()
-                .and_then(|team_id| context.state.core.teams.get(&team_id))
-                .map(|team| team.full)
-                .unwrap_or(false),
-            team_join_requests: context
-                .state
-                .core
-                .joiners
-                .iter()
-                .filter_map(|&id| {
-                    context
-                        .state
-                        .core
-                        .player_or_bot(id)
-                        .map(|player| TeamPlayerModel {
-                            player_id: player.player_id,
-                            name: player.alias,
-                            captain: false,
-                        })
-                })
-                .collect(),
-            teams: context
-                .state
-                .core
-                .teams
-                .iter()
-                .sorted_by(|&(a, team_a), &(b, team_b)| {
-                    team_a
-                        .closed
-                        .cmp(&team_b.closed)
-                        .then(team_a.full.cmp(&team_b.full))
-                        .then_with(|| {
-                            team_proximity
-                                .get(a)
-                                .unwrap_or(&f32::INFINITY)
-                                .partial_cmp(team_proximity.get(b).unwrap_or(&f32::INFINITY))
-                                .unwrap()
-                        })
-                })
-                .map(|(team_id, team)| TeamModel {
-                    team_id: *team_id,
-                    name: team.name,
-                    joining: context.state.core.joins.contains(team_id),
-                    full: team.full,
-                    closed: team.closed,
-                })
-                .take(5)
-                .collect(),
-            restrictions: EntityType::iter()
-                .filter(|&entity_type: &EntityType| {
-                    if let UiStatus::Playing { position, .. } = &status {
-                        outside_strict_area(entity_type, vec2(position.x, position.y))
-                    } else {
-                        false
-                    }
-                })
-                .collect(),
-            server_id: context.common_settings.server_id,
-            servers: context
-                .state
-                .core
-                .servers
-                .iter()
-                .map(|(&server_id, server_dto)| ServerModel {
-                    server_id,
-                    region: server_dto.region_id.as_human_readable_str(),
-                    players: server_dto.player_count,
-                })
-                .sorted_by_key(|model| model.server_id)
-                .collect(),
+            score: context.state.game.score,
             status,
         };
 
         context.set_ui_props(props);
+    }
+}
+
+fn switch(routes: &Mk48Route) -> Html {
+    match routes {
+        Mk48Route::About => html! {
+            <AboutDialog/>
+        },
+        Mk48Route::Changelog => html! {
+            <ChangelogDialog/>
+        },
+        Mk48Route::Help => html! {
+            <HelpDialog/>
+        },
+        Mk48Route::Ships => html! {
+            <ShipsDialog/>
+        },
+        Mk48Route::Levels => html! {
+            <LevelsDialog/>
+        },
+        Mk48Route::Settings => html! {
+            <SettingsDialog/>
+        },
+        Mk48Route::Home => html! {},
     }
 }

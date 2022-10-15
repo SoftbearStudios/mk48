@@ -1,0 +1,9 @@
+[workspace]
+members = ["*", "renderer2d/examples"]
+exclude = ["game_terraform", "js", "target", "terraform", ".cargo", ".git"]
+
+[patch.crates-io]
+# crates.io not up to date (see https://github.com/swgillespie/unicode-categories/issues/12)
+unicode_categories = { git = "https://github.com/swgillespie/unicode-categories" }
+# https://github.com/hyperium/hyper/pull/2891
+# hyper = {git = "https://github.com/hyperium/hyper"}

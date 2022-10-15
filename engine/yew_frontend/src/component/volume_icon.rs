@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::translation::{t, Translation};
 use crate::Ctw;
 use web_sys::MouseEvent;
@@ -56,6 +59,6 @@ pub fn volume_icon(props: &VolumeIconProps) -> Html {
     };
 
     html! {
-        <Icon {icon_id} title={t().settings_volume_hint()} {onclick} {oncontextmenu} width={props.size.clone()} height={props.size.clone()} style={format!("color: white; cursor: pointer; user-select: none; {}", style)}/>
+        <Icon {icon_id} title={t().settings_volume_hint()} {onclick} {oncontextmenu} width={props.size.clone()} height={props.size.clone()} style={format!("color: white; cursor: pointer; user-select: none; vertical-align: bottom; {}", style)}/>
     }
 }

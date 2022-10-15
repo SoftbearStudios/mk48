@@ -235,6 +235,7 @@ impl<G: GameArenaService> PlayerRepo<G> {
 
                     Some(PlayerDto {
                         alias: p.alias(),
+                        moderator: p.client().map(|c| c.moderator).unwrap_or(false),
                         player_id: p.player_id,
                         team_id: p.team_id(),
                         team_captain: p
@@ -386,7 +387,7 @@ pub struct PlayerData<G: GameArenaService> {
     /// When was_alive was set to its current value.
     was_alive_timestamp: Instant,
     /// Present if the player has an active client a.k.a. session.
-    pub(crate) client: Option<Box<PlayerClientData<G>>>,
+    pub client: Option<Box<PlayerClientData<G>>>,
     pub(crate) team: PlayerTeamData,
     pub data: G::PlayerData,
 }

@@ -5,74 +5,46 @@ authors = ["Softbear, Inc."]
 edition = "2021"
 license = "AGPL-3.0-or-later"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [profile.release]
 lto = "fat"
 opt-level = 's'
 codegen-units = 1
 
 [dependencies]
-js-sys = "0.3"
-wasm-bindgen = {version = "0.2", features = ["serde-serialize"] }
-wasm-bindgen-futures = "0.4"
-console_error_panic_hook = "0.1"
-serde = "1.0"
-serde_json = "1.0"
-serde-wasm-bindgen = "0.3"
-glam = {version="0.18", features=["scalar-math"]}
-common = {path="../common", features=["js"]}
-instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
-rand = "0.8"
-client_util = {path="../engine/client_util"}
-common_util = {path="../engine/common_util"}
-core_protocol = {path="../engine/core_protocol"}
 arrayvec = "0.7"
-sprite_sheet = {path="../engine/sprite_sheet"}
-engine_macros = {path="../engine/engine_macros"}
+bytemuck = "1.9"
+client_util = { path = "../engine/client_util" }
+common = { path = "../common", features = [ "js" ] }
+common_util = { path = "../engine/common_util", features = [ "rand" ] }
+console_error_panic_hook = "0.1"
+core_protocol = { path = "../engine/core_protocol"}
+engine_macros = { path = "../engine/engine_macros" }
+getrandom = { version = "0.2", features = [ "js" ] }
+glam = { version = "0.18", features = [ "scalar-math" ] }
+instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
 itertools = "0.10"
+js-sys = "0.3"
+js_hooks = { path = "../engine/js_hooks" }
+lazy_static = "1.4"
+rand = "0.8"
+renderer = { path = "../engine/renderer" }
+renderer2d = { path = "../engine/renderer2d" }
+serde = "1.0"
+serde-wasm-bindgen = "0.3"
+serde_json = "1.0"
+sprite_sheet = { path = "../engine/sprite_sheet" }
+stylist = "0.10"
+wasm-bindgen = { version = "0.2", features = [ "serde-serialize" ] }
+wasm-bindgen-futures = "0.4"
+yew = "0.19"
+yew-router = "0.16"
+yew_frontend = { path = "../engine/yew_frontend" }
+yew_icons = { version = "0.4", features = [ "BootstrapSnow2", "BootstrapLockFill", "BootstrapUnlockFill" ] }
 
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
-    'AudioContext',
-    'AudioBuffer',
-    'AudioParam',
-    'AudioDestinationNode',
-    'AudioBufferSourceNode',
-    'AudioContextState',
-    'GainNode',
-    'BinaryType',
-    'Blob',
-    'CanvasRenderingContext2d',
-    'CloseEvent',
-    'Document',
-    'Element',
-    'ErrorEvent',
-    'FileReader',
-    'HtmlCanvasElement',
-    'HtmlImageElement',
-    'KeyboardEvent',
-    'Location',
-    'MessageEvent',
+    'CssStyleDeclaration',
+    'HtmlDivElement',
     'MouseEvent',
-    'OesVertexArrayObject',
-    'OesStandardDerivatives',
-    'ProgressEvent',
-    'TextMetrics',
-    'WebGlBuffer',
-    'WebGlProgram',
-    'WebGlRenderingContext',
-    'WebGlShader',
-    'WebGlTexture',
-    'WebGlUniformLocation',
-    'WebGlVertexArrayObject',
-    'WebSocket',
-    'Window',
-    'Headers',
-    'Request',
-    'RequestInit',
-    'RequestMode',
-    'Response',
 ]

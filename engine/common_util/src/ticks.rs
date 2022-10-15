@@ -41,6 +41,11 @@ impl<const FREQUENCY_HZ: TicksRepr> GenTicks<FREQUENCY_HZ> {
         self.0 as f32 * Self::PERIOD_SECS
     }
 
+    /// Returns the duration as whole seconds (floored).
+    pub fn to_whole_secs(self) -> TicksRepr {
+        self.0 / Self::FREQUENCY_HZ.0
+    }
+
     /// Converts the duration in ticks to a formal `Duration`.
     pub fn to_duration(self) -> Duration {
         Duration::from_secs_f32(self.to_secs())

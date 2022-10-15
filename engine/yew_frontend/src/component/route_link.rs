@@ -1,5 +1,9 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+use stylist::yew::styled_component;
 use web_sys::MouseEvent;
-use yew::{function_component, html, Callback, Children, Properties};
+use yew::{classes, html, Callback, Children, Classes, Properties};
 use yew_router::history::History;
 use yew_router::hooks::use_history;
 use yew_router::Routable;
@@ -8,18 +12,31 @@ use yew_router::Routable;
 pub struct RouteLinkProps<R: Routable> {
     pub children: Children,
     pub route: R,
+    #[prop_or_default]
+    pub class: Classes,
 }
 
-#[function_component(RouteLink)]
-pub fn route_link<R: Routable + Copy + 'static>(props: &RouteLinkProps<R>) -> Html {
+#[styled_component(RouteLink)]
+pub fn route_link<R: Routable + Clone + 'static>(props: &RouteLinkProps<R>) -> Html {
+    let style = css!(
+        r#"
+        color: white;
+        cursor: pointer;
+        user-select: none;
+        user-drag: none;
+        -webkit-user-drag: none;
+        "#
+    );
+
     let onclick = {
-        let route = props.route;
+        let route = props.route.clone();
         let navigator = use_history().unwrap();
 
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
             e.stop_propagation();
 
+            let route = route.clone();
             navigator.push(route);
         })
     };
@@ -28,7 +45,7 @@ pub fn route_link<R: Routable + Copy + 'static>(props: &RouteLinkProps<R>) -> Ht
     let href: &'static str = "javascript:void(0)";
 
     html! {
-        <a {href} {onclick} style={"color: white; cursor: pointer; user-select: none;"}>
+        <a {href} {onclick} class={classes!(style, props.class.clone())}>
             {props.children.clone()}
         </a>
     }

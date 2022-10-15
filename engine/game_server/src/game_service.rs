@@ -164,20 +164,21 @@ pub struct MockGameBot;
 
 #[cfg(test)]
 impl Bot<MockGame> for MockGameBot {
-    type BotUpdate<'a> = ();
+    type Input<'a> = ();
 
     fn get_input<'a>(
-        game: &'a MockGame,
-        _counter: Ticks,
-        _player_tuple: &'a Arc<PlayerTuple<Self>>,
-    ) -> Self::BotUpdate<'a> {
+        _game: &'a MockGame,
+        _player_tuple: &'a Arc<PlayerTuple<MockGame>>,
+        _players: &PlayerRepo<MockGame>,
+    ) -> Self::Input<'a> {
         ()
     }
 
     fn update<'a>(
         &mut self,
-        _update: <MockGame as GameArenaService>::BotUpdate<'_>,
+        _update: Self::Input<'_>,
         _player_id: PlayerId,
+        _players: &PlayerRepo<MockGame>,
     ) -> BotAction<<MockGame as GameArenaService>::GameRequest> {
         BotAction::None
     }
@@ -186,8 +187,8 @@ impl Bot<MockGame> for MockGameBot {
 #[cfg(test)]
 impl GameArenaService for MockGame {
     const GAME_ID: GameId = GameId::Redacted;
+    const TICK_PERIOD_SECS: f32 = 0.5;
 
-    const TEAM_MEMBERS_MAX: usize = 4;
     const TEAM_JOINERS_MAX: usize = 3;
     const TEAM_JOINS_MAX: usize = 2;
 
@@ -202,19 +203,24 @@ impl GameArenaService for MockGame {
         Self
     }
 
+    fn team_members_max(_players_online: usize) -> usize {
+        4
+    }
+
     fn player_command(
         &mut self,
         _command: Self::GameRequest,
         _player_tuple: &Arc<PlayerTuple<Self>>,
+        _players: &PlayerRepo<Self>,
     ) -> Option<Self::GameUpdate> {
         None
     }
 
     fn get_game_update(
         &self,
-        _counter: Ticks,
         _player: &Arc<PlayerTuple<Self>>,
         _player_tuple: &mut Self::ClientData,
+        _players: &PlayerRepo<Self>,
     ) -> Option<Self::GameUpdate> {
         Some(())
     }
@@ -223,5 +229,5 @@ impl GameArenaService for MockGame {
         false
     }
 
-    fn tick(&mut self, _context: &Context<Self>) {}
+    fn tick(&mut self, _context: &mut Context<Self>) {}
 }

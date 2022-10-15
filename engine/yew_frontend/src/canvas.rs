@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::window::event_listener::WindowEventListener;
+use js_hooks::window;
 use std::num::NonZeroU8;
 use wasm_bindgen::JsValue;
-use web_sys::{window, Event, FocusEvent, MouseEvent, TouchEvent, WheelEvent};
+use web_sys::{Event, FocusEvent, MouseEvent, TouchEvent, WheelEvent};
 use yew::prelude::*;
 use yew::{Callback, Context};
 
@@ -54,15 +58,24 @@ impl Component for Canvas {
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
-        let w = window().unwrap();
+        let w = window();
 
-        let window_width = dimension(w.inner_width(), ctx.props().resolution_divisor);
-        let window_height = dimension(w.inner_height(), ctx.props().resolution_divisor);
+        let device_pixel_ratio = w.device_pixel_ratio();
+        let window_width = dimension(
+            w.inner_width(),
+            device_pixel_ratio,
+            ctx.props().resolution_divisor,
+        );
+        let window_height = dimension(
+            w.inner_height(),
+            device_pixel_ratio,
+            ctx.props().resolution_divisor,
+        );
 
         html! {
             <canvas
                 id="canvas"
-                style="position: absolute; width: 100%; height: 100%;"
+                style="position: absolute; width: 100%; height: 100%; z-index: -1000;"
                 width={window_width}
                 height={window_height}
                 onmouseenter={ctx.props().mouse_callback.clone()}
@@ -82,8 +95,12 @@ impl Component for Canvas {
     }
 }
 
-fn dimension(resolution: Result<JsValue, JsValue>, resolution_divisor: NonZeroU8) -> String {
-    (resolution.unwrap().as_f64().unwrap() / resolution_divisor.get() as f64)
+fn dimension(
+    resolution: Result<JsValue, JsValue>,
+    device_pixel_ratio: f64,
+    resolution_divisor: NonZeroU8,
+) -> String {
+    (resolution.unwrap().as_f64().unwrap() * device_pixel_ratio / resolution_divisor.get() as f64)
         .round()
         .to_string()
 }

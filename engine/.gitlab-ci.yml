@@ -1,0 +1,22 @@
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
+nightly:cargo:
+  image: rustdocker/rust:nightly
+  stage: test
+  coverage: '/^\d+.\d+% coverage/'
+  script:
+    - rustup default nightly-2022-08-14
+    - cargo install cargo-tarpaulin -f
+    - cargo test --verbose --jobs 1
+    - cargo tarpaulin --out Xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
+  cache:
+    key: shared-cache
+    paths:
+      - target/
+      - .cargo/

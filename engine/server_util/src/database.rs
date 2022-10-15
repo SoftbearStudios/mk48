@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use crate::database_schema::{
-    GameIdMetricFilter, GameIdScoreType, IpItem, LoginItem, Metrics, MetricsItem, Score, ScoreItem,
+    GameIdMetricFilter, GameIdScoreType, LoginItem, Metrics, MetricsItem, Score, ScoreItem,
     ScoreType, SessionItem,
 };
 use aws_config::default_provider::credentials::DefaultCredentialsChain;
@@ -39,7 +39,6 @@ pub enum Error {
 
 impl Database {
     const REGION: &'static str = "us-east-1";
-    const IPS_TABLE_NAME: &'static str = "core_ips";
     const LOGINS_TABLE_NAME: &'static str = "core_logins";
     const METRICS_TABLE_NAME: &'static str = "core_metrics";
     const SESSIONS_TABLE_NAME: &'static str = "core_sessions";
@@ -532,14 +531,6 @@ impl Database {
 
     pub async fn put_login(&self, login: LoginItem) -> Result<(), Error> {
         self.put(login, Self::LOGINS_TABLE_NAME).await
-    }
-
-    pub async fn get_ip(&self, ip: IpAddr) -> Result<Option<IpItem>, Error> {
-        self.get(Self::IPS_TABLE_NAME, "ip", ip).await
-    }
-
-    pub async fn put_ip(&self, ip: IpItem) -> Result<(), Error> {
-        self.put(ip, Self::IPS_TABLE_NAME).await
     }
 
     pub async fn get_metrics_between(

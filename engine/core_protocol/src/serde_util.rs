@@ -9,7 +9,7 @@ pub fn _default<T: Default + PartialEq>(x: &T) -> bool {
     x == &T::default()
 }
 
-/// Serialize [`struct Typ(Fmt)`] as [`Fmt`].
+/// Serialize `struct Typ(T)` as `T`.
 #[macro_export]
 macro_rules! serde_transparent_tuple {
     ($typ: ident, $fmt: expr) => {

@@ -3,32 +3,101 @@
 
 use crate::id::PlayerId;
 use arrayvec::ArrayString;
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::LazyLock;
 
-/// An alias, e.g. "mrbig", is NOT a real name.
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct PlayerAlias(ArrayString<12>);
-#[repr(transparent)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub struct Referrer(pub ArrayString<16>);
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
-pub struct SurveyDetail(pub ArrayString<384>);
+pub struct Referrer(ArrayString<16>);
+// TODO find a better way to limit length without copying this behemoth around on the stack.
+// #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
+// pub struct SurveyDetail(ArrayString<384>);
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct TeamName(ArrayString<12>);
 
-lazy_static! {
-    static ref BOT_NAMES: Box<[&'static str]> = include_str!("./famous_bots.txt")
+macro_rules! impl_str {
+    ($typ:ty) => {
+        impl $typ {
+            pub fn as_str(&self) -> &str {
+                self.0.as_str()
+            }
+
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
+
+            pub fn len(&self) -> usize {
+                self.0.len()
+            }
+        }
+
+        impl AsRef<str> for $typ {
+            fn as_ref(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
+        impl std::borrow::Borrow<str> for $typ {
+            fn borrow(&self) -> &str {
+                self.0.borrow()
+            }
+        }
+
+        impl std::ops::Deref for $typ {
+            type Target = str;
+            fn deref(&self) -> &Self::Target {
+                &*self.0
+            }
+        }
+
+        impl std::fmt::Display for $typ {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+
+        impl PartialEq<str> for $typ {
+            fn eq(&self, other: &str) -> bool {
+                self.0.as_str() == other
+            }
+        }
+
+        impl PartialOrd<str> for $typ {
+            fn partial_cmp(&self, other: &str) -> Option<std::cmp::Ordering> {
+                self.0.as_str().partial_cmp(other)
+            }
+        }
+    };
+}
+
+macro_rules! impl_from_str {
+    ($typ:ty) => {
+        impl std::str::FromStr for $typ {
+            type Err = arrayvec::CapacityError;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(ArrayString::from_str(s)?))
+            }
+        }
+    };
+}
+
+impl_str!(PlayerAlias);
+impl_str!(Referrer);
+// impl_str!(SurveyDetail);
+impl_str!(TeamName);
+
+impl_from_str!(PlayerAlias);
+impl_from_str!(TeamName);
+
+static BOT_NAMES: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
+    include_str!("./famous_bots.txt")
         .split('\n')
         .filter(|s| !s.is_empty() && s.len() <= PlayerAlias::capacity())
-        .collect();
-}
+        .collect()
+});
 
 /// A player's alias (not their real name).
 impl PlayerAlias {
@@ -64,20 +133,19 @@ impl PlayerAlias {
 
     /// Good for known-good names.
     pub fn new_unsanitized(str: &str) -> Self {
-        Self(trim_and_slice_up_to_array_string(str))
+        let sliced = slice_up_to_array_string(str);
+        #[cfg(feature = "server")]
+        debug_assert_eq!(sliced, trim_and_slice_up_to_array_string(str));
+        Self(sliced)
     }
 
     pub fn from_bot_player_id(player_id: PlayerId) -> Self {
-        //debug_assert!(player_id.is_bot());
+        // Why is this here?: debug_assert!(player_id.is_bot());
         let names = &BOT_NAMES;
         Self::new_unsanitized(names[player_id.0.get() as usize % names.len()])
     }
 
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    pub fn capacity() -> usize {
+    fn capacity() -> usize {
         Self(ArrayString::new()).0.capacity()
     }
 }
@@ -88,44 +156,26 @@ impl Default for PlayerAlias {
     }
 }
 
-impl Display for PlayerAlias {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
 impl Referrer {
     pub const TRACKED: [&'static str; 3] = ["crazygames", "gamedistribution", "google"];
 
-    /// For example, given "https://foo.bar.com:1234/moo.zoo/woo.hoo" the referer will be "bar".
-    pub fn new(raw: &str) -> Option<Self> {
-        let a: Vec<&str> = raw.split("://").into_iter().collect();
-        let b = if a.len() < 2 { raw } else { a[1] };
-
-        let c: Vec<&str> = b.split("/").into_iter().collect();
-        let d = if c.len() < 2 { b } else { c[0] };
-
-        let e: Vec<&str> = d.split(".").into_iter().collect();
-        let n = e.len();
-        if n > 1 {
-            let mut cooked = e[n - 2];
-            if n > 2 && cooked == "com" {
-                // e.g. "foo.com.uk"
-                cooked = e[n - 3];
-            }
-            Some(Self(trim_and_slice_up_to_array_string(cooked)))
-        } else if n == 1 && !e[0].is_empty() {
-            // e.g. localhost
-            Some(Self(trim_and_slice_up_to_array_string(e[0])))
+    /// For example, given `https://foo.bar.com:1234/moo.zoo/woo.hoo` the referer will be "bar".
+    pub fn new(s: &str) -> Option<Self> {
+        let s = s.split_once("://").map_or(s, |(_, after)| after);
+        let s = s.split('/').next().unwrap();
+        let mut iter = s.rsplit('.');
+        iter.next().unwrap();
+        let s = if let Some(second_from_last) = iter.next() {
+            // e.g. "foo.com.uk"
+            matches!(second_from_last, "co" | "com")
+                .then(|| iter.next())
+                .flatten()
+                .unwrap_or(second_from_last)
         } else {
-            None
-        }
-    }
-}
-
-impl Display for Referrer {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+            // e.g. localhost
+            s
+        };
+        (!s.is_empty()).then(|| Self(slice_up_to_array_string(s)))
     }
 }
 
@@ -133,7 +183,10 @@ impl FromStr for Referrer {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(trim_and_slice_up_to_array_string(s)))
+        #[cfg(target = "server")]
+        return Ok(Self(trim_and_slice_up_to_array_string(s)));
+        #[cfg(not(target = "server"))]
+        Ok(Self(slice_up_to_array_string(s)))
     }
 }
 
@@ -144,7 +197,10 @@ impl TeamName {
     const MAX_WIDTH: usize = 8;
 
     pub fn new_unsanitized(str: &str) -> Self {
-        Self(trim_and_slice_up_to_array_string(str))
+        let sliced = slice_up_to_array_string(str);
+        #[cfg(feature = "server")]
+        debug_assert_eq!(sliced, trim_and_slice_up_to_array_string(str));
+        Self(sliced)
     }
 
     /// Enforces `MAX_CHARS`, doesn't trim spaces, useful for guarding text inputs.
@@ -168,29 +224,9 @@ impl TeamName {
 
         Self::new_unsanitized(str)
     }
-
-    /*
-    /// Creates a form optimized for uniqueness checking.
-    pub fn canonicalize(&self) -> Self {
-        Self(self.0.to_lowercase())
-    }
-     */
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
 }
 
-impl Display for TeamName {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
+#[cfg(feature = "server")]
 pub fn trim_and_slice_up_to(s: &str, bytes: usize) -> &str {
     slice_up_to_bytes(rustrict::trim_whitespace(s), bytes)
 }
@@ -211,6 +247,7 @@ fn slice_up_to_chars(s: &str, max: usize) -> &str {
         .unwrap_or(s.len())]
 }
 
+#[cfg(feature = "server")]
 pub fn trim_and_slice_up_to_array_string<const CAPACITY: usize>(s: &str) -> ArrayString<CAPACITY> {
     ArrayString::from(trim_and_slice_up_to(s, CAPACITY)).unwrap()
 }
@@ -221,14 +258,30 @@ pub fn slice_up_to_array_string<const CAPACITY: usize>(s: &str) -> ArrayString<C
 
 #[cfg(test)]
 mod test {
-    use crate::name::TeamName;
+    use crate::name::Referrer;
 
     #[test]
+    #[cfg(feature = "server")]
     fn team_name() {
-        assert_eq!(TeamName::new("1234567").as_str(), "123456");
-        assert_eq!(TeamName::new("❮✰❯").as_str(), "❮✰❯");
-        assert_eq!(TeamName::new("❮✰❯").as_str(), "❮✰❯");
-        assert_eq!(TeamName::new("[foo").as_str(), "foo");
-        assert_eq!(TeamName::new("foo]]").as_str(), "foo");
+        use crate::name::TeamName;
+
+        assert_eq!(TeamName::new_sanitized("1234567").as_str(), "123456");
+        assert_eq!(TeamName::new_sanitized("❮✰❯").as_str(), "❮✰❯");
+        assert_eq!(TeamName::new_sanitized("❮✰❯").as_str(), "❮✰❯");
+        assert_eq!(TeamName::new_sanitized("[foo").as_str(), "foo");
+        assert_eq!(TeamName::new_sanitized("foo]]").as_str(), "foo");
+    }
+
+    #[test]
+    fn referrer() {
+        assert_eq!(&Referrer::new("http://foo.bar.com").unwrap(), "bar");
+        assert_eq!(&Referrer::new("baz.xyz").unwrap(), "baz");
+        assert_eq!(&Referrer::new("foo.com.uk").unwrap(), "foo");
+        assert_eq!(&Referrer::new("com.uk").unwrap(), "com");
+        assert_eq!(
+            &Referrer::new("https://one.two.three.four/five.html").unwrap(),
+            "three"
+        );
+        assert_eq!(Referrer::new(""), None);
     }
 }

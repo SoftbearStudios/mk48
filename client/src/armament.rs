@@ -3,15 +3,16 @@
 
 use crate::game::Mk48Game;
 use crate::interpolated_contact::InterpolatedContact;
+use crate::particle::{Mk48Particle, Mk48ParticleLayer};
 use client_util::context::CoreState;
 use client_util::rate_limiter::RateLimiter;
-use client_util::renderer::particle::{Particle, ParticleLayer};
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
-use common::entity::{EntityData, EntityId, EntityKind, EntitySubKind};
+use common::entity::{Armament, EntityData, EntityId, EntityKind, EntitySubKind, EntityType};
 use common_util::range::gen_radius;
 use glam::Vec2;
 use rand::{thread_rng, Rng};
+use renderer2d::Particle;
 use std::collections::HashMap;
 
 impl Mk48Game {
@@ -22,7 +23,7 @@ impl Mk48Game {
         player_contact: &Contact,
         angle_limit: bool,
         mouse_position: Vec2,
-        armament_selection: Option<(EntityKind, EntitySubKind)>,
+        armament_selection: Option<EntityType>,
     ) -> Option<usize> {
         // The f32 represents how good the shot is, lower is better.
         let mut best_armament: Option<(usize, f32)> = None;
@@ -31,14 +32,12 @@ impl Mk48Game {
             for i in 0..player_contact.data().armaments.len() {
                 let armament = &player_contact.data().armaments[i];
 
-                let armament_entity_data: &EntityData = armament.entity_type.data();
-
-                if !(armament_entity_data.kind == armament_selection.0
-                    && armament_entity_data.sub_kind == armament_selection.1)
-                {
+                if armament.entity_type != armament_selection {
                     // Wrong type; cannot fire.
                     continue;
                 }
+
+                let armament_entity_data: &EntityData = armament.entity_type.data();
 
                 // Don't limit dredger fire rate so players with bad ping can build faster.
                 // TODO fix ping reducing fire rate for all weapons.
@@ -113,7 +112,7 @@ impl Mk48Game {
         contacts: &HashMap<EntityId, InterpolatedContact>,
         core_state: &CoreState,
         player_position: Vec2,
-        airborne_particles: &mut ParticleLayer,
+        airborne_particles: &mut Mk48ParticleLayer,
     ) -> f32 {
         let mut volume = 0.0;
 
@@ -148,7 +147,7 @@ impl Mk48Game {
                 continue;
             }
 
-            let time_of_flight = Particle::LIFESPAN * 0.6;
+            let time_of_flight = Mk48Particle::LIFESPAN * 0.6;
             let mut prediction = *aa_target.transform();
             prediction.do_kinematics(time_of_flight);
             prediction.position += gen_radius(&mut rng, 10.0);
@@ -167,7 +166,7 @@ impl Mk48Game {
             let normalized = vector / distance;
             let offset = 5.0 + data.width * 0.4 + rng.gen::<f32>() * 10.0;
             for i in 0..3 {
-                airborne_particles.add(Particle {
+                airborne_particles.add(Mk48Particle {
                     position: aa_gun + normalized * (offset + i as f32),
                     velocity: normalized * (distance.max(30.0) * (1.0 / time_of_flight))
                         + gen_radius(&mut rng, 1.0),
@@ -207,7 +206,7 @@ impl FireRateLimiter {
             .unwrap_or(true)
     }
 
-    pub fn are_all_ready(&self) -> bool {
+    pub fn _are_all_ready(&self) -> bool {
         self.counters.iter().all(|&v| v == 0)
     }
 
@@ -224,5 +223,52 @@ impl FireRateLimiter {
                 *counter = counter.saturating_sub(1);
             }
         }
+    }
+}
+
+pub struct Group {
+    pub entity_type: EntityType,
+    pub total: u8,
+    pub ready: u8,
+}
+
+pub fn group_armaments(armaments: &[Armament], armament_consumption: &[bool]) -> Vec<Group> {
+    let mut groups = Vec::<Group>::with_capacity(armaments.len().min(5));
+    for (i, armament) in armaments.iter().enumerate() {
+        let ready = armament_consumption.get(i).cloned().unwrap_or(true) as u8;
+        if let Some(group) = groups
+            .iter_mut()
+            .find(|g| g.entity_type == armament.entity_type)
+        {
+            group.total += 1;
+            group.ready += ready;
+        } else {
+            groups.push(Group {
+                entity_type: armament.entity_type,
+                total: 1,
+                ready,
+            });
+        }
+    }
+    groups
+}
+
+pub fn update(entity_type: Option<EntityType>, armament: &mut Option<EntityType>) {
+    if let Some(entity_type) = entity_type {
+        let armaments = &entity_type.data().armaments;
+        if !armaments.iter().any(|a| Some(a.entity_type) == *armament) {
+            let best = (*armament)
+                .and_then(|selection| {
+                    armaments
+                        .iter()
+                        .find(|&a| a.entity_type.data().sub_kind == selection.data().sub_kind)
+                })
+                .map(|a| a.entity_type)
+                .or_else(|| armaments.get(0).map(|a| a.entity_type));
+            *armament = best;
+        }
+    } else {
+        // Not alive.
+        *armament = None;
     }
 }

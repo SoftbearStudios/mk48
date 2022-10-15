@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use web_sys::{window, MouseEvent};
 use yew::virtual_dom::AttrValue;
 use yew::{function_component, html, Callback, Properties};
@@ -22,12 +25,14 @@ pub fn link_icon(props: &LinkIconProps) -> Html {
             e.stop_propagation();
 
             if let Err(e) = window().unwrap().open_with_url_and_target(&link, "_blank") {
-                client_util::console_log!("could not open link: {:?}", e);
+                if cfg!(debug_assertions) {
+                    js_hooks::console_log!("could not open link: {:?}", e);
+                }
             }
         })
     };
 
     html! {
-        <Icon icon_id={props.icon_id} title={props.title.clone()} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none;"}/>
+        <Icon icon_id={props.icon_id} title={props.title.clone()} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none; vertical-align: bottom;"}/>
     }
 }

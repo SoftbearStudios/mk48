@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::dialog::dialog::Dialog;
 use crate::frontend::Ctw;
 use crate::translation::{t, Translation};
@@ -45,23 +48,30 @@ pub fn privacy_dialog() -> Html {
                     </tr>
                     <tr>
                         <td>{"Chat messages"}</td>
-                        <td>{"Radio panel"}</td>
+                        <td>{"Chat panel"}</td>
                         <td>{"Don't send any"}</td>
                         <td>{"Allow and moderate player communication"}</td>
                         <td>{"Forever, until manually deleted"}</td>
                     </tr>
                     <tr>
+                        <td>{"IP address"}</td>
+                        <td>{"Game server"}</td>
+                        <td>{"Use a VPN"}</td>
+                        <td>{"Security"}</td>
+                        <td>{"While you play, unless potential abuse detected"}</td>
+                    </tr>
+                    <tr>
                         <td>{"User agent, referrer"}</td>
                         <td>{"Game server"}</td>
-                        <td>{"Install a browser extension to hide them"}</td>
-                        <td>{"Provide for aggregate statistics"}</td>
+                        <td>{"Use a browser extension to hide"}</td>
+                        <td>{"Aggregate statistics"}</td>
                         <td>{"Forever"}</td>
                     </tr>
                     <tr>
                         <td>{"How long you play, FPS"}</td>
                         <td>{"Game server"}</td>
                         <td>{"N/A"}</td>
-                        <td>{"Provide for aggregate statistics"}</td>
+                        <td>{"Aggregate statistics"}</td>
                         <td>{"Forever"}</td>
                     </tr>
                 </tbody>
@@ -69,18 +79,20 @@ pub fn privacy_dialog() -> Html {
 
             <h2>{"Use of Cookies"}</h2>
 
-            <p>{r#"In order to ensure the continuity and consistency of player experience, and provide for internal operations, we store a persistent session identifier in your browser's local storage. You can reset it at any time, by using your browser's "clear site data" option. We do not use this information for advertising purposes."#}</p>
+            <p>{r#"In order to ensure the continuity and consistency of your experience, and provide for internal operations, we store a persistent session identifier in your browser's local storage. You can reset it at any time, by using your browser's "clear site data" option. We do not use this information for advertising purposes."#}</p>
 
-            <p>{"Other information, such as which language and volume level you select, is also stored in your browser's local storage but we don't collect it."}</p>
+            <p>{"Settings, such as which language and volume level you select, are also stored in your browser's local storage but we don't collect them."}</p>
 
             <h2>{"Changes"}</h2>
 
             <p>{"We reserve the right to alter these privacy policies at any time, without notice."}</p>
 
-            <h2>{"Contact Us"}</h2>
+            if Ctw::use_outbound_enabled() {
+                <h2>{"Contact Us"}</h2>
 
-            <p>{"If you have any concern, such as a desire to remove your nickname or your child's nickname from the
-            leaderboard, please contact us by email at "}<a href={format!("mailto:{}", crate::CONTACT_EMAIL)}>{crate::CONTACT_EMAIL}</a>{"."}</p>
+                <p>{"If you have any concern, such as a desire to remove your nickname or your child's nickname from the
+                leaderboard, please contact us by email at "}<a href={format!("mailto:{}", crate::CONTACT_EMAIL)}>{crate::CONTACT_EMAIL}</a>{"."}</p>
+            }
         </Dialog>
     }
 }

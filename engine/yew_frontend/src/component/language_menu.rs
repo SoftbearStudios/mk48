@@ -1,20 +1,20 @@
-// SPDX-FileCopyrightText: 2022 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::event::event_target;
-use crate::svg::bork_flag::*;
 use crate::translation::{t, Translation};
 use crate::Ctw;
 use core_protocol::id::LanguageId;
 use gloo::timers::callback::Timeout;
 use stylist::yew::styled_component;
 use web_sys::{Event, HtmlSelectElement};
-use yew::{html, html_nested, use_state, Html};
+use yew::{html, html_nested, use_state, Callback, Html};
 use yew_icons::{Icon, IconId};
 
 #[styled_component(LanguageMenu)]
 pub fn language_menu() -> Html {
     let ctw = Ctw::use_ctw();
-    // Open if [`Some`], closed otherwise.
+    // Open if [`Some`], closed otherwise. The [`Some`] variant stores a timer to close it automatically.
     let menu_open = use_state::<Option<Timeout>, _>(|| None);
 
     let div_css_class = css!(
@@ -50,7 +50,7 @@ pub fn language_menu() -> Html {
     let handle_open = {
         let menu_open = menu_open.clone();
 
-        move |_| {
+        Callback::from(move |_| {
             if menu_open.is_none() {
                 let menu_open_clone = menu_open.clone();
 
@@ -58,7 +58,7 @@ pub fn language_menu() -> Html {
                     menu_open_clone.set(None);
                 })));
             };
-        }
+        })
     };
 
     let handle_change = {
@@ -81,36 +81,28 @@ pub fn language_menu() -> Html {
         }
     };
 
-    // <select value={language_id} onchange={|e| handle_change(e.target.value)} onclick={|e| e.stop_propagation()}>
     html! {
-        <div id="language_selector" onclick={handle_open} class={div_css_class}>
+        <div class={div_css_class}>
             if menu_open.is_some() {
                 <select onchange={handle_change} class={select_css_class}>
                     {LanguageId::iter().map(|language_id| {
                         html_nested!{
                             <option
                                 value={format!("{:?}", language_id)}
-                                selected={language_id == ctw.setting_cache.language_id}
+                                selected={language_id == ctw.setting_cache.language}
                             >{language_id.label()}</option>
                         }
                     }).collect::<Html>()}
                 </select>
-            } else if ctw.setting_cache.language_id == LanguageId::Bork {
-                <BorkFlag/>
             } else {
-                <Icon icon_id={match ctw.setting_cache.language_id {
-                        LanguageId::Bork => unreachable!(),
-                        LanguageId::English => IconId::LipisFlagIcons4X3Gb,
-                        LanguageId::German => IconId::LipisFlagIcons4X3De,
-                        LanguageId::Spanish => IconId::LipisFlagIcons4X3Es,
-                        LanguageId::French => IconId::LipisFlagIcons4X3Fr,
-                        LanguageId::Italian => IconId::LipisFlagIcons4X3It,
-                        LanguageId::Arabic => IconId::LipisFlagIcons4X3Ye,
-                        LanguageId::Japanese => IconId::LipisFlagIcons4X3Jp,
-                        LanguageId::Russian => IconId::LipisFlagIcons4X3Ru,
-                        LanguageId::Vietnamese => IconId::LipisFlagIcons4X3Vn,
-                        LanguageId::SimplifiedChinese => IconId::LipisFlagIcons4X3Cn,
-                    }} width={String::from("2rem")} height={String::from("2rem")} title={t().settings_language_hint()}/>
+                <Icon
+                    icon_id={IconId::BootstrapGlobe2}
+                    width={String::from("2rem")}
+                    height={String::from("1.8rem")}
+                    title={t().settings_language_hint()}
+                    onclick={handle_open}
+                    style={"cursor: pointer;"}
+                />
             }
         </div>
     }

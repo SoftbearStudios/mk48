@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::window::event_listener::WindowEventListener;
 use web_sys::{FocusEvent, KeyboardEvent};
 use yew::Callback;

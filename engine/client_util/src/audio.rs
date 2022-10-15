@@ -4,11 +4,9 @@
 use crate::visibility::VisibilityEvent;
 use js_sys::ArrayBuffer;
 use sprite_sheet::AudioSprite;
-use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
+use std::marker::PhantomData;
 use std::rc::Rc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, JsValue};
@@ -18,11 +16,16 @@ use web_sys::{
 };
 
 /// A macro-generated enum representing all audio sprites.
-pub trait Audio: Eq + Hash + Copy + Debug + Sized + 'static {
+/// They each have an index associated with them to use as a key into a [`Vec`].
+pub trait Audio: Copy + Debug + 'static {
+    /// Returns the [`Audio`]'s unique identifier.
+    fn index(self) -> usize;
+
     /// Returns path to the audio file containing all the audio.
-    fn path() -> Cow<'static, str>;
-    /// Gets the audio sprite corresponding to this audio id.
-    fn sprite(self) -> AudioSprite;
+    fn path() -> &'static str;
+
+    /// Returns a static slice of [`AudioSprite`]s indexed by [`Audio::index`].
+    fn sprites() -> &'static [AudioSprite];
 }
 
 /// Renders (plays) audio.
@@ -33,10 +36,10 @@ pub struct AudioPlayer<A: Audio> {
 struct Inner<A: Audio> {
     context: AudioContext,
     sfx_gain: GainNode,
-    #[allow(dead_code)]
-    music_gain: GainNode,
+    _music_gain: GainNode,
     track: Option<AudioBuffer>,
-    playing: HashMap<A, Vec<AudioBufferSourceNode>>,
+    /// Audio indexed by [`Audio::index`].
+    playing: Box<[Vec<AudioBufferSourceNode>]>,
     /// What volume is or is ramping up/down to.
     volume_target: f32,
     /// The game wants to mute all audio.
@@ -47,6 +50,7 @@ struct Inner<A: Audio> {
     muted_by_ad: bool,
     /// Volume (kept up to date with the corresponding setting.
     volume_setting: f32,
+    spooky: PhantomData<A>,
 }
 
 impl<A: Audio> Default for AudioPlayer<A> {
@@ -62,17 +66,18 @@ impl<A: Audio> Default for AudioPlayer<A> {
                 let inner = Rc::new(RefCell::new(Some(Inner {
                     context,
                     sfx_gain,
-                    music_gain,
+                    _music_gain: music_gain,
                     track: None,
-                    playing: HashMap::new(),
+                    playing: vec![Vec::new(); std::mem::variant_count::<A>()].into_boxed_slice(),
                     muted_by_game: false,
                     muted_by_visibility: false,
                     muted_by_ad: false,
                     volume_target: 0.0,
                     volume_setting: 0.0,
+                    spooky: PhantomData,
                 })));
 
-                let promise = web_sys::window().unwrap().fetch_with_str(&A::path());
+                let promise = js_hooks::window().fetch_with_str(&A::path());
                 let inner_clone = inner.clone();
 
                 let _ = future_to_promise(async move {
@@ -177,8 +182,7 @@ impl<A: Audio> AudioPlayer<A> {
         }
     }
 
-    #[allow(unused)]
-    pub(crate) fn set_muted_by_ad(&self, muted_by_ad: bool) {
+    pub fn set_muted_by_ad(&self, muted_by_ad: bool) {
         if let Some(inner) = self.inner.borrow_mut().as_mut() {
             inner.muted_by_ad = muted_by_ad;
             inner.update_volume();
@@ -199,12 +203,13 @@ impl<A: Audio> Inner<A> {
         let new_volume = self.recalculate_volume();
         if new_volume != self.volume_target {
             self.volume_target = new_volume;
-            if let Err(e) = self
+            if let Err(_e) = self
                 .sfx_gain
                 .gain()
                 .linear_ramp_to_value_at_time(new_volume, self.context.current_time() + 1.5)
             {
-                crate::console_log!("could not linear ramp audio: {:?}", e);
+                #[cfg(debug_assertions)]
+                js_hooks::console_log!("could not linear ramp audio: {:?}", _e);
                 self.sfx_gain.gain().set_value(new_volume);
             }
         }
@@ -223,8 +228,7 @@ impl<A: Audio> Inner<A> {
             } else if inner.track.is_some() {
                 let track = inner.track.as_ref().unwrap();
 
-                let sprite = audio.sprite();
-                //crate::console_log!("playing {:?} at {} ({:?})", audio, volume, sprite);
+                let sprite = &A::sprites()[audio.index()];
                 let source: AudioBufferSourceNode = inner
                     .context
                     .create_buffer_source()
@@ -257,47 +261,37 @@ impl<A: Audio> Inner<A> {
                 let stop = Closure::once_into_js(move |value: JsValue| {
                     let event: Event = value.dyn_into().unwrap();
                     if let Some(inner) = cloned_rc.borrow_mut().as_mut() {
-                        if let Some(playing) = inner.playing.get_mut(&audio) {
-                            for source in playing.drain_filter(|p| {
-                                *p == event
-                                    .target()
-                                    .unwrap()
-                                    .dyn_into::<AudioBufferSourceNode>()
-                                    .unwrap()
-                            }) {
-                                // Ensure no double-invocation.
-                                source.set_onended(None);
-                            }
+                        let playing = &mut inner.playing[audio.index()];
+                        for source in playing.drain_filter(|p| {
+                            *p == event
+                                .target()
+                                .unwrap()
+                                .dyn_into::<AudioBufferSourceNode>()
+                                .unwrap()
+                        }) {
+                            // Ensure no double-invocation.
+                            source.set_onended(None);
                         }
                     }
                 });
 
                 source.set_onended(Some(stop.as_ref().unchecked_ref()));
 
-                inner
-                    .playing
-                    .entry(audio)
-                    .or_insert_with(Vec::new)
-                    .push(source);
+                inner.playing[audio.index()].push(source);
             }
         }
     }
 
     fn is_playing(&self, audio: A) -> bool {
-        //crate::console_log!("{:?}", self.playing.iter().map(|(k, v)| (k, v.len())).collect::<Vec<_>>());
-        self.playing
-            .get(&audio)
-            .map(|playing| !playing.is_empty())
-            .unwrap_or(false)
+        self.playing[audio.index()].is_empty()
     }
 
     fn stop_playing(&mut self, audio: A) {
-        if let Some(playing) = self.playing.get_mut(&audio) {
-            for removed in playing.drain(..) {
-                // WebAudio bug makes unsetting loop required?
-                removed.set_loop(false);
-                let _ = removed.stop();
-            }
+        let playing = &mut self.playing[audio.index()];
+        for removed in playing.drain(..) {
+            // WebAudio bug makes unsetting loop required?
+            removed.set_loop(false);
+            let _ = removed.stop();
         }
     }
 }

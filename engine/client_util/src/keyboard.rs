@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::apply::Apply;
-use variant_count::VariantCount;
+use std::num::NonZeroU8;
+use strum_macros::Display;
 
 /// Each variant is a possible key. Not guaranteed to support all keys.
-#[derive(Copy, Clone, Eq, PartialEq, VariantCount)]
+#[derive(Copy, Clone, Eq, PartialEq, Display)]
 pub enum Key {
     A,
     B,
@@ -121,6 +122,28 @@ impl Key {
             _ => return None,
         })
     }
+
+    pub fn digit(self) -> Option<u8> {
+        Some(match self {
+            Self::Zero => 0,
+            Self::One => 1,
+            Self::Two => 2,
+            Self::Three => 3,
+            Self::Four => 4,
+            Self::Five => 5,
+            Self::Six => 6,
+            Self::Seven => 7,
+            Self::Eight => 8,
+            Self::Nine => 9,
+            _ => return None,
+        })
+    }
+
+    /// Digit but 0 is mapped to ten.
+    pub fn digit_with_ten(self) -> Option<NonZeroU8> {
+        self.digit()
+            .map(|d| NonZeroU8::new(d).unwrap_or(NonZeroU8::new(10).unwrap()))
+    }
 }
 
 /// The state of any key.
@@ -158,13 +181,13 @@ impl KeyState {
 
 /// The entire current state of the keyboard.
 pub struct KeyboardState {
-    pub(crate) states: [KeyState; Key::VARIANT_COUNT],
+    pub(crate) states: [KeyState; std::mem::variant_count::<Key>()],
 }
 
 impl Default for KeyboardState {
     fn default() -> Self {
         Self {
-            states: [KeyState::Up; Key::VARIANT_COUNT],
+            states: [KeyState::Up; std::mem::variant_count::<Key>()],
         }
     }
 }

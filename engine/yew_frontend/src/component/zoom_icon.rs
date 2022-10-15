@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::translation::{t, Translation};
 use crate::Ctw;
 use web_sys::MouseEvent;
@@ -33,6 +36,6 @@ pub fn zoom_icon(props: &ZoomIconProps) -> Html {
     };
 
     html! {
-        <Icon {icon_id} {title} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none;"}/>
+        <Icon {icon_id} {title} {onclick} width={props.size.clone()} height={props.size.clone()} style={"color: white; cursor: pointer; user-select: none; vertical-align: bottom;"}/>
     }
 }

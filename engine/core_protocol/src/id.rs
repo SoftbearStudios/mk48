@@ -1,27 +1,44 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use enum_iterator::IntoEnumIterator;
-use lazy_static::lazy_static;
-use rand::distributions::{Standard, WeightedIndex};
-use rand::prelude::Distribution;
-use rand::Rng;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{self, Display, Formatter};
-use std::num::{NonZeroU32, NonZeroU64, NonZeroU8, ParseIntError};
+use std::num::{NonZeroU32, NonZeroU64, NonZeroU8};
 use std::str::FromStr;
-use variant_count::VariantCount;
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
 
-#[repr(transparent)]
+#[cfg(feature = "server")]
+use rand::distributions::{Standard, WeightedIndex};
+#[cfg(feature = "server")]
+use rand::prelude::*;
+
+macro_rules! impl_wrapper_from_str {
+    ($typ:ty, $inner:ty) => {
+        impl std::fmt::Display for $typ {
+            fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+                self.0.fmt(f)
+            }
+        }
+
+        impl std::str::FromStr for $typ {
+            type Err = <$inner as FromStr>::Err;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(FromStr::from_str(s)?))
+            }
+        }
+    };
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct ArenaId(pub NonZeroU32);
+impl_wrapper_from_str!(ArenaId, NonZeroU32);
 
 /// Cohorts 1-4 are used for A/B testing.
 /// The default for existing players is cohort 1.
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct CohortId(pub NonZeroU8);
+impl_wrapper_from_str!(CohortId, NonZeroU8);
 
 impl CohortId {
     const WEIGHTS: [u8; 4] = [8, 4, 2, 1];
@@ -39,29 +56,13 @@ impl Default for CohortId {
     }
 }
 
-impl Display for CohortId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-#[derive(Debug)]
-pub struct InvalidCohortId;
-
-impl FromStr for CohortId {
-    type Err = InvalidCohortId;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse().ok().and_then(Self::new).ok_or(InvalidCohortId)
-    }
-}
-
+#[cfg(feature = "server")]
 impl Distribution<CohortId> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> CohortId {
-        lazy_static! {
-            static ref DISTRIBUTION: WeightedIndex<u8> =
-                WeightedIndex::new(&CohortId::WEIGHTS).unwrap();
-        }
+        use std::sync::LazyLock;
+        static DISTRIBUTION: LazyLock<WeightedIndex<u8>> =
+            LazyLock::new(|| WeightedIndex::new(&CohortId::WEIGHTS).unwrap());
+
         let n = DISTRIBUTION.sample(rng) + 1;
         debug_assert!(n > 0);
         debug_assert!(n <= CohortId::WEIGHTS.len());
@@ -91,6 +92,7 @@ impl<'de> Deserialize<'de> for CohortId {
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum GameId {
+    Kiomet,
     Mk48,
     /// A placeholder for games we haven't released yet.
     Redacted,
@@ -99,17 +101,18 @@ pub enum GameId {
 impl GameId {
     pub fn name(self) -> &'static str {
         match self {
+            Self::Kiomet => "Kiomet",
             Self::Mk48 => "Mk48.io",
             Self::Redacted => "Redacted",
         }
     }
 }
 
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct InvitationId(pub NonZeroU32);
 
 impl InvitationId {
+    #[cfg(feature = "server")]
     pub fn generate(server_id: Option<ServerId>) -> Self {
         let mut r: u32 = rand::thread_rng().gen();
         if r == 0 {
@@ -129,60 +132,48 @@ impl InvitationId {
     }
 }
 
-impl Display for InvitationId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
-impl FromStr for InvitationId {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NonZeroU32::from_str(s).map(InvitationId)
-    }
-}
+impl_wrapper_from_str!(InvitationId, NonZeroU32);
 
 // The LanguageId enum may be extended with additional languages, such as:
 // Bengali,
 // Hindi,
 // Indonesian,
-// Italy,
 // Korean,
 // Portuguese,
-// StandardArabic,
 // TraditionalChinese,
 
 /// In order that they should be presented in a language picker.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, IntoEnumIterator)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, EnumIter, EnumString, Display)]
 pub enum LanguageId {
-    #[serde(rename = "en")]
+    #[strum(serialize = "en")]
     English,
-    #[serde(rename = "es")]
+    #[strum(serialize = "es")]
     Spanish,
-    #[serde(rename = "fr")]
+    #[strum(serialize = "fr")]
     French,
-    #[serde(rename = "de")]
+    #[strum(serialize = "de")]
     German,
-    #[serde(rename = "it")]
+    #[strum(serialize = "it")]
     Italian,
-    #[serde(rename = "ru")]
+    #[strum(serialize = "ru")]
     Russian,
-    #[serde(rename = "ar")]
+    #[strum(serialize = "ar")]
     Arabic,
-    #[serde(rename = "zh")]
+    #[strum(serialize = "hi")]
+    Hindi,
+    #[strum(serialize = "zh")]
     SimplifiedChinese,
-    #[serde(rename = "ja")]
+    #[strum(serialize = "ja")]
     Japanese,
-    #[serde(rename = "vi")]
+    #[strum(serialize = "vi")]
     Vietnamese,
-    #[serde(rename = "xx-bork")]
+    #[strum(serialize = "xx-bork")]
     Bork,
 }
 
 impl LanguageId {
     pub fn iter() -> impl Iterator<Item = Self> + 'static {
-        Self::into_enum_iter()
+        <Self as IntoEnumIterator>::iter()
     }
 }
 
@@ -193,9 +184,7 @@ impl Default for LanguageId {
 }
 
 /// `PeriodId` is used by `LeaderboardDto`.
-#[derive(
-    Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, IntoEnumIterator, Serialize, VariantCount,
-)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, EnumIter, Serialize)]
 pub enum PeriodId {
     AllTime = 0,
     Daily = 1,
@@ -215,11 +204,10 @@ impl From<usize> for PeriodId {
 
 impl PeriodId {
     pub fn iter() -> impl Iterator<Item = Self> {
-        Self::into_enum_iter()
+        <Self as IntoEnumIterator>::iter()
     }
 }
 
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub NonZeroU32);
 
@@ -258,8 +246,9 @@ impl PlayerId {
     }
 }
 
-/// Mirrors [`db_ip::Region`]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, IntoEnumIterator, Serialize)]
+/// Mirrors <https://github.com/finnbear/db_ip>: `Region`.
+/// TODO use strum to implement FromStr
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, EnumIter, Serialize)]
 pub enum RegionId {
     Africa,
     Asia,
@@ -343,7 +332,7 @@ impl RegionId {
     }
 
     pub fn iter() -> impl Iterator<Item = Self> + 'static {
-        Self::into_enum_iter()
+        <Self as IntoEnumIterator>::iter()
     }
 }
 
@@ -361,7 +350,7 @@ impl FromStr for RegionId {
     type Err = InvalidRegionId;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.to_lowercase().as_str() {
+        Ok(match s.to_ascii_lowercase().as_str() {
             "af" | "africa" => Self::Africa,
             "as" | "asia" => Self::Asia,
             "eu" | "europe" => Self::Europe,
@@ -373,11 +362,11 @@ impl FromStr for RegionId {
     }
 }
 
-#[repr(transparent)]
 /// Symbolizes, for example: #.domain.com
-/// The meaning of Option::<ServerId>::None is often "localhost"
+/// The meaning of [`Option::<ServerId>::None`] is often "localhost"
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct ServerId(pub NonZeroU8);
+impl_wrapper_from_str!(ServerId, NonZeroU8);
 
 impl ServerId {
     pub fn new(val: u8) -> Option<Self> {
@@ -385,21 +374,14 @@ impl ServerId {
     }
 }
 
-impl Display for ServerId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct SessionId(pub NonZeroU64);
+impl_wrapper_from_str!(SessionId, NonZeroU64);
 
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct TeamId(pub NonZeroU32);
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, IntoEnumIterator, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum UserAgentId {
     ChromeOS,
     Desktop,
@@ -413,12 +395,11 @@ pub enum UserAgentId {
 
 impl UserAgentId {
     pub fn iter() -> impl Iterator<Item = Self> + 'static {
-        Self::into_enum_iter()
+        <Self as IntoEnumIterator>::iter()
     }
 }
 
 // This will supersede [`PlayerId`] for persistent storage.
-#[repr(transparent)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct UserId(pub NonZeroU64);
 
@@ -430,11 +411,14 @@ pub enum LoginType {
 
 #[cfg(test)]
 mod tests {
-    use crate::id::{InvitationId, PlayerId, ServerId};
-    use std::num::NonZeroU8;
+    use crate::id::PlayerId;
 
     #[test]
+    #[cfg(feature = "server")]
     fn invitation_id() {
+        use crate::id::{InvitationId, ServerId};
+        use std::num::NonZeroU8;
+
         for i in 1..=u8::MAX {
             let sid = ServerId(NonZeroU8::new(i).unwrap());
             let iid = InvitationId::generate(Some(sid));

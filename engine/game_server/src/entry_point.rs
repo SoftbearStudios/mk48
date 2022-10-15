@@ -32,7 +32,7 @@ use core_protocol::web_socket::WebSocketProtocol;
 use core_protocol::{get_unix_time_now, UnixTime};
 use futures::pin_mut;
 use futures::SinkExt;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use minicdn::release_include_mini_cdn;
 use minicdn::MiniCdn;
 use server_util::cloud::Cloud;
@@ -40,6 +40,7 @@ use server_util::http::limit_content_length;
 use server_util::ip_rate_limiter::IpRateLimiter;
 use server_util::linode::Linode;
 use server_util::observer::{ObserverMessage, ObserverUpdate};
+use server_util::os::set_open_file_limit;
 use server_util::rate_limiter::{RateLimiterProps, RateLimiterState};
 use server_util::user_agent::UserAgent;
 use std::convert::TryInto;
@@ -69,6 +70,11 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
         let options = Options::from_args();
 
         crate::log::init_logger(&options);
+
+        match set_open_file_limit(16384) {
+            Ok(limit) => info!("set open file limit to {}", limit),
+            Err(e) => error!("could not set open file limit: {}", e)
+        }
 
         #[allow(unused)]
         let (http_port, https_port) = options.http_and_https_ports();
@@ -105,11 +111,15 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
         let discord_guild_id = options.discord_guild_id;
         let discord_bot = options.discord_bot_token.and_then(|t| DiscordBotRepo::new(discord_guild_id, &t));
         let discord_client_id = options.discord_client_id;
+        let domain = options.domain.map(|domain| &*Box::leak(domain.into_boxed_str()));
         let discord_oauth2 = options.discord_client_secret
             .map(|client_secret| &*Box::leak(Box::new(DiscordOauth2Repo::new(
                 discord_client_id,
                 client_secret,
-    format!("http://localhost:{}", http_port)
+                domain
+                    .filter(|_| cfg!(not(debug_assertions)))
+                    .map(|d| format!("https://{d}"))
+                    .unwrap_or_else(|| format!("http://localhost:{http_port}"))
             ))));
 
         // println!("{:?}", discord_bot.as_ref().unwrap().send_message("", "", None).await);
@@ -130,6 +140,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                 options.trace_log,
                 Arc::clone(&game_client),
                 &ALLOW_WEB_SOCKET_JSON,
+                options.admin_config_file,
                 RateLimiterProps::new(
                     Duration::from_secs(options.client_authenticate_rate_limit),
                     options.client_authenticate_burst,
@@ -137,7 +148,6 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
             )
             .await,
         );
-        let domain = &*Box::leak(Box::new(options.domain.clone()));
 
         #[cfg(not(debug_assertions))]
         let certificate_paths = options
@@ -165,20 +175,20 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
 
         let app = Router::new()
             .fallback(get(create_static_handler(game_client, "", browser_router)))
-            .route("/oauth2/discord/", get(async move || {
+            .route("/oauth2/discord", get(async move || {
                 discord_oauth2.map(|oauth2| oauth2.redirect().into_response()).unwrap_or_else(|| Response::builder()
                     .status(StatusCode::NOT_FOUND)
                     .body(boxed(Full::from("404 Not Found")))
                     .unwrap())
             }))
-            .route("/ws/", axum::routing::get(async move |upgrade: WebSocketUpgrade, addr: Option<ConnectInfo<SocketAddr>>, user_agent: Option<TypedHeader<axum::headers::UserAgent>>, Query(query): Query<WebSocketQuery>| {
+            .route("/ws", axum::routing::get(async move |upgrade: WebSocketUpgrade, ConnectInfo(addr): ConnectInfo<SocketAddr>, user_agent: Option<TypedHeader<axum::headers::UserAgent>>, Query(query): Query<WebSocketQuery>| {
                 let user_agent_id = user_agent
                     .map(|h| UserAgent::new(h.as_str()))
                     .and_then(UserAgent::into_id);
                 let login_type = query.login_type;
 
                 let authenticate = Authenticate {
-                    ip_address: addr.map(|addr| addr.0.ip()),
+                    ip_address: addr.ip(),
                     referrer: query.referrer,
                     user_agent_id,
                     arena_id_session_id: query.arena_id.zip(query.session_id),
@@ -212,7 +222,9 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                             let keep_alive = tokio::time::sleep(TIMER_DURATION);
                             let mut last_activity = Instant::now();
                             let mut rate_limiter = RateLimiterState::default();
+                            let mut measure_rtt_ping_governor = RateLimiterState::default();
                             const RATE: RateLimiterProps = RateLimiterProps::const_new(Duration::from_millis(80), 5);
+                            const MEASURE_RTT_PING: RateLimiterProps = RateLimiterProps::const_new(Duration::from_secs(60), 0);
 
                             pin_mut!(keep_alive);
 
@@ -275,7 +287,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                                                             }
                                                         }
                                                         Message::Ping(_) => {
-                                                            // Axum spec days that automatic Pong will be sent.
+                                                            // Axum spec says that automatic Pong will be sent.
                                                         }
                                                         Message::Pong(pong_data) => {
                                                             if rate_limiter.should_limit_rate_with_now(&RATE, last_activity) {
@@ -286,7 +298,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                                                                 let now = get_unix_time_now();
                                                                 let timestamp = UnixTime::from_ne_bytes(bytes);
                                                                 let rtt = now.saturating_sub(timestamp);
-                                                                if rtt < u16::MAX as UnixTime {
+                                                                if rtt <= 10000 as UnixTime {
                                                                     let _ = ws_srv.do_send(ObserverMessage::<Request<G::GameRequest>, Update<G::GameUpdate >>::RoundTripTime {
                                                                         player_id,
                                                                         rtt: rtt as u16,
@@ -334,6 +346,12 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                                                 if web_socket.send(web_socket_message).await.is_err() {
                                                     break NORMAL_CLOSURE;
                                                 }
+
+                                                if !measure_rtt_ping_governor.should_limit_rate_with_now(&MEASURE_RTT_PING, last_activity) {
+                                                    if web_socket.send(Message::Ping(get_unix_time_now().to_ne_bytes().into())).await.is_err() {
+                                                        break NORMAL_CLOSURE;
+                                                    }
+                                                }
                                             }
                                             ObserverUpdate::Close => {
                                                 break NORMAL_CLOSURE;
@@ -368,16 +386,14 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                     },
                 }
             }))
-            .route("/system/", axum::routing::get(move |addr: Option<ConnectInfo<SocketAddr>>, query: Query<SystemQuery>| {
+            .route("/system.json", axum::routing::get(move |ConnectInfo(addr): ConnectInfo<SocketAddr>, query: Query<SystemQuery>| {
                 let srv = system_srv.to_owned();
                 debug!("received system request");
-
-                let ip = addr.map(|addr| addr.0.ip());
 
                 async move {
                     match srv
                         .send(SystemRequest {
-                            ip,
+                            ip: addr.ip(),
                             server_id: query.server_id,
                             region_id: query.region_id,
                             invitation_id: query.invitation_id,
@@ -400,7 +416,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
 
                 // We want to redirect everything except index.html (at any path level) so the
                 // browser url-bar remains intact.
-                let redirect = !path.is_empty() && (!path.ends_with('/') || matches!(path, "/system/" | "/ws/"));
+                let redirect = !path.is_empty() && !path.ends_with('/');
 
                 if redirect {
                     if let Some((domain, server_id)) = domain
@@ -439,7 +455,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                     }
                 }
             }))
-            .route("/status/", get(move || {
+            .route("/status.json", get(move || {
                 let srv = status_srv.to_owned();
                 debug!("received status request");
 

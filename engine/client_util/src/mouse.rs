@@ -3,10 +3,9 @@
 
 use crate::apply::Apply;
 use glam::Vec2;
-use variant_count::VariantCount;
 
 /// Identifies a mouse button (left, middle, or right).
-#[derive(Copy, Clone, Debug, Eq, PartialEq, VariantCount)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MouseButton {
     Left,
     Middle,
@@ -87,22 +86,23 @@ pub enum MouseEvent {
     Wheel(f32),
     /// Position in view space (-1..1).
     MoveViewSpace(Vec2),
-    /// Position in world space. Triggered by [`Self::MoveView`] or a change in world space.
-    MoveWorldSpace(Vec2),
+    /// Delta in device specific pixels. Useful for pointer lock.
+    DeltaPixels(Vec2),
+    /// For touchscreen devices.
+    Touch,
 }
 
 /// The state of the mouse i.e. buttons and position.
 #[derive(Default)]
 pub struct MouseState {
-    states: [MouseButtonState; MouseButton::VARIANT_COUNT],
+    states: [MouseButtonState; std::mem::variant_count::<MouseButton>()],
     /// Position in view space (-1..1).
     /// None if mouse isn't on game.
     pub view_position: Option<Vec2>,
-    /// Position in world space.
-    /// None if the mouse isn't on game.
-    pub world_position: Option<Vec2>,
     /// During a pinch to zoom gesture, stores last distance value.
     pub(crate) pinch_distance: Option<f32>,
+    /// Whether the player is interacting with the game via a touch-screen.
+    pub touch_screen: bool,
 }
 
 impl Apply<MouseEvent> for MouseState {
@@ -126,7 +126,9 @@ impl Apply<MouseEvent> for MouseState {
             MouseEvent::MoveViewSpace(position) => {
                 self.view_position = Some(position);
             }
-            MouseEvent::MoveWorldSpace(position) => self.world_position = Some(position),
+            MouseEvent::Touch => {
+                self.touch_screen = true;
+            }
             _ => {}
         }
     }

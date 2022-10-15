@@ -12,6 +12,8 @@
 #![feature(int_roundings)]
 #![feature(is_sorted)]
 #![feature(variant_count)]
+#![feature(result_into_ok_or_err)]
+#![feature(result_option_inspect)]
 
 pub mod admin;
 pub mod bot;

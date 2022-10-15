@@ -66,7 +66,7 @@ table inet filter {
 
 	chain inbound_ipv4 {
 		# Allow ICMP pings (with a global limit)
-		icmp type echo-request limit rate 10/second accept
+		icmp type echo-request limit rate 5/second accept
 
 		# Limit connections per source IP
 		ct state new add @ipv4 { ip saddr ct count over 64 } counter reject
@@ -82,7 +82,7 @@ table inet filter {
 		icmpv6 type { nd-neighbor-solicit, nd-router-advert, nd-neighbor-advert } accept
 
 		# Allow ICMP pings (with a global limit)
-		icmpv6 type echo-request limit rate 10/second accept
+		icmpv6 type echo-request limit rate 5/second accept
 
 		# Limit connections per source IP
 		ct state new add @ipv6 { ip6 saddr ct count over 64 } counter reject
@@ -108,10 +108,10 @@ table inet filter {
 		iifname lo accept
 
 		# Allow SSH (with a global limit)
-		tcp dport ssh ct count 10 accept
+		tcp dport ssh ct count 32 accept
 
-		# Allow HTTP (with a global limit)
-		tcp dport { http, https } ct count 900 accept
+		# Allow HTTP (without a global limit)
+		tcp dport { http, https } accept
 	}
 
 	chain forward {
@@ -145,7 +145,7 @@ ln -s /snap/bin/certbot /usr/bin/certbot
 snap set certbot trust-plugin-with-root=ok
 snap install certbot-dns-linode
 
-printf "certbot certonly --agree-tos --non-interactive --dns-linode --dns-linode-credentials /root/linode.ini --dns-linode-propagation-seconds 180 --no-eff-email --no-redirect --email finnbearone@gmail.com -d $DOMAIN_HOME -d $DOMAIN" > get_ssl_cert.sh
+printf "certbot certonly --agree-tos --non-interactive --dns-linode --dns-linode-credentials /root/linode.ini --dns-linode-propagation-seconds 180 --no-eff-email --no-redirect --email finnbearone@gmail.com -d $DOMAIN -d www.$DOMAIN -d $SERVER_ID.$DOMAIN" > get_ssl_cert.sh
 chmod u+x /root/get_ssl_cert.sh
 ./get_ssl_cert.sh
 
@@ -168,7 +168,18 @@ Group=root
 Restart=always
 RestartSec=3
 EnvironmentFile=/etc/environment
-ExecStart=/root/server --server-id $SERVER_ID --ip-address $IP_ADDRESS --domain $DOMAIN_HOME --chat-log /root/chat.log --trace-log /root/trace.log --linode-personal-access-token $LINODE_TOKEN --certificate-path /etc/letsencrypt/live/$DOMAIN_HOME/fullchain.pem --private-key-path /etc/letsencrypt/live/$DOMAIN_HOME/privkey.pem
+ExecStart=/root/server \
+  --server-id $SERVER_ID \
+  --ip-address $IP_ADDRESS \
+  --domain $DOMAIN \
+  --chat-log /root/chat.log \
+  --trace-log /root/trace.log \
+  --admin-config-file /root/admin.toml \
+  --discord-client-secret $DISCORD_CLIENT_SECRET \
+  --discord-bot-token $DISCORD_BOT_TOKEN \
+  --linode-personal-access-token $LINODE_TOKEN \
+  --certificate-path /etc/letsencrypt/live/$DOMAIN/fullchain.pem \
+  --private-key-path /etc/letsencrypt/live/$DOMAIN/privkey.pem
 
 [Install]
 WantedBy=multi-user.target

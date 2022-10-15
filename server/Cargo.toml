@@ -43,7 +43,7 @@ rand = "0.8"
 idalloc = "0.1"
 noise = { version = "0.7", default-features = false }
 common = {path="../common", version="0.1", features=["server"]}
-common_util = {path="../engine/common_util"}
+common_util = {path="../engine/common_util", features=["rand"]}
 game_server = {path="../engine/game_server"}
 core_protocol = {path="../engine/core_protocol"}
 server_util = {path="../engine/server_util"}

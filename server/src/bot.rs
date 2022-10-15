@@ -352,7 +352,7 @@ impl Bot {
             BotAction::Quit
         } else {
             BotAction::Some(Command::Spawn(Spawn {
-                entity_type: EntityType::spawn_options(true)
+                entity_type: EntityType::spawn_options(0, true)
                     .choose(&mut rng)
                     .expect("there must be at least one entity type to spawn as"),
             }))

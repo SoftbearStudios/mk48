@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use aws_sdk_dynamodb::model::AttributeValue;
 use common_util::serde::is_default;
 use core_protocol::dto::{MetricFilter, MetricsDataPointDto, MetricsSummaryDto};
@@ -9,12 +12,11 @@ use core_protocol::metrics::{
 };
 use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::serde_util::StrVisitor;
-use core_protocol::{get_unix_time_now, UnixTime};
+use core_protocol::UnixTime;
 use derive_more::Add;
 use serde::de::DeserializeOwned;
 use serde::{de, ser, Deserialize, Deserializer, Serialize, Serializer};
 use std::iter::Sum;
-use std::net::IpAddr;
 use variant_count::VariantCount;
 
 /// The type of leaderboard score, for a particular game.
@@ -137,6 +139,7 @@ pub struct SessionItem {
     pub previous_id: Option<SessionId>,
     pub referrer: Option<Referrer>,
     pub user_agent_id: Option<UserAgentId>,
+    pub moderator: bool,
     /// Unlike RAM cache Session, not optional because storing localhost sessions in the database
     /// makes no sense.
     pub server_id: ServerId,
@@ -450,36 +453,6 @@ pub struct MetricsItem {
     pub timestamp: UnixTime,
     #[serde(flatten)]
     pub metrics: Metrics,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct IpItem {
-    /// Hash key.
-    pub ip: IpAddr,
-    /// Creation time in Unix seconds.
-    pub created: u64,
-    /// HTTP requests.
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub requests: u32,
-    /// Websocket requests.
-    #[serde(default, skip_serializing_if = "is_default")]
-    pub websockets: u32,
-    /// How long to restrict chat until, in Unix seconds.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub safe_chat_until: Option<u64>,
-    /// Expiry in Unix seconds.
-    pub ttl: u64,
-}
-
-impl IpItem {
-    pub fn update_ttl(&mut self) {
-        self.ttl = if let Some(save_chat_until) = self.safe_chat_until {
-            self.ttl.max(save_chat_until)
-        } else {
-            self.ttl
-        }
-        .max(get_unix_time_now() / 1000 + 7 * 24 * 3600)
-    }
 }
 
 #[derive(Serialize, Deserialize)]

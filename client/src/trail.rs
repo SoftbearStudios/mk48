@@ -1,10 +1,13 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::game::wind;
-use client_util::renderer::graphic::GraphicLayer;
 use common::entity::EntityId;
 use common::ticks::Ticks;
 use common_util::range::map_ranges;
 use glam::{Vec2, Vec3, Vec4};
 use itertools::Itertools;
+use renderer2d::GraphicLayer;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -54,7 +57,7 @@ impl Trail {
         let end_pos = self.end + Self::offset(end_alive);
         let end_color = self.color(end_alive);
 
-        layer.add_line_gradient(start_pos, end_pos, self.width, start_color, end_color);
+        layer.draw_line_gradient(start_pos, end_pos, self.width, start_color, end_color);
     }
 
     fn expired(&self, time: f32) -> bool {
@@ -107,10 +110,6 @@ pub struct TrailSystem {
 }
 
 impl TrailSystem {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
     pub fn set_time(&mut self, time: f32) {
         self.time = time;
     }

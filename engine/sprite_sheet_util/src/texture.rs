@@ -4,9 +4,7 @@
 use crate::shorten_name;
 use crunch::{pack, Item, Rect, Rotation};
 use image::imageops::{replace, resize, FilterType};
-use image::{
-    codecs::png, io::Reader, ColorType, DynamicImage, GenericImageView, ImageEncoder, RgbaImage,
-};
+use image::{codecs::png, io::Reader, ColorType, GenericImageView, ImageEncoder, RgbaImage};
 use oxipng::{optimize_from_memory, Headers, Options};
 use rayon::prelude::*;
 use sprite_sheet::{Sprite, SpriteSheet};

@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #![feature(const_option)]
+#![feature(once_cell)]
 
 use std::time::{SystemTime, UNIX_EPOCH};
+
+mod owned;
 
 pub mod dto;
 pub mod id;

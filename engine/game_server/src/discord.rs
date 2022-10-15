@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use axum::http::{HeaderMap, HeaderValue};
 use axum::response::{IntoResponse, Redirect};
 use oauth2::{
@@ -10,12 +13,12 @@ use std::num::NonZeroU64;
 use std::time::Duration;
 
 pub struct DiscordBotRepo {
-    guild_id: String,
+    guild_id: NonZeroU64,
     client: reqwest::Client,
 }
 
 impl DiscordBotRepo {
-    pub fn new(guild_id: String, token: &str) -> Option<Self> {
+    pub fn new(guild_id: NonZeroU64, token: &str) -> Option<Self> {
         HeaderValue::from_str(&format!("Bot {}", token))
             .ok()
             .map(|auth_header| {

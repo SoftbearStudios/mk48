@@ -88,7 +88,7 @@ pub mod test {
     pub fn ip_rate_limiter() {
         let ip_one = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
         let ip_two = IpAddr::V6(Ipv6Addr::new(1, 2, 3, 4, 5, 6, 7, 8));
-        let mut limiter = IpRateLimiter::new(Duration::from_millis(10), 3);
+        let mut limiter = IpRateLimiter::new(Duration::from_millis(100), 3);
 
         assert_eq!(limiter.len(), 0);
         assert!(!limiter.should_limit_rate(ip_one));
@@ -108,7 +108,7 @@ pub mod test {
         assert!(limiter.should_limit_rate(ip_one));
         assert_eq!(limiter.len(), 1);
 
-        std::thread::sleep(Duration::from_millis(25));
+        std::thread::sleep(Duration::from_millis(250));
 
         assert!(!limiter.should_limit_rate(ip_two));
         assert_eq!(limiter.len(), 2);
@@ -118,12 +118,12 @@ pub mod test {
         limiter.prune();
         assert_eq!(limiter.len(), 2);
 
-        std::thread::sleep(Duration::from_millis(10));
+        std::thread::sleep(Duration::from_millis(100));
 
         limiter.prune();
         assert_eq!(limiter.len(), 1);
 
-        std::thread::sleep(Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(500));
 
         limiter.prune();
         assert_eq!(limiter.len(), 0);

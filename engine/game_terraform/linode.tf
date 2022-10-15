@@ -29,18 +29,18 @@ resource "linode_instance" "servers" {
         source      = "../engine/game_terraform/server_init.sh"
         destination = "/root/server_init.sh"
     }
-
     provisioner "remote-exec" {
         inline = [
             "chmod u+x /root/server",
             "chmod u+x /root/server_init.sh",
             "echo \"SERVER_ID=\\\"${each.key}\\\"\" >> /etc/environment",
             "echo \"IP_ADDRESS=\\\"${self.ip_address}\\\"\" >> /etc/environment",
-            "echo \"DOMAIN_HOME=\\\"${var.domain}\\\"\" >> /etc/environment",
-            "echo \"DOMAIN=\\\"${each.key}.${var.domain}\\\"\" >> /etc/environment",
+            "echo \"DOMAIN=\\\"${var.domain}\\\"\" >> /etc/environment",
             "echo \"AWS_ACCESS_KEY_ID=\\\"${data.terraform_remote_state.core.outputs.aws_access_key_id}\\\"\" >> /etc/environment",
             "echo \"AWS_SECRET_ACCESS_KEY=\\\"${data.terraform_remote_state.core.outputs.aws_secret_access_key}\\\"\" >> /etc/environment",
             "echo \"PRIVATE_S3_BUCKET=\\\"${data.terraform_remote_state.core.outputs.private_s3_bucket}\\\"\" >> /etc/environment",
+            "echo \"DISCORD_CLIENT_SECRET=\\\"${var.discord_client_secret}\\\"\" >> /etc/environment",
+            "echo \"DISCORD_BOT_TOKEN=\\\"${var.discord_bot_token}\\\"\" >> /etc/environment",
             "echo \"LINODE_TOKEN=\\\"${var.linode_token}\\\"\" >> /etc/environment"
         ]
     }

@@ -49,7 +49,7 @@ fn main() {
     }
 
     game_server::entry_point::entry_point::<Server>(
-        minicdn::release_include_mini_cdn!("../../js/public"),
-        false,
+        minicdn::release_include_mini_cdn!("../../client/dist/"),
+        true,
     );
 }

@@ -15,18 +15,17 @@
 
 ### Tools
 
-0. Install Rust Nightly (install [rustup](https://rustup.rs/), then `rustup override set nightly-2022-06-15`)
-1. Install NodeJS 14 or higher ([here](https://nodejs.org/en/download/))
+0. Install Rust Nightly (install [rustup](https://rustup.rs/), then `rustup override set nightly-2022-08-14`)
+1. Install `trunk` (`cargo install --locked trunk`)
 
-You may use any version of Rust that works, but we use some nightly features and `nightly-2022-06-15` is known to work,
-whereas some newer versions produce internal compiler errors.
+You may use any version of Rust that works, but only `nightly-2022-08-14` is known
+to be compatible.
 
 ### Client
 
-0. Enter `/js`
-1. `npm install`
-2. `make`
-3. Deploy the server to host the client
+0. Enter `/client`
+1. `make` or, equivalently, `trunk build --release`
+2. Deploy the server to host the client
 
 ### Server
 
@@ -57,11 +56,12 @@ Both client and server rely on our custom game engine (which is present in the `
 #### Admin interface (optional)
 One notable feature of the engine is an (optional) admin interface. To build it:
 
-0. Enter `/engine/js`
-1. `make`
-2. Deploy the server to host the admin interface
-3. Go to `localhost:8080/admin`
-4. Paste the contents of `engine/game_server/src/auth.txt`, generated randomly by a build script, into the alert dialog
+0. Install NodeJS 14 or higher ([here](https://nodejs.org/en/download/))
+1. Enter `/engine/js`
+2. `make`
+3. Deploy the server to host the admin interface
+4. Go to `localhost:8080/admin`
+5. Paste the contents of `engine/game_server/src/auth.txt`, generated randomly by a build script, into the alert dialog
 
 ### Macros
 

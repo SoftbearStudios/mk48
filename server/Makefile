@@ -8,10 +8,10 @@ SCP_OPTS := $(SSH_OPTS) -C
 all: debug_core
 
 debug_core:
-	RUST_BACKTRACE=1 cargo run -- --debug-core debug -p 0 --database-read-only
+	RUST_BACKTRACE=1 cargo run -- --debug-core debug --max-bots 0 --database-read-only --http-port 8081
 
 debug_bots:
-	RUST_BACKTRACE=1 cargo run --release -- -p 50000 --database-read-only
+	RUST_BACKTRACE=1 cargo run --release -- --min-bots 50000 --database-read-only
 
 target/release/server:
 	#RUSTFLAGS="-Ctarget-feature=-retpoline,+mmx,+aes,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+popcnt" cargo build --release

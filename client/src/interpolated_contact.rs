@@ -4,9 +4,9 @@
 use crate::animation::Animation;
 use crate::audio::Audio;
 use crate::game::{Mk48Game, RendererLayer};
+use crate::particle::Mk48Particle;
 use client_util::audio::AudioPlayer;
 use client_util::context::Context;
-use client_util::renderer::particle::Particle;
 use common::contact::{Contact, ContactTrait};
 use common::entity::EntityId;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
@@ -14,6 +14,7 @@ use common::ticks::Ticks;
 use common_util::angle::Angle;
 use common_util::range::map_ranges;
 use glam::Vec2;
+use js_hooks::console_log;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
@@ -66,7 +67,7 @@ impl InterpolatedContact {
             .to_mps();
 
         if Some(self.view.id()) == debug_latency_entity_id {
-            client_util::console_log!(
+            console_log!(
                 "err: {:.2}, pos: {:.2}, dir: {:.2}, vel: {:.2}",
                 self.error,
                 positional_inaccuracy.sqrt(),
@@ -147,7 +148,7 @@ impl InterpolatedContact {
                     // Add muzzle flash particles.
                     let amount = 10;
                     for i in 0..amount {
-                        layer.add(Particle {
+                        layer.add(Mk48Particle {
                             position: armament_transform.position
                                 + direction_vector * forward_offset,
                             velocity: boat_velocity
