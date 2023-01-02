@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::Ctw;
+use crate::frontend::use_outbound_enabled;
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
-use yew::{html, Callback, Children, Properties};
+use yew::{html, Callback, Children, Html, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct LinkProps {
@@ -27,7 +27,7 @@ pub fn link(props: &LinkProps) -> Html {
 		"#
     );
 
-    let outbound_enabled = Ctw::use_outbound_enabled();
+    let outbound_enabled = use_outbound_enabled();
     let outbound = props.href.starts_with("http");
     let target = if (props.new_tab || outbound) && outbound_enabled {
         Some(AttrValue::Static("_blank"))

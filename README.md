@@ -5,7 +5,7 @@
   <img src='https://img.shields.io/badge/Mk48.io-%23announcements-blue.svg' alt='Mk48.io Discord' />
 </a>
 
-![Logo](/js/public/logo-712.png)
+![Logo](/client/logo-712.png)
 
 [Mk48.io](https://mk48.io) is an online multiplayer naval combat game, in which you take command of a ship and sail your way to victory. Watch out for torpedoes!
 
@@ -15,8 +15,11 @@
 
 ### Tools
 
-0. Install Rust Nightly (install [rustup](https://rustup.rs/), then `rustup override set nightly-2022-08-14`)
-1. Install `trunk` (`cargo install --locked trunk`)
+0. Install `rustup` ([see instructions here](https://rustup.rs/))
+1. Install Rust Nightly (`rustup override set nightly-2022-08-14`)
+2. Add WebAssembly target (`rustup target add wasm32-unknown-unknown`)
+3. Install `trunk` (`cargo install --locked trunk`, install `gcc` first if it complains about missing `cc`)
+4. Optionally, install the `make` command
 
 You may use any version of Rust that works, but only `nightly-2022-08-14` is known
 to be compatible.
@@ -31,7 +34,13 @@ to be compatible.
 
 0. Enter `/server`
 1. `make` to build and run a test server
-2. Navigate to `localhost:8080`
+2. Navigate to `localhost:8081` (or whatever port is printed in the console)
+
+### HTTPS
+
+If you build the server in `--release` mode, it will force HTTPS using a self-signed certificate.
+
+Optionally, specify `--certificate-path` and `--private-key-path` to use a trusted CA certificate (e.g. acquired via [Let's Encrypt](https://letsencrypt.org/)). The server will periodically check for and load renewed certificates.
 
 ## Developing
 
@@ -40,9 +49,8 @@ is to modify the game, you may want to read more :)
 
 ### Entity data
 
-Entities (ships, weapons, aircraft, collectibles, obstacles, decoys, etc.) are defined in `data/entities-raw.json`. This
-file is, however, preprocessed by `node data/preprocess.mjs` into `js/src/data/entities.json` which is compiled into both the
-client and server. It comes with the repository, but must be reprocessed if the raw data is changed.
+Entities (ships, weapons, aircraft, collectibles, obstacles, decoys, etc.) are defined at the bottom of
+`common/src/entity/_type.rs`.
 
 ### Entity textures
 

@@ -322,15 +322,12 @@ impl Entity {
             Altitude(2)
         } else {
             Altitude::ZERO
-        };
+        }
+        .max(self.altitude);
 
         // If submerged, colliding with terrain should be relatively temporary (boats should simply
         // rise up rather than taking damage) so it is ignored.
-        t.collides_with(
-            self.dimension_transform(),
-            self.altitude.max(threshold),
-            delta_seconds,
-        )
+        t.collides_with(self.dimension_transform(), threshold, delta_seconds)
     }
 
     /// Updates the aim of all turrets, assuming delta_seconds have elapsed.
@@ -679,18 +676,12 @@ mod tests {
 
     #[test]
     fn collides_with() {
-        unsafe {
-            EntityType::init();
-        }
         assert!(Entity::new(EntityType::Zubr, None)
             .collides_with(&Entity::new(EntityType::Crate, None), 0.0));
     }
 
     #[test]
     fn closest_point_on_keep_to() {
-        unsafe {
-            EntityType::init();
-        }
         assert_eq!(
             Entity::new(EntityType::Zubr, None)
                 .closest_point_on_keel_to(Vec2::new(-100.0, 0.0), 0.5),
@@ -700,9 +691,6 @@ mod tests {
 
     #[test]
     fn eq() {
-        unsafe {
-            EntityType::init();
-        }
         let mut e1 = Entity::new(EntityType::Zubr, None);
         let e2 = Entity::new(EntityType::Zubr, None);
         e1.id = EntityId::new(5).unwrap(); // make sure IDs are different.

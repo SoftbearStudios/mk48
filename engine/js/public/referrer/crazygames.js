@@ -6,6 +6,7 @@ if (!('CrazyGames' in window)) {
             window.postMessage(msg, '*');
         }
         const sdk = window.CrazyGames.CrazySDK.getInstance();
+        let rewarded = false;
         sdk.init();
         sdk.sdkGameLoadingStart();
         sdk.addEventListener("adStarted", () => {
@@ -15,13 +16,24 @@ if (!('CrazyGames' in window)) {
         sdk.addEventListener("adFinished", () => {
             send('unmute');
             send('unpause');
+            if (rewarded) {
+                rewarded = false;
+                send('tallyRewardedAd');
+            } else {
+                send('tallyVideoAd');
+            }
         });
         sdk.addEventListener("adError", () => {
             send('unmute');
             send('unpause');
+            if (rewarded) {
+                rewarded = false;
+                send('cancelRewardedAd');
+            }
         });
         sdk.addEventListener("bannerRendered", (event) => {
             console.log(`Banner for container ${event.containerId} has been rendered!`);
+            send('tallyBannerAd');
         });
         sdk.addEventListener("bannerError", (event) => {
             console.log(`Banner render error: ${event.error}`);
@@ -53,16 +65,21 @@ if (!('CrazyGames' in window)) {
                         requestBanner("banner_bottom", 728, 90);
                     } else {
                         sdk.gameplayStop();
-                        sdk.requestAd();
+                        sdk.requestAd("midgame");
                     }
                     break;
                 case "playing":
                     sdk.clearAllBanners();
                     sdk.gameplayStart();
                     break;
+                case "requestRewardedAd":
+                    sdk.requestAd("rewarded");
+                    rewarded = true;
+                    break;
             }
         });
         send("snippetLoaded");
+        send("enableRewardedAds");
     };
     document.body.appendChild(script);
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use stylist::yew::styled_component;
-use yew::{html, Children, Properties};
+use yew::{html, Children, Html, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct MeterProps {

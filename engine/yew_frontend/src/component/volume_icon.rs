@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::translation::{t, Translation};
-use crate::Ctw;
+use crate::frontend::{use_change_common_settings_callback, use_ctw};
+use crate::translation::{use_translation, Translation};
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
-use yew::{function_component, html, Callback, Properties};
+use yew::{function_component, html, Callback, Html, Properties};
 use yew_icons::{Icon, IconId};
 
 #[derive(PartialEq, Properties)]
@@ -16,11 +16,11 @@ pub struct VolumeIconProps {
 
 #[function_component(VolumeIcon)]
 pub fn volume_icon(props: &VolumeIconProps) -> Html {
-    let volume = Ctw::use_ctw().setting_cache.volume;
+    let volume = use_ctw().setting_cache.volume;
     let current = ((volume * 2.0).round() as u8).clamp(0, 2);
 
     let onclick = {
-        let change_common_settings_callback = Ctw::use_change_common_settings_callback();
+        let change_common_settings_callback = use_change_common_settings_callback();
 
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
@@ -36,7 +36,7 @@ pub fn volume_icon(props: &VolumeIconProps) -> Html {
     };
 
     let oncontextmenu = {
-        let change_common_settings_callback = Ctw::use_change_common_settings_callback();
+        let change_common_settings_callback = use_change_common_settings_callback();
 
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
@@ -57,8 +57,17 @@ pub fn volume_icon(props: &VolumeIconProps) -> Html {
         2 => (IconId::BootstrapVolumeUpFill, "opacity: 1;"),
         _ => unreachable!(),
     };
+    let t = use_translation();
 
     html! {
-        <Icon {icon_id} title={t().settings_volume_hint()} {onclick} {oncontextmenu} width={props.size.clone()} height={props.size.clone()} style={format!("color: white; cursor: pointer; user-select: none; vertical-align: bottom; {}", style)}/>
+        <Icon
+            {icon_id}
+            title={t.settings_volume_hint()}
+            {onclick}
+            {oncontextmenu}
+            width={props.size.clone()}
+            height={props.size.clone()}
+            style={format!("color: white; cursor: pointer; user-select: none; vertical-align: bottom; {}", style)}
+        />
     }
 }

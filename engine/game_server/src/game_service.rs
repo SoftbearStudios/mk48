@@ -91,6 +91,16 @@ pub trait GameArenaService: 'static + Unpin + Sized + Send + Sync {
         let _ = player_tuple;
     }
 
+    fn chat_command(
+        &mut self,
+        command: &str,
+        player_id: PlayerId,
+        players: &PlayerRepo<Self>,
+    ) -> Option<String> {
+        let _ = (command, player_id, players);
+        None
+    }
+
     /// Gets a client a.k.a. real player's [`GameUpdate`].
     /// Note that mutable borrowing of the player_tuple is not permitted (will panic).
     ///

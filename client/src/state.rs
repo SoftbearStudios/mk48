@@ -3,7 +3,6 @@
 
 use crate::animation::Animation;
 use crate::interpolated_contact::InterpolatedContact;
-use crate::trail::TrailSystem;
 use client_util::apply::Apply;
 use common::contact::Contact;
 use common::death_reason::DeathReason;
@@ -20,7 +19,6 @@ pub struct Mk48State {
     pub entity_id: Option<EntityId>,
     pub score: u32,
     pub terrain: Terrain,
-    pub trails: TrailSystem,
     pub world_radius: f32,
     terrain_reset: bool,
 }
@@ -34,7 +32,6 @@ impl Default for Mk48State {
             entity_id: None,
             score: 0,
             terrain: Terrain::default(),
-            trails: TrailSystem::default(),
             // Keep border off splash screen by assuming radius.
             world_radius: 10000.0,
             terrain_reset: false,

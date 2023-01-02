@@ -14,11 +14,11 @@ use stylist::StyleSource;
 use yew::{html, html_nested, Html};
 use yew_frontend::component::link::Link;
 use yew_frontend::dialog::dialog::Dialog;
-use yew_frontend::translation::t;
+use yew_frontend::translation::use_translation;
 
 #[styled_component(ShipsDialog)]
 pub fn ships_dialog() -> Html {
-    let t = t();
+    let t = use_translation();
     let table_style = css!(
         r#"
         border-spacing: 1em;
@@ -89,7 +89,7 @@ fn entity_card(
                             <li>{format!("Max Depth: {}m", data.depth.to_meters() as u16)}</li>
                         }
                         if data.lifespan != Ticks::ZERO {
-                            <li>{format!("Lifespan: {}s", data.lifespan.to_secs() as u16)}</li>
+                            <li>{format!("Lifespan: {:.1}s", data.lifespan.to_secs())}</li>
                         }
                         if data.reload != Ticks::ZERO {
                             <li>{format!("Reload: {:.1}s", data.reload.to_secs())}</li>
@@ -104,7 +104,7 @@ fn entity_card(
                             <li>{format!("Torpedo Resistance: {}%", (data.torpedo_resistance * 100.0) as u16)}</li>
                         }
                         if data.stealth != 0.0 {
-                            <li>{format!("Torpedo Resistance: {}%", (data.stealth * 100.0) as u16)}</li>
+                            <li>{format!("Stealth: {}%", (data.stealth * 100.0) as u16)}</li>
                         }
                         if data.npc {
                             <li>{"NPC only"}</li>

@@ -41,7 +41,7 @@ impl_vertex_floats!(f32, 1);
 impl_vertex_floats!(Vec2, 2);
 impl_vertex_floats!(Vec3, 3);
 
-// These is normally 16 byte aligned (breaking derive Pod) but not with glam's scalar-math feature.
+// These are normally 16 byte aligned (breaking derive Pod) but not with glam's scalar-math feature.
 impl_vertex_floats!(Vec4, 4);
 impl_vertex_floats!(Mat2, 4);
 

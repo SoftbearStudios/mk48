@@ -6,8 +6,13 @@ edition = "2021"
 authors = ["Softbear, Inc."]
 license = "AGPL-3.0-or-later"
 
+[features]
+shadow = [ "renderer/depth_texture" ]
+
 [dependencies]
+base64 = "0.13"
 bytemuck = "1.9"
-glam = "0.18"
-renderer = { path = "../renderer" }
 engine_macros = { path = "../engine_macros" }
+glam = "0.18"
+js_hooks = { path = "../js_hooks" }
+renderer = { path = "../renderer" }

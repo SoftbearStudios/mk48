@@ -19,7 +19,7 @@ impl Mk48Game {
     /// Finds the best armament (i.e. the one that will be fired if the mouse is clicked).
     /// Armaments are scored by a combination of distance and angle to target.
     pub fn find_best_armament(
-        &self,
+        fire_rate_limiter: &FireRateLimiter,
         player_contact: &Contact,
         angle_limit: bool,
         mouse_position: Vec2,
@@ -41,7 +41,7 @@ impl Mk48Game {
 
                 // Don't limit dredger fire rate so players with bad ping can build faster.
                 // TODO fix ping reducing fire rate for all weapons.
-                if !((player_contact.reloads()[i] && self.fire_rate_limiter.is_ready(i as u8))
+                if !((player_contact.reloads()[i] && fire_rate_limiter.is_ready(i as u8))
                     || armament_entity_data.sub_kind == EntitySubKind::Depositor)
                 {
                     // Recently fired, shouldn't try to fire again (server will just block).
@@ -112,7 +112,7 @@ impl Mk48Game {
         contacts: &HashMap<EntityId, InterpolatedContact>,
         core_state: &CoreState,
         player_position: Vec2,
-        airborne_particles: &mut Mk48ParticleLayer,
+        airborne_particles: &mut Mk48ParticleLayer<true>,
     ) -> f32 {
         let mut volume = 0.0;
 

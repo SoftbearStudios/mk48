@@ -2,25 +2,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::ui::Mk48Route;
-use yew::{function_component, html};
+use yew::{function_component, html, Html};
 use yew_frontend::component::route_link::RouteLink;
 use yew_frontend::dialog::dialog::Dialog;
-use yew_frontend::frontend::Ctw;
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::frontend::use_game_id;
+use yew_frontend::translation::{use_translation, Translation};
 
 #[function_component(HelpDialog)]
 pub fn help_dialog() -> Html {
-    let game_id = Ctw::use_game_id();
+    let t = use_translation();
+    let game_id = use_game_id();
     let game_name = game_id.name();
     html! {
-        <Dialog title={t().help_title(game_id)}>
+        <Dialog title={t.help_title(game_id)}>
 
             <h2>{"Basics"}</h2>
 
             <p>
                 {format!("{} is a multiplayer naval combat game. ", game_name)}
                 {"You start off a small ship, and consume crates to increase your score (to level up your ship). "}
-                {"While a small amount of crates spawn naturally, sinking other ships directly increases your score and spawns many more crates."}
+                {"While a small amount of crates spawn naturally, sinking other ships directly increases your score and spawns many more collectibles."}
             </p>
 
             <h2>{"Movement"}</h2>
@@ -28,60 +29,54 @@ pub fn help_dialog() -> Html {
             <p>{"There are four ways to move your ship:"}</p>
 
             <ol>
-                <li><b>{"Left click and hold"}</b>{" outside your ship's inner ring"}</li>
-                <li><b>{"Right click"}</b>{" (and optionally hold) outside your ship's inner
-                ring "}<i>{"(this is the recommended way to move)"}</i></li>
-                <li><b>{"Tap and hold"}</b>{" (on touch screen) outside your ship's inner ring"}</li>
+                <li><b>{"Left click and hold"}</b></li>
+                <li><b>{"Right click"}</b>{" and optionally hold "}<i>{"(this is the recommended way to move)"}</i></li>
+                <li><b>{"Tap and hold"}</b>{" (on touch screen)"}</li>
                 <li>{"Use the "}<b>{"WASD"}</b>{" or "}<b>{"arrow"}</b>{" keys to move, and 'x' key to stop"}</li>
             </ol>
 
             <p>
-                {"Once your ship is moving in a direction, it will keep moving, to let you focus on using your weapons."}</p>
+                {"Once your ship is moving in a direction, it will keep moving, so you can focus on using your weapons."}</p>
 
             <p>
                 {"If using mouse controls, your ship will turn to point towards your mouse. "}
-                {"You can control the speed of your ship by using your mouse position between the two rings as a throttle. "}
-                {"If your mouse is outside the outer ring, your ship will increase to maximum speed."}
+                {"You can control the speed of your ship by varying the distance between your mouse and your ship. "}
             </p>
 
             <h2>{"Ships"}</h2>
 
             <p>
-                {"Just like in real life, there are many different types of ships, each with different advantages."}
+                {"Just like in real life, there are many different types of ships, each with different advantages:"}
             </p>
 
             <ol>
-                <li><b>{"Motor-torpedo boats"}</b>{" are the type of most level one ships,
-                generally having multiple torpedoes and possibly guns."}</li>
-                <li><b>{"Corvettes"}</b>{" and "}<b>{"Destroyers"}</b>{" are larger boats that carry more weapons, including
+                <li><b>{"Motor-torpedo boats"}</b>{" occupy the lower levels and generally carry
+                multiple torpedoes and possibly guns."}</li>
+                <li><b>{"Corvettes"}</b>{" and "}<b>{"Destroyers"}</b>{" are larger and carry more weapons, including
                 slightly more powerful guns."}</li>
                 <li><b>{"Cruisers"}</b>{" are a compromise between destroyers and battleships."}</li>
                 <li><b>{"Battleships"}</b>{" and "}<b>{"Dreadnoughts"}</b>{" are very formidable ships, having extremely
-                powerful main cannons. They may carry a minimal amount of planes for submarine defense."}</li>
+                powerful main cannons. They may carry a minimal complement of aircraft for submarine defense."}</li>
                 <li><b>{"Submarines"}</b>{" travel underwater, making them immune to certain
                 types of weapons, but must surface to fire certain types of weapons."}</li>
                 <li><b>{"Hovercraft"}</b>{" can travel on land and water."}</li>
-                <li><b>{"Rams"}</b>{" are a special ship type that is designed to ram other
-                ships. They take very little damage in the process, and inflict extra damage to
-                the other ship."}</li>
-                <li><b>{"Dredgers"}</b>{" have the special ability to modify the land. New land
+                <li><b>{"Rams"}</b>{" are specially designed to ram other ships."}</li>
+                <li><b>{"Dredgers"}</b>{" have the ability to modify the land. New land
                 can be created by clicking in front of them, and old land can be destroyed
-                by driving over it."}</li>
-                <li><b>{"Icebreakers"}</b>{" can plow through ice sheets without taking damage."}</li>
-                <li><b>{"Minelayers"}</b>{" dispense long-lasting mines that can help guard a
-                small area."}</li>
-                <li><b>{"Aircraft carriers"}</b>{" command a squadron of planes to bomb enemy ships! Planes will follow your mouse cursor."}</li>
+                by sailing over it."}</li>
+                <li><b>{"Icebreakers"}</b>{" can plow through ice and snow without taking damage."}</li>
+                <li><b>{"Minelayers"}</b>{" dispense magnetic mines that can help guard a small area."}</li>
+                <li><b>{"Aircraft carriers"}</b>{" command a squadron of aircraft which follow your mouse cursor to attack enemy ships!"}</li>
             </ol>
 
             <p>
-                {"Once you earn enough points, you are able to "}<b>{"upgrade"}</b>{" your ship to the next level. "}
-                {"The upgrade choices are shown in top-middle of the screen when an upgrade is available. "}
+                {"Once you earn enough points, you can pick an "}<b>{"upgrade"}</b>{" from the top-middle of the screen. "}
                 {"Be careful when upgrading, as becoming a larger ship may lead to crashing into land "}
-                {"or a reduction in mobility if the water is too shallow."}
+                {"or reduced mobility if the water is too shallow."}
             </p>
 
             <p>
-                {"Enemies are more likely to detect larger ships. However, some modern ships have a property known as "}
+                {"Enemies are more likely to detect larger ships. However, a few ships have a property known as "}
                 <b>{"stealth"}</b>
                 {" to help you evade detection."}
             </p>
@@ -97,7 +92,7 @@ pub fn help_dialog() -> Html {
             <p>
                 {"There are multiple different types of weapons available on various ships. "}
                 {"In general, weapons are fired by clicking in the appropriate direction "}
-                {"(although the Space key can also be used)."}
+                {"(although the Space or 'e' keys can also be used)."}
             </p>
 
             <ol>
@@ -107,13 +102,15 @@ pub fn help_dialog() -> Html {
 
                 <li><b>{"Rockets"}</b>{" are like missiles but lack guidance."}</li>
 
+                <li><b>{"Rocket torpedoes"}</b>{" deploy a torpedo when in the vicinity of an enemy submarine."}</li>
+
                 <li><b>{"SAMs"}</b>{" (surface-to-air missiles) can shoot down aircraft and missiles."}</li>
 
-                <li><b>{"Gun turrets"}</b>{" shoot very fast shells that do moderate damage. Once fired, a shell is without guidance."}</li>
+                <li><b>{"Gun turrets"}</b>{" shoot very fast shells that do moderate damage."}</li>
 
-                <li><b>{"Depth charges"}</b>{" are stationary weapons that can be deployed against persuing ships or submerged submarines."}</li>
+                <li><b>{"Depth charges"}</b>{" are stationary weapons that can be deployed against pursuing ships or submerged submarines."}</li>
 
-                <li><b>{"Mines"}</b>{" are like depth charges but last much longer and are more powerful."}</li>
+                <li><b>{"Mines"}</b>{" are like depth charges but last much longer and are more damaging."}</li>
 
                 <li><b>{"Aircraft"}</b>{" fly towards your mouse cursor, and automatically deploy weapons of their own."}</li>
 
@@ -124,7 +121,7 @@ pub fn help_dialog() -> Html {
                 {"Once fired, all weapons take some time to "}
                 <b>{"reload"}</b>
                 {". Each type of weapon and each turret reload independently. "}
-                {"Consuming crates speeds up reloading, while using weapons underwater slows it down."}
+                {"Consuming crates speeds up reloading."}
             </p>
 
             <h2>{"Sensors"}</h2>
@@ -153,8 +150,8 @@ pub fn help_dialog() -> Html {
             <h2>{"Fleets"}</h2>
 
             <p>
-                {"You can join up to five other players to form a fleet, using the panel in the top left corner of the screen. "}
-                {"Once you have a fleet, other players can request to join it. You can then approve or deny them. "}
+                {"You can join other players to form a fleet, using the panel in the top left corner of the screen. "}
+                {"As the creator of a fleet, you can accept or deny those who request to join it. "}
                 {"Members of a fleet cannot hurt each other with weapons. "}
                 {"Importantly, you cannot request to join a fleet until you are close enough to see one of its members, and the fleet has slots remaining."}
             </p>
@@ -162,7 +159,7 @@ pub fn help_dialog() -> Html {
             <h2>{"The Arctic"}</h2>
 
             <p>
-                {"Experienced players may attempt to explore the Arctic biome, located to the far north of the world. "}
+                {"Experienced players may attempt to explore the Arctic biome, located far North. "}
                 {"It is important to understand that Arctic has three separate types of terrain, snow, ice sheet, and cracked ice sheet. "}
                 {"Snow, which appears white and smooth, will damage any ship upon contact. "}
                 {"The two types of ice sheet will slow and damage most ships, the difference being that non-icebreakers cannot destroy non-cracked ice sheet. "}

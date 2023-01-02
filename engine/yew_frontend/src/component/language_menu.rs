@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::event::event_target;
-use crate::translation::{t, Translation};
-use crate::Ctw;
+use crate::frontend::{use_change_common_settings_callback, use_ctw};
+use crate::translation::{use_translation, Translation};
 use core_protocol::id::LanguageId;
 use gloo::timers::callback::Timeout;
 use stylist::yew::styled_component;
@@ -13,7 +13,7 @@ use yew_icons::{Icon, IconId};
 
 #[styled_component(LanguageMenu)]
 pub fn language_menu() -> Html {
-    let ctw = Ctw::use_ctw();
+    let ctw = use_ctw();
     // Open if [`Some`], closed otherwise. The [`Some`] variant stores a timer to close it automatically.
     let menu_open = use_state::<Option<Timeout>, _>(|| None);
 
@@ -62,7 +62,7 @@ pub fn language_menu() -> Html {
     };
 
     let handle_change = {
-        let change_common_settings_callback = Ctw::use_change_common_settings_callback();
+        let change_common_settings_callback = use_change_common_settings_callback();
         let menu_open = menu_open.clone();
 
         move |event: Event| {
@@ -80,6 +80,8 @@ pub fn language_menu() -> Html {
             menu_open.set(None);
         }
     };
+
+    let t = use_translation();
 
     html! {
         <div class={div_css_class}>
@@ -99,7 +101,7 @@ pub fn language_menu() -> Html {
                     icon_id={IconId::BootstrapGlobe2}
                     width={String::from("2rem")}
                     height={String::from("1.8rem")}
-                    title={t().settings_language_hint()}
+                    title={t.settings_language_hint()}
                     onclick={handle_open}
                     style={"cursor: pointer;"}
                 />

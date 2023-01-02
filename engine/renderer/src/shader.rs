@@ -12,6 +12,11 @@ use std::mem;
 use std::rc::Rc;
 use web_sys::{WebGlProgram, WebGlShader, WebGlUniformLocation};
 
+struct CachedUniform {
+    location: Option<WebGlUniformLocation>,
+    texture_index: usize,
+}
+
 /// References a glsl shader. As cheap to clone as an [`Rc`].
 #[derive(Clone)]
 pub struct Shader(Rc<ShaderInner>);
@@ -23,13 +28,14 @@ struct ShaderInner {
     link_done: Cell<bool>,
     // Use a LinearMap because there are relatively few uniforms.
     // TODO make a macro to convert uniform names to indices in a vec.
-    uniform_cache: RefCell<LinearMap<&'static str, Option<WebGlUniformLocation>>>,
+    uniform_cache: RefCell<LinearMap<&'static str, CachedUniform>>,
+    texture_index_alloc: Cell<usize>,
 }
 
 impl Shader {
     /// Compiles a new glsl shader from sources. Attribute locations are indexed exactly according
     /// to their index in the input.
-    pub fn new<C>(renderer: &Renderer<C>, vertex: &str, fragment: &str) -> Self {
+    pub fn new(renderer: &Renderer, vertex: &str, fragment: &str) -> Self {
         let gl = &renderer.gl;
         let vert_shader = compile_shader(gl, Gl::VERTEX_SHADER, vertex);
         let frag_shader = compile_shader(gl, Gl::FRAGMENT_SHADER, fragment);
@@ -43,18 +49,19 @@ impl Shader {
             frag_shader,
             link_done: Default::default(),
             uniform_cache: Default::default(),
+            texture_index_alloc: Cell::new(1), // 0 is reserved for creating textures.
         }))
     }
 
-    /// Binds the shader for handling subsequent draw calls.
-    /// Returns None if the shader is still compiling asynchronously.
-    pub fn bind<'a, C>(&'a self, renderer: &'a Renderer<C>) -> Option<ShaderBinding<'a>> {
-        let gl = &renderer.gl;
+    /// Binds the [`Shader`] for handling subsequent draw calls. Returns `None` if the [`Shader`] is
+    /// still compiling asynchronously.
+    #[must_use]
+    pub fn bind<'a>(&'a self, renderer: &'a Renderer) -> Option<ShaderBinding<'a>> {
         let khr = renderer.khr.as_ref();
         if !self.0.link_done.get() {
             if self
                 .0
-                .query_link_status(gl, khr)
+                .query_link_status(&renderer.gl, khr)
                 .unwrap_or_else(|e| panic!("{}", e))
             {
                 self.0.link_done.set(true);
@@ -62,17 +69,17 @@ impl Shader {
                 return None;
             }
         }
-        Some(ShaderBinding::new(gl, &self.0))
+        Some(ShaderBinding::new(renderer, &self.0))
     }
 }
 
 impl ShaderInner {
-    /// uniform gets the (cached) location of a named uniform.
-    fn uniform<'a>(
+    fn location_inner<'a>(
         &'a self,
         gl: &Gl,
         name: &'static str,
-    ) -> RefMut<'a, Option<WebGlUniformLocation>> {
+        texture: bool,
+    ) -> RefMut<'a, CachedUniform> {
         // Pre-borrow because using self in closure borrows all of self.
         let program = &self.program;
         let r = self.uniform_cache.borrow_mut();
@@ -80,11 +87,26 @@ impl ShaderInner {
         // Map mutable ref to avoid indexing again.
         RefMut::map(r, |r| {
             r.entry(name).or_insert_with(|| {
-                let uniform = gl.get_uniform_location(program, name);
-                if uniform.is_none() && cfg!(debug_assertions) {
-                    console_log!("warning: uniform {} does not exist or is not in use", name);
+                let location = gl.get_uniform_location(program, name);
+                let texture_index = if location.is_some() {
+                    if texture {
+                        let i = self.texture_index_alloc.get();
+                        self.texture_index_alloc.set(i + 1);
+                        i
+                    } else {
+                        usize::MAX // Set to invalid (not a texture).
+                    }
+                } else {
+                    if cfg!(debug_assertions) {
+                        console_log!("warning: uniform {} does not exist or is not in use", name);
+                    }
+                    usize::MAX // Set to invalid (doesn't exist or not in use).
+                };
+
+                CachedUniform {
+                    location,
+                    texture_index,
                 }
-                uniform
             })
         })
     }
@@ -112,7 +134,7 @@ impl ShaderInner {
             fn fmt_err(e: Option<String>, prefix: &str) -> String {
                 let mut e = e.unwrap_or_default();
                 if !e.is_empty() {
-                    e = prefix.to_string() + e.trim_end_matches("\x00");
+                    e = prefix.to_string() + e.trim_end_matches('\x00');
                 }
                 e
             }
@@ -125,121 +147,366 @@ impl ShaderInner {
     }
 }
 
+/// A type which can be set as a uniform in a [`ShaderBinding`].
+pub trait Uniform {
+    #[doc(hidden)]
+    fn uniform(self, shader: &ShaderBinding, name: &'static str);
+}
+
+impl Uniform for &Texture {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.shader.location_inner(shader.gl, name, true);
+        if u.location.is_none() {
+            return; // Unused or doesn't exist.
+        }
+
+        let index = u.texture_index;
+        assert!(u.texture_index < 32, "using too many textures");
+
+        shader.gl.uniform1i(u.location.as_ref(), index as i32);
+        let mask = 1u32 << index;
+
+        // Already bound unbind it.
+        if shader.bound_textures.get() & mask != 0 {
+            let cube = shader.bound_texture_cubes.get() & mask != 0;
+            TextureBinding::drop_raw_parts(shader.renderer, index, cube);
+        }
+
+        // Use a bitset instead of a Vec<TextureBinding>.
+        mem::forget(self.bind(shader.renderer, index));
+
+        // Instead set into bitset.
+        shader
+            .bound_textures
+            .set(shader.bound_textures.get() | mask);
+        if self.typ().cube() {
+            shader
+                .bound_texture_cubes
+                .set(shader.bound_texture_cubes.get() | mask);
+        }
+    }
+}
+
+impl Uniform for f32 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform1f(u.as_ref(), self);
+    }
+}
+
+impl Uniform for Vec2 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform2f(u.as_ref(), self.x, self.y);
+    }
+}
+
+impl Uniform for Vec3 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform3f(u.as_ref(), self.x, self.y, self.z);
+    }
+}
+
+impl Uniform for Vec4 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4f(u.as_ref(), self.x, self.y, self.z, self.w);
+    }
+}
+
+impl Uniform for &Mat2 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix2fv_with_f32_array(u.as_ref(), false, &self.to_cols_array());
+    }
+}
+
+impl Uniform for &Mat3 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix3fv_with_f32_array(u.as_ref(), false, &self.to_cols_array());
+    }
+}
+
+impl Uniform for &Mat4 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix4fv_with_f32_array(u.as_ref(), false, &self.to_cols_array());
+    }
+}
+
+impl Uniform for i32 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform1i(u.as_ref(), self);
+    }
+}
+
+impl Uniform for IVec2 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform2i(u.as_ref(), self.x, self.y);
+    }
+}
+
+impl Uniform for IVec3 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform3i(u.as_ref(), self.x, self.y, self.z);
+    }
+}
+
+impl Uniform for IVec4 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4i(u.as_ref(), self.x, self.y, self.z, self.w);
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl Uniform for u32 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform1ui(u.as_ref(), self);
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl Uniform for UVec2 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform2ui(u.as_ref(), self.x, self.y);
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl Uniform for UVec3 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader.gl.uniform3ui(u.as_ref(), self.x, self.y, self.z);
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl Uniform for UVec4 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4ui(u.as_ref(), self.x, self.y, self.z, self.w);
+    }
+}
+
+impl Uniform for bool {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        (self as i32).uniform(shader, name);
+    }
+}
+
+impl Uniform for BVec2 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        IVec2::select(self, IVec2::ONE, IVec2::ZERO).uniform(shader, name);
+    }
+}
+
+impl Uniform for BVec3 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        IVec3::select(self, IVec3::ONE, IVec3::ZERO).uniform(shader, name);
+    }
+}
+
+impl Uniform for BVec4 {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        IVec4::select(self, IVec4::ONE, IVec4::ZERO).uniform(shader, name);
+    }
+}
+
+impl<const N: usize> Uniform for &[f32; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform1fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Vec2; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform2fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Vec3; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform3fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Vec4; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Mat2; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix2fv_with_f32_array(u.as_ref(), false, bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Mat3; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix3fv_with_f32_array(u.as_ref(), false, bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[Mat4; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform_matrix4fv_with_f32_array(u.as_ref(), false, bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[i32; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform1iv_with_i32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[IVec2; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform2iv_with_i32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[IVec3; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform3iv_with_i32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+impl<const N: usize> Uniform for &[IVec4; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4iv_with_i32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl<const N: usize> Uniform for &[u32; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform1uiv_with_u32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl<const N: usize> Uniform for &[UVec2; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform2uiv_with_u32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl<const N: usize> Uniform for &[UVec3; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform3uiv_with_u32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
+#[cfg(feature = "webgl2")]
+impl<const N: usize> Uniform for &[UVec4; N] {
+    fn uniform(self, shader: &ShaderBinding, name: &'static str) {
+        let u = shader.location(name);
+        shader
+            .gl
+            .uniform4uiv_with_u32_array(u.as_ref(), bytemuck::cast_slice(self));
+    }
+}
+
 /// A bound [`Shader`] that can you can draw with.
 pub struct ShaderBinding<'a> {
-    gl: &'a Gl,
+    renderer: &'a Renderer,
+    gl: &'a Gl, // Makes uniforms calls shorter.
     shader: &'a ShaderInner,
-    bound_textures: Cell<u32>, // bitset
+    bound_textures: Cell<u32>,      // bitset
+    bound_texture_cubes: Cell<u32>, // bitset that is a subset of bound_textures.
 }
 
 impl<'a> ShaderBinding<'a> {
-    fn new(gl: &'a Gl, shader: &'a ShaderInner) -> Self {
+    fn new(renderer: &'a Renderer, shader: &'a ShaderInner) -> Self {
+        let gl = &renderer.gl;
+
         // Make sure binding was cleared.
         debug_assert!(gl.get_parameter(Gl::CURRENT_PROGRAM).unwrap().is_null());
 
         gl.use_program(Some(&shader.program));
         Self {
-            gl,
+            renderer,
+            gl: &renderer.gl,
             shader,
             bound_textures: Cell::new(0),
+            bound_texture_cubes: Cell::new(0),
         }
     }
 
-    /// Sets a `texture2D`/`sampler2D` uniform at an `index` in range `0..32`.
-    pub fn uniform_texture(&self, name: &'static str, texture: &Texture, index: usize) {
-        self.uniform1i(name, index as i32);
-
-        let mask = 1u32 << index;
-
-        // Already bound unbind it.
-        if self.bound_textures.get() & mask != 0 {
-            TextureBinding::drop_raw_parts(self.gl, index);
-        }
-
-        // Can't keep borrow of gl.
-        mem::forget(texture.bind(self.gl, index));
-
-        // Instead set into bitset.
-        self.bound_textures.set(self.bound_textures.get() | mask);
+    /// Gets the (cached) location of a named uniform. TODO take and assert size.
+    fn location(&self, name: &'static str) -> RefMut<'a, Option<WebGlUniformLocation>> {
+        RefMut::map(self.shader.location_inner(self.gl, name, false), |r| {
+            &mut r.location
+        })
     }
 
-    /// Sets an `int` uniform.
-    fn uniform1i(&self, name: &'static str, v: i32) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl.uniform1i(u.as_ref(), v);
-    }
-
-    /// Sets a `float` uniform.
-    pub fn uniform1f(&self, name: &'static str, v: f32) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl.uniform1f(u.as_ref(), v);
-    }
-
-    /// Sets a `vec2` uniform.
-    pub fn uniform2f(&self, name: &'static str, v: Vec2) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl.uniform2f(u.as_ref(), v.x, v.y);
-    }
-
-    /// Sets a `vec3` uniform.
-    pub fn uniform3f(&self, name: &'static str, v: Vec3) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl.uniform3f(u.as_ref(), v.x, v.y, v.z);
-    }
-
-    /// Sets a `vec4` uniform.
-    pub fn uniform4f(&self, name: &'static str, v: Vec4) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl.uniform4f(u.as_ref(), v.x, v.y, v.z, v.w);
-    }
-
-    /// Sets an array of `float` uniforms.
-    pub fn uniform1fs(&self, name: &'static str, v: &[f32]) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform1fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(v));
-    }
-
-    /// Sets an array of `vec3` uniforms.
-    pub fn uniform2fs(&self, name: &'static str, v: &[Vec2]) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform2fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(v));
-    }
-
-    /// Sets an array of `vec3` uniforms.
-    pub fn uniform3fs(&self, name: &'static str, v: &[Vec3]) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform3fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(v));
-    }
-
-    /// Sets an array of `vec4` uniforms.
-    pub fn uniform4fs(&self, name: &'static str, v: &[Vec4]) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform4fv_with_f32_array(u.as_ref(), bytemuck::cast_slice(v));
-    }
-
-    /// Sets a `mat2` uniform.
-    pub fn uniform_matrix2f(&self, name: &'static str, m: &Mat2) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform_matrix2fv_with_f32_array(u.as_ref(), false, &m.to_cols_array());
-    }
-
-    /// Sets a `mat3` uniform.
-    pub fn uniform_matrix3f(&self, name: &'static str, m: &Mat3) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform_matrix3fv_with_f32_array(u.as_ref(), false, &m.to_cols_array());
-    }
-
-    /// Sets a `mat4` uniform.
-    pub fn uniform_matrix4f(&self, name: &'static str, m: &Mat4) {
-        let u = self.shader.uniform(self.gl, name);
-        self.gl
-            .uniform_matrix4fv_with_f32_array(u.as_ref(), false, &m.to_cols_array());
+    /// Sets a [`Uniform`] named `name` to a `value`.
+    pub fn uniform(&self, name: &'static str, value: impl Uniform) {
+        value.uniform(self, name)
     }
 }
 
@@ -250,18 +517,21 @@ impl<'a> Drop for ShaderBinding<'a> {
         self.gl.use_program(None);
 
         let mut bitset = self.bound_textures.get();
+        let cubes = self.bound_texture_cubes.get();
+
         for index in 0..32 {
             // Break early if no more bits.
             if bitset == 0 {
                 break;
             }
 
-            let bit = bitset & (1u32 << index);
-            if bit != 0 {
-                // Clear bit.
+            let bit = 1u32 << index;
+            if bitset & bit != 0 {
+                // Clear bit (so we can return early if no more bits).
                 bitset ^= bit;
 
-                TextureBinding::drop_raw_parts(self.gl, index);
+                let cube = cubes & bit != 0;
+                TextureBinding::drop_raw_parts(self.renderer, index, cube);
             }
         }
     }

@@ -8,7 +8,7 @@ use stylist::yew::styled_component;
 use yew::{html, html_nested, Html};
 use yew_frontend::component::positioner::Align;
 use yew_frontend::dialog::dialog::Dialog;
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::translation::{use_translation, Translation};
 
 #[styled_component(LevelsDialog)]
 pub fn levels_dialog() -> Html {
@@ -19,7 +19,7 @@ pub fn levels_dialog() -> Html {
         "#
     );
 
-    let t = t();
+    let t = use_translation();
 
     html! {
         <Dialog title={"Levels"} align={Align::Center}>

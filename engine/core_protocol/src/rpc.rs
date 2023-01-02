@@ -61,8 +61,10 @@ actix_response!(SystemResponse);
 #[derive(Serialize, Deserialize)]
 pub struct LeaderboardResponse {
     /// Eventually consistent global leaderboard.
+    #[cfg_attr(feature = "client", serde(default))]
     pub leaderboard: Owned<[LeaderboardDto]>,
     /// Eventually consistent player count across all servers.
+    #[serde(alias = "player_count")]
     pub players: u32,
 }
 
@@ -272,13 +274,25 @@ pub enum InvitationUpdate {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientRequest {
     SetAlias(PlayerAlias),
+    /// An advertisement was shown or played.
+    TallyAd(AdType),
     TallyFps(f32),
-    Trace { message: String },
+    Trace {
+        message: String,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AdType {
+    Banner,
+    Rewarded,
+    Video,
 }
 
 /// General update from server to client.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientUpdate {
+    AdTallied,
     AliasSet(PlayerAlias),
     EvalSnippet(Owned<str>),
     FpsTallied,
@@ -306,7 +320,7 @@ mod admin {
     use super::*;
 
     /// Admin requests are from the admin interface to the core service.
-    #[derive(Clone, Debug, Deserialize)]
+    #[derive(Clone, Debug, Deserialize, Serialize)]
     pub enum AdminRequest {
         ClearSnippet {
             cohort_id: Option<CohortId>,

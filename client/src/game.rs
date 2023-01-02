@@ -3,22 +3,26 @@
 
 use crate::armament::{group_armaments, FireRateLimiter, Group};
 use crate::audio::Audio;
-use crate::background::{Mk48BackgroundContext, Mk48OverlayContext};
+use crate::background::{Mk48BackgroundLayer, Mk48OverlayLayer};
+use crate::camera::Mk48Camera;
 use crate::interpolated::Interpolated;
 use crate::interpolated_contact::InterpolatedContact;
-use crate::particle::{Mk48Particle, Mk48ParticleContext, Mk48ParticleLayer};
-use crate::settings::Mk48Settings;
-use crate::sprite::SortableSprite;
+use crate::particle::{Mk48Particle, Mk48ParticleLayer};
+use crate::settings::{Mk48Settings, ShadowSetting};
+use crate::sortable_sprite::SortableSprite;
+use crate::sprite::SpriteLayer;
 use crate::state::Mk48State;
+use crate::trail::TrailLayer;
 use crate::ui::{
-    InstructionsProps, UiEvent, UiProps, UiState, UiStatus, UiStatusPlaying, UiStatusRespawning,
+    InstructionStatus, UiEvent, UiProps, UiState, UiStatus, UiStatusPlaying, UiStatusRespawning,
 };
+use crate::weather::Weather;
 use client_util::context::Context;
 use client_util::fps_monitor::FpsMonitor;
 use client_util::game_client::GameClient;
 use client_util::joystick::Joystick;
 use client_util::keyboard::{Key, KeyboardEvent};
-use client_util::mouse::{MouseButton, MouseEvent};
+use client_util::mouse::{MouseButton, MouseEvent, MouseState};
 use client_util::rate_limiter::RateLimiter;
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -32,17 +36,22 @@ use common::velocity::Velocity;
 use common::world::strict_area_border;
 use common_util::range::{gen_radius, lerp, map_ranges};
 use core_protocol::id::{GameId, TeamId};
-use glam::{Mat2, Vec2, Vec4, Vec4Swizzles};
+use glam::{Mat2, UVec2, Vec2, Vec3, Vec4Swizzles};
 use rand::{thread_rng, Rng};
-use renderer::{gray, rgb, rgba, Layer, Texture, TextureFormat};
-use renderer2d::{
-    BackgroundContext, BackgroundLayer, Camera2d, GraphicLayer, ParticleLayer, Renderer2d,
-    SpriteLayer, TextLayer,
-};
+use renderer::{gray_a, rgb_array, rgba, DefaultRender, Layer, RenderChain};
+use renderer2d::{Camera2d, GraphicLayer, TextLayer};
+use renderer3d::ShadowLayer;
+use renderer3d::{ShadowParams, ShadowResult};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
 pub struct Mk48Game {
+    /// Mk48 specific camera.
+    pub mk48_camera: Mk48Camera,
+    /// Game's camera.
+    pub camera: Camera2d,
+    /// For rendering.
+    pub render_chain: RenderChain<FullLayer>,
     /// Can't reverse on first control when you spawn. Also for UI instructions.
     pub first_control: bool,
     /// For UI instructions.
@@ -51,16 +60,10 @@ pub struct Mk48Game {
     pub holding: bool,
     /// Currently in mouse control reverse mode.
     pub reversing: bool,
-    /// Camera on death.
-    pub saved_camera: Option<(Vec2, f32)>,
     /// Override respawning with regular spawning.
     respawn_overridden: bool,
     /// Interpolate altitude for smooth animation of visual range and restriction.
     pub interpolated_altitude: Interpolated,
-    /// In meters.
-    pub interpolated_zoom: f32,
-    /// 1 = normal.
-    pub zoom_input: f32,
     /// Last control, for diffing.
     pub last_control: Option<Control>,
     /// Rate limit control websocket messages.
@@ -81,22 +84,35 @@ pub struct Mk48Game {
     ui_state: UiState,
 }
 
+type FullLayer = ShadowLayer<Mk48Layer>;
+
 /// Order of fields is order of rendering.
 #[derive(Layer)]
-#[layer(Camera2d)]
-pub struct RendererLayer {
-    background: BackgroundLayer<Mk48BackgroundContext>,
-    pub sea_level_particles: Mk48ParticleLayer,
+#[render(&ShadowResult<&Mk48Params>)]
+#[render(&ShadowParams)]
+pub struct Mk48Layer {
+    #[render(&ShadowParams)]
+    background: Mk48BackgroundLayer,
+    pub sea_level_particles: Mk48ParticleLayer<false>,
+    // TODO sprite shadows. #[render(&ShadowParams)]
     sprites: SpriteLayer,
-    pub airborne_particles: Mk48ParticleLayer,
-    airborne_graphics: GraphicLayer,
-    overlay: BackgroundLayer<Mk48OverlayContext>,
+    pub airborne_particles: Mk48ParticleLayer<true>,
+    trails: TrailLayer,
+    overlay: Mk48OverlayLayer,
     graphics: GraphicLayer,
     text: TextLayer,
 }
 
-pub fn wind() -> Vec2 {
-    Vec2::new(7.0, 1.5)
+pub struct Mk48Params {
+    pub camera: Camera2d,
+    pub weather: Weather,
+}
+
+impl std::ops::Deref for Mk48Params {
+    type Target = Camera2d;
+    fn deref(&self) -> &Self::Target {
+        &self.camera
+    }
 }
 
 /// Back 75 degrees is reverse angle.
@@ -106,121 +122,96 @@ pub const ACTIVE_KEY: Key = Key::Z;
 
 impl Mk48Game {
     // Don't reverse early on, when the player doesn't have a great idea of their orientation.
-    fn can_reverse(&self, player_contact: &Contact) -> bool {
-        self.has_reverse(player_contact)
-            && (!self.first_control || player_contact.guidance().velocity_target < Velocity::ZERO)
+    fn can_reverse(first_control: bool, player_contact: &Contact) -> bool {
+        Self::has_reverse(player_contact)
+            && (!first_control || player_contact.guidance().velocity_target < Velocity::ZERO)
     }
 
     // Level 1 ships can't reverse with mouse controls.
-    fn has_reverse(&self, player_contact: &Contact) -> bool {
+    fn has_reverse(player_contact: &Contact) -> bool {
         player_contact.entity_type().unwrap().data().level > 1
+    }
+
+    // Right button down or left button down and time has passed.
+    fn is_holding_control(mouse: &MouseState, time: f32) -> bool {
+        mouse.is_down(MouseButton::Right) || mouse.is_down_not_click(MouseButton::Left, time)
+    }
+
+    fn create_render_chain(context: &Context<Self>) -> Result<RenderChain<FullLayer>, String> {
+        let shadows = context.settings.shadows;
+
+        RenderChain::new([0, 53, 116, 255], context.common_settings.antialias, |r| {
+            r.enable_cull_face(); // Required for shadows.
+            ShadowLayer::with_viewport(
+                r,
+                Mk48Layer {
+                    // TODO when recreated with animations turned off can cause issues.
+                    background: Mk48BackgroundLayer::new(
+                        r,
+                        context.settings.animations,
+                        context.settings.dynamic_waves,
+                        shadows,
+                    ),
+                    sea_level_particles: Mk48ParticleLayer::new(r, shadows),
+                    sprites: SpriteLayer::new(r, shadows),
+                    airborne_particles: Mk48ParticleLayer::new(r, shadows),
+                    trails: TrailLayer::new(r),
+                    overlay: Mk48OverlayLayer::new(r),
+                    graphics: GraphicLayer::new(r),
+                    text: TextLayer::new(r),
+                },
+                match shadows {
+                    ShadowSetting::None => None,
+                    ShadowSetting::Hard => Some(UVec2::splat(2048)),
+                    ShadowSetting::Soft => Some(UVec2::splat(512)),
+                },
+            )
+        })
     }
 }
 
 impl GameClient for Mk48Game {
     const GAME_ID: GameId = GameId::Mk48;
+    const LICENSES: &'static [(&'static str, &'static [&'static str])] = crate::licenses::LICENSES;
 
     type Audio = Audio;
     type GameRequest = Command;
-    type RendererLayer = RendererLayer;
-    type Camera = Camera2d;
     type GameState = Mk48State;
     type UiEvent = UiEvent;
     type UiProps = UiProps;
     type GameUpdate = Update;
     type GameSettings = Mk48Settings;
 
-    fn new() -> Self {
-        unsafe {
-            // SAFETY: First thing to run, happens before any entity data loading.
-            EntityType::init();
-        }
+    fn new(context: &Context<Self>) -> Result<Self, String> {
+        let ui_props_rate_limiter = RateLimiter::new(0.1);
 
-        Self {
+        let render_chain = Self::create_render_chain(context)?;
+        let camera = Camera2d::default();
+        let mk48_camera = Mk48Camera::default();
+
+        Ok(Self {
+            mk48_camera,
+            camera,
+            render_chain,
             first_control: false,
             first_zoom: false,
             holding: false,
             reversing: false,
             interpolated_altitude: Interpolated::new(0.2),
-            interpolated_zoom: Self::DEFAULT_ZOOM_INPUT * Self::MENU_VISUAL_RANGE,
-            zoom_input: Self::DEFAULT_ZOOM_INPUT,
-            saved_camera: None,
             respawn_overridden: false,
             last_control: None,
             control_rate_limiter: RateLimiter::new(0.1),
-            ui_props_rate_limiter: RateLimiter::new(0.15),
+            ui_props_rate_limiter,
             alarm_fast_rate_limiter: RateLimiter::new(10.0),
             peek_update_sound_counter: 0,
             fire_rate_limiter: FireRateLimiter::new(),
             fps_counter: FpsMonitor::new(1.0),
             ui_state: UiState::default(),
-        }
-    }
-
-    #[allow(deprecated)]
-    fn init_settings(&mut self, renderer: &mut Renderer2d) -> Self::GameSettings {
-        let animations = !renderer.fragment_uses_mediump();
-        let wave_quality = renderer.fragment_has_highp() as u8;
-
-        Mk48Settings {
-            animations,
-            wave_quality,
-            ..Default::default()
-        }
-    }
-
-    fn init_layer(
-        &mut self,
-        renderer: &mut Renderer2d,
-        context: &mut Context<Self>,
-    ) -> Self::RendererLayer {
-        renderer.set_background_color(Vec4::new(0.0, 0.20784314, 0.45490196, 1.0));
-
-        let sprite_sheet = serde_json::from_str(include_str!("./sprites_webgl.json")).unwrap();
-        let sprite_texture = Texture::load(
-            renderer,
-            "/sprites_webgl.png",
-            TextureFormat::Rgba,
-            None,
-            false,
-        );
-
-        let background_context = Mk48BackgroundContext::new(
-            renderer,
-            context.settings.animations,
-            context.settings.wave_quality,
-        );
-
-        let overlay_context = Mk48OverlayContext::default();
-
-        if context.settings.animations {
-            // Animations on, we can afford more state changes.
-            self.ui_props_rate_limiter.set_period(0.1);
-        }
-
-        RendererLayer {
-            background: BackgroundLayer::new(renderer, background_context),
-            sea_level_particles: ParticleLayer::new(
-                renderer,
-                Mk48ParticleContext { wind: Vec2::ZERO },
-            ),
-            sprites: SpriteLayer::new(renderer, sprite_texture, sprite_sheet),
-            airborne_particles: ParticleLayer::new(renderer, Mk48ParticleContext { wind: wind() }),
-            airborne_graphics: GraphicLayer::new(renderer),
-            overlay: BackgroundLayer::new(renderer, overlay_context),
-            graphics: GraphicLayer::new(renderer),
-            text: TextLayer::new(renderer),
-        }
+        })
     }
 
     /// This violates the normal "peek" contract by doing the work of apply, when it comes to contacts.
-    fn peek_game(
-        &mut self,
-        update: &Update,
-        context: &mut Context<Self>,
-        renderer: &Renderer2d,
-        _layer: &mut Self::RendererLayer,
-    ) {
+    fn peek_game(&mut self, update: &Update, context: &mut Context<Self>) {
         self.peek_update_sound_counter = self.peek_update_sound_counter.saturating_add(1);
         // Only play sounds for 10 peeked updates between frames.
         let play_sounds = self.peek_update_sound_counter < 10;
@@ -258,7 +249,7 @@ impl GameClient for Mk48Game {
                 if play_sounds {
                     self.play_new_contact_audio(
                         contact,
-                        renderer.camera.center,
+                        self.camera.center,
                         &*context,
                         &context.audio,
                     );
@@ -310,9 +301,9 @@ impl GameClient for Mk48Game {
             .collect::<Vec<_>>()
         {
             if play_sounds {
-                let time_seconds = context.client.update_seconds;
+                let time_seconds = context.client.time_seconds;
                 self.play_lost_contact_audio_and_animations(
-                    renderer.camera.center,
+                    self.camera.center,
                     &contact,
                     &context.audio,
                     &mut context.state.game.animations,
@@ -321,7 +312,7 @@ impl GameClient for Mk48Game {
             }
         }
 
-        let player_position = renderer.camera.center;
+        let player_position = self.camera.center;
         let player_altitude = context
             .state
             .game
@@ -415,11 +406,11 @@ impl GameClient for Mk48Game {
                 let consumptions: Vec<bool> = contact.reloads().iter().map(|b| *b).collect();
                 let groups = group_armaments(&entity_type.data().armaments, &consumptions);
                 match event.key {
-                    Key::R => {
-                        self.ui_state.submerge = !self.ui_state.submerge;
+                    SURFACE_KEY => {
+                        self.set_submerge(!self.ui_state.submerge, &*context);
                     }
-                    Key::Z => {
-                        self.ui_state.active = !self.ui_state.active;
+                    ACTIVE_KEY => {
+                        self.set_active(!self.ui_state.active, &*context);
                     }
                     Key::Tab => {
                         self.ui_state.armament = groups
@@ -451,25 +442,18 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn peek_mouse(
-        &mut self,
-        event: &MouseEvent,
-        _context: &mut Context<Self>,
-        _renderer: &Renderer2d,
-    ) {
+    fn peek_mouse(&mut self, event: &MouseEvent, _context: &mut Context<Self>) {
         if let MouseEvent::Wheel(delta) = event {
-            self.zoom(*delta);
+            self.mk48_camera.zoom(*delta);
             self.first_zoom = false;
         }
     }
 
-    fn tick(
-        &mut self,
-        elapsed_seconds: f32,
-        context: &mut Context<Self>,
-        renderer: &mut Renderer2d,
-        layer: &mut Self::RendererLayer,
-    ) {
+    fn tick(&mut self, elapsed_seconds: f32, context: &mut Context<Self>) {
+        let mut frame = self.render_chain.begin(context.client.time_seconds);
+        let (renderer, shadow_layer) = frame.draw();
+        let layer = &mut shadow_layer.inner;
+
         // Allow more sounds to be played in peek.
         self.peek_update_sound_counter = 0;
 
@@ -478,12 +462,14 @@ impl GameClient for Mk48Game {
         let mut team_proximity: HashMap<TeamId, f32> = HashMap::new();
 
         // Temporary (will be recalculated after moving ships).
-        self.update_camera(
+        self.mk48_camera.update(
             context.state.game.player_contact(),
             elapsed_seconds,
-            layer.background.context.cache_frame(),
+            layer.background.cache_frame,
         );
-        let (camera, _) = self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
+        let (camera, _) = self
+            .mk48_camera
+            .camera(context.state.game.player_contact(), renderer.aspect_ratio());
 
         // Update audio volume.
         if Self::maybe_contact_mut(
@@ -543,18 +529,20 @@ impl GameClient for Mk48Game {
         }
 
         // May have changed due to the above.
-        let (camera, zoom) =
-            self.camera(context.state.game.player_contact(), renderer.aspect_ratio());
+        let (camera, zoom) = self
+            .mk48_camera
+            .camera(context.state.game.player_contact(), renderer.aspect_ratio());
 
         // Set camera before update layers so they don't get last frame's camera.
         // TODO decouple update and render.
-        renderer.camera.update(camera, zoom, renderer.canvas_size());
+        self.camera.update(camera, zoom, renderer.canvas_size());
+        let weather = Weather::new(renderer.time);
 
         let (visual_range, visual_restriction, area) =
             if let Some(c) = context.state.game.player_interpolated_contact() {
                 // Use model as input to interpolation (can't interpolate twice).
                 let altitude = c.model.altitude().to_norm();
-                let t = context.client.update_seconds;
+                let t = context.client.time_seconds;
                 let altitude = self.interpolated_altitude.update(altitude, t);
 
                 // Use view for entity type.
@@ -574,15 +562,22 @@ impl GameClient for Mk48Game {
 
         // Update background and add vegetation sprites.
         let terrain_reset = context.state.game.take_terrain_reset();
-        sortable_sprites.extend(layer.background.context.update(
+        sortable_sprites.extend(layer.background.update(
             camera,
             zoom,
             &mut context.state.game.terrain,
             terrain_reset,
+            context.settings.shadows.is_some(),
             &*renderer,
         ));
+        shadow_layer.camera = layer.background.shadow_camera(
+            renderer,
+            &self.camera,
+            &weather,
+            context.settings.shadows,
+        );
 
-        layer.overlay.context.update(
+        layer.overlay.update(
             visual_range,
             visual_restriction,
             context.state.game.world_radius,
@@ -598,42 +593,44 @@ impl GameClient for Mk48Game {
 
             let len = layer.sprites.animation_length(animation.name);
 
-            if animation.frame(context.client.update_seconds) >= len {
+            if animation.frame(context.client.time_seconds) >= len {
                 context.state.game.animations.swap_remove(i);
             } else {
                 sortable_sprites.push(SortableSprite::new_animation(
                     animation,
-                    context.client.update_seconds,
+                    context.client.time_seconds,
                 ));
                 i += 1;
             }
         }
 
         // Update trails.
-        context
-            .state
-            .game
-            .trails
-            .set_time(context.client.update_seconds);
+        layer.trails.set_time(context.client.time_seconds);
 
         for InterpolatedContact { view: contact, .. } in context.state.game.contacts.values() {
             let friendly = context.state.core.is_friendly(contact.player_id());
 
-            let color = if friendly {
-                rgb(58, 255, 140)
+            let color_bytes = if friendly {
+                [58, 255, 140]
             } else if contact.is_boat() {
-                gray(255)
+                [255; 3]
             } else {
-                rgb(231, 76, 60)
+                [231, 76, 60]
             };
+            let color = rgb_array(color_bytes);
 
             if let Some(entity_type) = contact.entity_type() {
-                let altitude = contact.altitude().to_norm();
+                let altitude = contact.altitude().to_meters();
                 // Only boats have non linear altitude to alpha (because they have more depth).
                 // TODO give entities depth dimension.
                 let alpha = if !contact.is_boat() || contact.altitude().is_submerged() {
                     let max_alpha = if contact.is_boat() { 0.7 } else { 1.0 };
-                    map_ranges(altitude, -1.0..0.0, 0.2..max_alpha, true)
+                    map_ranges(
+                        contact.altitude().to_norm(),
+                        -1.0..0.0,
+                        0.2..max_alpha,
+                        true,
+                    )
                 } else {
                     1.0
                 };
@@ -647,13 +644,13 @@ impl GameClient for Mk48Game {
                     // Subtle wave animation on collectibles.
                     // No waves if animations or waves are off.
                     if settings.animations
-                        && settings.wave_quality > 0
+                        && settings.dynamic_waves
                         && data.kind == EntityKind::Collectible
                     {
-                        let t = context.client.update_seconds;
+                        let t = context.client.time_seconds;
 
                         // Moves waves with the wind.
-                        let mut input = (transform.position + wind() * t) * 0.1;
+                        let mut input = (transform.position + weather.wind * t) * 0.1;
 
                         // Offset waves from regular grid.
                         input.x += input.y * 0.3;
@@ -685,7 +682,7 @@ impl GameClient for Mk48Game {
                         contact,
                         &context.state.game.contacts,
                         &context.state.core,
-                        renderer.camera.center,
+                        self.camera.center,
                         &mut layer.airborne_particles,
                     );
                 }
@@ -700,18 +697,19 @@ impl GameClient for Mk48Game {
                             continue;
                         }
                         let armament_type = armament.entity_type;
+
+                        let reloaded = contact.reloads().get(i).map(|r| *r).unwrap_or(false);
+                        if !reloaded && context.settings.cinematic {
+                            continue;
+                        }
+
                         sortable_sprites.push(SortableSprite::new_child_entity(
                             entity_id,
                             entity_type,
                             armament_type,
                             *contact.transform() + data.armament_transform(contact.turrets(), i),
                             altitude + 0.02,
-                            alpha
-                                * if contact.reloads().get(i).map(|r| *r).unwrap_or(false) {
-                                    1.0
-                                } else {
-                                    0.5
-                                },
+                            alpha * if reloaded { 1.0 } else { 0.5 },
                         ));
                     }
                 }
@@ -742,368 +740,421 @@ impl GameClient for Mk48Game {
                 // GUI overlays.
                 let overlay_vertical_position = data.radius * 1.2;
 
-                match data.kind {
-                    EntityKind::Boat => {
-                        // Is this player's own boat?
-                        if context.state.core.player_id.is_some()
-                            && contact.player_id() == context.state.core.player_id
-                            && !context.settings.cinematic
-                        {
-                            // Radii
-                            let hud_color = rgba(255, 255, 255, 255 / 3);
-                            let reverse_color = rgba(255, 75, 75, 120);
-                            let hud_thickness = 0.0025 * zoom;
-
-                            // Throttle rings.
-                            // 1. Inner
-                            layer.graphics.draw_circle(
-                                contact.transform().position,
-                                data.radii().start,
-                                hud_thickness,
-                                hud_color,
-                            );
-                            // 2. Outer
-                            layer.graphics.draw_circle(
-                                contact.transform().position,
-                                data.radii().end,
-                                hud_thickness,
-                                hud_color,
-                            );
-                            // 3. Actual speed
-                            layer.graphics.draw_circle(
-                                contact.transform().position,
-                                map_ranges(
-                                    contact.transform().velocity.abs().to_mps(),
-                                    0.0..data.speed.to_mps(),
-                                    data.radii(),
-                                    false,
-                                ),
-                                hud_thickness,
-                                if contact.transform().velocity < Velocity::ZERO {
-                                    reverse_color
-                                } else {
-                                    hud_color
-                                },
-                            );
-                            // 4. Target speed
+                if !context.settings.cinematic {
+                    match data.kind {
+                        EntityKind::Boat => {
+                            // Is this player's own boat?
+                            if context.state.core.player_id.is_some()
+                                && contact.player_id() == context.state.core.player_id
                             {
-                                let velocity_target = contact
-                                    .guidance()
-                                    .velocity_target
-                                    .max(data.speed * Velocity::MAX_REVERSE_SCALE);
-                                layer.graphics.draw_circle(
-                                    contact.transform().position,
-                                    map_ranges(
-                                        velocity_target.abs().to_mps(),
-                                        0.0..data.speed.to_mps(),
-                                        data.radii(),
-                                        true,
-                                    ),
-                                    hud_thickness,
-                                    if velocity_target < Velocity::ZERO {
-                                        reverse_color
-                                    } else {
-                                        hud_color
-                                    },
-                                );
-                            }
+                                // Radii
+                                let hud_color = gray_a(255, 50);
+                                let reverse_color = rgba(255, 75, 75, 75);
+                                let hud_thickness = 0.0025 * zoom;
 
-                            // Target bearing line.
-                            {
-                                let guidance = contact.guidance();
-                                let mut direction = guidance.direction_target;
-                                let mut color = hud_color;
-
-                                // Is reversing.
-                                // Fix ambiguity when loading guidance from server.
-                                if guidance.velocity_target < Velocity::ZERO
-                                    || guidance.velocity_target == Velocity::ZERO && self.reversing
-                                {
-                                    // Flip dir if going backwards.
-                                    direction += Angle::PI;
-                                    // Reversing color.
-                                    color = reverse_color;
-                                    // TODO BEEP BEEP BEEP
-                                }
-
-                                let dir_mat = Mat2::from_angle(direction.to_radians());
-                                let radii = data.radii();
-                                // Don't overlap inner/outer hud circles.
-                                let start = radii.start + hud_thickness * 0.5;
-                                let end = radii.end - hud_thickness * 0.5;
-
-                                layer.graphics.draw_line(
-                                    contact.transform().position + dir_mat * Vec2::new(start, 0.0),
-                                    contact.transform().position + dir_mat * Vec2::new(end, 0.0),
-                                    hud_thickness,
-                                    color,
-                                );
-                            }
-
-                            // Reverse azimuths.
-                            if self.has_reverse(contact) {
-                                let mut range = data.radii();
-                                // Don't overlap inner hud circle.
-                                range.start += hud_thickness * 0.5;
-                                range.end = lerp(range.start, range.end, 0.1);
-
-                                let position = contact.transform().position;
-                                let direction = contact.transform().direction.to_radians() - PI;
-                                let mut color = hud_color;
-
-                                if self.holding || !self.can_reverse(contact) {
-                                    if self.reversing {
-                                        color = reverse_color
-                                    } else {
-                                        color.w *= 0.5;
-                                    }
-                                }
-                                let end_color = color.xyz().extend(0.0);
-
-                                for m in [-0.5, 0.5] {
-                                    let direction = direction + REVERSE_ANGLE * m;
-                                    let dir_mat = Mat2::from_angle(direction);
-
-                                    layer.graphics.draw_line_gradient(
-                                        position + dir_mat * Vec2::new(range.start, 0.0),
-                                        position + dir_mat * Vec2::new(range.end, 0.0),
+                                if context.settings.circle_hud {
+                                    // Throttle rings.
+                                    // 1. Inner
+                                    layer.graphics.draw_circle(
+                                        contact.transform().position,
+                                        data.radii().start,
                                         hud_thickness,
-                                        color,
-                                        end_color,
+                                        hud_color,
+                                    );
+                                    // 2. Outer
+                                    layer.graphics.draw_circle(
+                                        contact.transform().position,
+                                        data.radii().end,
+                                        hud_thickness,
+                                        hud_color,
+                                    );
+                                    // 3. Actual speed
+                                    layer.graphics.draw_circle(
+                                        contact.transform().position,
+                                        map_ranges(
+                                            contact.transform().velocity.abs().to_mps(),
+                                            0.0..data.speed.to_mps(),
+                                            data.radii(),
+                                            false,
+                                        ),
+                                        hud_thickness,
+                                        if contact.transform().velocity < Velocity::ZERO {
+                                            reverse_color
+                                        } else {
+                                            hud_color
+                                        },
+                                    );
+                                    // 4. Target speed
+                                    let velocity_target = contact
+                                        .guidance()
+                                        .velocity_target
+                                        .max(data.speed * Velocity::MAX_REVERSE_SCALE);
+                                    layer.graphics.draw_circle(
+                                        contact.transform().position,
+                                        map_ranges(
+                                            velocity_target.abs().to_mps(),
+                                            0.0..data.speed.to_mps(),
+                                            data.radii(),
+                                            true,
+                                        ),
+                                        hud_thickness,
+                                        if velocity_target < Velocity::ZERO {
+                                            reverse_color
+                                        } else {
+                                            hud_color
+                                        },
                                     );
                                 }
-                            }
 
-                            // Turret azimuths.
-                            // Pre-borrow to not borrow all of context (will be fixed eventually).
-                            let ui_armament = self.ui_state.armament;
-                            if let Some((i, mouse_pos)) =
-                                context.mouse.view_position.and_then(|view_pos| {
-                                    let mouse_pos = renderer.camera.to_world_position(view_pos);
-                                    self.find_best_armament(contact, false, mouse_pos, ui_armament)
-                                        .zip(Some(mouse_pos))
-                                })
-                            {
-                                let armament = &data.armaments[i];
-                                if armament.entity_type != EntityType::Depositor {
-                                    let transform = *contact.transform();
-                                    let direction = contact.transform().direction;
-                                    let color = hud_color;
+                                // Target bearing line.
+                                if context.settings.circle_hud
+                                    || Self::is_holding_control(
+                                        &context.mouse,
+                                        context.client.time_seconds,
+                                    )
+                                {
+                                    let guidance = contact.guidance();
+                                    let mut direction = guidance.direction_target;
+                                    let mut color = hud_color;
 
-                                    if let Some(turret_index) = armament.turret {
-                                        let turret = &data.turrets[turret_index];
-                                        let turret_radius = turret
-                                            .entity_type
-                                            .map(|e| e.data().radius)
-                                            .unwrap_or(0.0);
-                                        let transform =
-                                            transform + Transform::from_position(turret.position());
+                                    // Is reversing.
+                                    // Fix ambiguity when loading guidance from server.
+                                    if guidance.velocity_target < Velocity::ZERO
+                                        || guidance.velocity_target == Velocity::ZERO
+                                            && self.reversing
+                                    {
+                                        // Flip dir if going backwards.
+                                        direction += Angle::PI;
+                                        // Reversing color.
+                                        color = reverse_color;
+                                        // TODO BEEP BEEP BEEP
+                                    }
 
-                                        let inner: f32 = 0.2 * data.width;
-                                        let outer: f32 = 0.325 * data.width;
-                                        let arc_thickness: f32 = outer - inner;
-                                        let middle: f32 = inner + arc_thickness * 0.5;
+                                    let angle = direction.to_radians();
+                                    let dir_mat = Mat2::from_angle(angle);
+                                    let radii = data.radii();
 
-                                        // Aim line is only helpful on small turrets.
-                                        if turret_radius < inner {
-                                            let turret_direction = (direction
-                                                + contact.turrets()[turret_index])
-                                                .to_radians();
-                                            let dir_mat = Mat2::from_angle(turret_direction);
-                                            let line_thickness = hud_thickness * 2.0;
+                                    // Don't overlap inner/outer hud circles.
+                                    let overlap = hud_thickness
+                                        * context.settings.circle_hud as u8 as f32
+                                        * 0.5;
+                                    let start = contact.transform().position
+                                        + dir_mat * Vec2::new(radii.start + overlap, 0.0);
+                                    let mut end = contact.transform().position
+                                        + dir_mat * Vec2::new(radii.end - overlap, 0.0);
+                                    let mut line_width = hud_thickness;
 
-                                            layer.graphics.draw_line(
-                                                transform.position
-                                                    + dir_mat * Vec2::new(inner, 0.0),
-                                                transform.position
-                                                    + dir_mat * Vec2::new(outer, 0.0),
-                                                line_thickness,
-                                                color,
-                                            );
+                                    if !context.settings.circle_hud {
+                                        let velocity_target = contact
+                                            .guidance()
+                                            .velocity_target
+                                            .max(data.speed * Velocity::MAX_REVERSE_SCALE);
+                                        let t =
+                                            velocity_target.abs().to_mps() / data.speed.to_mps();
+
+                                        // Make sure scale is never too big or too small.
+                                        let mut scale = (hud_thickness * 2.0)
+                                            .min(radii.start * 0.03)
+                                            .max(hud_thickness);
+                                        let new_scale = scale * 2.5;
+
+                                        let diff = end - start;
+                                        let len = diff.length();
+                                        if len * t < new_scale {
+                                            scale = new_scale;
                                         }
 
-                                        let left_back = (direction + turret.angle
-                                            - turret.azimuth_bl
-                                            + Angle::PI)
-                                            .to_radians();
-                                        let left_front =
-                                            (direction + turret.angle + turret.azimuth_fl)
-                                                .to_radians();
-                                        let right_back = (direction
-                                            + turret.angle
-                                            + turret.azimuth_br
-                                            + Angle::PI)
-                                            .to_radians();
-                                        let right_front = (direction + turret.angle
-                                            - turret.azimuth_fr)
-                                            .to_radians();
+                                        let scale_t = scale / len;
+                                        let center =
+                                            start.lerp(end, (t - scale_t * 0.5).max(scale_t * 0.5));
+                                        end = start + diff * (t - scale_t).max(0.0);
 
-                                        if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
-                                            layer.graphics.draw_arc(
-                                                transform.position,
-                                                middle,
-                                                right_back..if right_front > right_back {
-                                                    right_front
-                                                } else {
-                                                    right_front + 2.0 * std::f32::consts::PI
-                                                },
-                                                arc_thickness,
-                                                color,
-                                            );
-                                        }
-                                        if turret.azimuth_fl + turret.azimuth_bl < Angle::PI {
-                                            layer.graphics.draw_arc(
-                                                transform.position,
-                                                middle,
-                                                left_front..if left_back > left_front {
-                                                    left_back
-                                                } else {
-                                                    left_back + 2.0 * PI
-                                                },
-                                                arc_thickness,
-                                                color,
-                                            );
-                                        }
-                                    } else {
-                                        let armament_data = armament.entity_type.data();
-
-                                        let transform = transform
-                                            + Transform::from_position(armament.position());
-                                        let color = hud_color.xyz().extend(0.45);
-
-                                        let is_vertical = armament.vertical;
-                                        let is_stationary = matches!(
-                                            armament_data.sub_kind,
-                                            EntitySubKind::DepthCharge | EntitySubKind::Mine
+                                        layer.graphics.draw_triangle(
+                                            center,
+                                            Vec2::splat(scale),
+                                            angle - PI * 0.5,
+                                            color,
                                         );
+                                        line_width = scale;
+                                    }
 
-                                        if !is_stationary {
-                                            let direction = if is_vertical
-                                                || armament_data.sub_kind == EntitySubKind::Heli
-                                            {
-                                                (mouse_pos - transform.position).into()
-                                            } else {
-                                                direction + armament.angle
-                                            };
+                                    layer.graphics.draw_line(start, end, line_width, color);
+                                }
 
-                                            let angle_radians = direction.to_radians();
-                                            let dir_mat = Mat2::from_angle(angle_radians);
+                                // Reverse azimuths.
+                                if context.settings.circle_hud && Self::has_reverse(contact) {
+                                    let mut range = data.radii();
+                                    // Don't overlap inner hud circle.
+                                    range.start += hud_thickness * 0.5;
+                                    range.end = lerp(range.start, range.end, 0.1);
 
-                                            let scale = data.width * 0.15;
-                                            let start: f32 = (0.65 * armament_data.length)
-                                                .max(data.width * 0.2)
-                                                + scale * 0.5;
-                                            let center = transform.position
-                                                + dir_mat * Vec2::new(start, 0.0);
+                                    let position = contact.transform().position;
+                                    let direction = contact.transform().direction.to_radians() - PI;
+                                    let mut color = hud_color;
 
-                                            // Widen triangle for aircraft.
-                                            let scale_x =
-                                                if armament_data.kind == EntityKind::Aircraft {
-                                                    scale
-                                                } else {
-                                                    scale * (2.0 / 3.0)
-                                                };
-                                            let scale = Vec2::new(scale_x, scale);
-
-                                            layer.graphics.draw_triangle(
-                                                center,
-                                                scale,
-                                                angle_radians - PI * 0.5,
-                                                color,
-                                            );
+                                    if self.holding
+                                        || !Self::can_reverse(self.first_control, contact)
+                                    {
+                                        if self.reversing {
+                                            color = reverse_color
                                         } else {
-                                            let inner: f32 = 0.11 * data.width;
-                                            layer.graphics.draw_circle(
-                                                transform.position,
-                                                inner,
-                                                inner * 0.55,
-                                                color,
-                                            )
+                                            color.w *= 0.5;
                                         }
+                                    }
+                                    let end_color = color.xyz().extend(0.0);
 
-                                        if is_vertical {
-                                            let inner: f32 = 0.055 * data.width;
-                                            layer.graphics.draw_filled_circle(
-                                                transform.position,
-                                                inner,
-                                                color,
+                                    for m in [-0.5, 0.5] {
+                                        let direction = direction + REVERSE_ANGLE * m;
+                                        let dir_mat = Mat2::from_angle(direction);
+
+                                        layer.graphics.draw_line_gradient(
+                                            position + dir_mat * Vec2::new(range.start, 0.0),
+                                            position + dir_mat * Vec2::new(range.end, 0.0),
+                                            hud_thickness,
+                                            color,
+                                            end_color,
+                                        );
+                                    }
+                                }
+
+                                // Turret azimuths.
+                                // Pre-borrow to not borrow all of context (will be fixed eventually).
+                                let ui_armament = self.ui_state.armament;
+                                if let Some((i, mouse_pos)) =
+                                    context.mouse.view_position.and_then(|view_pos| {
+                                        let mouse_pos = self.camera.to_world_position(view_pos);
+                                        Self::find_best_armament(
+                                            &self.fire_rate_limiter,
+                                            contact,
+                                            false,
+                                            mouse_pos,
+                                            ui_armament,
+                                        )
+                                        .zip(Some(mouse_pos))
+                                    })
+                                {
+                                    let armament = &data.armaments[i];
+                                    if armament.entity_type != EntityType::Depositor {
+                                        let transform = *contact.transform();
+                                        let direction = contact.transform().direction;
+                                        let color = hud_color;
+
+                                        if let Some(turret_index) = armament.turret {
+                                            let turret = &data.turrets[turret_index];
+                                            let turret_radius = turret
+                                                .entity_type
+                                                .map(|e| e.data().radius)
+                                                .unwrap_or(0.0);
+                                            let transform = transform
+                                                + Transform::from_position(turret.position());
+
+                                            let inner: f32 = 0.2 * data.width;
+                                            let outer: f32 = 0.325 * data.width;
+                                            let arc_thickness: f32 = outer - inner;
+                                            let middle: f32 = inner + arc_thickness * 0.5;
+
+                                            // Aim line is only helpful on small turrets.
+                                            if turret_radius < inner {
+                                                let turret_direction = (direction
+                                                    + contact.turrets()[turret_index])
+                                                    .to_radians();
+                                                let dir_mat = Mat2::from_angle(turret_direction);
+                                                let line_thickness = hud_thickness * 2.0;
+
+                                                layer.graphics.draw_line(
+                                                    transform.position
+                                                        + dir_mat * Vec2::new(inner, 0.0),
+                                                    transform.position
+                                                        + dir_mat * Vec2::new(outer, 0.0),
+                                                    line_thickness,
+                                                    color,
+                                                );
+                                            }
+
+                                            let left_back = (direction + turret.angle
+                                                - turret.azimuth_bl
+                                                + Angle::PI)
+                                                .to_radians();
+                                            let left_front =
+                                                (direction + turret.angle + turret.azimuth_fl)
+                                                    .to_radians();
+                                            let right_back = (direction
+                                                + turret.angle
+                                                + turret.azimuth_br
+                                                + Angle::PI)
+                                                .to_radians();
+                                            let right_front = (direction + turret.angle
+                                                - turret.azimuth_fr)
+                                                .to_radians();
+
+                                            if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
+                                                layer.graphics.draw_arc(
+                                                    transform.position,
+                                                    middle,
+                                                    right_back..if right_front > right_back {
+                                                        right_front
+                                                    } else {
+                                                        right_front + 2.0 * std::f32::consts::PI
+                                                    },
+                                                    arc_thickness,
+                                                    color,
+                                                );
+                                            }
+                                            if turret.azimuth_fl + turret.azimuth_bl < Angle::PI {
+                                                layer.graphics.draw_arc(
+                                                    transform.position,
+                                                    middle,
+                                                    left_front..if left_back > left_front {
+                                                        left_back
+                                                    } else {
+                                                        left_back + 2.0 * PI
+                                                    },
+                                                    arc_thickness,
+                                                    color,
+                                                );
+                                            }
+                                        } else {
+                                            let armament_data = armament.entity_type.data();
+
+                                            let transform = transform
+                                                + Transform::from_position(armament.position());
+                                            let color = hud_color.xyz().extend(0.45);
+
+                                            let is_vertical = armament.vertical;
+                                            let is_stationary = matches!(
+                                                armament_data.sub_kind,
+                                                EntitySubKind::DepthCharge | EntitySubKind::Mine
                                             );
+
+                                            if !is_stationary {
+                                                let direction = if is_vertical
+                                                    || armament_data.sub_kind == EntitySubKind::Heli
+                                                {
+                                                    (mouse_pos - transform.position).into()
+                                                } else {
+                                                    direction + armament.angle
+                                                };
+
+                                                let angle_radians = direction.to_radians();
+                                                let dir_mat = Mat2::from_angle(angle_radians);
+
+                                                let scale = data.width * 0.15;
+                                                let start: f32 = (0.65 * armament_data.length)
+                                                    .max(data.width * 0.2)
+                                                    + scale * 0.5;
+                                                let center = transform.position
+                                                    + dir_mat * Vec2::new(start, 0.0);
+
+                                                // Widen triangle for aircraft.
+                                                let scale_x =
+                                                    if armament_data.kind == EntityKind::Aircraft {
+                                                        scale
+                                                    } else {
+                                                        scale * (2.0 / 3.0)
+                                                    };
+                                                let scale = Vec2::new(scale_x, scale);
+
+                                                layer.graphics.draw_triangle(
+                                                    center,
+                                                    scale,
+                                                    angle_radians - PI * 0.5,
+                                                    color,
+                                                );
+                                            } else {
+                                                let inner: f32 = 0.11 * data.width;
+                                                layer.graphics.draw_circle(
+                                                    transform.position,
+                                                    inner,
+                                                    inner * 0.55,
+                                                    color,
+                                                )
+                                            }
+
+                                            if is_vertical {
+                                                let inner: f32 = 0.055 * data.width;
+                                                layer.graphics.draw_filled_circle(
+                                                    transform.position,
+                                                    inner,
+                                                    color,
+                                                );
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        // Health bar
-                        if contact.damage() > Ticks::ZERO {
-                            let length = 0.12 * zoom;
-                            let health =
-                                1.0 - contact.damage().to_secs() / data.max_health().to_secs();
-                            let center = contact.transform().position
-                                + Vec2::new(0.0, overlay_vertical_position);
-                            let offset_x = |v, x| v + Vec2::new(x, 0.0);
+                            // Health bar
+                            if contact.damage() > Ticks::ZERO {
+                                let length = 0.12 * zoom;
+                                let health =
+                                    1.0 - contact.damage().to_secs() / data.max_health().to_secs();
+                                let center = contact.transform().position
+                                    + Vec2::new(0.0, overlay_vertical_position);
+                                let offset_x = |v, x| v + Vec2::new(x, 0.0);
 
-                            let bg_color = rgba(85, 85, 85, 127);
-                            let health_color = color.extend(1.0);
-                            let thickness = 0.0075 * zoom;
+                                let bg_color = rgba(85, 85, 85, 127);
+                                let health_color = color.extend(1.0);
+                                let thickness = 0.0075 * zoom;
 
-                            // Background of health bar.
-                            layer.graphics.draw_rounded_line(
-                                offset_x(center, length * -0.5),
-                                offset_x(center, length * 0.5),
-                                thickness,
-                                bg_color,
-                                true,
-                            );
+                                // Background of health bar.
+                                layer.graphics.draw_rounded_line(
+                                    offset_x(center, length * -0.5),
+                                    offset_x(center, length * 0.5),
+                                    thickness,
+                                    bg_color,
+                                    true,
+                                );
 
-                            // Health indicator.
-                            layer.graphics.draw_rounded_line(
-                                offset_x(center, length * -0.5),
-                                offset_x(center, length * (health - 0.5)),
-                                thickness,
-                                health_color,
-                                true,
-                            );
-                        }
-
-                        // Name
-                        let text = if let Some(player) = context
-                            .state
-                            .core
-                            .player_or_bot(contact.player_id().unwrap())
-                        {
-                            if let Some(team) = player
-                                .team_id
-                                .and_then(|team_id| context.state.core.teams.get(&team_id))
-                            {
-                                format!("[{}] {}", team.name, player.alias)
-                            } else {
-                                player.alias.as_str().to_owned()
+                                // Health indicator.
+                                layer.graphics.draw_rounded_line(
+                                    offset_x(center, length * -0.5),
+                                    offset_x(center, length * (health - 0.5)),
+                                    thickness,
+                                    health_color,
+                                    true,
+                                );
                             }
-                        } else {
-                            // This is not meant to happen in production. It is for debugging.
-                            format!("{}", contact.player_id().unwrap().0.get())
-                        };
 
-                        layer.text.draw(
-                            &text,
-                            contact.transform().position
-                                + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
-                            0.035 * zoom,
-                            color.extend(1.0),
-                        );
+                            // Name
+                            let text = if let Some(player) = context
+                                .state
+                                .core
+                                .player_or_bot(contact.player_id().unwrap())
+                            {
+                                if let Some(team) = player
+                                    .team_id
+                                    .and_then(|team_id| context.state.core.teams.get(&team_id))
+                                {
+                                    format!("[{}] {}", team.name, player.alias)
+                                } else {
+                                    player.alias.as_str().to_owned()
+                                }
+                            } else {
+                                // This is not meant to happen in production. It is for debugging.
+                                format!("{}", contact.player_id().unwrap().0.get())
+                            };
+
+                            let c = color_bytes;
+                            layer.text.draw(
+                                &text,
+                                contact.transform().position
+                                    + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
+                                0.035 * zoom,
+                                [c[0], c[1], c[2], 255],
+                            );
+                        }
+                        EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
+                            let triangle_position = contact.transform().position
+                                + Vec2::new(0.0, overlay_vertical_position);
+                            layer.graphics.draw_triangle(
+                                triangle_position + Vec2::new(0.0, 0.01 * zoom),
+                                Vec2::splat(0.02 * zoom),
+                                180f32.to_radians(),
+                                color.extend(1.0),
+                            );
+                        }
+                        _ => {}
                     }
-                    EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
-                        let triangle_position = contact.transform().position
-                            + Vec2::new(0.0, overlay_vertical_position);
-                        layer.graphics.draw_triangle(
-                            triangle_position + Vec2::new(0.0, 0.01 * zoom),
-                            Vec2::splat(0.02 * zoom),
-                            180f32.to_radians(),
-                            color.extend(1.0),
-                        );
-                    }
-                    _ => {}
                 }
 
                 // Add particles.
@@ -1115,7 +1166,7 @@ impl GameClient for Mk48Game {
                 // Integer amount of particles from fractional per_second
                 let amount = {
                     let per_second = data.width * 6.0 + speed * 2.0;
-                    let t = context.client.update_seconds;
+                    let t = context.client.time_seconds;
                     let time_delta = elapsed_seconds;
 
                     // Essentially a random number based on time.
@@ -1134,7 +1185,7 @@ impl GameClient for Mk48Game {
                 {
                     if data.sub_kind == EntitySubKind::Shell {
                         let t = contact.transform();
-                        context.state.game.trails.add_trail(
+                        layer.trails.add_trail(
                             entity_id,
                             t.position,
                             t.direction.to_vec() * t.velocity.to_mps(),
@@ -1142,12 +1193,6 @@ impl GameClient for Mk48Game {
                         );
                     } else {
                         let is_airborne = contact.altitude().is_airborne();
-                        let layer = if is_airborne {
-                            &mut layer.airborne_particles
-                        } else {
-                            &mut layer.sea_level_particles
-                        };
-
                         let spread = match (data.kind, data.sub_kind) {
                             _ if !is_airborne => 0.16,
                             (EntityKind::Aircraft, _) => 0.08,
@@ -1172,13 +1217,46 @@ impl GameClient for Mk48Game {
                             let velocity = direction_vector * (speed * 0.75)
                                 + tangent_vector * (speed * r * spread);
 
-                            layer.add(Mk48Particle {
+                            let particle = Mk48Particle {
                                 position,
                                 velocity,
                                 radius: 1.0,
                                 color: 1.0,
                                 smoothness: 1.0,
-                            });
+                            };
+
+                            if is_airborne {
+                                layer.airborne_particles.add(particle);
+                            } else {
+                                layer.sea_level_particles.add(particle);
+                            }
+                        }
+
+                        // Side wake.
+                        if data.kind == EntityKind::Boat
+                            && data.sub_kind != EntitySubKind::Submarine
+                            && contact.altitude() == Altitude::ZERO
+                        {
+                            for _ in 0..amount * 2 {
+                                let r = rng.gen::<f32>() - 0.6;
+                                let side = if rng.gen() { -1f32 } else { 1f32 };
+
+                                let position = start
+                                    + direction_vector * (data.length * r * 0.5)
+                                    + tangent_vector * (data.width * side * 0.3);
+
+                                let velocity = direction_vector * (speed * 0.1)
+                                    + tangent_vector
+                                        * ((spread * 1.0 + data.width * 0.01) * speed * side);
+
+                                layer.sea_level_particles.add(Mk48Particle {
+                                    position,
+                                    velocity,
+                                    radius: 1.0,
+                                    color: 1.0,
+                                    smoothness: 1.0,
+                                });
+                            }
                         }
                     }
                 }
@@ -1197,7 +1275,7 @@ impl GameClient for Mk48Game {
                                 color: if entity_type == EntityType::OilPlatform {
                                     -1.0
                                 } else {
-                                    0.4
+                                    0.23
                                 },
                                 smoothness: 1.0,
                             });
@@ -1212,15 +1290,11 @@ impl GameClient for Mk48Game {
                     Vec2::splat(10.0),
                     contact.transform().direction.to_radians(),
                     1.0,
+                    0.0,
+                    0.0,
                 );
             }
         }
-
-        context
-            .state
-            .game
-            .trails
-            .update(&mut layer.airborne_graphics);
 
         // Play anti-aircraft sfx.
         if anti_aircraft_volume > 0.0 && !context.audio.is_playing(Audio::Aa) {
@@ -1231,22 +1305,69 @@ impl GameClient for Mk48Game {
 
         // Sort sprites by altitude.
         sortable_sprites.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-        for s in sortable_sprites {
+        for SortableSprite {
+            alpha,
+            altitude,
+            dimensions,
+            frame,
+            height,
+            shadow_height,
+            sprite,
+            transform:
+                Transform {
+                    direction,
+                    position,
+                    ..
+                },
+            ..
+        } in sortable_sprites
+        {
+            let angle = direction.to_radians();
+            if alpha == 1.0 && shadow_height != 0.0 && context.settings.shadows.is_some() {
+                // Water plane covers whole world and is pointing up.
+                let water_pos = Vec3::ZERO;
+                let water_normal = Vec3::Z;
+
+                // Cast shadow ray.
+                let shadow_pos = position.extend(shadow_height);
+                let shadow_normal = -weather.sun;
+
+                // Cast ray from ship's center along sun's direction towards water to get shadow
+                // offset.
+                let water_distance = water_normal.dot(shadow_pos) - water_normal.dot(water_pos);
+                if water_distance > 0.0 {
+                    let normal_dot = -shadow_normal.dot(water_normal);
+                    if normal_dot > 0.0 {
+                        let scale = water_distance / normal_dot;
+                        let displacement = shadow_normal * scale;
+                        let center = (shadow_pos + displacement).truncate();
+
+                        // let center = position - Vec2::splat(0.2) * height;
+                        layer
+                            .sprites
+                            .draw_shadow(sprite, frame, center, dimensions, angle);
+                    }
+                }
+            }
+
+            let center = position;
             layer.sprites.draw(
-                s.sprite,
-                s.frame,
-                s.transform.position,
-                s.dimensions,
-                s.transform.direction.to_radians(),
-                s.alpha,
+                sprite, frame, center, dimensions, angle, alpha, altitude, height,
             );
         }
+
+        // For hinting to server.
+        let aspect_ratio = renderer.aspect_ratio();
+        frame.end(&Mk48Params {
+            camera: self.camera.clone(),
+            weather,
+        });
 
         // After the above line, mouse world position state may be out-of-date. Recalculate it here.
         let aim_target = context
             .mouse
             .view_position
-            .map(|p| renderer.camera.to_world_position(p));
+            .map(|p| self.camera.to_world_position(p));
 
         // Send command later, when lifetimes allow.
         let mut control: Option<Command> = None;
@@ -1269,7 +1390,7 @@ impl GameClient for Mk48Game {
                 let max_speed = player_contact.data().speed.to_mps();
 
                 let joystick = Joystick::try_from_keyboard_state(
-                    context.client.update_seconds,
+                    context.client.time_seconds,
                     &context.keyboard,
                 );
                 let stop = joystick.as_ref().map(|j| j.stop).unwrap_or(false);
@@ -1290,11 +1411,7 @@ impl GameClient for Mk48Game {
                     self.first_control = false; // First control was joystick.
                 }
 
-                if context.mouse.is_down(MouseButton::Right)
-                    || context
-                        .mouse
-                        .is_down_not_click(MouseButton::Left, context.client.update_seconds)
-                {
+                if Self::is_holding_control(&context.mouse, context.client.time_seconds) {
                     let current_dir = player_contact.transform().direction;
                     let mut direction_target = Angle::from(
                         aim_target.unwrap_or_default() - player_contact.transform().position,
@@ -1302,7 +1419,7 @@ impl GameClient for Mk48Game {
 
                     // Only do when start holding.
                     if !self.holding {
-                        if self.can_reverse(player_contact) {
+                        if Self::can_reverse(self.first_control, player_contact) {
                             // Starting movement behind ship turns on reverse.
                             let delta = direction_target - current_dir;
                             self.reversing = delta
@@ -1367,11 +1484,15 @@ impl GameClient for Mk48Game {
                 altitude: player_contact.altitude(),
                 submerge: self.ui_state.submerge,
                 active: self.ui_state.active,
-                instruction_props: yew::props!(InstructionsProps {
-                    touch: context.mouse.touch_screen,
-                    basics: self.first_control,
-                    zoom: self.first_zoom,
-                }),
+                instruction_status: if player_contact.data().level <= 3 {
+                    InstructionStatus {
+                        touch: context.mouse.touch_screen,
+                        basics: self.first_control,
+                        zoom: self.first_zoom,
+                    }
+                } else {
+                    InstructionStatus::default()
+                },
                 armament: self.ui_state.armament,
                 armament_consumption: player_contact.reloads().iter().map(|b| *b).collect(),
                 team_proximity,
@@ -1382,7 +1503,7 @@ impl GameClient for Mk48Game {
 
                 // Get hint before borrow of player_contact().
                 let hint = Some(Hint {
-                    aspect: renderer.aspect_ratio(),
+                    aspect: aspect_ratio,
                 });
 
                 let current_control = Control {
@@ -1398,7 +1519,8 @@ impl GameClient for Mk48Game {
                             .combined(context.keyboard.state(Key::E))
                             .is_down()
                     {
-                        self.find_best_armament(
+                        Self::find_best_armament(
+                            &self.fire_rate_limiter,
                             player_contact,
                             true,
                             aim_target.unwrap_or_default(),
@@ -1464,50 +1586,58 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn ui(
-        &mut self,
-        event: UiEvent,
-        context: &mut Context<Self>,
-        _layer: &mut Self::RendererLayer,
-    ) {
+    fn ui(&mut self, event: UiEvent, context: &mut Context<Self>) {
         match event {
+            UiEvent::Active(active) => {
+                self.set_active(active, &*context);
+            }
+            UiEvent::Armament(armament) => {
+                self.ui_state.armament = armament;
+            }
+            UiEvent::GraphicsSettingsChanged => {
+                self.render_chain = Self::create_render_chain(context).unwrap();
+            }
+            UiEvent::OverrideRespawn => {
+                self.respawn_overridden = true;
+            }
+            UiEvent::Respawn(entity_type) => {
+                context.send_to_game(Command::Spawn(Spawn { entity_type }));
+            }
             UiEvent::Spawn { alias, entity_type } => {
                 context.send_set_alias(alias);
                 context.send_to_game(Command::Spawn(Spawn { entity_type }));
             }
-            UiEvent::Respawn(entity_type) => {
-                context.send_to_game(Command::Spawn(Spawn { entity_type }));
+            UiEvent::Submerge(submerge) => {
+                self.set_submerge(submerge, &*context);
             }
             UiEvent::Upgrade(entity_type) => {
                 context.audio.play(Audio::Upgrade);
                 context.send_to_game(Command::Upgrade(Upgrade { entity_type }));
             }
-            UiEvent::Active(active) => {
-                if let Some(contact) = context.state.game.player_contact() {
-                    if active && contact.data().sensors.sonar.range >= 0.0 {
-                        context.audio.play(Audio::Sonar1);
-                    }
-                }
-                self.ui_state.active = active;
-            }
-            UiEvent::Submerge(submerge) => {
-                if let Some(contact) = context.state.game.player_contact() {
-                    if contact.data().sub_kind == EntitySubKind::Submarine {
-                        if !self.ui_state.submerge && submerge {
-                            context.audio.play(Audio::Dive);
-                        } else if self.ui_state.submerge && !submerge {
-                            context.audio.play(Audio::Surface);
-                        }
-                    }
-                }
-                self.ui_state.submerge = submerge;
-            }
-            UiEvent::OverrideRespawn => {
-                self.respawn_overridden = true;
-            }
-            UiEvent::Armament(armament) => {
-                self.ui_state.armament = armament;
+        }
+    }
+}
+
+impl Mk48Game {
+    fn set_active(&mut self, active: bool, context: &Context<Self>) {
+        if let Some(contact) = context.state.game.player_contact() {
+            if active && contact.data().sensors.sonar.range >= 0.0 {
+                context.audio.play(Audio::Sonar1);
             }
         }
+        self.ui_state.active = active;
+    }
+
+    fn set_submerge(&mut self, submerge: bool, context: &Context<Self>) {
+        if let Some(contact) = context.state.game.player_contact() {
+            if contact.data().sub_kind == EntitySubKind::Submarine {
+                if !self.ui_state.submerge && submerge {
+                    context.audio.play(Audio::Dive);
+                } else if self.ui_state.submerge && !submerge {
+                    context.audio.play(Audio::Surface);
+                }
+            }
+        }
+        self.ui_state.submerge = submerge;
     }
 }

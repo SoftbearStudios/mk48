@@ -14,21 +14,16 @@
 //! [`renderer2d`][`crate`] is an add-on to [`renderer`] that provides a [`Camera2d`] and some 2D specific
 //! [`Layer`][`renderer::Layer`]s.
 
-use renderer::Renderer;
-
 mod background;
 mod camera_2d;
 mod graphic;
+mod mask;
 mod particle;
-mod sprite;
 mod text;
 
 pub use background::*;
 pub use camera_2d::*;
 pub use graphic::*;
+pub use mask::*;
 pub use particle::*;
-pub use sprite::*;
 pub use text::*;
-
-/// An alias for [`Renderer<Camera2d>`].
-pub type Renderer2d = Renderer<Camera2d>;

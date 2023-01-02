@@ -1,5 +1,7 @@
 Alexa
 Android
+ATLAS
+Atom
 Ava
 A.X.L.
 Baymax
@@ -13,6 +15,7 @@ CHAPPiE
 Clippy
 Cortana
 CPU
+Curiosity
 Cyborg
 Data
 Droid
@@ -28,10 +31,12 @@ IronGiant
 Johnny5
 K-2SO
 KITT
+Mech
 Megatron
 MQ-1
 MQ-9
 Otto
+P-body
 Project 2501
 R2-D2
 Rev-9

@@ -9,7 +9,6 @@ use crate::setting::Settings;
 use crate::visibility::VisibilityEvent;
 use core_protocol::id::GameId;
 use core_protocol::rpc::ClientUpdate;
-use renderer::{Camera, Layer, Renderer};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -22,10 +21,6 @@ pub trait GameClient: Sized + 'static {
     type Audio: crate::audio::Audio;
     /// Game-specific command to server.
     type GameRequest: 'static + Serialize + Clone;
-    /// Game-specific render layer.
-    type RendererLayer: Layer<Self::Camera>;
-    /// Game-specific camera.
-    type Camera: Camera;
     /// Game-specific state.
     type GameState: Apply<Self::GameUpdate>;
     /// Event from game UI.
@@ -36,30 +31,16 @@ pub trait GameClient: Sized + 'static {
     type GameUpdate: 'static + DeserializeOwned;
     /// Game-specific settings
     type GameSettings: Settings + Clone + PartialEq + Default;
+    /// Open source licenses.
+    const LICENSES: &'static [(&'static str, &'static [&'static str])] = &[];
 
-    fn new() -> Self;
-
-    /// Creates the (game-specific) settings.
-    fn init_settings(&mut self, renderer: &mut Renderer<Self::Camera>) -> Self::GameSettings;
-
-    /// Creates the (game-specific) render layer.
-    fn init_layer(
-        &mut self,
-        renderer: &mut Renderer<Self::Camera>,
-        context: &mut Context<Self>,
-    ) -> Self::RendererLayer;
+    fn new(context: &Context<Self>) -> Result<Self, String>;
 
     /// Peek at a core update before it is applied to `CoreState`.
     fn peek_core(&mut self, _inbound: &ClientUpdate, _context: &mut Context<Self>) {}
 
     /// Peek at a game update before it is applied to `GameState`.
-    fn peek_game(
-        &mut self,
-        inbound: &Self::GameUpdate,
-        _context: &mut Context<Self>,
-        _renderer: &Renderer<Self::Camera>,
-        _layer: &mut Self::RendererLayer,
-    ) {
+    fn peek_game(&mut self, inbound: &Self::GameUpdate, _context: &mut Context<Self>) {
         let _ = inbound;
     }
 
@@ -67,62 +48,28 @@ pub trait GameClient: Sized + 'static {
     fn peek_keyboard(&mut self, _event: &KeyboardEvent, _context: &mut Context<Self>) {}
 
     /// Peek at a mouse event before it is applied to `MouseState`.
-    fn peek_mouse(
-        &mut self,
-        event: &MouseEvent,
-        _context: &mut Context<Self>,
-        _renderer: &Renderer<Self::Camera>,
-    ) {
+    fn peek_mouse(&mut self, event: &MouseEvent, _context: &mut Context<Self>) {
         let _ = event;
     }
 
     /// Peek at a visibility event before it is applied to `VisibilityState`.
-    fn peek_visibility(
-        &mut self,
-        event: &VisibilityEvent,
-        _context: &mut Context<Self>,
-        _renderer: &Renderer<Self::Camera>,
-    ) {
+    fn peek_visibility(&mut self, event: &VisibilityEvent, _context: &mut Context<Self>) {
         let _ = event;
     }
 
-    /// Render the game. Optional, as this may be done in `tick`.
-    fn render(
-        &mut self,
-        _elapsed_seconds: f32,
-        _context: &Context<Self>,
-        _renderer: &mut Renderer<Self::Camera>,
-        _renderer_layer: &mut Self::RendererLayer,
-    ) {
-    }
+    /// Render the game. Optional, as this may be done in `tick`. Must end with a call to
+    /// [`Renderer::render`].
+    fn render(&mut self, _elapsed_seconds: f32, _context: &Context<Self>) {}
     /// A game with update and render intertwined implements this method.
     /// Otherwise, it implements update() and render().
-    fn tick(
-        &mut self,
-        elapsed_seconds: f32,
-        context: &mut Context<Self>,
-        renderer: &mut Renderer<Self::Camera>,
-        renderer_layer: &mut Self::RendererLayer,
-    ) {
-        self.update(elapsed_seconds, context, &*renderer);
-        self.render(elapsed_seconds, context, renderer, renderer_layer);
+    fn tick(&mut self, elapsed_seconds: f32, context: &mut Context<Self>) {
+        self.update(elapsed_seconds, context);
+        self.render(elapsed_seconds, context);
     }
 
     /// Peek at a UI event before it is applied to `UiState`.
-    fn ui(
-        &mut self,
-        _event: Self::UiEvent,
-        _context: &mut Context<Self>,
-        _layer: &mut Self::RendererLayer,
-    ) {
-    }
+    fn ui(&mut self, _event: Self::UiEvent, _context: &mut Context<Self>) {}
 
     /// Updates the game. Optional, as may be done in `tick`.
-    fn update(
-        &mut self,
-        _elapsed_seconds: f32,
-        _context: &mut Context<Self>,
-        _renderer: &Renderer<Self::Camera>,
-    ) {
-    }
+    fn update(&mut self, _elapsed_seconds: f32, _context: &mut Context<Self>) {}
 }

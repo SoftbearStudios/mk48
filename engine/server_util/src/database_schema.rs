@@ -161,6 +161,9 @@ pub struct Metrics {
     /// How many megabits per second transmitted.
     #[serde(default, skip_serializing_if = "is_default")]
     pub bandwidth_tx: ContinuousExtremaMetric,
+    /// Number of banner advertisements shown.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub banner_ads: DiscreteMetric,
     /// Ratio of new players that leave without ever playing.
     #[serde(default, skip_serializing_if = "is_default")]
     pub bounce: RatioMetric,
@@ -227,6 +230,9 @@ pub struct Metrics {
     /// Player retention histogram.
     #[serde(default, skip_serializing_if = "is_default")]
     pub retention_histogram: HistogramMetric,
+    /// Number of rewarded advertisements shown.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub rewarded_ads: DiscreteMetric,
     /// Network latency round trip time in seconds.
     #[serde(default, skip_serializing_if = "is_default")]
     pub rtt: ContinuousExtremaMetric,
@@ -251,88 +257,115 @@ pub struct Metrics {
     /// Uptime in (fractional) days.
     #[serde(default, skip_serializing_if = "is_default")]
     pub uptime: ContinuousExtremaMetric,
+    /// Number of video advertisements shown.
+    #[serde(default, skip_serializing_if = "is_default")]
+    pub video_ads: DiscreteMetric,
     /// Visits
     #[serde(default, skip_serializing_if = "is_default")]
     pub visits: DiscreteMetric,
 }
 
+macro_rules! fields {
+    ($me: ident, $st: ident, $f: ident, $($name: ident),*) => {
+        {
+            $st {
+                $($name: $me.$name.$f()),*
+            }
+        }
+    }
+}
+
 impl Metrics {
     pub fn summarize(&self) -> MetricsSummaryDto {
-        MetricsSummaryDto {
-            abuse_reports: self.abuse_reports.summarize(),
-            arenas_cached: self.arenas_cached.summarize(),
-            bandwidth_rx: self.bandwidth_rx.summarize(),
-            bandwidth_tx: self.bandwidth_tx.summarize(),
-            bounce: self.bounce.summarize(),
-            concurrent: self.concurrent.summarize(),
-            connections: self.connections.summarize(),
-            cpu: self.cpu.summarize(),
-            cpu_steal: self.cpu_steal.summarize(),
-            flop: self.flop.summarize(),
-            fps: self.fps.summarize(),
-            invited: self.invited.summarize(),
-            invitations_cached: self.invitations_cached.summarize(),
-            low_fps: self.low_fps.summarize(),
-            minutes_per_play: self.minutes_per_play.summarize(),
-            minutes_per_visit: self.minutes_per_visit.summarize(),
-            new: self.new.summarize(),
-            no_referrer: self.no_referrer.summarize(),
-            peek: self.peek.summarize(),
-            players_cached: self.players_cached.summarize(),
-            plays_per_visit: self.plays_per_visit.summarize(),
-            plays_total: self.plays_total.summarize(),
-            ram: self.ram.summarize(),
-            renews: self.renews.summarize(),
-            retention_days: self.retention_days.summarize(),
-            retention_histogram: self.retention_histogram.summarize(),
-            rtt: self.rtt.summarize(),
-            score: self.score.summarize(),
-            sessions_cached: self.sessions_cached.summarize(),
-            spt: self.spt.summarize(),
-            teamed: self.teamed.summarize(),
-            toxicity: self.toxicity.summarize(),
-            tps: self.tps.summarize(),
-            uptime: self.uptime.summarize(),
-            visits: self.visits.summarize(),
-        }
+        fields!(
+            self,
+            MetricsSummaryDto,
+            summarize,
+            // Fields
+            abuse_reports,
+            arenas_cached,
+            bandwidth_rx,
+            bandwidth_tx,
+            banner_ads,
+            bounce,
+            concurrent,
+            connections,
+            cpu,
+            cpu_steal,
+            flop,
+            fps,
+            invited,
+            invitations_cached,
+            low_fps,
+            minutes_per_play,
+            minutes_per_visit,
+            new,
+            no_referrer,
+            peek,
+            players_cached,
+            plays_per_visit,
+            plays_total,
+            ram,
+            renews,
+            retention_days,
+            retention_histogram,
+            rewarded_ads,
+            rtt,
+            score,
+            sessions_cached,
+            spt,
+            teamed,
+            toxicity,
+            tps,
+            uptime,
+            video_ads,
+            visits
+        )
     }
 
     pub fn data_point(&self) -> MetricsDataPointDto {
-        MetricsDataPointDto {
-            abuse_reports: self.abuse_reports.data_point(),
-            arenas_cached: self.arenas_cached.data_point(),
-            bandwidth_rx: self.bandwidth_rx.data_point(),
-            bandwidth_tx: self.bandwidth_tx.data_point(),
-            bounce: self.bounce.data_point(),
-            concurrent: self.concurrent.data_point(),
-            connections: self.connections.data_point(),
-            cpu: self.cpu.data_point(),
-            cpu_steal: self.cpu_steal.data_point(),
-            flop: self.flop.data_point(),
-            fps: self.fps.data_point(),
-            invited: self.invited.data_point(),
-            invitations_cached: self.invitations_cached.data_point(),
-            low_fps: self.low_fps.data_point(),
-            minutes_per_play: self.minutes_per_play.data_point(),
-            minutes_per_visit: self.minutes_per_visit.data_point(),
-            new: self.new.data_point(),
-            no_referrer: self.no_referrer.data_point(),
-            peek: self.peek.data_point(),
-            players_cached: self.players_cached.data_point(),
-            plays_per_visit: self.plays_per_visit.data_point(),
-            plays_total: self.plays_total.data_point(),
-            ram: self.ram.data_point(),
-            renews: self.renews.data_point(),
-            retention_days: self.retention_days.data_point(),
-            rtt: self.rtt.data_point(),
-            score: self.score.data_point(),
-            sessions_cached: self.sessions_cached.data_point(),
-            spt: self.spt.data_point(),
-            teamed: self.teamed.data_point(),
-            toxicity: self.toxicity.data_point(),
-            tps: self.tps.data_point(),
-            uptime: self.uptime.data_point(),
-            visits: self.visits.data_point(),
+        fields! {
+            self,
+            MetricsDataPointDto,
+            data_point,
+            // Fields.
+            abuse_reports,
+            arenas_cached,
+            bandwidth_rx,
+            bandwidth_tx,
+            banner_ads,
+            bounce,
+            concurrent,
+            connections,
+            cpu,
+            cpu_steal,
+            flop,
+            fps,
+            invited,
+            invitations_cached,
+            low_fps,
+            minutes_per_play,
+            minutes_per_visit,
+            new,
+            no_referrer,
+            peek,
+            players_cached,
+            plays_per_visit,
+            plays_total,
+            ram,
+            renews,
+            retention_days,
+            rewarded_ads,
+            rtt,
+            score,
+            sessions_cached,
+            spt,
+            teamed,
+            toxicity,
+            tps,
+            uptime,
+            video_ads,
+            visits
         }
     }
 }
@@ -360,8 +393,11 @@ impl Serialize for GameIdMetricFilter {
     {
         fn ser<T: Serialize>(t: T) -> Option<String> {
             let av: AttributeValue = serde_dynamo::to_attribute_value(t).ok()?;
-            // TODO: Unecessary string clone
-            av.as_s().ok().map(Clone::clone)
+            if let AttributeValue::S(string) = av {
+                Some(string)
+            } else {
+                None
+            }
         }
 
         let game_id_string =

@@ -54,30 +54,24 @@ pub fn include_audio(item: TokenStream) -> TokenStream {
                 quote! {
                     Some(#loop_start)
                 }
-                .into()
             } else {
                 quote! {
                     None
                 }
-                .into()
             };
             let duration = sprite.duration;
 
-            sprites.push(
-                quote! {
-                    sprite_sheet::AudioSprite {
-                        start: #start,
-                        loop_start: #loop_start,
-                        duration: #duration
-                    }
+            sprites.push(quote! {
+                sprite_sheet::AudioSprite {
+                    start: #start,
+                    loop_start: #loop_start,
+                    duration: #duration
                 }
-                .into(),
-            );
+            });
 
             quote! {
                 #variant
             }
-            .into()
         })
         .collect();
 

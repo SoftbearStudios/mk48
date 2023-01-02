@@ -25,6 +25,7 @@ pub(crate) type Ani = web_sys::ExtTextureFilterAnisotropic;
 
 #[cfg(not(feature = "webgl2"))]
 #[macro_use]
+#[allow(clippy::module_inception)]
 mod gl {
     use wasm_bindgen::JsCast;
     use web_sys::{AngleInstancedArrays, OesVertexArrayObject, WebGlRenderingContext};
@@ -66,6 +67,7 @@ mod gl {
 
 #[cfg(feature = "webgl2")]
 #[macro_use]
+#[allow(clippy::module_inception)]
 mod gl {
     use wasm_bindgen::JsValue;
     use web_sys::{

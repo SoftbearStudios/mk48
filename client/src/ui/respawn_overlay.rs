@@ -6,10 +6,10 @@ use crate::ui::ship_menu::ShipMenu;
 use crate::ui::{UiEvent, UiStatusRespawning};
 use crate::Mk48Game;
 use stylist::yew::styled_component;
-use yew::{html, Properties};
-use yew_frontend::frontend::Gctw;
+use yew::{html, Html, Properties};
+use yew_frontend::frontend::use_ui_event_callback;
 use yew_frontend::overlay::spawn::use_splash_screen;
-use yew_frontend::translation::t;
+use yew_frontend::translation::use_translation;
 
 #[derive(Properties, PartialEq)]
 pub struct RespawnOverlayProps {
@@ -49,11 +49,12 @@ pub fn respawn_overlay(props: &RespawnOverlayProps) -> Html {
         "#
     );
 
+    let t = use_translation();
     let (_paused, _transitioning, onanimationend) = use_splash_screen();
-    let onclick = Gctw::<Mk48Game>::use_ui_event_callback().reform(UiEvent::Respawn);
+    let onclick = use_ui_event_callback::<Mk48Game>().reform(UiEvent::Respawn);
     html! {
-        <div class={container_style} {onanimationend}>
-            <h2 class={reason_style}>{t().death_reason(&props.status.death_reason)}</h2>
+        <div id="death" class={container_style} {onanimationend}>
+            <h2 class={reason_style}>{t.death_reason(&props.status.death_reason)}</h2>
             <ShipMenu
                 score={props.score}
                 {onclick}

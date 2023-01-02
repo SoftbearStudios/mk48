@@ -3,7 +3,7 @@
 
 use crate::component::link_icon::LinkIcon;
 use yew::virtual_dom::AttrValue;
-use yew::{function_component, html, Properties};
+use yew::{function_component, html, Html, Properties};
 use yew_icons::IconId;
 
 #[derive(PartialEq, Properties)]

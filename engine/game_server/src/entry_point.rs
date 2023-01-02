@@ -11,7 +11,7 @@ use crate::game_service::GameArenaService;
 use crate::infrastructure::Infrastructure;
 use crate::leaderboard::LeaderboardRequest;
 use crate::options::Options;
-use crate::static_files::{create_static_handler, static_size_and_hash};
+use crate::static_files::{static_size_and_hash, StaticFilesHandler};
 use crate::status::StatusRequest;
 use crate::system::{SystemRepo, SystemRequest};
 use actix::Actor;
@@ -170,11 +170,33 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                 String::from("https://localhost:8443"),
                 String::from("http://localhost:80"),
                 String::from("https://localhost:443"),
+                String::from("https://softbear.com"),
+                String::from("https://www.softbear.com"),
             ]
         });
 
+        let admin_router = get(StaticFilesHandler{cdn: admin_client, prefix: "/admin", browser_router: false}).post(
+            move |request: Json<ParameterizedAdminRequest>| {
+                let srv_clone_admin = admin_srv.clone();
+
+                async move {
+                    match srv_clone_admin.send(request.0).await {
+                        Ok(result) => match result {
+                            Ok(update) => {
+                                Ok(Json(update))
+                            }
+                            Err(e) => Err((StatusCode::BAD_REQUEST, String::from(e)).into_response()),
+                        },
+                        Err(e) => {
+                            Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
+                        }
+                    }
+                }
+            }
+        );
+
         let app = Router::new()
-            .fallback(get(create_static_handler(game_client, "", browser_router)))
+            .fallback_service(get(StaticFilesHandler{cdn: game_client, prefix: "", browser_router}))
             .route("/oauth2/discord", get(async move || {
                 discord_oauth2.map(|oauth2| oauth2.redirect().into_response()).unwrap_or_else(|| Response::builder()
                     .status(StatusCode::NOT_FOUND)
@@ -468,25 +490,8 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                     }
                 }
             }))
-            .route("/admin/*path", get(create_static_handler(admin_client, "/admin", false)).post(
-                move |request: Json<ParameterizedAdminRequest>| {
-                    let srv_clone_admin = admin_srv.clone();
-
-                    async move {
-                        match srv_clone_admin.send(request.0).await {
-                            Ok(result) => match result {
-                                Ok(update) => {
-                                    Ok(Json(update))
-                                }
-                                Err(e) => Err((StatusCode::BAD_REQUEST, String::from(e)).into_response()),
-                            },
-                            Err(e) => {
-                                Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response())
-                            }
-                        }
-                    }
-                }
-            ))
+            .route("/admin/", admin_router.clone())
+            .route("/admin/*path", admin_router)
             .layer(ServiceBuilder::new()
                 .layer(CorsLayer::new()
                     .allow_origin(tower_http::cors::AllowOrigin::predicate(move |origin, _parts| {
@@ -510,7 +515,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
                 .layer(axum::middleware::from_fn(async move |request: axum::http::Request<_>, next: axum::middleware::Next<_>| {
                     let addr = request.extensions().get::<ConnectInfo<SocketAddr>>().map(|ci| ci.0);
 
-                    if !request.headers().get("auth").map(|hv| hv == include_str!("auth.txt")).unwrap_or(false) {
+                    if !request.headers().get("auth").map(|hv| constant_time_eq::constant_time_eq(include_str!("auth.txt").as_bytes(), hv.as_bytes())).unwrap_or(false) {
                         if let Err(response) = limit_content_length(request.headers(), 16384) {
                             return Err(response);
                         }
@@ -558,7 +563,9 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
 
                     Ok(response)
                 }))
-            );
+            )
+            // We limit even further later on.
+            .layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024));
 
         let addr_incoming_config = axum_server::AddrIncomingConfig::new()
             .tcp_keepalive(Some(Duration::from_secs(32)))
@@ -577,7 +584,7 @@ pub fn entry_point<G: GameArenaService>(game_client: MiniCdn, browser_router: bo
 
         #[cfg(not(debug_assertions))]
         let http_app = Router::new()
-            .fallback(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>, headers: reqwest::header::HeaderMap| {
+            .fallback_service(get(async move |uri: Uri, host: TypedHeader<axum::headers::Host>, headers: reqwest::header::HeaderMap| {
                 if let Err(response) = limit_content_length(&headers, 16384) {
                     return Err(response);
                 }

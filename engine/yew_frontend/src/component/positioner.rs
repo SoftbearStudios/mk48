@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use std::fmt::{Display, Formatter, Write};
 use stylist::yew::styled_component;
 use yew::virtual_dom::AttrValue;
-use yew::{html, Children, Classes, Properties};
+use yew::{html, Children, Classes, Html, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct PositionerProps {
@@ -18,6 +19,7 @@ pub struct PositionerProps {
     pub max_width: Option<AttrValue>,
     #[prop_or_default]
     pub class: Classes,
+    //pub style: Option<AttrValue>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -39,13 +41,12 @@ impl Position {
     }
 }
 
-impl ToString for Position {
-    fn to_string(&self) -> String {
-        let mut style = String::with_capacity(64);
+impl Display for Position {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("position: absolute;")?;
 
-        style += "position: absolute;";
-
-        let (h_position, h_margin, h_translation) = match self.horizontal() {
+        let horizontal = self.horizontal();
+        let (h_position, h_margin, h_translation) = match horizontal {
             HorizontalPosition::Left { margin } => {
                 ("left: 0;", format!("margin-left: {};", margin), 0)
             }
@@ -55,8 +56,12 @@ impl ToString for Position {
             }
         };
 
-        style += h_position;
-        style += &h_margin;
+        f.write_str(h_position)?;
+        f.write_str(&h_margin)?;
+
+        if !f.alternate() {
+            f.write_str(horizontal.default_text_align().as_css())?;
+        }
 
         let (v_position, v_margin, v_translation) = match self.vertical() {
             VerticalPosition::Bottom { margin } => {
@@ -66,17 +71,18 @@ impl ToString for Position {
             VerticalPosition::Top { margin } => ("top: 0;", format!("margin-top: {};", margin), 0),
         };
 
-        style += v_position;
-        style += &v_margin;
+        f.write_str(v_position)?;
+        f.write_str(&v_margin)?;
 
         if h_translation != 0 || v_translation != 0 {
-            style += &format!(
+            write!(
+                f,
                 "transform: translate({}%, {}%);",
                 h_translation, v_translation
-            );
+            )?;
         }
 
-        style
+        Ok(())
     }
 }
 
@@ -168,14 +174,14 @@ impl Position {
 
 #[styled_component(Positioner)]
 pub fn positioner(props: &PositionerProps) -> Html {
-    let mut style = props.position.to_string();
+    let mut style = format!("{:#}", props.position);
 
     if let Some(min_width) = props.min_width.as_ref() {
-        style += &format!("min-width: {};", min_width);
+        write!(&mut style, "min-width: {};", min_width).unwrap();
     }
 
     if let Some(max_width) = props.max_width.as_ref() {
-        style += &format!("max-width: {};", max_width);
+        write!(&mut style, "max-width: {};", max_width).unwrap();
     }
 
     if let Some(flex) = props.flex {
@@ -186,6 +192,12 @@ pub fn positioner(props: &PositionerProps) -> Html {
         .align
         .unwrap_or(props.position.default_text_align())
         .as_css();
+
+    /*
+    if let Some(s) = &props.style {
+        style += s.as_str();
+    }
+     */
 
     html! {
         <div id={props.id.clone()} style={style} class={props.class.clone()}>

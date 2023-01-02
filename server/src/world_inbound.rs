@@ -306,20 +306,11 @@ impl CommandTrait for Fire {
                     // Can't deposit in arctic.
                     target.y = target.y.min(ARCTIC - 2.0 * common::terrain::SCALE);
 
+                    // Clamp target is in valid range from depositor or error if too far.
+                    const DEPOSITOR_RANGE: f32 = 60.0;
                     let depositor = armament_transform.position;
-
-                    // Radius of depositor.
-                    const MAX_RADIUS: f32 = 60.0;
-
-                    // Max radius that will snap to MAX_RADIUS.
-                    const CUTOFF_RADIUS: f32 = MAX_RADIUS * 2.0;
-
-                    // Make sure target is in valid range.
-                    let delta = target - depositor;
-                    if delta.length_squared() > CUTOFF_RADIUS.powi(2) {
-                        return Err("outside maximum range");
-                    }
-                    let pos = depositor + delta.clamp_length_max(MAX_RADIUS);
+                    let pos =
+                        clamp_to_range(depositor, target, DEPOSITOR_RANGE, DEPOSITOR_RANGE * 2.0)?;
 
                     world.terrain.modify(TerrainMutation::simple(pos, 60.0));
                 } else {
@@ -381,17 +372,17 @@ impl CommandTrait for Pay {
 
         return if let Status::Alive {
             entity_index,
-            aim_target: Some(position),
+            aim_target: Some(target),
             ..
         } = player.data.status
         {
             let entity = &world.entities[entity_index];
 
-            if position.distance_squared(entity.transform.position)
-                > entity.data().radii().end.powi(2)
-            {
-                return Err("position is too far away to pay");
-            }
+            // Clamp pay to range or error if too far.
+            let max_range = entity.data().radii().end;
+            let cutoff_range = (max_range * 2.0).min(max_range + 60.0);
+            let target =
+                clamp_to_range(entity.transform.position, target, max_range, cutoff_range)?;
 
             let pay = 10; // Value of coin.
             let withdraw = pay * 2; // Payment has 50% efficiency.
@@ -405,7 +396,7 @@ impl CommandTrait for Pay {
                 Some(Arc::clone(entity.player.as_ref().unwrap())),
             );
 
-            payment.transform.position = position;
+            payment.transform.position = target;
             payment.altitude = entity.altitude;
 
             // If payment successfully spawns, withdraw funds.
@@ -488,4 +479,20 @@ fn sanitize_floats<'a, F: IntoIterator<Item = &'a mut f32>>(
         *float = sanitize_float(*float, valid.clone())?;
     }
     Ok(())
+}
+
+/// Clamps a center -> target vector to `range` and errors if it's length is greater than
+/// `cutoff_range`.
+fn clamp_to_range(
+    center: Vec2,
+    target: Vec2,
+    range: f32,
+    cutoff_range: f32,
+) -> Result<Vec2, &'static str> {
+    let delta = target - center;
+    if delta.length_squared() > cutoff_range.powi(2) {
+        Err("outside maximum range")
+    } else {
+        Ok(center + delta.clamp_length_max(range))
+    }
 }

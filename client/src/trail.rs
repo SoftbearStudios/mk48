@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::game::wind;
+use crate::game::Mk48Params;
+use crate::weather::Weather;
 use common::entity::EntityId;
 use common::ticks::Ticks;
 use common_util::range::map_ranges;
 use glam::{Vec2, Vec3, Vec4};
 use itertools::Itertools;
+use renderer::{DefaultRender, Layer, RenderLayer, Renderer};
 use renderer2d::GraphicLayer;
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -37,7 +39,7 @@ impl Trail {
         self.updated = time;
     }
 
-    fn add_to_layer(&self, layer: &mut GraphicLayer, time: f32) {
+    fn add_to_layer(&self, layer: &mut GraphicLayer, weather: &Weather, time: f32) {
         // How long the start point of the trail has been visible.
         // Clamp the start point to the visible range.
         let start_alive = time - self.created;
@@ -48,13 +50,13 @@ impl Trail {
         let start_pos = self
             .start
             .lerp(self.end, start_clamp / (self.updated - self.created))
-            + Self::offset(start_alive);
+            + Self::offset(weather, start_alive);
         let start_color = self.color(start_alive);
 
         // How long the end point of the trail has been visible.
         // Don't need to clamp the end point because it will be expired first.
         let end_alive = time - self.updated;
-        let end_pos = self.end + Self::offset(end_alive);
+        let end_pos = self.end + Self::offset(weather, end_alive);
         let end_color = self.color(end_alive);
 
         layer.draw_line_gradient(start_pos, end_pos, self.width, start_color, end_color);
@@ -65,11 +67,16 @@ impl Trail {
     }
 
     fn color(&self, alive: f32) -> Vec4 {
-        Vec3::ONE.extend(map_ranges(alive, 0.0..self.lifespan, 0.1..0.0, false))
+        debug_assert!(
+            alive >= 0.0 && alive <= self.lifespan,
+            "{alive}, {}",
+            self.lifespan
+        );
+        Vec3::ONE.extend(map_ranges(alive, 0.0..self.lifespan, 0.05..0.0, false))
     }
 
-    fn offset(alive: f32) -> Vec2 {
-        wind() * alive
+    fn offset(weather: &Weather, alive: f32) -> Vec2 {
+        weather.wind * alive
     }
 }
 
@@ -102,14 +109,28 @@ impl Ord for Trail {
     }
 }
 
-#[derive(Default)]
-pub struct TrailSystem {
+#[derive(Layer)]
+pub struct TrailLayer {
+    #[layer]
+    inner: GraphicLayer,
     time: f32,
     trails: HashMap<EntityId, Trail>,
     unowned_trails: Vec<Trail>,
 }
 
-impl TrailSystem {
+impl DefaultRender for TrailLayer {
+    fn new(renderer: &Renderer) -> Self {
+        // TODO implement #[derive(DefaultRender)]
+        Self {
+            inner: DefaultRender::new(renderer),
+            time: Default::default(),
+            trails: Default::default(),
+            unowned_trails: Default::default(),
+        }
+    }
+}
+
+impl TrailLayer {
     pub fn set_time(&mut self, time: f32) {
         self.time = time;
     }
@@ -126,8 +147,10 @@ impl TrailSystem {
             })
             .update(pos, self.time);
     }
+}
 
-    pub fn update(&mut self, layer: &mut GraphicLayer) {
+impl RenderLayer<&Mk48Params> for TrailLayer {
+    fn render(&mut self, renderer: &Renderer, params: &Mk48Params) {
         let time = self.time;
 
         // Move trails that weren't updated.
@@ -148,7 +171,9 @@ impl TrailSystem {
             .chain(self.unowned_trails.iter())
             .sorted_unstable()
         {
-            trail.add_to_layer(layer, time)
+            trail.add_to_layer(&mut self.inner, &params.weather, time)
         }
+
+        self.inner.render(renderer, &params.camera);
     }
 }

@@ -5,8 +5,8 @@ use crate::translation::Mk48Translation;
 use common::entity::EntityType;
 use stylist::yew::styled_component;
 use web_sys::HtmlDivElement;
-use yew::{html, use_effect_with_deps, use_node_ref, Properties};
-use yew_frontend::translation::t;
+use yew::{html, use_effect_with_deps, use_node_ref, Html, Properties};
+use yew_frontend::translation::use_translation;
 
 #[derive(PartialEq, Properties)]
 pub struct HintProps {
@@ -69,10 +69,11 @@ pub fn hint(props: &HintProps) -> Html {
         );
     }
 
+    let t = use_translation();
     let data = props.entity_type.data();
     html! {
         <div class={hint_style} ref={container_ref}>
-            {t().entity_kind_hint(data.kind, data.sub_kind)}
+            {t.entity_kind_hint(data.kind, data.sub_kind)}
         </div>
     }
 }

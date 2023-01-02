@@ -9,7 +9,8 @@ license = "AGPL-3.0-or-later"
 [features]
 anisotropy = [ "web-sys/ExtTextureFilterAnisotropic" ]
 blocking = [] # Waits for shaders to compile before rendering.
-srgb = [ "dep:srgb", "web-sys/ExtSRgb", "web-sys/WebGlRenderbuffer" ]
+depth_texture = []
+srgb = [ "dep:srgb", "web-sys/ExtSRgb" ]
 webgl2 = [ "web-sys/WebGl2RenderingContext" ]
 
 [dependencies]
@@ -38,6 +39,7 @@ features = [
     'WebGlBuffer',
     'WebGlFramebuffer',
     'WebGlProgram',
+    'WebGlRenderbuffer',
     'WebGlRenderingContext',
     'WebGlShader',
     'WebGlShaderPrecisionFormat',

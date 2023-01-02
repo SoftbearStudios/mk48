@@ -10,11 +10,12 @@ use common::entity::EntityType;
 use common::protocol::{Command, Update};
 use common::terrain::ChunkSet;
 use common::ticks::Ticks;
+use common::util::level_to_score;
 use core_protocol::id::*;
 use game_server::context::Context;
 use game_server::game_service::GameArenaService;
 use game_server::player::{PlayerRepo, PlayerTuple};
-use log::warn;
+use log::{error, warn};
 use std::cell::UnsafeCell;
 use std::sync::Arc;
 use std::time::Duration;
@@ -86,7 +87,7 @@ impl GameArenaService for Server {
         #[cfg(debug_assertions)]
         {
             use common::entity::EntityData;
-            use common::util::level_to_score;
+            //use common::util::level_to_score;
             use rand::{thread_rng, Rng};
             let highest_level_score = level_to_score(EntityData::MAX_BOAT_LEVEL);
             player.score = if player.is_bot() {
@@ -165,13 +166,82 @@ impl GameArenaService for Server {
     }
 
     /// update runs server ticks.
-    fn tick(&mut self, _context: &mut Context<Self>) {
+    fn tick(&mut self, context: &mut Context<Self>) {
         self.counter = self.counter.next();
 
         self.world.update(Ticks::ONE);
 
         // Needs to be called before clients receive updates, but after World::update.
         self.world.terrain.pre_update();
+
+        if self.counter.every(Ticks::from_whole_secs(60)) {
+            use std::collections::{BTreeMap, HashMap};
+            use std::fs::OpenOptions;
+            use std::io::{Read, Seek, Write};
+
+            let mut count_score = HashMap::<EntityType, (usize, f32)>::new();
+
+            for player in context.players.iter_borrow() {
+                if let Status::Alive { entity_index, .. } = player.status {
+                    let entity = &self.world.entities[entity_index];
+                    debug_assert!(entity.is_boat());
+
+                    let (current_count, current_score) =
+                        count_score.entry(entity.entity_type).or_default();
+                    *current_count += 1;
+
+                    let level = entity.data().level;
+                    let level_score = level_to_score(level);
+                    let next_level_score = level_to_score(level + 1);
+                    let progress = common_util::range::map_ranges(
+                        player.score as f32,
+                        level_score as f32..next_level_score as f32,
+                        0.0..1.0,
+                        false,
+                    );
+                    if progress.is_finite() {
+                        *current_score += progress;
+                    }
+                }
+            }
+
+            tokio::task::spawn_blocking(move || {
+                if let Err(e) = OpenOptions::new()
+                    .create(true)
+                    .read(true)
+                    .write(true)
+                    .open(&*"playtime.json")
+                    .and_then(move |mut file| {
+                        let mut buf = Vec::new();
+                        file.read_to_end(&mut buf)?;
+                        let mut old = if let Ok(old) =
+                            serde_json::from_slice::<BTreeMap<EntityType, (u64, f32)>>(&buf)
+                        {
+                            old
+                        } else {
+                            error!("error loading old playtime.");
+                            BTreeMap::new()
+                        };
+
+                        for (entity_type, (new_count, new_score)) in count_score {
+                            if new_count > 0 {
+                                let (old_count, old_score) = old.entry(entity_type).or_default();
+                                *old_count = old_count.saturating_add(new_count as u64);
+                                *old_score += new_score;
+                            }
+                        }
+
+                        file.set_len(0)?;
+                        file.rewind()?;
+
+                        let serialized = serde_json::to_vec(&old).unwrap_or_default();
+                        file.write_all(&serialized)
+                    })
+                {
+                    error!("error logging playtime: {:?}", e);
+                }
+            });
+        }
     }
 
     fn post_update(&mut self, _context: &mut Context<Self>) {

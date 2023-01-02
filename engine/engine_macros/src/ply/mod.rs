@@ -37,27 +37,21 @@ pub fn include_ply(item: TokenStream) -> TokenStream {
     let parse_err = format!("unable to parse ply {}", ply_path.display());
     let ply_src = fs::read_to_string(ply_path).expect(&load_err);
     let ply = Ply::from_str(&ply_src).expect(&parse_err);
-    ply.to_tokens().into()
+    ply.into_model_tokens().into()
 }
 
-pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
+pub fn include_plys(item: TokenStream, define: bool, model: bool) -> TokenStream {
     let input = TokenStream2::from(item)
         .into_iter()
-        .filter(|item| {
-            if let proc_macro2::TokenTree::Punct(_) = item {
-                false
-            } else {
-                true
-            }
-        })
+        .filter(|item| !matches!(item, proc_macro2::TokenTree::Punct(_)))
         .collect::<Vec<_>>();
 
-    if input.is_empty() {
-        let msg = "expected at least one input";
+    if input.len() < 2 {
+        let msg = "expected at least two inputs";
         return quote! { compile_error!(#msg) }.into();
     }
 
-    let extra_traits: Vec<proc_macro2::Ident> = input[1..]
+    let extra_traits: Vec<proc_macro2::Ident> = input[2..]
         .iter()
         .map(|name| {
             // TODO better error handling.
@@ -76,7 +70,13 @@ pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
         );
     }
 
-    let ply_path_lit = match StringLit::try_from(&input[0]) {
+    let id_ident = if let proc_macro2::TokenTree::Ident(id_ident) = &input[0] {
+        id_ident.clone()
+    } else {
+        panic!("expected first input to be ident");
+    };
+
+    let ply_path_lit = match StringLit::try_from(&input[1]) {
         Err(e) => return e.to_compile_error(),
         Ok(lit) => lit,
     };
@@ -88,8 +88,9 @@ pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
 
     proc_macro::tracked_path::path(ply_path.to_string_lossy());
 
-    let mut variants = Vec::new();
-    let mut includes = Vec::<proc_macro2::TokenStream>::new();
+    let mut defines = Vec::new();
+    let mut models = Vec::<proc_macro2::TokenStream>::new();
+    let mut triangles = Vec::<proc_macro2::TokenStream>::new();
 
     for entry in fs::read_dir(ply_path)
         .expect("couldn't read model dir")
@@ -99,7 +100,7 @@ pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
         let tmp = entry.file_name();
         let file_name = tmp.to_string_lossy();
         if file_name.ends_with(".ply") {
-            let raw_name = file_name.split(".").next().unwrap();
+            let raw_name = file_name.split('.').next().unwrap();
             assert!(!raw_name.contains('.'));
             let name = name_to_ident(raw_name.to_string());
             if !define {
@@ -109,15 +110,20 @@ pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
                 let parse_err = format!("unable to parse ply {}", ply_path);
                 let ply_src = fs::read_to_string(ply_path.to_string()).expect(&load_err);
                 let ply = Ply::from_str(&ply_src).expect(&parse_err);
-                let ply = ply.to_tokens();
-                includes.push(
-                    quote! {
+
+                if model {
+                    let ply = ply.into_model_tokens();
+                    models.push(quote! {
                         Self::#name => #ply
-                    }
-                    .into(),
-                );
+                    });
+                } else {
+                    let tris = ply.into_triangle_tokens();
+                    triangles.push(quote! {
+                        Self::#name => #tris
+                    });
+                }
             } else {
-                variants.push(name);
+                defines.push(name);
             }
         }
     }
@@ -126,20 +132,32 @@ pub fn include_plys(item: TokenStream, define: bool) -> TokenStream {
         quote! {
             #[derive(Ord, PartialOrd, Hash, Copy, Clone, PartialEq, Eq, #(#extra_traits),*)]
             #[repr(u8)]
-            pub enum ModelId {
-                #(#variants),*
+            pub enum #id_ident {
+                #(#defines),*
+            }
+        }
+    } else if model {
+        quote! {
+            impl IntoModel for #id_ident {
+                #[allow(clippy::approx_constant)]
+                fn into_model(self) -> renderer3d::Model {
+                    match self {
+                        #(#models),*
+                    }
+                }
             }
         }
     } else {
         quote! {
-            pub trait IntoModel {
-                fn model(self) -> renderer3d::Model;
+            trait IntoTriangles {
+                fn into_triangles(self) -> &'static [f32];
             }
 
-            impl IntoModel for ModelId {
-                fn model(self) -> renderer3d::Model {
+            impl IntoTriangles for #id_ident {
+                #[allow(clippy::approx_constant)]
+                fn into_triangles(self) -> &'static [f32] {
                     match self {
-                        #(#includes),*
+                        #(#triangles),*
                     }
                 }
             }

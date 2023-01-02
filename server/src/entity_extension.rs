@@ -6,6 +6,7 @@ use common::angle::Angle;
 use common::entity::*;
 use common::ticks::Ticks;
 use common::util::make_mut_slice;
+use common_util::alloc::{arc_default_n, box_default_n};
 use std::iter::FromIterator;
 use std::sync::Arc;
 
@@ -34,14 +35,6 @@ pub struct EntityExtension {
     // 1 angle per turret relative to boat.
     // Arc to save allocations
     pub turrets: Arc<[Angle]>,
-}
-
-fn arc_default_n<T: Default>(n: usize) -> Arc<[T]> {
-    Arc::from_iter((0..n).map(|_| T::default()))
-}
-
-fn box_default_n<T: Default>(n: usize) -> Box<[T]> {
-    Box::from_iter((0..n).map(|_| T::default()))
 }
 
 impl EntityExtension {

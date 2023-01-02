@@ -139,6 +139,30 @@ impl<'de> Visitor<'de> for I16Visitor {
     }
 }
 
+pub struct BytesVisitor;
+
+impl<'de> Visitor<'de> for BytesVisitor {
+    type Value = Vec<u8>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("bytes")
+    }
+
+    fn visit_bytes<E>(self, value: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_byte_buf(Vec::from(value))
+    }
+
+    fn visit_byte_buf<E>(self, value: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value)
+    }
+}
+
 pub struct StrVisitor;
 
 impl<'de> Visitor<'de> for StrVisitor {

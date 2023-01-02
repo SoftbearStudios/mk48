@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use glam::Vec2;
+use glam::{uvec2, vec2, UVec2, Vec2};
 use serde::{Deserialize, Serialize, Serializer};
 use std::collections::{BTreeMap, HashMap};
 
@@ -41,7 +41,16 @@ pub struct UvSpriteSheet {
 /// UvSprite stores precise texture coordinates.
 #[derive(Serialize, Deserialize)]
 pub struct UvSprite {
+    /// Texture coordinates into [`UvSpriteSheet`] in counter-clockwise order starting at bottom
+    /// left.
+    ///
+    /// ```x
+    /// D - C
+    /// | / |
+    /// A - B
+    /// ```
     pub uvs: [Vec2; 4],
+    /// Aspect ratio aka width / height. Could be calculated from uvs.
     pub aspect: f32,
 }
 
@@ -60,12 +69,18 @@ pub struct AudioSprite {
 }
 
 impl SpriteSheet {
+    /// Dimensions of [`SpriteSheet`] equivilant to `uvec2(width, height)`.
+    pub fn dimensions(&self) -> UVec2 {
+        uvec2(self.width, self.height)
+    }
+
+    /// Converts a [`SpriteSheet`] into a [`UvSpriteSheet`] which is useful for rendering.
     pub fn to_uv_spritesheet(&self) -> UvSpriteSheet {
         UvSpriteSheet {
             sprites: self
                 .sprites
                 .iter()
-                .map(|(name, sprite)| (name.clone(), self.to_uv_sprite(sprite)))
+                .map(|(name, sprite)| (name.clone(), sprite.uvs(self.dimensions())))
                 .collect(),
             animations: self
                 .animations
@@ -75,42 +90,45 @@ impl SpriteSheet {
                         animation.clone(),
                         frames
                             .iter()
-                            .map(|frame| self.to_uv_sprite(frame))
+                            .map(|frame| frame.uvs(self.dimensions()))
                             .collect(),
                     )
                 })
                 .collect(),
         }
     }
+}
 
-    fn to_uv_sprite(&self, sprite: &Sprite) -> UvSprite {
+impl Sprite {
+    /// Position of [`Sprite`] equivilant to `uvec2(x, y)`.
+    pub fn position(&self) -> UVec2 {
+        uvec2(self.x, self.y)
+    }
+
+    /// Dimensions of [`Sprite`] equivilant to `uvec2(width, height)`.
+    pub fn dimensions(&self) -> UVec2 {
+        uvec2(self.width, self.height)
+    }
+
+    /// Converts a [`Sprite`] into a [`UvSprite`]. Requires the dimensions of the [`SpriteSheet`].
+    fn uvs(&self, sheet_dims: UVec2) -> UvSprite {
+        let pos = self.position().as_vec2();
+        let dim = self.dimensions().as_vec2();
+
         /*
+        D  C
+
         A  B
-
-        C  D
          */
-
-        let inv_width = 1.0 / self.width as f32;
-        let inv_height = 1.0 / self.height as f32;
-
         let uvs = [
-            Vec2::new(sprite.x as f32 * inv_width, sprite.y as f32 * inv_height),
-            Vec2::new(
-                (sprite.x + sprite.width) as f32 * inv_width,
-                sprite.y as f32 * inv_height,
-            ),
-            Vec2::new(
-                sprite.x as f32 * inv_width,
-                (sprite.y + sprite.height) as f32 * inv_height,
-            ),
-            Vec2::new(
-                (sprite.x + sprite.width) as f32 * inv_width,
-                (sprite.y + sprite.height) as f32 * inv_height,
-            ),
-        ];
+            pos + vec2(0.0, dim.y),
+            pos + dim,
+            pos + vec2(dim.x, 0.0),
+            pos,
+        ]
+        .map(|v| v / sheet_dims.as_vec2());
 
-        let aspect = sprite.height as f32 / sprite.width as f32;
-
+        let aspect = dim.x / dim.y;
         UvSprite { uvs, aspect }
     }
 }

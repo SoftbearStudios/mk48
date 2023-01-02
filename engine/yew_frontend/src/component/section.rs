@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::component::positioner::Position;
+use crate::frontend::use_ctw;
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
-use yew::{classes, html, use_state, Callback, Children, Properties};
+use yew::{classes, html, use_state, Callback, Children, Html, Properties};
 use yew_icons::{Icon, IconId};
 
 #[derive(PartialEq, Properties)]
@@ -12,7 +14,11 @@ pub struct SectionProps {
     pub children: Children,
     #[prop_or(true)]
     pub closable: bool,
+    #[prop_or(None)]
+    pub id: Option<AttrValue>,
     pub name: AttrValue,
+    pub position: Option<Position>,
+    pub style: Option<AttrValue>,
     #[prop_or(true)]
     pub open: bool,
     /// If [`Some`], open is reactive.
@@ -82,16 +88,21 @@ pub fn section(props: &SectionProps) -> Html {
     let h2_css_class = css!(
         r#"
         color: white;
-        cursor: pointer;
         font-weight: bold;
         margin: 0;
         user-select: none;
+    "#
+    );
+
+    let h2_clickable_css_class = css!(
+        r#"
+        cursor: pointer;
         transition: filter 0.1s;
 
         :hover {
             filter: opacity(0.85);
         }
-    "#
+        "#
     );
 
     /*
@@ -116,30 +127,50 @@ pub fn section(props: &SectionProps) -> Html {
         "#
     );
 
+    let high_contrast_style = css!(
+        r#"
+        background-color: #00000035;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        "#
+    );
+    let high_contrast = use_ctw().setting_cache.high_contrast;
+
     const ICON_WIDTH: &'static str = "1.5rem";
     const ICON_HEIGHT: &'static str = "1.2rem";
 
+    let mut style = String::new();
+    if let Some(s) = &props.style {
+        style.push_str(s.as_str());
+    }
+    if let Some(position) = props.position {
+        use std::fmt::Write;
+        write!(&mut style, "{}", position).unwrap();
+    }
+
     html! {
         <>
-            <h2
-                class={h2_css_class}
-                {onclick}
-                >
-                if let Some(maybe_callback) = props.left_arrow.unpack(open) {
-                    <span class={classes!(span_css_class.clone(), maybe_callback.is_none().then(|| reserved_style.clone()))} onclick={maybe_callback}>
-                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
-                    </span>
+            <div id={props.id.clone()} {style} class={high_contrast.then_some(high_contrast_style)}>
+                <h2
+                    class={classes!(h2_css_class, onclick.is_some().then_some(h2_clickable_css_class))}
+                    {onclick}
+                    >
+                    if let Some(maybe_callback) = props.left_arrow.unpack(open) {
+                        <span class={classes!(span_css_class.clone(), maybe_callback.is_none().then(|| reserved_style.clone()))} onclick={maybe_callback}>
+                            <Icon icon_id={IconId::FontAwesomeSolidSquareCaretLeft} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
+                        </span>
+                    }
+                    {&props.name}
+                    if let Some(maybe_callback) = props.right_arrow.unpack(open) {
+                        <span class={classes!(span_css_class, maybe_callback.is_none().then_some(reserved_style))} onclick={maybe_callback}>
+                            <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
+                        </span>
+                    }
+                </h2>
+                if open {
+                    {props.children.clone()}
                 }
-                {&props.name}
-                if let Some(maybe_callback) = props.right_arrow.unpack(open) {
-                    <span class={classes!(span_css_class, maybe_callback.is_none().then_some(reserved_style))} onclick={maybe_callback}>
-                        <Icon icon_id={IconId::FontAwesomeSolidSquareCaretRight} width={ICON_WIDTH.to_string()} height={ICON_HEIGHT.to_string()}/>
-                    </span>
-                }
-            </h2>
-            if open {
-                {props.children.clone()}
-            }
+            </div>
         </>
     }
 }

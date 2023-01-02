@@ -1,7 +1,8 @@
 [package]
 name = "macros"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
+authors = ["Softbear, Inc."]
 license = "AGPL-3.0-or-later"
 
 [lib]
@@ -10,6 +11,8 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+common_util = {path = "../engine/common_util"}
+glam = "0.18"
 quote = "1.0"
 syn = "1.0"
 litrs = "0.2"

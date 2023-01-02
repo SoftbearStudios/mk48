@@ -96,14 +96,14 @@ pub(crate) fn derive_settings(input: TokenStream) -> TokenStream {
                 };
                 let getter = quote! {
                     pub fn #getter_name(&self) -> #ty {
-                        self.#ident
+                        self.#ident.clone()
                     }
                 };
 
                 let setter = if optional {
                     quote! {
                         pub fn #setter_name(&mut self, value: #ty, browser_storages: &mut BrowserStorages) {
-                            self.#ident = value;
+                            self.#ident = value.clone();
                             let _ = browser_storages.#storage.set(#ident_string, value);
                         }
                     }
@@ -111,7 +111,7 @@ pub(crate) fn derive_settings(input: TokenStream) -> TokenStream {
                     quote! {
                         pub fn #setter_name(&mut self, value: #ty, browser_storages: &mut BrowserStorages) {
                             if let Some(valid) = Self::#validator_name(value) {
-                                self.#ident = valid;
+                                self.#ident = valid.clone();
                                 let _ = browser_storages.#storage.set(#ident_string, Some(valid));
                             }
                         }

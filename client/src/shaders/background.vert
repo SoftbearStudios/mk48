@@ -1,10 +1,12 @@
-attribute vec4 position;
-attribute vec2 uv;
+#version 300 es
+
+in vec4 position;
+in vec2 uv;
 uniform mat3 uCamera;
 uniform mat3 uTexture;
-varying vec2 vPosition; // world position.
-varying vec2 vUv; // terrain texture uv.
-varying vec2 vUv2; // sand/grass texture uv.
+out vec2 vPosition; // world position.
+out vec2 vUv; // terrain texture uv.
+out vec2 vUv2; // sand/grass texture uv.
 
 void main() {
     gl_Position = position;

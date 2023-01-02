@@ -28,7 +28,22 @@ impl<const FREQUENCY_HZ: TicksRepr> GenTicks<FREQUENCY_HZ> {
 
     /// Converts whole seconds to a duration.
     pub const fn from_whole_secs(secs: TicksRepr) -> Self {
-        Self(secs * Self::FREQUENCY_HZ.0)
+        debug_assert!(
+            secs.checked_mul(Self::FREQUENCY_HZ.0).is_some(),
+            "from_whole_secs overflow"
+        );
+        Self(secs.saturating_mul(Self::FREQUENCY_HZ.0))
+    }
+
+    /// Converts whole millis to a duration.
+    pub const fn from_whole_millis(secs: u32) -> Self {
+        let scaled = secs * Self::FREQUENCY_HZ.0 as u32 / 1000;
+        if scaled > TicksRepr::MAX as u32 {
+            debug_assert!(false, "from_whole_millis overflow");
+            Self::MAX
+        } else {
+            Self(scaled as TicksRepr)
+        }
     }
 
     /// Returns some absolute number of ticks.

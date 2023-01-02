@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+		<style>
+			html {
+				height: 100%;
+			}
+
+			body {
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				overflow: hidden;
+			}
+
+			#container {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 0;
+				height: 0;
+				overflow: hidden;
+				max-width: 100%;
+				max-height: 100%;
+				min-width: 100%;
+				min-height: 100%;
+				box-sizing: border-box;
+			}
+		</style>
+	</head>
+	<body>
+		<iframe
+			id="frame"
+			allowfullscreen
+			frameborder="0"
+			height="100%"
+			referrerpolicy="origin"
+			sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts"
+			src="https://mk48.io"
+			title="Mk48.io"
+			width="100%"
+		></iframe>
+		<script>
+			const frame = document.getElementById('frame');
+			const frameWindow = frame.contentWindow;
+
+			let first = true;
+
+			window.GD_OPTIONS = {
+				gameId: '1802972a26fc4bcfa60a98c63ed86002',
+				onEvent: event => {
+					console.log(`iframe received event: ${event.name}`);
+					switch (event.name) {
+						case 'SDK_GAME_START':
+							if (first) {
+								frameWindow.postMessage('disableOutbound', 'https://mk48.io');
+								first = false;
+							}
+							frameWindow.postMessage('unpause', 'https://mk48.io');
+							break;
+						case 'SDK_GAME_PAUSE':
+							frameWindow.postMessage('pause', 'https://mk48.io');
+							break;
+						case 'SDK_GDPR_TRACKING':
+							// NO-OP: No tracking relevant to GDPR to disable
+							break;
+						case 'SDK_GDPR_TARGETING':
+							// NO-OP: No 3rd party advertisement services
+							break;
+					}
+				}
+			};
+
+			window.addEventListener('message', event => {
+				//console.log(`iframe received message: ${event.data}`);
+				switch (event.data) {
+					case 'splash':
+						console.log('iframe received message: splash');
+						if (typeof gdsdk !== 'undefined' && gdsdk.showAd !== 'undefined') {
+							try {
+								gdsdk.showAd();
+							} catch (err) {
+								console.warn(err);
+							}
+						}
+						break;
+				}
+			}, false);
+
+			(function(d, s, id) {
+				var js, fjs = d.getElementsByTagName(s)[0];
+				if (d.getElementById(id)) return;
+				js = d.createElement(s);
+				js.id = id;
+				js.src = 'https://html5.api.gamedistribution.com/main.min.js';
+				fjs.parentNode.insertBefore(js, fjs);
+			}(document, 'script', 'gamedistribution-jssdk'));
+		</script>
+	</body>
+</html>

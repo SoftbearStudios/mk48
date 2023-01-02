@@ -51,7 +51,7 @@ pub(crate) fn derive_vertex(input: TokenStream) -> TokenStream {
     }
 }
 
-// Add a bound `T: HeapSize` to every type parameter T.
+// Add a bound `T: Vertex` to every type parameter T.
 fn add_trait_bounds(mut generics: Generics) -> Generics {
     for param in &mut generics.params {
         if let GenericParam::Type(ref mut type_param) = *param {

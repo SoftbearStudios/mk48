@@ -253,6 +253,7 @@ mod admin {
         pub arenas_cached: <DiscreteMetric as Metric>::Summary,
         pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::Summary,
         pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::Summary,
+        pub banner_ads: <DiscreteMetric as Metric>::Summary,
         pub bounce: <RatioMetric as Metric>::Summary,
         pub concurrent: <ContinuousExtremaMetric as Metric>::Summary,
         pub connections: <ContinuousExtremaMetric as Metric>::Summary,
@@ -275,6 +276,7 @@ mod admin {
         pub renews: <DiscreteMetric as Metric>::Summary,
         pub retention_days: <ContinuousExtremaMetric as Metric>::Summary,
         pub retention_histogram: <HistogramMetric as Metric>::Summary,
+        pub rewarded_ads: <DiscreteMetric as Metric>::Summary,
         pub rtt: <ContinuousExtremaMetric as Metric>::Summary,
         pub score: <ContinuousExtremaMetric as Metric>::Summary,
         pub sessions_cached: <DiscreteMetric as Metric>::Summary,
@@ -283,6 +285,7 @@ mod admin {
         pub toxicity: <RatioMetric as Metric>::Summary,
         pub tps: <ContinuousExtremaMetric as Metric>::Summary,
         pub uptime: <ContinuousExtremaMetric as Metric>::Summary,
+        pub video_ads: <DiscreteMetric as Metric>::Summary,
         pub visits: <DiscreteMetric as Metric>::Summary,
     }
 
@@ -292,6 +295,7 @@ mod admin {
         pub arenas_cached: <DiscreteMetric as Metric>::DataPoint,
         pub bandwidth_rx: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub bandwidth_tx: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub banner_ads: <DiscreteMetric as Metric>::DataPoint,
         pub bounce: <RatioMetric as Metric>::DataPoint,
         pub concurrent: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub connections: <ContinuousExtremaMetric as Metric>::DataPoint,
@@ -313,6 +317,7 @@ mod admin {
         pub ram: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub renews: <DiscreteMetric as Metric>::DataPoint,
         pub retention_days: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub rewarded_ads: <DiscreteMetric as Metric>::DataPoint,
         pub rtt: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub score: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub sessions_cached: <DiscreteMetric as Metric>::DataPoint,
@@ -321,6 +326,7 @@ mod admin {
         pub toxicity: <RatioMetric as Metric>::DataPoint,
         pub tps: <ContinuousExtremaMetric as Metric>::DataPoint,
         pub uptime: <ContinuousExtremaMetric as Metric>::DataPoint,
+        pub video_ads: <DiscreteMetric as Metric>::DataPoint,
         pub visits: <DiscreteMetric as Metric>::DataPoint,
     }
 }

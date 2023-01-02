@@ -7,7 +7,7 @@ use crate::ui::about_dialog::AboutDialog;
 use crate::ui::changelog_dialog::ChangelogDialog;
 use crate::ui::help_dialog::HelpDialog;
 use crate::ui::hint::Hint;
-pub use crate::ui::instructions::InstructionsProps;
+pub use crate::ui::instructions::InstructionStatus;
 use crate::ui::levels_dialog::LevelsDialog;
 use crate::ui::logo::logo;
 use crate::ui::respawn_overlay::RespawnOverlay;
@@ -30,10 +30,11 @@ use std::collections::HashMap;
 use stylist::yew::styled_component;
 use yew::prelude::*;
 use yew_frontend::component::discord_icon::DiscordIcon;
+use yew_frontend::component::github_icon::GithubIcon;
 use yew_frontend::component::invitation_icon::InvitationIcon;
 use yew_frontend::component::invitation_link::InvitationLink;
 use yew_frontend::component::language_menu::LanguageMenu;
-use yew_frontend::component::positioner::{Align, Flex, Position, Positioner};
+use yew_frontend::component::positioner::{Flex, Position, Positioner};
 use yew_frontend::component::privacy_link::PrivacyLink;
 use yew_frontend::component::route_link::RouteLink;
 use yew_frontend::component::settings_icon::SettingsIcon;
@@ -41,13 +42,13 @@ use yew_frontend::component::terms_link::TermsLink;
 use yew_frontend::component::volume_icon::VolumeIcon;
 use yew_frontend::component::x_button::XButton;
 use yew_frontend::component::zoom_icon::ZoomIcon;
-use yew_frontend::frontend::Ctw;
-use yew_frontend::frontend::{Gctw, PropertiesWrapper};
+use yew_frontend::frontend::{use_gctw, use_outbound_enabled};
+use yew_frontend::frontend::{use_rewarded_ad, PropertiesWrapper};
 use yew_frontend::overlay::chat::ChatOverlay;
 use yew_frontend::overlay::leaderboard::LeaderboardOverlay;
 use yew_frontend::overlay::spawn::SpawnOverlay;
-use yew_frontend::overlay::team::TeamsOverlay;
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::overlay::team::TeamOverlay;
+use yew_frontend::translation::{use_translation, Translation};
 use yew_router::{Routable, Switch};
 
 mod about_dialog;
@@ -78,34 +79,85 @@ pub fn mk48_ui(props: &PropertiesWrapper<UiProps>) -> Html {
     "#
     );
 
-    let gctw = Gctw::<Mk48Game>::use_gctw();
+    let gctw = use_gctw::<Mk48Game>();
+    let t = use_translation();
     let on_play = gctw.send_ui_event_callback.reform(|alias| UiEvent::Spawn {
         alias,
-        entity_type: EntityType::GFive,
+        entity_type: EntityType::G5,
     });
 
     let margin = "0.75rem";
     let status = props.status.clone();
-    let outbound_enabled = Ctw::use_outbound_enabled();
+    let outbound_enabled = use_outbound_enabled();
+
+    /*
+       if (msg.includes('how')) {
+           if (msg.includes('move')) {
+               return 'If you are asking how you move, you click and hold (or right click) outside the inner ring of your ship to set your speed and direction (or use WASD)';
+           }
+           if (msg.includes('play')) {
+               return '';
+           }
+           if (msg.includes('shoot') || msg.includes('use weapons') || msg.includes('fire')) {
+               return '';
+           }
+       }
+    */
+
+    let shoot_hint = "First, select an available weapon. Then, click in the direction to fire. If you hold the click for too long, you won't shoot.";
+    let hints = vec![
+        ("Invitation links cannot currently be accepted by players that are already in game. They must send a join request instead.", vec!["/invite"]),
+        ("If you are asking how you move, you click and hold to set your speed and direction (or use WASD).", vec!["how", "move"]),
+        ("The controls are click and hold (or WASD) to move, click (or Space) to shoot.", vec!["how", "play"]),
+        (shoot_hint, vec!["how", "shoot"]),
+        (shoot_hint, vec!["how", "use weapons"]),
+        (shoot_hint, vec!["how", "fire"])
+    ];
+
+    use yew_frontend::frontend::RewardedAd;
+    use yew_icons::{Icon, IconId};
+    let rewarded_ad = use_rewarded_ad();
+    let rewarded_style = css!(
+        r#"
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #c0392b;
+        border: 2px solid #e74c3c;
+        border-radius: 0.5rem;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        font-size: 1rem;
+
+        :disabled {
+            filter: brightness(0.9);
+        }
+    "#
+    );
 
     html! {
         <>
             if let UiStatus::Playing(playing) = status {
                 <div class={classes!(gctw.settings_cache.cinematic.then_some(cinematic_style))}>
-                    <Positioner position={Position::BottomMiddle{margin}}>
+                    <Positioner id="status" position={Position::BottomMiddle{margin}} max_width="45%">
                         <StatusOverlay
                             status={playing.clone()}
                             score={props.score}
                             fps={gctw.settings_cache.fps_shown.then_some(props.fps)}
                         />
                     </Positioner>
-                    <Positioner position={Position::TopMiddle{margin}}>
-                        <UpgradeOverlay status={playing.clone()} score={props.score}/>
-                    </Positioner>
-                    <Positioner position={Position::BottomLeft{margin}}>
-                        <ShipControls status={playing.clone()}/>
-                    </Positioner>
-                    <Positioner position={Position::CenterRight{margin}} flex={Flex::Column}>
+                    <UpgradeOverlay
+                        position={Position::TopMiddle{margin}}
+                        status={playing.clone()}
+                        score={props.score}
+                    />
+                    <ShipControls
+                        position={Position::BottomLeft{margin}}
+                        style="max-width:25%;"
+                        status={playing.clone()}
+                    />
+                    <Positioner id="sidebar" position={Position::CenterRight{margin}} flex={Flex::Column}>
                         <InvitationIcon/>
                         <ZoomIcon amount={-4}/>
                         <ZoomIcon amount={4}/>
@@ -113,19 +165,23 @@ pub fn mk48_ui(props: &PropertiesWrapper<UiProps>) -> Html {
                         <SettingsIcon<Mk48Route> route={Mk48Route::Settings}/>
                         <LanguageMenu/>
                     </Positioner>
-                    <Positioner position={Position::TopLeft{margin}} max_width="25%">
-                        <TeamsOverlay
-                            team_proximity={playing.team_proximity.clone()}
-                            label={LanguageId::team_fleet_label as fn(LanguageId) -> &'static str}
-                            name_placeholder={LanguageId::team_fleet_name_placeholder as fn(LanguageId) -> &'static str}
-                        />
-                    </Positioner>
-                    <Positioner position={Position::TopRight{margin}} max_width="25%">
-                        <LeaderboardOverlay/>
-                    </Positioner>
-                    <Positioner position={Position::BottomRight{margin}} align={Align::Left} max_width="25%">
-                        <ChatOverlay label={LanguageId::chat_radio_label as fn(LanguageId) -> &'static str}/>
-                    </Positioner>
+                    <TeamOverlay
+                        position={Position::TopLeft{margin}}
+                        style="max-width:25%;"
+                        team_proximity={playing.team_proximity.clone()}
+                        label={LanguageId::team_fleet_label as fn(LanguageId) -> &'static str}
+                        name_placeholder={LanguageId::team_fleet_name_placeholder as fn(LanguageId) -> &'static str}
+                    />
+                    <LeaderboardOverlay
+                        position={Position::TopRight{margin}}
+                        style="max-width:25%;"
+                    />
+                    <ChatOverlay
+                        position={Position::BottomRight{margin}}
+                        style="max-width:25%;"
+                        {hints}
+                        label={LanguageId::chat_radio_label as fn(LanguageId) -> &'static str}
+                    />
                 </div>
                 if !gctw.settings_cache.cinematic {
                     <Hint entity_type={playing.entity_type}/>
@@ -139,29 +195,40 @@ pub fn mk48_ui(props: &PropertiesWrapper<UiProps>) -> Html {
                 <SpawnOverlay {on_play}>
                     {logo()}
                 </SpawnOverlay>
-                <Positioner position={Position::TopRight{margin}} flex={Flex::Row}>
+                <Positioner id="back" position={Position::TopRight{margin}} flex={Flex::Row}>
                     <LanguageMenu/>
                 </Positioner>
             }
             if !matches!(props.status, UiStatus::Playing(_)) {
-                <Positioner position={Position::BottomLeft{margin}}>
+                <Positioner id="invite" position={Position::BottomLeft{margin}}>
                     <InvitationLink/>
                 </Positioner>
-                <Positioner position={Position::BottomMiddle{margin}} flex={Flex::Row}>
-                    <RouteLink<Mk48Route> route={Mk48Route::Help}>{t().help_hint()}</RouteLink<Mk48Route>>
-                    <RouteLink<Mk48Route> route={Mk48Route::About}>{t().about_hint()}</RouteLink<Mk48Route>>
+                <Positioner id="links" position={Position::BottomMiddle{margin}} flex={Flex::Row}>
+                    <RouteLink<Mk48Route> route={Mk48Route::Help}>{t.help_hint()}</RouteLink<Mk48Route>>
+                    <RouteLink<Mk48Route> route={Mk48Route::About}>{t.about_hint()}</RouteLink<Mk48Route>>
                     <PrivacyLink/>
                     <TermsLink/>
                 </Positioner>
                 if outbound_enabled {
-                    <Positioner position={Position::BottomRight{margin}} flex={Flex::Row}>
+                    <Positioner id="social" position={Position::BottomRight{margin}} flex={Flex::Row}>
                         <DiscordIcon/>
+                        <GithubIcon repository_link={"https://github.com/SoftbearStudios/mk48"}/>
                     </Positioner>
                 }
+                if !matches!(rewarded_ad, RewardedAd::Unavailable) {
+                    <button
+                        id="rewarded"
+                        onclick={if let RewardedAd::Available{request} = &rewarded_ad { Some(request.reform(|_| {})) } else { None }}
+                        disabled={!matches!(rewarded_ad, RewardedAd::Available{..})}
+                        style={Position::TopLeft{margin}.to_string()}
+                        class={rewarded_style}
+                    >
+                        <Icon icon_id={IconId::OcticonsVideo16}/>
+                        {t.rewarded_ad(&rewarded_ad)}
+                    </button>
+                }
             }
-            <div>
-                <Switch<Mk48Route> render={Switch::render(switch)}/>
-            </div>
+            <Switch<Mk48Route> render={switch}/>
         </>
     }
 }
@@ -203,19 +270,20 @@ impl Default for UiState {
 }
 
 pub enum UiEvent {
+    /// Sensors active.
+    Active(bool),
+    Armament(Option<EntityType>),
+    GraphicsSettingsChanged,
+    /// Go from respawning to spawning.
+    #[allow(unused)]
+    OverrideRespawn,
+    Respawn(EntityType),
     Spawn {
         alias: PlayerAlias,
         entity_type: EntityType,
     },
-    Respawn(EntityType),
-    Upgrade(EntityType),
-    /// Sensors active.
-    Active(bool),
     Submerge(bool),
-    Armament(Option<EntityType>),
-    /// Go from respawning to spawning.
-    #[allow(unused)]
-    OverrideRespawn,
+    Upgrade(EntityType),
 }
 
 #[derive(PartialEq, Clone, Default)]
@@ -244,7 +312,7 @@ pub struct UiStatusPlaying {
     pub submerge: bool,
     /// Active sensors.
     pub active: bool,
-    pub instruction_props: InstructionsProps,
+    pub instruction_status: InstructionStatus,
     pub armament: Option<EntityType>,
     pub armament_consumption: Box<[bool]>,
     pub team_proximity: HashMap<TeamId, f32>,
@@ -267,7 +335,7 @@ impl Mk48Game {
     }
 }
 
-fn switch(routes: &Mk48Route) -> Html {
+fn switch(routes: Mk48Route) -> Html {
     match routes {
         Mk48Route::About => html! {
             <AboutDialog/>

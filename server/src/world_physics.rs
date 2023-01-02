@@ -440,10 +440,6 @@ mod tests {
     /// Tests how long each boat takes to recover from (one tick less than) full damage.
     #[test]
     fn repair_rate() {
-        unsafe {
-            EntityType::init();
-        }
-
         let mut world = World::new(10000.0);
         world.terrain = Terrain::new();
 

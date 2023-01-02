@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use stylist::yew::styled_component;
-use yew::html;
+use yew::{html, Html};
 
 #[styled_component(Spinner)]
 pub fn spinner() -> Html {

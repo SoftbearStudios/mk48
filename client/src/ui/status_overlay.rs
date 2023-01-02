@@ -5,9 +5,9 @@ use crate::ui::UiStatusPlaying;
 use common::entity::EntityData;
 use common::util::level_to_score;
 use glam::Vec2;
-use yew::{function_component, html, Properties};
+use yew::{function_component, html, Html, Properties};
 use yew_frontend::component::meter::Meter;
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::translation::{use_translation, Translation};
 
 #[derive(Properties, PartialEq)]
 pub struct StatusProps {
@@ -18,7 +18,7 @@ pub struct StatusProps {
 
 #[function_component(StatusOverlay)]
 pub fn status_overlay(props: &StatusProps) -> Html {
-    let t = t();
+    let t = use_translation();
     let status = &props.status;
     let level = status.entity_type.data().level;
     let next_level = level + 1;
@@ -32,17 +32,17 @@ pub fn status_overlay(props: &StatusProps) -> Html {
     );
     html! {
         <>
-            <h2 style="margin-bottom: 0.25rem;">
-                {t.score(props.score)}
-                {" — "}
-                {format!("{:.1}kn", status.velocity.to_knots())}
-                {" — "}
-                {format!("{}° [{}]", status.direction.to_bearing(), status.direction.to_cardinal())}
-                {" — "}
+            <h2 style="margin-bottom: 0.25rem; font-family: monospace, sans-serif;">
+                {t.score(props.score).replace(' ', "\u{00A0}")}
+                {" "}
+                {format!("{:\u{00A0}>4.1}kn", status.velocity.to_knots())}
+                {" "}
+                {format!("{:\u{00A0}>3}°\u{00A0}{:\u{00A0}<4}", status.direction.to_bearing(), format!("[{}]", status.direction.to_cardinal()))}
+                {" "}
                 {fmt_position(status.position)}
                 if let Some(fps) = props.fps {
-                    {" — "}
-                    {format!("{:.1} fps", fps)}
+                    {" "}
+                    {format!("{:\u{00A0}>5.1}\u{00A0}fps", fps)}
                 }
             </h2>
             if next_level <= EntityData::MAX_BOAT_LEVEL {
@@ -65,8 +65,8 @@ fn fmt_position(position: Vec2) -> String {
         )
     }
     format!(
-        "({}, {})",
-        fmt_coordinate(position.x, 'E', 'W'),
+        "{:\u{00A0}>6},\u{00A0}{:\u{00A0}>5})",
+        "(".to_owned() + &fmt_coordinate(position.x, 'E', 'W'),
         fmt_coordinate(position.y, 'N', 'S')
     )
 }

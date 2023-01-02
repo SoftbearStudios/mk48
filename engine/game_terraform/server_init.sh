@@ -168,6 +168,7 @@ Group=root
 Restart=always
 RestartSec=3
 EnvironmentFile=/etc/environment
+WorkingDirectory=~
 ExecStart=/root/server \
   --server-id $SERVER_ID \
   --ip-address $IP_ADDRESS \
@@ -197,8 +198,8 @@ chmod u+x /root/view-game-server-logs.sh
 printf "sudo systemctl restart game-server" > /root/restart-game-server.sh
 chmod u+x /root/restart-game-server.sh
 
-printf "/root/download-game-server.sh\n/root/restart-game-server.sh\n/root/view-game-server-logs.sh" > /root/update-game-server.sh
-chmod u+x /root/update-game-server.sh
+#printf "/root/download-game-server.sh\n/root/restart-game-server.sh\n/root/view-game-server-logs.sh" > /root/update-game-server.sh
+#chmod u+x /root/update-game-server.sh
 
 printf "journalctl -a --no-pager -o cat -u game-server | grep -i \$1" > /root/grep-game-server-logs.sh
 chmod u+x /root/grep-game-server-logs.sh

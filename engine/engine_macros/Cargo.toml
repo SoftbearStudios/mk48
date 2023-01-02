@@ -10,6 +10,7 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
+emojis = "0.5.1"
 bytemuck = "1.12"
 convert_case = "0.5"
 itertools = "0.10.5"

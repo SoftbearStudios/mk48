@@ -5,6 +5,7 @@ use crate::game_service::GameArenaService;
 use crate::metric::MetricRepo;
 use crate::player::PlayerRepo;
 use crate::team::TeamRepo;
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 use core_protocol::dto::MessageDto;
 use core_protocol::get_unix_time_now;
 use core_protocol::id::PlayerId;
@@ -31,6 +32,7 @@ pub struct ChatRepo<G> {
     safe_mode_until: Option<Instant>,
     /// Slow mode (more aggressive rate limits for all players) is on until this time.
     slow_mode_until: Option<Instant>,
+    emoji_replacer: AhoCorasick<u32>,
     /// Log all chats here.
     log_path: Option<Arc<str>>,
     _spooky: PhantomData<G>,
@@ -73,12 +75,20 @@ impl ClientChatData {
     }
 }
 
+engine_macros::include_emoji!();
+
 impl<G: GameArenaService> ChatRepo<G> {
     pub fn new(log_path: Option<String>) -> Self {
+        let emoji_replacer = AhoCorasickBuilder::new()
+            .dfa(true)
+            .build_with_size(EMOJI_FIND)
+            .unwrap();
+
         Self {
             recent: HistoryBuffer::new(),
             safe_mode_until: None,
             slow_mode_until: None,
+            emoji_replacer,
             log_path: log_path.map(Into::into),
             _spooky: PhantomData,
         }
@@ -212,11 +222,12 @@ impl<G: GameArenaService> ChatRepo<G> {
         req_player_id: PlayerId,
         message: String,
         whisper: bool,
+        service: &mut G,
         players: &mut PlayerRepo<G>,
         teams: &TeamRepo<G>,
         metrics: &mut MetricRepo<G>,
     ) -> Result<ChatUpdate, &'static str> {
-        if let Some(text) = self.try_execute_command(req_player_id, &message, players) {
+        if let Some(text) = self.try_execute_command(req_player_id, &message, service, players) {
             if let Some(mut req_player) = players.borrow_player_mut(req_player_id) {
                 let alias = req_player.alias();
                 if let Some(req_client) = req_player.client_mut() {
@@ -278,6 +289,14 @@ impl<G: GameArenaService> ChatRepo<G> {
                 },
                 ..Default::default()
             };
+
+            // Replace :smile: with 😄 (and others)
+            let message =
+                if message.len() <= 500 && message.bytes().filter(|b| *b == b':').count() >= 2 {
+                    self.emoji_replacer.replace_all(&message, EMOJI_REPLACE)
+                } else {
+                    message
+                };
 
             let before = req_client.chat.context.total_inappropriate();
 
@@ -384,6 +403,7 @@ impl<G: GameArenaService> ChatRepo<G> {
         &mut self,
         req_player_id: PlayerId,
         request: ChatRequest,
+        service: &mut G,
         players: &mut PlayerRepo<G>,
         teams: &TeamRepo<G>,
         metrics: &mut MetricRepo<G>,
@@ -391,9 +411,15 @@ impl<G: GameArenaService> ChatRepo<G> {
         match request {
             ChatRequest::Mute(player_id) => self.mute_player(req_player_id, player_id, players),
             ChatRequest::Unmute(player_id) => self.unmute_player(req_player_id, player_id, players),
-            ChatRequest::Send { message, whisper } => {
-                self.send_chat(req_player_id, message, whisper, players, teams, metrics)
-            }
+            ChatRequest::Send { message, whisper } => self.send_chat(
+                req_player_id,
+                message,
+                whisper,
+                service,
+                players,
+                teams,
+                metrics,
+            ),
             ChatRequest::SetSafeMode(minutes) => {
                 self.set_safe_mode(req_player_id, minutes, &*players)
             }
@@ -484,6 +510,7 @@ impl<G: GameArenaService> ChatRepo<G> {
         &mut self,
         req_player_id: PlayerId,
         message: &str,
+        service: &mut G,
         players: &PlayerRepo<G>,
     ) -> Option<String> {
         struct FormattedDuration(Duration);
@@ -556,7 +583,9 @@ impl<G: GameArenaService> ChatRepo<G> {
         Some(match first {
             "slow" => until!("slow mode", slow_mode_until, set_slow_mode),
             "safe" => until!("safe mode", safe_mode_until, set_safe_mode),
-            _ => String::from("unrecognized command"),
+            _ => service
+                .chat_command(command, req_player_id, players)
+                .unwrap_or_else(|| String::from("unrecognized command")),
         })
     }
 }

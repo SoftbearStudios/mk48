@@ -1,10 +1,17 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#![feature(box_syntax)]
 #![feature(array_chunks)]
-#![feature(result_into_ok_or_err)]
+#![feature(box_syntax)]
 #![feature(mixed_integer_ops)]
+#![feature(result_into_ok_or_err)]
+#![feature(test)]
+
+// Actually required see https://doc.rust-lang.org/beta/unstable-book/library-features/test.html
+#[cfg(test)]
+extern crate core;
+#[cfg(test)]
+extern crate test;
 
 pub mod altitude;
 pub mod angle;

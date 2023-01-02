@@ -20,7 +20,7 @@ pub type Quad<I> = [I; 4];
 
 /// Allows building a triangle mesh presumably to draw with [`TriangleBuffer`].
 #[derive(Debug)]
-pub struct MeshBuilder<V: Vertex, I: Index = u16> {
+pub struct MeshBuilder<V, I = u16> {
     /// Vertices of a mesh that are indexed by indices.
     pub vertices: Vec<V>,
     /// Indices into `vertices` that form counter-clockwise triangles.
@@ -52,7 +52,7 @@ impl<V: Vertex, I: Index> MeshBuilder<V, I> {
     /// Pushes a single [`Quad`] to `indices`.
     pub fn push_quad(&mut self, quad: Quad<I>) {
         self.indices
-            .extend_from_slice(&[quad[0], quad[1], quad[2], quad[1], quad[3], quad[2]]);
+            .extend_from_slice(&[quad[0], quad[1], quad[2], quad[2], quad[3], quad[0]]);
     }
 
     /// Pushes a [`Triangle`] to `indices` for every 3 `vertices`. Next mutation must be
@@ -130,7 +130,7 @@ impl GpuBufferType {
     }
 }
 
-pub(crate) struct GpuBuffer<E: Pod, const B: bool> {
+pub(crate) struct GpuBuffer<E, const B: bool> {
     elements: WebGlBuffer,
     length: u32,   // The amount of valid elements in the buffer.
     capacity: u32, // The amount of capacity (in elements) that is available in the buffer.
@@ -147,6 +147,7 @@ impl<E: Pod, const B: bool> GpuBuffer<E, B> {
         }
     }
 
+    #[must_use]
     pub(crate) fn bind<'a>(&'a self, gl: &'a Gl) -> GpuBufferBinding<'a, E, B> {
         GpuBufferBinding::new(gl, self)
     }
@@ -263,7 +264,7 @@ impl<'a, E: Pod, const B: bool> Drop for GpuBufferBinding<'a, E, B> {
 }
 
 /// [`TriangleBuffer`] facilitates drawing a triangle mesh.
-pub struct TriangleBuffer<V: Vertex, I: Index = u16> {
+pub struct TriangleBuffer<V, I = u16> {
     pub(crate) vertices: GpuBuffer<V, { GpuBufferType::Array.to() }>,
     pub(crate) indices: GpuBuffer<I, { GpuBufferType::Element.to() }>,
     vao: WebGlVertexArrayObject,
@@ -271,7 +272,7 @@ pub struct TriangleBuffer<V: Vertex, I: Index = u16> {
 
 impl<V: Vertex, I: Index> TriangleBuffer<V, I> {
     /// Creates a new [`TriangleBuffer`].
-    pub fn new<C>(renderer: &Renderer<C>) -> Self {
+    pub fn new(renderer: &Renderer) -> Self {
         let gl = &renderer.gl;
         let ovao = &renderer.ovao;
 
@@ -312,12 +313,13 @@ impl<V: Vertex, I: Index> TriangleBuffer<V, I> {
     }
 
     /// Binds the [`TriangleBuffer`] to draw triangles.
-    pub fn bind<'a, C>(&'a self, renderer: &'a Renderer<C>) -> TriangleBufferBinding<'a, V, I> {
+    #[must_use]
+    pub fn bind<'a>(&'a self, renderer: &'a Renderer) -> TriangleBufferBinding<'a, V, I> {
         TriangleBufferBinding::new(&renderer.gl, &renderer.ovao, self)
     }
 
     /// Copies a whole [`MeshBuilder`] into the buffer. The [`MeshBuilder`] must have indices.
-    pub fn buffer_mesh<C>(&mut self, renderer: &Renderer<C>, mesh: &MeshBuilder<V, I>) {
+    pub fn buffer_mesh(&mut self, renderer: &Renderer, mesh: &MeshBuilder<V, I>) {
         assert!(
             mesh.default_indices ^ !mesh.indices.is_empty(),
             "mesh has invalid indices"
@@ -327,7 +329,7 @@ impl<V: Vertex, I: Index> TriangleBuffer<V, I> {
 
     /// Copies vertices and indices into the render buffer.
     /// If indices is empty it performs array based rendering.
-    pub fn buffer<C>(&mut self, renderer: &Renderer<C>, vertices: &[V], indices: &[I]) {
+    pub fn buffer(&mut self, renderer: &Renderer, vertices: &[V], indices: &[I]) {
         assert!(!vertices.is_empty(), "buffering no vertices");
         let gl = &renderer.gl;
         self.vertices.buffer(gl, vertices);

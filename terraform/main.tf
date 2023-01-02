@@ -11,6 +11,8 @@ module "game_terraform" {
     }
     aws_region = var.aws_region
     linode_token = var.linode_token
+    discord_bot_token = var.discord_bot_token
+    discord_client_secret = var.discord_client_secret
 }
 
 // From env.
@@ -21,6 +23,14 @@ variable "linode_token" {
 variable "aws_region" {
     type = string
     default = "us-east-1"
+}
+
+variable "discord_bot_token" {
+    type = string
+}
+
+variable "discord_client_secret" {
+    type = string
 }
 
 terraform {
@@ -41,7 +51,7 @@ terraform {
     required_providers {
         linode = {
             source  = "linode/linode"
-            # version = "1.20.2"
+            version = "1.29.4"
         }
     }
 }

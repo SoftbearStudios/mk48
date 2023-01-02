@@ -4,17 +4,19 @@
 use yew::{function_component, html, Html};
 use yew_frontend::component::link::Link;
 use yew_frontend::dialog::dialog::Dialog;
-use yew_frontend::frontend::Ctw;
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::frontend::use_game_id;
+use yew_frontend::translation::{use_translation, Translation};
 
 #[function_component(ChangelogDialog)]
 pub fn changelog_dialog() -> Html {
-    let game_id = Ctw::use_game_id();
+    let t = use_translation();
+    let game_id = use_game_id();
     html! {
-        <Dialog title={t().changelog_title(game_id)}>
+        <Dialog title={t.changelog_title(game_id)}>
             <p>{"Warning: This changelog may not always be fully up to date"}</p>
             {changelog_2022()}
-            {changelog_2021()}
+            {changelog_2021_part_2()}
+            {changelog_2021_part_1()}
         </Dialog>
     }
 }
@@ -25,10 +27,33 @@ fn changelog_2022() -> Html {
         <>
             <h2>{"2022"}</h2>
 
-            <h3>{"10/16/2022"}</h3>
+            <h3>{"12/26/2022"}</h3>
 
             <ul>
-                <li>{"TBD"}</li>
+                <li>{"Fix surface and active sensor sounds when using key bindings."}</li>
+                <li>{"Fix accept button when team is full."}</li>
+                <li>{"Fix weapon selector when weapon is consumed."}</li>
+                <li>{"Save whether fleet/leaderboard are open between plays/refreshes."}</li>
+                <li>{"Disable shadows by default on mobile devices until they can be fixed."}</li>
+            </ul>
+
+            <h3>{"12/24/2022"}</h3>
+
+            <ul>
+                <li>{"Add Skjold corvette and associated weapon."}</li>
+                <li>{"Add directional shading."}</li>
+                <li>{"Reduce score gain when spawn-killing."}</li>
+                <li>{"Adjust missile guidance."}</li>
+                <li>{"Add minimalist HUD (can switch back to old Circle HUD in settings)."}</li>
+                <li>{"Fix aiming of Yasen's rocket torpedoes."}</li>
+                <li>{"Reduce Visby's torpedo count to 4 for realism."}</li>
+                <li>{"Add support for converting text (like :smile:) to emoji in chat."}</li>
+                <li>{"Add more chat moderation features."}</li>
+                <li>{"Add optional high-contrast setting."}</li>
+                <li>{"Highlight mentions of your nickname in chat."}</li>
+                <li>{"Mute sounds when the tab is minimized."}</li>
+                <li>{"Revise help page and add an open-source software page linked to from the about page."}</li>
+                <li>{"Begin accumulating per-ship data to inform re-balancing."}</li>
             </ul>
 
             <h3>{"7/10/2022"}</h3>
@@ -188,7 +213,7 @@ fn changelog_2022() -> Html {
 }
 
 #[inline(never)]
-fn changelog_2021() -> Html {
+fn changelog_2021_part_2() -> Html {
     html! {
         <>
             <h2>{"2021"}</h2>
@@ -530,7 +555,14 @@ fn changelog_2021() -> Html {
                 <li>{"Add indicator to closed fleet panel showing number of pending requests"}</li>
                 <li>{"Improve aircraft weapons, and add helicopters to more ships"}</li>
             </ul>
+        </>
+    }
+}
 
+#[inline(never)]
+fn changelog_2021_part_1() -> Html {
+    html! {
+        <>
             <h3>{"5/30/2021"}</h3>
 
             <ul>

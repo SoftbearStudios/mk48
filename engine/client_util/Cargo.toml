@@ -31,7 +31,6 @@ getrandom = { version = "0.2", features = [ "js" ], optional = true }
 glam = "0.18"
 heapless = { version = "0.7", default-features = false }
 js-sys = "0.3"
-renderer = { path = "../renderer" }
 js_hooks = { path = "../js_hooks" }
 linear-map = "1.2.0"
 rc_borrow_mut = { git = "https://github.com/finnbear/rc_borrow_mut" }

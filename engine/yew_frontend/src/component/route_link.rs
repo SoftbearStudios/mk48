@@ -3,9 +3,8 @@
 
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
-use yew::{classes, html, Callback, Children, Classes, Properties};
-use yew_router::history::History;
-use yew_router::hooks::use_history;
+use yew::{classes, html, Callback, Children, Classes, Html, Properties};
+use yew_router::hooks::use_navigator;
 use yew_router::Routable;
 
 #[derive(PartialEq, Properties)]
@@ -30,14 +29,12 @@ pub fn route_link<R: Routable + Clone + 'static>(props: &RouteLinkProps<R>) -> H
 
     let onclick = {
         let route = props.route.clone();
-        let navigator = use_history().unwrap();
+        let navigator = use_navigator().unwrap();
 
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
             e.stop_propagation();
-
-            let route = route.clone();
-            navigator.push(route);
+            navigator.push(&route);
         })
     };
 

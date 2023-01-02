@@ -18,7 +18,9 @@ core_protocol = { path = "../core_protocol" }
 glam = { version = "0.18", features = [ "debug-glam-assert" ] }
 rand = { version = "0.8", optional = true }
 serde = "1.0"
+fxhash = "0.2"
 
 [dev-dependencies]
 serde_json = "1.0"
 engine_macros = { path = "../engine_macros" }
+rand = "0.8"

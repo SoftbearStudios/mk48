@@ -2,5 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pub mod dialog;
-pub(crate) mod privacy_dialog;
-pub(crate) mod terms_dialog;
+pub mod licensing_dialog;
+pub mod privacy_dialog;
+pub mod terms_dialog;

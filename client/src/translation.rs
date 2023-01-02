@@ -8,6 +8,7 @@ use core_protocol::id::LanguageId;
 use core_protocol::id::LanguageId::*;
 use core_protocol::name::PlayerAlias;
 use std::fmt::Display;
+use yew_frontend::frontend::RewardedAd;
 use yew_frontend::s;
 
 pub trait Mk48Translation: Sized {
@@ -152,6 +153,19 @@ pub trait Mk48Translation: Sized {
 
     s!(team_fleet_label);
     s!(team_fleet_name_placeholder);
+
+    fn rewarded_ad(self, rewarded_ad: &RewardedAd) -> &'static str {
+        match rewarded_ad {
+            RewardedAd::Available { .. } => self.rewarded_ad_available(),
+            RewardedAd::Watching => self.rewarded_ad_watching(),
+            RewardedAd::Watched { .. } => self.rewarded_ad_watched(),
+            _ => self.rewarded_ad_error(),
+        }
+    }
+    s!(rewarded_ad_available);
+    s!(rewarded_ad_watching);
+    s!(rewarded_ad_watched);
+    s!(rewarded_ad_error);
 }
 
 impl Mk48Translation for LanguageId {
@@ -1257,6 +1271,72 @@ impl Mk48Translation for LanguageId {
             SimplifiedChinese => "机队名称",
             Spanish => "Nombre",
             Vietnamese => "Tên hạm đội",
+        }
+    }
+
+    fn rewarded_ad_available(self) -> &'static str {
+        match self {
+            Arabic => "فتح محتوى المكافأة",
+            Bork => "Unbork bonus content",
+            English => "Unlock bonus content",
+            French => "Débloquez du contenu bonus",
+            German => "Bonusinhalte freischalten",
+            Hindi => "बोनस सामग्री अनलॉक करें",
+            Italian => "Sblocca contenuti bonus",
+            Japanese => "ボーナスコンテンツのロックを解除",
+            Russian => "Разблокировать бонусный контент",
+            SimplifiedChinese => "解锁奖励内容",
+            Spanish => "Desbloquear contenido extra",
+            Vietnamese => "Mở khóa nội dung tiền thưởng",
+        }
+    }
+
+    fn rewarded_ad_watching(self) -> &'static str {
+        match self {
+            Arabic => "طلب إعلان",
+            English | Bork => "Requesting ad...",
+            French => "Demande d'annonce...",
+            German => "Anzeige anfordern...",
+            Hindi => "विज्ञापन का अनुरोध किया जा रहा है...",
+            Italian => "Richiesta annuncio...",
+            Japanese => "広告をリクエストしています...",
+            Russian => "Запрос объявления...",
+            SimplifiedChinese => "请求广告...",
+            Spanish => "Solicitando anuncio...",
+            Vietnamese => "Yêu cầu quảng cáo...",
+        }
+    }
+
+    fn rewarded_ad_watched(self) -> &'static str {
+        match self {
+            Arabic => "مفتوحة!",
+            Bork => "Unborked!",
+            English => "Unlocked!",
+            French => "Débloqué !",
+            German => "Entsperrt!",
+            Hindi => "अनलॉक!",
+            Italian => "Sbloccato!",
+            Japanese => "ロック解除！",
+            Russian => "Разблокировано!",
+            SimplifiedChinese => "解锁！",
+            Spanish => "¡Desbloqueado!",
+            Vietnamese => "Đã mở khóa!",
+        }
+    }
+
+    fn rewarded_ad_error(self) -> &'static str {
+        match self {
+            Arabic => "خطأ إعلان",
+            English | Bork => "Ad error",
+            French => "Erreur d'annonce",
+            German => "Anzeigenfehler",
+            Hindi => "विज्ञापन त्रुटि।",
+            Italian => "Errore annuncio",
+            Japanese => "広告エラー",
+            Russian => "Ошибка объявления",
+            SimplifiedChinese => "广告错误",
+            Spanish => "Error de anuncio",
+            Vietnamese => "Lỗi quảng cáo",
         }
     }
 }

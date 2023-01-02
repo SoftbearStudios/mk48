@@ -58,6 +58,9 @@ fn main() {
     }
 
     eprintln!();
+    eprintln!("total bytes: {}", body.len());
+
+    eprintln!();
     eprintln!("pausing for a moment...");
 
     std::thread::sleep(Duration::from_secs(2));

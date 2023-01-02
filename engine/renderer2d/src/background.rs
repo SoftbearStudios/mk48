@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::camera_2d::Camera2d;
-use crate::Renderer2d;
-use glam::{uvec2, vec2, vec4, IVec2, UVec2, Vec2};
+use glam::{uvec2, vec2, IVec2, UVec2, Vec2};
 use js_hooks::console_log;
 use renderer::{
-    derive_vertex, Framebuffer, Layer, LayerShader, MeshBuilder, Shader, TriangleBuffer,
+    derive_vertex, DefaultRender, Framebuffer, Layer, MeshBuilder, RenderLayer, Renderer, Shader,
+    ShaderBinding, TriangleBuffer,
 };
 use std::ops::Range;
 
-/// Invalidates part of the [`BackgroundLayer`]'s [`cached frame`][`BackgroundContext::cache_frame`]
-/// (useful if [`BackgroundContext`]'s uniforms change).
+/// Invalidates part of the [`BackgroundLayer`]'s cached frame. Useful if uniforms change.
 #[derive(Debug)]
 pub enum Invalidation {
     /// Redraw the whole buffer.
@@ -21,24 +20,6 @@ pub enum Invalidation {
     Rects(Vec<(Vec2, Vec2)>),
 }
 
-/// Implements [`LayerShader<Camera2d>`] and has optional methods for caching the frame.
-pub trait BackgroundContext: LayerShader<Camera2d> {
-    /// Returns if `true` if [`BackgroundLayer`] should cache the frame with a [`Framebuffer`].
-    /// If it returns `true` [`take_invalidation`][`Self::take_invalidation`] must be implemented
-    /// correctly. NOTE: Only called once in [`BackgroundLayer::new`] so shouldn't change. Only use
-    /// this on expensive [`Shader`]s that don't make [`Invalidation`]s that often for performance
-    /// gains.
-    fn cache_frame(&self) -> bool {
-        false
-    }
-    /// Reports which pixels were invalidated by changes to uniforms in
-    /// [`prepare`][`LayerShader::prepare`]. This will be called every frame if
-    /// [`cache_frame`][`Self::cache_frame`] returned `true`.
-    fn take_invalidation(&mut self) -> Option<Invalidation> {
-        None
-    }
-}
-
 derive_vertex!(
     struct PosUv {
         pos: Vec2,
@@ -46,46 +27,41 @@ derive_vertex!(
     }
 );
 
-/// Draws a [`Shader`] over the whole screen.
-pub struct BackgroundLayer<X: BackgroundContext> {
+/// Draws a [`Shader`] over the whole screen. Must not override `uniform mat3 uCamera`. The
+/// [`Shader`] must take `uniform mat3 uCamera;`.
+///
+/// If the an [`Option<Invalidation>`] is passed [`BackgroundLayer`] will cache the frame with a
+/// [`Framebuffer`]. Only use this on expensive [`Shader`]s that don't make [`Invalidation`]s that
+/// often for performance gains. The [`Option<Invalidation>`] reports which pixels were invalidated
+/// by changes to uniforms.
+///
+/// Its implementation of [`RenderLayer`] takes a [`ShaderBinding`] by value since it has to unbind
+/// it to use its internal [`Shader`]s.
+pub struct BackgroundLayer {
     buffer: TriangleBuffer<PosUv, u16>,
     frame_cache: Option<FrameCache>,
-    /// The [`BackgroundContext`] passed to [`new`][`Self::new`].
-    pub context: X,
-    shader: Shader,
-    shader_loaded: bool,
 }
 
-impl<X: BackgroundContext> BackgroundLayer<X> {
-    /// Shader must take uCamera and uMiddle_uDerivative uniforms.
-    pub fn new(renderer: &Renderer2d, context: X) -> Self {
-        let shader = context.create(renderer);
-        let shader_loaded = false;
-
+impl DefaultRender for BackgroundLayer {
+    fn new(renderer: &Renderer) -> Self {
         let mut buffer = TriangleBuffer::new(renderer);
         buffer_viewport(renderer, &mut buffer);
-
-        let frame_cache = context.cache_frame().then(|| FrameCache::new(renderer));
-
         Self {
             buffer,
-            context,
-            frame_cache,
-            shader,
-            shader_loaded,
+            frame_cache: None,
         }
     }
 }
 
 /// Buffers a single triangle that covers the whole viewport.
-fn buffer_viewport(renderer: &Renderer2d, buffer: &mut TriangleBuffer<PosUv>) {
+fn buffer_viewport(renderer: &Renderer, buffer: &mut TriangleBuffer<PosUv>) {
     buffer_viewport_with_uv(renderer, buffer, |uv| uv);
 }
 
 /// Buffers a single triangle that covers the whole viewport.
 /// Calls the provided function to get the uv from the screen space position.
 fn buffer_viewport_with_uv<F: FnMut(Vec2) -> Vec2>(
-    renderer: &Renderer2d,
+    renderer: &Renderer,
     buffer: &mut TriangleBuffer<PosUv>,
     mut f: F,
 ) {
@@ -96,67 +72,54 @@ fn buffer_viewport_with_uv<F: FnMut(Vec2) -> Vec2>(
     );
 }
 
-impl<X: BackgroundContext> Layer<Camera2d> for BackgroundLayer<X> {
-    fn render(&mut self, renderer: &Renderer2d) {
+// TODO set fb viewport in pre_render.
+impl Layer for BackgroundLayer {}
+
+impl RenderLayer<(ShaderBinding<'_>, &Camera2d, Option<Option<Invalidation>>)> for BackgroundLayer {
+    fn render(
+        &mut self,
+        renderer: &Renderer,
+        (shader, camera, invalidation): (ShaderBinding, &Camera2d, Option<Option<Invalidation>>),
+    ) {
         let mut wrote_none: bool = false;
 
         // Write to frame cache or main screen.
         'write: {
-            if let Some(mut shader) = self.shader.bind(renderer) {
-                let just_loaded = !self.shader_loaded;
-                self.shader_loaded = true;
+            let mut buffer = &self.buffer;
+            let mut camera_matrix = &camera.camera_matrix;
 
-                let mut buffer = &self.buffer;
-                let mut camera_matrix = &renderer.camera.camera_matrix;
-                let mut middle = renderer.camera.center;
+            let _fbb = if let Some(invalidation) = invalidation {
+                let frame_cache = self
+                    .frame_cache
+                    .get_or_insert_with(|| FrameCache::new(renderer));
 
-                let _fbb = if let Some(frame_cache) = &mut self.frame_cache {
-                    // Update the frame cached (resize texture and compute read/write buffers).
-                    let mut invalidation = self.context.take_invalidation();
-                    if just_loaded {
-                        invalidation = Some(Invalidation::All);
-                    }
-
-                    frame_cache.update(
-                        renderer,
-                        renderer.camera.aligned.delta_pixels,
-                        invalidation,
-                    );
-
-                    // Not drawing anything (camera didn't move).
-                    if !frame_cache.write_some {
-                        wrote_none = true;
-                        break 'write;
-                    }
-
-                    buffer = &frame_cache.write_buffer;
-                    camera_matrix = &renderer.camera.aligned.camera_matrix;
-                    middle = renderer.camera.aligned.center;
-
-                    Some(frame_cache.scrolled_frame.bind(renderer))
-                } else {
-                    None
-                };
-
-                shader.uniform_matrix3f("uCamera", camera_matrix);
-
-                // Pack middle and derivative.
-                // Derivative same between aligned/unaligned cameras.
-                let derivative = renderer.camera.derivative();
-                shader.uniform4f(
-                    "uMiddle_uDerivative",
-                    vec4(middle.x, middle.y, derivative, derivative),
+                // Update the frame cache (resize texture and compute read/write buffers).
+                frame_cache.update(
+                    renderer,
+                    camera,
+                    camera.aligned.delta_pixels,
+                    invalidation.as_ref(),
                 );
 
-                // Set custom uniforms.
-                self.context.prepare(renderer, &mut shader);
+                // Not drawing anything (camera didn't move).
+                if !frame_cache.write_some {
+                    wrote_none = true;
+                    break 'write;
+                }
 
-                buffer.bind(renderer).draw();
+                buffer = &frame_cache.write_buffer;
+                camera_matrix = &camera.aligned.camera_matrix;
+
+                Some(frame_cache.scrolled_frame.bind(renderer))
             } else {
-                // First shader wasn't loaded so don't bother writing frame cache to main screen.
-                return;
-            }
+                assert!(self.frame_cache.is_none(), "stopped caching frame");
+                None
+            };
+
+            shader.uniform("uCamera", camera_matrix);
+            buffer.bind(renderer).draw();
         }
+        drop(shader); // Unbind shader so we can bind another one.
 
         // Read from frame cache and render to main screen.
         if let Some(frame_cache) = &mut self.frame_cache {
@@ -169,7 +132,7 @@ impl<X: BackgroundContext> Layer<Camera2d> for BackgroundLayer<X> {
                 // power of 2 textures (viewport). Ideally we would also pad the viewport width and
                 // height by 1 so the interpolated border pixel isn't clamped (or repeating to
                 // opposite side in WebGL2).
-                let subpixel = renderer.camera.subpixel_uv_diff();
+                let subpixel = camera.subpixel_uv_diff();
                 let multipass = subpixel != Vec2::ZERO;
 
                 // Don't need to copy if original wasn't modified (main frame is always modified).
@@ -177,7 +140,7 @@ impl<X: BackgroundContext> Layer<Camera2d> for BackgroundLayer<X> {
                 // If we wrote none and are multipass and linear is up to date we can skip drawing.
                 frame_cache.linear_valid &= wrote_none && multipass;
                 if !frame_cache.linear_valid {
-                    shader.uniform_texture("uSampler", frame_cache.scrolled_frame.as_texture(), 0);
+                    shader.uniform("uSampler", frame_cache.scrolled_frame.as_texture());
 
                     let fb_binding = multipass.then(|| {
                         // Drawing to whole linear so it will become valid.
@@ -192,7 +155,7 @@ impl<X: BackgroundContext> Layer<Camera2d> for BackgroundLayer<X> {
                 }
 
                 if multipass {
-                    shader.uniform_texture("uSampler", frame_cache.linear_frame.as_texture(), 0);
+                    shader.uniform("uSampler", frame_cache.linear_frame.as_texture());
 
                     let buffer = &mut frame_cache.subpixel_buffer;
                     buffer_viewport_with_uv(renderer, buffer, |uv| uv - subpixel);
@@ -207,28 +170,32 @@ impl<X: BackgroundContext> Layer<Camera2d> for BackgroundLayer<X> {
 ///
 /// Based on <https://www.factorio.com/blog/post/fff-333>.
 struct FrameCache {
-    shader: Shader,
+    empty: bool,
     linear_frame: Framebuffer,
     linear_valid: bool, // Linear contains an up to date frame.
-    scrolled_frame: Framebuffer,
-    scroll: UVec2,
     read_buffer: TriangleBuffer<PosUv>,
+    scroll: UVec2,
+    scrolled_frame: Framebuffer,
+    shader: Shader,
     subpixel_buffer: TriangleBuffer<PosUv>,
     write_buffer: TriangleBuffer<PosUv>,
     write_some: bool,
 }
 
-impl FrameCache {
-    fn new(renderer: &Renderer2d) -> Self {
+impl DefaultRender for FrameCache {
+    fn new(renderer: &Renderer) -> Self {
         // Compile framebuffer shader (alternative to WebGL2's blitFramebuffer).
         let shader = renderer.create_shader(
             include_str!("shaders/framebuffer.vert"),
             include_str!("shaders/framebuffer.frag"),
         );
 
-        let linear_frame = Framebuffer::new(renderer, true);
+        // Use zero background colors because the real shader will be compiled before copying to the
+        // screen.
+
+        let linear_frame = Framebuffer::new(renderer, [0; 4], true);
         let linear_valid = false;
-        let scrolled_frame = Framebuffer::new(renderer, false);
+        let scrolled_frame = Framebuffer::new(renderer, [0; 4], false);
         let scroll = UVec2::ZERO;
 
         let read_buffer = TriangleBuffer::new(renderer);
@@ -237,25 +204,29 @@ impl FrameCache {
         let write_some = false;
 
         Self {
-            shader,
+            empty: true,
             linear_frame,
             linear_valid,
-            scrolled_frame,
-            scroll,
             read_buffer,
+            scroll,
+            scrolled_frame,
+            shader,
             subpixel_buffer,
             write_buffer,
             write_some,
         }
     }
+}
 
+impl FrameCache {
     fn update(
         &mut self,
-        renderer: &Renderer2d,
+        renderer: &Renderer,
+        camera: &Camera2d,
         maybe_delta: Option<IVec2>,
-        invalidation: Option<Invalidation>,
+        invalidation: Option<&Invalidation>,
     ) {
-        // TODO don't set viewports during render phase beacause texture allocation stalls pipeline.
+        // TODO don't set viewports during render phase because texture allocation stalls pipeline.
         let viewport = renderer.canvas_size();
         self.scrolled_frame.set_viewport(renderer, viewport);
         self.linear_frame.set_viewport(renderer, viewport);
@@ -264,7 +235,12 @@ impl FrameCache {
 
         // Validate that a delta can be made.
         let delta = {
-            if let Some(delta) = maybe_delta {
+            if std::mem::take(&mut self.empty) {
+                if DEBUG {
+                    console_log!("invalidated: empty");
+                }
+                None
+            } else if let Some(delta) = maybe_delta {
                 if delta.abs().cmpge(viewport.as_ivec2()).any() {
                     if DEBUG {
                         console_log!("invalidated: out of range");
@@ -276,10 +252,10 @@ impl FrameCache {
                     }
                     match inv {
                         Invalidation::All => None,
-                        Invalidation::Rects(rects) => Some((delta, rects)),
+                        Invalidation::Rects(rects) => Some((delta, rects.as_slice())),
                     }
                 } else {
-                    Some((delta, vec![]))
+                    Some((delta, [].as_slice()))
                 }
             } else {
                 if DEBUG {
@@ -332,9 +308,9 @@ impl FrameCache {
                             scroll,
                             viewport,
                         ))
-                        .chain(delta_rects.into_iter().flat_map(|rect| {
+                        .chain(delta_rects.into_iter().flat_map(|&rect| {
                             let (start, end) = rect;
-                            let matrix = &renderer.camera.aligned.view_matrix;
+                            let matrix = &camera.aligned.view_matrix;
 
                             let v = viewport.as_vec2();
                             let multiplier = v * 0.5;
@@ -377,7 +353,7 @@ impl FrameCache {
     /// The generated triangles aren't necessarily in the same order as the iterator.
     /// Returns if any triangles were generated.
     fn buffer_scrolled_rects(
-        renderer: &Renderer2d,
+        renderer: &Renderer,
         buffer: &mut TriangleBuffer<PosUv>,
         rects: impl Iterator<Item = (Rect, Rect)>,
         viewport: UVec2,
@@ -393,7 +369,7 @@ impl FrameCache {
 
         mesh.vertices.extend(
             rects
-                .map(|(rect, scrolled)| {
+                .filter_map(|(rect, scrolled)| {
                     if rect == viewport_rect && scrolled == viewport_rect {
                         single_triangle = true;
                         None
@@ -408,8 +384,8 @@ impl FrameCache {
                             [
                                 (start, start2),
                                 (uvec2(end.x, start.y), uvec2(end2.x, start2.y)),
-                                (uvec2(start.x, end.y), uvec2(start2.x, end2.y)),
                                 (end, end2),
+                                (uvec2(start.x, end.y), uvec2(start2.x, end2.y)),
                             ]
                             .map(|(point, snapped)| {
                                 // Map 0..viewport to -1.0..1.0
@@ -421,21 +397,18 @@ impl FrameCache {
                         )
                     }
                 })
-                .flatten()
                 .flatten(),
         );
 
         if single_triangle {
             buffer_viewport(renderer, buffer);
             true
+        } else if mesh.vertices.is_empty() {
+            false
         } else {
-            if mesh.vertices.is_empty() {
-                false
-            } else {
-                mesh.push_default_quads();
-                buffer.buffer_mesh(renderer, &mesh);
-                true
-            }
+            mesh.push_default_quads();
+            buffer.buffer_mesh(renderer, &mesh);
+            true
         }
     }
 
@@ -473,14 +446,14 @@ impl FrameCache {
         let inv_scroll = viewport - scroll;
 
         // Ranges used to make the 4 quads.
-        let x_range = rect_start.x.checked_sub(inv_scroll.x).unwrap_or(0)
+        let x_range = rect_start.x.saturating_sub(inv_scroll.x)
             ..scroll.x.saturating_sub(viewport.x - rect_end.x);
         let x_range2 = (scroll.x + rect_start.x).min(viewport.x)
-            ..(viewport.x - inv_scroll.x.checked_sub(rect_end.x).unwrap_or(0));
-        let y_range = rect_start.y.checked_sub(inv_scroll.y).unwrap_or(0)
+            ..(viewport.x - inv_scroll.x.saturating_sub(rect_end.x));
+        let y_range = rect_start.y.saturating_sub(inv_scroll.y)
             ..scroll.y.saturating_sub(viewport.y - rect_end.y);
         let y_range2 = (scroll.y + rect_start.y).min(viewport.y)
-            ..(viewport.y - inv_scroll.y.checked_sub(rect_end.y).unwrap_or(0));
+            ..(viewport.y - inv_scroll.y.saturating_sub(rect_end.y));
 
         // Iter the 4 rects (zero area rects are elided).
         IntoIterator::into_iter([
@@ -512,7 +485,7 @@ fn snapping_add_uvec2(a: UVec2, b: IVec2, snap: UVec2) -> UVec2 {
 /// Adds b to a while snapping to snap.
 fn snapping_add(a: u32, b: i32, snap: u32) -> u32 {
     assert!(a <= snap);
-    assert!(b.abs() as u32 <= snap);
+    assert!(b.unsigned_abs() <= snap);
 
     if b >= 0 {
         let r = a + b as u32;
@@ -522,7 +495,7 @@ fn snapping_add(a: u32, b: i32, snap: u32) -> u32 {
             r
         }
     } else {
-        snapping_sub(a, b.abs() as u32, snap, false)
+        snapping_sub(a, b.unsigned_abs(), snap, false)
     }
 }
 

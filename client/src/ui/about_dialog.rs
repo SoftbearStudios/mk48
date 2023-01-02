@@ -4,19 +4,21 @@
 use crate::ui::Mk48Route;
 use common::entity::{EntityData, EntityKind, EntityType};
 use std::collections::HashSet;
-use yew::{function_component, html};
+use yew::{function_component, html, Html};
 use yew_frontend::component::discord_icon::DiscordIcon;
 use yew_frontend::component::link::Link;
 use yew_frontend::component::route_link::RouteLink;
 use yew_frontend::dialog::dialog::Dialog;
-use yew_frontend::frontend::Ctw;
-use yew_frontend::translation::{t, Translation};
-use yew_frontend::CONTACT_EMAIL;
+use yew_frontend::frontend::{use_game_id, use_outbound_enabled};
+use yew_frontend::translation::{use_translation, Translation};
+use yew_frontend::{Route, CONTACT_EMAIL};
 
 #[function_component(AboutDialog)]
 pub fn about_dialog() -> Html {
-    let game_id = Ctw::use_game_id();
+    let t = use_translation();
+    let game_id = use_game_id();
     let game_name = game_id.name();
+    let outbound_enabled = use_outbound_enabled();
     let boat_type_count = EntityType::iter()
         .filter(|t| t.data().kind == EntityKind::Boat)
         .count();
@@ -26,7 +28,7 @@ pub fn about_dialog() -> Html {
         .len();
 
     html! {
-        <Dialog title={t().about_title(Ctw::use_game_id())}>
+        <Dialog title={t.about_title(game_id)}>
 
             <h2>{"Description"}</h2>
 
@@ -42,8 +44,7 @@ pub fn about_dialog() -> Html {
             <p>
                 {"To learn more about the game, visit the "}
                 <RouteLink<Mk48Route> route={Mk48Route::Help}>{"help page"}</RouteLink<Mk48Route>>
-                {"."}
-                {"You can also view the "}
+                {". You can also view the "}
                 <RouteLink<Mk48Route> route={Mk48Route::Changelog}>{"changelog"}</RouteLink<Mk48Route>>
                 {" to see what changed recently."}
             </p>
@@ -58,7 +59,9 @@ pub fn about_dialog() -> Html {
                     {" and "}
                     <Link href="https://github.com/SoftbearStudios/mk48/tree/main/server">{"server"}</Link>
                     {" are written in "}
-                    <Link href="https://www.rust-lang.org/">{"Rust programming language"}</Link>
+                    <Link href="https://www.rust-lang.org/">{"Rust"}</Link>
+                    {" and rely on "}
+                    <RouteLink<Route> route={Route::Licensing}>{"open-source software"}</RouteLink<Route>>
                     {"."}
                 </li>
                 <li>
@@ -88,7 +91,7 @@ pub fn about_dialog() -> Html {
                 </li>
             </ul>
 
-            if Ctw::use_outbound_enabled() {
+            if outbound_enabled {
                 <h2>{"Contact Us"}</h2>
                 <p>
                     {"If you have any feedback to share, business inquiries, or any other concern, please contact us on "}

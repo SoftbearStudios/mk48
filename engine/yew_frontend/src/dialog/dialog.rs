@@ -5,13 +5,12 @@ use crate::component::curtain::Curtain;
 use crate::component::positioner::Align;
 use crate::component::route_link::RouteLink;
 use crate::component::x_button::XButton;
-use crate::Ctw;
+use crate::frontend::use_ctw;
 use stylist::yew::styled_component;
 use web_sys::window;
 use yew::prelude::*;
 use yew::virtual_dom::AttrValue;
-use yew_router::history::History;
-use yew_router::hooks::use_history;
+use yew_router::hooks::use_navigator;
 use yew_router::AnyRoute;
 
 #[derive(PartialEq, Properties)]
@@ -105,14 +104,14 @@ pub fn dialog(props: &DialogProps) -> Html {
     );
 
     let onclick = {
-        let navigator = use_history().unwrap();
+        let navigator = use_navigator().unwrap();
 
         Callback::from(move |_| {
-            navigator.push(AnyRoute::new("/"));
+            navigator.push(&AnyRoute::new("/"));
         })
     };
 
-    let routes = Ctw::use_ctw().routes;
+    let routes = use_ctw().routes;
     let pathname = window()
         .unwrap()
         .location()

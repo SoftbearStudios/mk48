@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::camera_2d::Camera2d;
-use crate::Renderer2d;
-use glam::{vec2, Mat3, Vec2, Vec4};
-use renderer::{Layer, Shader, Texture, TriangleBuffer};
+use glam::{vec2, Mat3, Vec2};
+use renderer::{DefaultRender, Layer, RenderLayer, Renderer, Shader, Texture, TriangleBuffer};
 use std::collections::HashMap;
 use std::hash::BuildHasher;
 
@@ -32,9 +31,8 @@ pub struct TextLayer {
     shader: Shader,
 }
 
-impl TextLayer {
-    /// Creates a new [`TextLayer`].
-    pub fn new(renderer: &Renderer2d) -> Self {
+impl DefaultRender for TextLayer {
+    fn new(renderer: &Renderer) -> Self {
         let shader = renderer.create_shader(
             include_str!("shaders/text.vert"),
             include_str!("shaders/text.frag"),
@@ -44,12 +42,12 @@ impl TextLayer {
         text_geometry.buffer(
             renderer,
             &[
-                vec2(-0.5, 0.5),
-                vec2(0.5, 0.5),
                 vec2(-0.5, -0.5),
                 vec2(0.5, -0.5),
+                vec2(0.5, 0.5),
+                vec2(-0.5, 0.5),
             ],
-            &[2, 0, 1, 2, 1, 3],
+            &[0, 1, 2, 2, 3, 0],
         );
 
         Self {
@@ -58,16 +56,16 @@ impl TextLayer {
             shader,
         }
     }
+}
 
+impl TextLayer {
     /// Draws `text` centered at `center` with a `scale` and a `color`. TODO `scale`'s units need
     /// to be more precisely defined.
-    pub fn draw(&mut self, text: &str, center: Vec2, scale: f32, color: Vec4) {
+    pub fn draw(&mut self, text: &str, center: Vec2, scale: f32, color: [u8; 4]) {
         if text.is_empty() {
             return;
         }
 
-        // TODO take integer based color as input.
-        let color = color.to_array().map(|c| (c * 255.0) as u8);
         if color[3] == 0 {
             return;
         }
@@ -91,8 +89,10 @@ impl TextLayer {
     }
 }
 
-impl Layer<Camera2d> for TextLayer {
-    fn pre_render(&mut self, renderer: &Renderer2d) {
+impl Layer for TextLayer {
+    const ALPHA: bool = true;
+
+    fn pre_render(&mut self, renderer: &Renderer) {
         self.buffers.retain(|id, entry| {
             entry.texture.get_or_insert_with(|| {
                 // Generate textures here to avoid pipeline stall if done during rendering.
@@ -113,8 +113,10 @@ impl Layer<Camera2d> for TextLayer {
             }
         });
     }
+}
 
-    fn render(&mut self, renderer: &Renderer2d) {
+impl RenderLayer<&Camera2d> for TextLayer {
+    fn render(&mut self, renderer: &Renderer, camera: &Camera2d) {
         // Haven't rendered text in a while.
         if self.buffers.is_empty() {
             return;
@@ -129,9 +131,9 @@ impl Layer<Camera2d> for TextLayer {
                 }
 
                 // Shouldn't panic because texture was initialized in pre_render.
-                let texture = buffers.texture.as_mut().unwrap();
+                let texture = buffers.texture.as_ref().unwrap();
                 let texture_aspect = texture.aspect();
-                shader.uniform_texture("uSampler", texture, 0);
+                shader.uniform("uSampler", texture);
 
                 // TODO could draw multiple in a single draw call.
                 for Draw { center, scale } in buffers.draws.drain(..) {
@@ -141,7 +143,7 @@ impl Layer<Camera2d> for TextLayer {
                         center,
                     );
                     // Only drawing 1 at a time so we can premultiply the model and view matrix.
-                    shader.uniform_matrix3f("uModelView", &(renderer.camera.view_matrix * model));
+                    shader.uniform("uModelView", &(camera.view_matrix * model));
                     binding.draw();
                 }
             }

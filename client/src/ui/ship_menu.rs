@@ -10,14 +10,21 @@ use std::collections::HashMap;
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::{
-    classes, html, html_nested, use_state, use_state_eq, Callback, Children, Html, Properties,
+    classes, html, html_nested, use_state, use_state_eq, AttrValue, Callback, Children, Html,
+    Properties,
 };
+use yew_frontend::component::positioner::Position;
 use yew_frontend::component::section::{Section, SectionArrow};
-use yew_frontend::translation::{t, Translation};
+use yew_frontend::frontend::{use_rewarded_ad, RewardedAd};
+use yew_frontend::translation::{use_translation, Translation};
 use yew_icons::{Icon, IconId};
 
 #[derive(Properties, PartialEq)]
 pub struct ShipMenuProps {
+    #[prop_or(None)]
+    pub position: Option<Position>,
+    #[prop_or(None)]
+    pub style: Option<AttrValue>,
     /// If some, upgrading. Otherwise, spawning.
     pub entity: Option<(EntityType, Vec2)>,
     pub score: u32,
@@ -70,10 +77,14 @@ pub fn ship_menu(props: &ShipMenuProps) -> Html {
     let max_level = score_to_level(props.score);
     let level = use_state_eq(|| max_level);
     let locker = use_state(Locker::default);
+    let t = use_translation();
+    let rewarded_ad = use_rewarded_ad();
 
     if min_level > max_level {
         // There are no choices now. This is possible for upgrade menu, but not spawn menu.
         debug_assert!(entity_type.is_some(), "no choices to spawn");
+
+        // WARNING: Early return means no more hooks later on.
         return html! { {props.children.clone().into_iter().collect::<Html>()} };
     } else {
         level.set(level.clamp(min_level, max_level));
@@ -81,9 +92,11 @@ pub fn ship_menu(props: &ShipMenuProps) -> Html {
 
     let select_factory =
         |entity_type: EntityType| -> Result<Callback<MouseEvent>, (IconId, &'static str)> {
-            if let Some(lock_icon) =
-                locker.lock_icon(entity_type, props.entity.map(|(_, position)| position))
-            {
+            if let Some(lock_icon) = locker.lock_icon(
+                entity_type,
+                props.entity.map(|(_, position)| position),
+                &rewarded_ad,
+            ) {
                 Err(lock_icon)
             } else {
                 Ok(props.onclick.reform(move |_| entity_type))
@@ -107,9 +120,9 @@ pub fn ship_menu(props: &ShipMenuProps) -> Html {
         })
     };
 
-    let t = t();
-    let (name, ships) = if let Some(entity_type) = entity_type {
+    let (id, name, ships) = if let Some(entity_type) = entity_type {
         (
+            "upgrade",
             t.upgrade_to_level_label(*level as u32),
             entity_type
                 .upgrade_options(props.score, false)
@@ -118,6 +131,7 @@ pub fn ship_menu(props: &ShipMenuProps) -> Html {
         )
     } else {
         (
+            "respawn",
             t.respawn_as_level_label(*level as u32),
             EntityType::spawn_options(props.score, false)
                 .filter(|entity_type| entity_type.data().level == *level)
@@ -126,7 +140,15 @@ pub fn ship_menu(props: &ShipMenuProps) -> Html {
     };
 
     html! {
-        <Section {name} left_arrow={increment_level_factory(-1)} right_arrow={increment_level_factory(1)}>
+        <Section
+            {id}
+            {name}
+            position={props.position}
+            style={props.style.clone()}
+            left_arrow={increment_level_factory(-1)}
+            right_arrow={increment_level_factory(1)}
+            closable={props.closable}
+        >
             <div class={classes!(ships_style, (ships.len() > 3).then(|| columns_css.clone()))}>
                 {ships.into_iter().map(|entity_type| {
                     let mut onclick: Option<Callback<MouseEvent>> = None;
@@ -174,6 +196,7 @@ impl Locker {
         &self,
         entity_type: EntityType,
         position: Option<Vec2>,
+        rewarded_ad: &RewardedAd,
     ) -> Option<(IconId, &'static str)> {
         let attempts = self.attempts.get(&entity_type).cloned().unwrap_or_default();
         let attempts_required = Self::attempts_required(entity_type);
@@ -185,20 +208,28 @@ impl Locker {
                 IconId::BootstrapSnow2,
                 "Cannot choose this ship in this area",
             ))
-        } else if attempts >= attempts_required
-            || client_util::joined::minutes_since_u8() >= Self::minutes_required(entity_type)
-        {
-            None
+        } else if attempts < attempts_required {
+            Some((
+                IconId::BootstrapLockFill,
+                "New players are not advised to choose this ship",
+            ))
         } else if attempts + 1 == attempts_required {
             Some((
                 IconId::BootstrapUnlockFill,
                 "New players are not advised to choose this ship",
             ))
-        } else {
+        } else if matches!(entity_type, EntityType::Skjold)
+            && !matches!(
+                rewarded_ad,
+                RewardedAd::Unavailable | RewardedAd::Watched { .. }
+            )
+        {
             Some((
-                IconId::BootstrapLockFill,
-                "New players are not advised to choose this ship",
+                IconId::OcticonsVideo16,
+                "Watch video ad on the splash screen or respawn screen to unlock this ship",
             ))
+        } else {
+            None
         }
     }
 
@@ -213,98 +244,10 @@ impl Locker {
     }
 
     fn attempts_required(entity_type: EntityType) -> u8 {
-        if Self::minutes_required(entity_type) > 0 {
+        if Self::minutes_required(entity_type) > client_util::joined::minutes_since_u8() {
             5
         } else {
             0
         }
     }
 }
-
-/*
-import Locked from "svelte-bootstrap-icons/lib/LockFill";
-import Restricted from "svelte-bootstrap-icons/lib/Snow2";
-import Unlocked from "svelte-bootstrap-icons/lib/UnlockFill";
-import {onMount} from 'svelte';
-
-let forcedUnlocks = {};
-const FORCE_UNLOCKS = 5;
-
-$: level = clamp(level || minLevel, minLevel, maxLevel);
-$: ships = availableShips(level, type);
-$: columns = ships.length > 3;
-
-onMount(() => {
-level = maxLevel;
-});
-
-// $: console.log(`min=${minLevel}, max=${maxLevel}, level=${level}`);
-
-function handleSelectShip(shipType) {
-if (onSelectShip && !(restricted(shipType, restrictions) || locked(shipType, forcedUnlocks))) {
-onSelectShip(shipType);
-}
-}
-
-function incrementIndex(value) {
-level = clamp(level + value, minLevel, maxLevel);
-}
-
-// Some ships are difficult/confusing. Lock them until the player has a bit of experience with the game.
-function locked(type, forcedUnlocks) {
-const data = entityData[type];
-const minutesPlayed = (Date.now() - (storage.join || 0)) / (60 * 1000);
-return (forcedUnlocks[type] || 0) < FORCE_UNLOCKS && minutesPlayed < ({dredger: 15, minelayer: 30, icebreaker: 45, tanker: 60}[data.subkind] || -1);
-}
-
-function restricted(type, restrictions) {
-return restrictions ? restrictions.includes(type) : false;
-}
-
-// Protest locking of ships (click the lock x times to unlock manually).
-function unlockShip(type) {
-forcedUnlocks[type] = (forcedUnlocks[type] || 0) + 1;
-}
-</script>
-
-<Section disableLeftArrow={level == minLevel} disableRightArrow={level == maxLevel} headerAlign='center' name={name} bind:open onLeftArrow={() => incrementIndex(-1)} onRightArrow={() => incrementIndex(1)} {closable}>
-<div class="ships" class:columns={ships.length > 3}>
-{#each ships as shipType}
-<Sprite
-title={`${entityData[shipType].label} (${summarizeType($t, shipType)})`}
-consumed={restricted(shipType, restrictions) || locked(shipType, forcedUnlocks)}
-icon={restricted(shipType, restrictions) ? Restricted : locked(shipType, forcedUnlocks) ? ((forcedUnlocks[shipType] || 0) < FORCE_UNLOCKS - 1 ? Locked : Unlocked) : null}
-iconTitle={restricted(shipType, restrictions) ? 'Cannot choose this ship in this area' : 'New players are not advised to choose this ship'}
-onIconClick={() => unlockShip(shipType)}
-on:click={() => handleSelectShip(shipType)}
-name={shipType}
-/>
-{/each}
-</div>
-</Section>
-
-<style>
-div.ships {
-display: grid;
-grid-gap: 1.5rem 1.5rem;
-grid-template-columns: repeat(1, 1fr);
-margin: auto;
-padding-top: 1.5rem;
-user-select: none;
-width: min-content;
--webkit-user-drag: none;
-}
-
-@media(min-width: 1000px) {
-div.ships.columns {
-grid-template-columns: repeat(2, 1fr);
-}
-}
-
-@media(min-width: 600px) and (max-height: 500px) {
-div.ships {
-grid-template-columns: repeat(2, 1fr);
-}
-}
-</style>
- */

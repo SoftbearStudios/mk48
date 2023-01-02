@@ -20,21 +20,24 @@ pub mod translation;
 pub mod window;
 
 use crate::canvas::Canvas;
+use crate::dialog::licensing_dialog::LicensingDialog;
 use crate::dialog::privacy_dialog::PrivacyDialog;
 use crate::dialog::terms_dialog::TermsDialog;
 use crate::error_tracer::ErrorTracer;
-use crate::frontend::post_message;
+use crate::frontend::{post_message, RewardedAd};
 use crate::overlay::fatal_error::FatalError;
 use crate::overlay::reconnecting::Reconnecting;
 use crate::window::event_listener::WindowEventListener;
 use client_util::browser_storage::BrowserStorages;
 use client_util::context::WeakCoreState;
+use client_util::frontend::Frontend;
 use client_util::game_client::GameClient;
 use client_util::infrastructure::Infrastructure;
 use client_util::setting::CommonSettings;
+use client_util::setting::Settings;
 use core_protocol::id::{InvitationId, ServerId};
 use core_protocol::name::Referrer;
-use core_protocol::rpc::{ChatRequest, PlayerRequest, Request, TeamRequest};
+use core_protocol::rpc::{AdType, ChatRequest, PlayerRequest, Request, TeamRequest};
 use engine_macros::SmolRoutable;
 use frontend::{Ctw, Gctw, PropertiesWrapper, Yew};
 use gloo_render::{request_animation_frame, AnimationFrame};
@@ -51,13 +54,17 @@ use yew_router::prelude::*;
 
 pub const CONTACT_EMAIL: &'static str = "contact@softbear.com";
 
-struct App<G: GameClient, UI: Component<Properties = PropertiesWrapper<G::UiProps>>, R: Routable>
-where
+struct App<
+    G: GameClient,
+    UI: BaseComponent<Properties = PropertiesWrapper<G::UiProps>>,
+    R: Routable,
+> where
     G::UiProps: Default + PartialEq + Clone,
 {
     context_menu: Option<Html>,
-    infrastructure: Option<Infrastructure<G>>,
+    infrastructure: PendingInfrastructure<G>,
     ui_props: G::UiProps,
+    rewarded_ad: RewardedAd,
     fatal_error: Option<String>,
     /// After [`AppMsg::RecreateCanvas`] is received, before [`AppMsg::RecreateRenderer`] is received.
     recreating_canvas: RecreatingCanvas,
@@ -74,7 +81,49 @@ where
     _spooky: PhantomData<(UI, R)>,
 }
 
-#[derive(Copy, Clone, PartialEq, Default)]
+enum PendingInfrastructure<G: GameClient> {
+    Done(Infrastructure<G>),
+    /// Contains things that the infrastructure will eventually own, but that are required to exist
+    /// before the infrastructure.
+    Pending {
+        browser_storages: BrowserStorages,
+        common_settings: CommonSettings,
+        settings: G::GameSettings,
+    },
+    /// Used to help replace [`Pending`] with [`Done`] in lieu of
+    /// https://github.com/rust-lang/rfcs/pull/1736
+    Swapping,
+}
+
+impl<G: GameClient> PendingInfrastructure<G> {
+    fn is_pending(&self) -> bool {
+        matches!(self, Self::Pending { .. })
+    }
+
+    fn as_ref(&self) -> Option<&Infrastructure<G>> {
+        match self {
+            Self::Done(infrastructure) => Some(infrastructure),
+            Self::Pending { .. } => None,
+            Self::Swapping => {
+                debug_assert!(false, "PendingInfrastructure::Swapping::as_ref");
+                None
+            }
+        }
+    }
+
+    fn as_mut(&mut self) -> Option<&mut Infrastructure<G>> {
+        match self {
+            Self::Done(infrastructure) => Some(infrastructure),
+            Self::Pending { .. } => None,
+            Self::Swapping => {
+                debug_assert!(false, "PendingInfrastructure::Swapping::as_mut");
+                None
+            }
+        }
+    }
+}
+
+#[derive(Copy, Clone, Default, PartialEq)]
 enum RecreatingCanvas {
     /// No canvas recreation is in progress.
     #[default]
@@ -91,7 +140,7 @@ struct AppProps {}
 enum AppMsg<G: GameClient> {
     ChangeCommonSettings(Box<dyn FnOnce(&mut CommonSettings, &mut BrowserStorages)>),
     ChangeSettings(Box<dyn FnOnce(&mut G::GameSettings, &mut BrowserStorages)>),
-    CreateInfrastructure(Box<Infrastructure<G>>),
+    FrontendCreated(Box<dyn Frontend<G::UiProps>>),
     /// Signals the canvas should be recreated, followed by the renderer.
     RecreateCanvas,
     /// Put back the canvas.
@@ -100,6 +149,7 @@ enum AppMsg<G: GameClient> {
     /// Signals just the renderer should be recreated.
     RecreateRenderer,
     SetServerId(Option<ServerId>),
+    #[allow(unused)]
     FatalError(String),
     Frame {
         time: f64,
@@ -119,6 +169,8 @@ enum AppMsg<G: GameClient> {
     /// Error trace.
     Trace(String),
     VisibilityChange(Event),
+    RequestRewardedAd,
+    ConsumeRewardedAd,
     /// Message from parent window.
     Message(String),
     Wheel(WheelEvent),
@@ -126,7 +178,7 @@ enum AppMsg<G: GameClient> {
 
 impl<
         G: GameClient,
-        UI: Component<Properties = PropertiesWrapper<G::UiProps>>,
+        UI: BaseComponent<Properties = PropertiesWrapper<G::UiProps>>,
         R: Routable + 'static,
     > App<G, UI, R>
 where
@@ -140,7 +192,7 @@ where
 
 impl<
         G: GameClient,
-        UI: Component<Properties = PropertiesWrapper<G::UiProps>>,
+        UI: BaseComponent<Properties = PropertiesWrapper<G::UiProps>>,
         R: Routable + 'static,
     > Component for App<G, UI, R>
 where
@@ -156,11 +208,22 @@ where
         let message_callback = ctx.link().callback(AppMsg::Message);
         let trace_callback = ctx.link().callback(AppMsg::Trace);
 
+        // First load local storage common settings.
+        // Not guaranteed to set either or both to Some. Could fail to load.
+        let browser_storages = BrowserStorages::new();
+        let common_settings = CommonSettings::load(&browser_storages, CommonSettings::default());
+        let settings = G::GameSettings::load(&browser_storages, G::GameSettings::default());
+
         Self {
             context_menu: None,
-            infrastructure: None,
+            infrastructure: PendingInfrastructure::Pending {
+                browser_storages,
+                common_settings,
+                settings,
+            },
             ui_props: G::UiProps::default(),
             recreating_canvas: RecreatingCanvas::default(),
+            rewarded_ad: RewardedAd::Unavailable,
             fatal_error: None,
             outbound_enabled: true,
             _animation_frame: Self::create_animation_frame(ctx),
@@ -228,28 +291,89 @@ where
     fn update(&mut self, ctx: &Context<Self>, msg: AppMsg<G>) -> bool {
         match msg {
             AppMsg::ChangeCommonSettings(change) => {
-                if let Some(infrastructure) = self.infrastructure.as_mut() {
-                    change(
-                        &mut infrastructure.context.common_settings,
-                        &mut infrastructure.context.browser_storages,
-                    );
-                    // Just in case.
-                    return true;
+                match &mut self.infrastructure {
+                    PendingInfrastructure::Done(infrastructure) => {
+                        change(
+                            &mut infrastructure.context.common_settings,
+                            &mut infrastructure.context.browser_storages,
+                        );
+                    }
+                    PendingInfrastructure::Pending {
+                        common_settings,
+                        browser_storages,
+                        ..
+                    } => {
+                        change(common_settings, browser_storages);
+                    }
+                    PendingInfrastructure::Swapping => {
+                        debug_assert!(
+                            false,
+                            "PendingInfrastructure::Swapping in ChangeCommonSettings"
+                        );
+                    }
                 }
+                // Just in case.
+                return true;
             }
             AppMsg::ChangeSettings(change) => {
-                if let Some(infrastructure) = self.infrastructure.as_mut() {
-                    change(
-                        &mut infrastructure.context.settings,
-                        &mut infrastructure.context.browser_storages,
-                    );
-                    // Just in case.
-                    return true;
+                match &mut self.infrastructure {
+                    PendingInfrastructure::Done(infrastructure) => {
+                        change(
+                            &mut infrastructure.context.settings,
+                            &mut infrastructure.context.browser_storages,
+                        );
+                    }
+                    PendingInfrastructure::Pending {
+                        settings,
+                        browser_storages,
+                        ..
+                    } => {
+                        change(settings, browser_storages);
+                    }
+                    PendingInfrastructure::Swapping => {
+                        debug_assert!(false, "PendingInfrastructure::Swapping in ChangeSettings");
+                    }
                 }
+                // Just in case.
+                return true;
             }
-            AppMsg::CreateInfrastructure(infrastructure) => {
-                assert!(self.infrastructure.is_none());
-                self.infrastructure = Some(*infrastructure);
+            AppMsg::FrontendCreated(frontend) => {
+                assert!(self.infrastructure.is_pending());
+
+                self.infrastructure = match std::mem::replace(
+                    &mut self.infrastructure,
+                    PendingInfrastructure::Swapping,
+                ) {
+                    PendingInfrastructure::Pending {
+                        browser_storages,
+                        common_settings,
+                        settings,
+                    } => {
+                        match Infrastructure::new(
+                            browser_storages,
+                            common_settings,
+                            settings,
+                            frontend,
+                        ) {
+                            Ok(infrastructure) => PendingInfrastructure::Done(infrastructure),
+                            Err((e, browser_storages, common_settings, settings)) => {
+                                self.fatal_error = Some(e);
+                                // Put stuff back in the box :(
+                                PendingInfrastructure::Pending {
+                                    browser_storages,
+                                    common_settings,
+                                    settings,
+                                }
+                            }
+                        }
+                    }
+                    PendingInfrastructure::Swapping => {
+                        unreachable!("infrastructure creation aborted")
+                    }
+                    PendingInfrastructure::Done(_) => {
+                        unreachable!("infrastructure already created")
+                    }
+                }
             }
             AppMsg::RecreateCanvas => {
                 self.recreating_canvas = RecreatingCanvas::Started;
@@ -263,6 +387,8 @@ where
             }
             AppMsg::RecreateRenderer => {
                 self.recreating_canvas = RecreatingCanvas::None;
+                console_log!("could not recreate renderer.");
+                /*
                 if let Some(infrastructure) = self.infrastructure.as_mut() {
                     if let Err(e) = infrastructure.recreate_renderer() {
                         console_log!("could not recreate renderer: {}", e);
@@ -270,6 +396,7 @@ where
                         console_log!("finished recreating renderer");
                     }
                 }
+                */
                 return true;
             }
             AppMsg::SetServerId(server_id) => {
@@ -347,6 +474,19 @@ where
                     infrastructure.touch(event);
                 }
             }
+            AppMsg::RequestRewardedAd => {
+                if matches!(self.rewarded_ad, RewardedAd::Available { .. }) {
+                    self.rewarded_ad = RewardedAd::Watching;
+                    post_message("requestRewardedAd");
+                }
+            }
+            AppMsg::ConsumeRewardedAd => {
+                if matches!(self.rewarded_ad, RewardedAd::Watched { .. }) {
+                    self.rewarded_ad = RewardedAd::Available {
+                        request: ctx.link().callback(|_| AppMsg::RequestRewardedAd),
+                    };
+                }
+            }
             AppMsg::Trace(message) => {
                 if let Some(infrastructure) = self.infrastructure.as_mut() {
                     infrastructure.trace(message);
@@ -383,6 +523,41 @@ where
                             infrastructure.context.audio.set_muted_by_ad(false);
                         }
                     }
+                    "enableRewardedAds" => {
+                        if matches!(self.rewarded_ad, RewardedAd::Unavailable) {
+                            self.rewarded_ad = RewardedAd::Available {
+                                request: ctx.link().callback(|_| AppMsg::RequestRewardedAd),
+                            };
+                        }
+                    }
+                    "tallyBannerAd" => {
+                        if let Some(infrastructure) = self.infrastructure.as_mut() {
+                            infrastructure.tally_ad(AdType::Banner);
+                        }
+                    }
+                    "tallyRewardedAd" => {
+                        if let Some(infrastructure) = self.infrastructure.as_mut() {
+                            infrastructure.tally_ad(AdType::Rewarded);
+                            if matches!(
+                                self.rewarded_ad,
+                                RewardedAd::Available { .. } | RewardedAd::Watching
+                            ) {
+                                self.rewarded_ad = RewardedAd::Watched {
+                                    consume: ctx.link().callback(|_| AppMsg::ConsumeRewardedAd),
+                                };
+                            }
+                        }
+                    }
+                    "cancelRewardedAd" => {
+                        if matches!(self.rewarded_ad, RewardedAd::Watching) {
+                            self.rewarded_ad = RewardedAd::Canceled;
+                        }
+                    }
+                    "tallyVideoAd" => {
+                        if let Some(infrastructure) = self.infrastructure.as_mut() {
+                            infrastructure.tally_ad(AdType::Video);
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -411,7 +586,11 @@ where
         let routes = R::routes()
             .into_iter()
             .chain(Route::routes().into_iter())
-            .filter(|r| !r.contains(':') && r.chars().filter(|&c| c == '/').count() == 2)
+            .filter(|r| {
+                !r.contains(':')
+                    && r.chars().filter(|&c| c == '/').count() == 2
+                    && *r != "/licensing/"
+            })
             .collect::<Vec<_>>();
 
         let context = Ctw {
@@ -419,17 +598,26 @@ where
             change_common_settings_callback,
             game_id: G::GAME_ID,
             outbound_enabled: self.outbound_enabled,
+            rewarded_ad: self.rewarded_ad.clone(),
             player_request_callback,
             raw_zoom_callback,
             recreate_renderer_callback,
             set_server_id_callback,
             set_context_menu_callback,
             routes,
-            setting_cache: self
-                .infrastructure
-                .as_ref()
-                .map(|i| i.context.common_settings.clone())
-                .unwrap_or_default(),
+            licenses: G::LICENSES,
+            setting_cache: match &self.infrastructure {
+                PendingInfrastructure::Done(infrastructure) => {
+                    infrastructure.context.common_settings.clone()
+                }
+                PendingInfrastructure::Pending {
+                    common_settings, ..
+                } => common_settings.clone(),
+                PendingInfrastructure::Swapping => {
+                    debug_assert!(false, "PendingInfrastructure::Swapping in render");
+                    CommonSettings::default()
+                }
+            },
             state: self
                 .infrastructure
                 .as_ref()
@@ -440,11 +628,16 @@ where
 
         let game_context = Gctw {
             send_ui_event_callback,
-            settings_cache: self
-                .infrastructure
-                .as_ref()
-                .map(|i| i.context.settings.clone())
-                .unwrap_or_default(),
+            settings_cache: match &self.infrastructure {
+                PendingInfrastructure::Done(infrastructure) => {
+                    infrastructure.context.settings.clone()
+                }
+                PendingInfrastructure::Pending { settings, .. } => settings.clone(),
+                PendingInfrastructure::Swapping => {
+                    debug_assert!(false, "PendingInfrastructure::Swapping in render");
+                    G::GameSettings::default()
+                }
+            },
             change_settings_callback,
         };
 
@@ -468,7 +661,7 @@ where
                         } else {
                             <>
                                 <UI props={self.ui_props.clone()}/>
-                                <Switch<Route> render={Switch::render(switch)}/>
+                                <Switch<Route> render={switch}/>
                                 if let Some(context_menu) = self.context_menu.as_ref() {
                                     {context_menu.clone()}
                                 }
@@ -486,15 +679,9 @@ where
     fn rendered(&mut self, ctx: &Context<Self>, first_render: bool) {
         if first_render {
             let set_ui_props = ctx.link().callback(AppMsg::SetUiProps);
-            let create_infrastructure_callback = ctx.link().callback(AppMsg::CreateInfrastructure);
-            let fatal_error_callback = ctx.link().callback(AppMsg::FatalError);
+            let frontend_created_callback = ctx.link().callback(AppMsg::FrontendCreated);
             let _ = future_to_promise(async move {
-                match Infrastructure::new(Box::new(Yew::new(set_ui_props).await)) {
-                    Ok(infrastructure) => {
-                        create_infrastructure_callback.emit(Box::new(infrastructure))
-                    }
-                    Err(e) => fatal_error_callback.emit(e),
-                }
+                frontend_created_callback.emit(Box::new(Yew::new(set_ui_props).await));
                 Ok(JsValue::NULL)
             });
         }
@@ -508,13 +695,13 @@ where
 
 pub fn entry_point<
     G: GameClient,
-    UI: Component<Properties = PropertiesWrapper<G::UiProps>>,
+    UI: BaseComponent<Properties = PropertiesWrapper<G::UiProps>>,
     R: Routable + 'static,
 >()
 where
     G::UiProps: Default + PartialEq + Clone,
 {
-    yew::start_app::<App<G, UI, R>>();
+    yew::Renderer::<App<G, UI, R>>::new().render();
 }
 
 #[derive(Clone, Copy, PartialEq, SmolRoutable)]
@@ -527,12 +714,14 @@ pub enum Route {
     Privacy,
     #[at("/terms/")]
     Terms,
+    #[at("/licensing/")]
+    Licensing,
     #[not_found]
     #[at("/")]
     Home,
 }
 
-fn switch(routes: &Route) -> Html {
+fn switch(routes: Route) -> Html {
     match routes {
         Route::Home | Route::Invitation { .. } | Route::Referrer { .. } => html! {},
         Route::Privacy => html! {
@@ -540,6 +729,9 @@ fn switch(routes: &Route) -> Html {
         },
         Route::Terms => html! {
             <TermsDialog/>
+        },
+        Route::Licensing => html! {
+            <LicensingDialog/>
         },
     }
 }

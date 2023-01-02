@@ -46,6 +46,18 @@ pub fn referrer() -> Option<Referrer> {
     Referrer::new(&document().referrer())
 }
 
+/// Returns `true` if the user agent is a mobile browser (may overlook some niche platforms).
+pub fn is_mobile() -> bool {
+    let user_agent = window().navigator().user_agent();
+    user_agent
+        .map(|user_agent| {
+            ["iPhone", "iPad", "iPod", "Android"]
+                .iter()
+                .any(|platform| user_agent.contains(platform))
+        })
+        .unwrap_or(false)
+}
+
 /// Gets the string, ws or wss, for the websocket protocol to use.
 /// This is a problematic API because it does not respect redirect schemes.
 pub fn is_https() -> bool {

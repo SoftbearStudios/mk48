@@ -16,7 +16,7 @@ use std::ops::Deref;
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{window, Request, RequestInit, RequestMode, Response, Url};
-use yew::{use_context, Callback, Html, Properties};
+use yew::{hook, use_context, Callback, Html, Properties};
 use yew_router::Routable;
 
 #[derive(Properties, PartialEq)]
@@ -32,12 +32,28 @@ impl<P: PartialEq> Deref for PropertiesWrapper<P> {
     }
 }
 
+#[derive(Clone, PartialEq)]
+pub enum RewardedAd {
+    Unavailable,
+    Available {
+        /// Start watching.
+        request: Callback<()>,
+    },
+    Watching,
+    Watched {
+        /// Set back to available.
+        consume: Callback<()>,
+    },
+    Canceled,
+}
+
 /// Non-game-specific context wrapper.
 #[derive(Clone, PartialEq)]
 pub struct Ctw {
     pub game_id: GameId,
     /// Outbound links.
     pub outbound_enabled: bool,
+    pub rewarded_ad: RewardedAd,
     pub setting_cache: CommonSettings,
     pub change_common_settings_callback:
         Callback<Box<dyn FnOnce(&mut CommonSettings, &mut BrowserStorages)>>,
@@ -51,49 +67,63 @@ pub struct Ctw {
     /// A copy of the core state.
     pub state: WeakCoreState,
     pub team_request_callback: Callback<TeamRequest>,
+    pub licenses: &'static [(&'static str, &'static [&'static str])],
 }
 
-impl Ctw {
-    pub fn use_chat_request_callback() -> Callback<ChatRequest> {
-        Self::use_ctw().chat_request_callback.clone()
-    }
+#[hook]
+pub fn use_rewarded_ad() -> RewardedAd {
+    use_ctw().rewarded_ad
+}
 
-    pub fn use_player_request_callback() -> Callback<PlayerRequest> {
-        Self::use_ctw().player_request_callback.clone()
-    }
+#[hook]
+pub fn use_chat_request_callback() -> Callback<ChatRequest> {
+    use_ctw().chat_request_callback
+}
 
-    pub fn use_change_common_settings_callback(
-    ) -> Callback<Box<dyn FnOnce(&mut CommonSettings, &mut BrowserStorages)>> {
-        Self::use_ctw().change_common_settings_callback.clone()
-    }
+#[hook]
+pub fn use_player_request_callback() -> Callback<PlayerRequest> {
+    use_ctw().player_request_callback
+}
 
-    pub fn use_set_context_menu_callback() -> Callback<Option<Html>> {
-        Self::use_ctw().set_context_menu_callback.clone()
-    }
+#[hook]
+pub fn use_change_common_settings_callback(
+) -> Callback<Box<dyn FnOnce(&mut CommonSettings, &mut BrowserStorages)>> {
+    use_ctw().change_common_settings_callback
+}
 
-    pub fn use_core_state() -> StrongCoreState<'static> {
-        Self::use_ctw().state.into_strong()
-    }
+#[hook]
+pub fn use_set_context_menu_callback() -> Callback<Option<Html>> {
+    use_ctw().set_context_menu_callback
+}
 
-    pub fn use_ctw() -> Self {
-        use_context::<Self>().unwrap()
-    }
+#[hook]
+pub fn use_core_state() -> StrongCoreState<'static> {
+    use_ctw().state.into_strong()
+}
 
-    pub fn use_game_id() -> GameId {
-        Self::use_ctw().game_id
-    }
+#[hook]
+pub fn use_ctw() -> Ctw {
+    use_context::<Ctw>().unwrap()
+}
 
-    pub fn use_raw_zoom_callback() -> Callback<f32> {
-        Self::use_ctw().raw_zoom_callback.clone()
-    }
+#[hook]
+pub fn use_game_id() -> GameId {
+    use_ctw().game_id
+}
 
-    pub fn use_team_request_callback() -> Callback<TeamRequest> {
-        Self::use_ctw().team_request_callback.clone()
-    }
+#[hook]
+pub fn use_raw_zoom_callback() -> Callback<f32> {
+    use_ctw().raw_zoom_callback
+}
 
-    pub fn use_outbound_enabled() -> bool {
-        Self::use_ctw().outbound_enabled
-    }
+#[hook]
+pub fn use_team_request_callback() -> Callback<TeamRequest> {
+    use_ctw().team_request_callback
+}
+
+#[hook]
+pub fn use_outbound_enabled() -> bool {
+    use_ctw().outbound_enabled
 }
 
 /// Game-specific context wrapper.
@@ -125,20 +155,21 @@ impl<G: GameClient> PartialEq for Gctw<G> {
     }
 }
 
-impl<G: GameClient> Gctw<G> {
-    /// Only works in function component.
-    pub fn use_ui_event_callback() -> Callback<G::UiEvent> {
-        Self::use_gctw().send_ui_event_callback.clone()
-    }
+/// Only works in function component.
+#[hook]
+pub fn use_ui_event_callback<G: GameClient>() -> Callback<G::UiEvent> {
+    use_gctw::<G>().send_ui_event_callback
+}
 
-    pub fn use_change_settings_callback(
-    ) -> Callback<Box<dyn FnOnce(&mut G::GameSettings, &mut BrowserStorages)>> {
-        Self::use_gctw().change_settings_callback.clone()
-    }
+#[hook]
+pub fn use_change_settings_callback<G: GameClient>(
+) -> Callback<Box<dyn FnOnce(&mut G::GameSettings, &mut BrowserStorages)>> {
+    use_gctw::<G>().change_settings_callback
+}
 
-    pub fn use_gctw() -> Self {
-        use_context::<Self>().unwrap()
-    }
+#[hook]
+pub fn use_gctw<G: GameClient>() -> Gctw<G> {
+    use_context::<Gctw<G>>().unwrap()
 }
 
 pub struct Yew<P> {

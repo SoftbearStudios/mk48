@@ -24,8 +24,10 @@ impl Velocity {
     pub const MIN: Self = Self(VelocityRepr::MIN);
     /// Maximum possible velocity.
     pub const MAX: Self = Self(VelocityRepr::MAX);
+    /// Inverse of scale.
+    const INV_SCALE: u32 = 1 << 5;
     /// How many meters per second per unit of velocity.
-    const SCALE: f32 = 1.0 / (1 << 5) as f32;
+    const SCALE: f32 = 1.0 / Self::INV_SCALE as f32;
     /// How many knots per unit of velocity.
     const KNOTS_SCALE: f32 = Self::SCALE * 1.94384;
     /// Max reverse velocity as a function of max forward velocity.
@@ -46,6 +48,17 @@ impl Velocity {
     #[inline]
     pub fn from_mps(mps: f32) -> Self {
         Self((mps * (1.0 / Self::SCALE)) as VelocityRepr)
+    }
+
+    /// from_mps returns a Velocity from a given amount of centimeters per second.
+    pub const fn from_whole_cmps(cmps: u32) -> Self {
+        let scaled = cmps * Self::INV_SCALE / 100;
+        if scaled > VelocityRepr::MAX as u32 {
+            debug_assert!(false, "from_whole_cmps overflow");
+            Self::MAX
+        } else {
+            Self(scaled as VelocityRepr)
+        }
     }
 
     /// to_knots returns an amount of knots corresponding to the Velocity.

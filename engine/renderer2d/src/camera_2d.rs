@@ -3,11 +3,10 @@
 
 use glam::{vec2, IVec2, Mat3, UVec2, Vec2};
 use renderer::viewport_to_aspect;
-use renderer::Camera;
 use renderer::ShaderBinding;
 
 /// A 2 dimensional camera.
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Camera2d {
     /// The [camera matrix](https://en.wikipedia.org/wiki/Camera_matrix).
     pub camera_matrix: Mat3,
@@ -22,10 +21,10 @@ pub struct Camera2d {
     pub(crate) aligned: Camera2dAligned,
 }
 
-impl Camera for Camera2d {
-    // Sets `uniform mat3 uView;`.
-    fn uniform_matrix(&self, shader: &ShaderBinding) {
-        shader.uniform_matrix3f("uView", &self.view_matrix);
+impl Camera2d {
+    /// Sets `uniform mat3 uView;`.
+    pub fn prepare(&self, shader: &ShaderBinding) {
+        shader.uniform("uView", &self.view_matrix);
     }
 }
 
@@ -95,7 +94,7 @@ impl Camera2d {
 }
 
 /// Camera that is aligned to pixels. Derefs to a [`Camera2dInner`].
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub(crate) struct Camera2dAligned {
     pub(crate) camera_matrix: Mat3,
     pub(crate) center: Vec2,

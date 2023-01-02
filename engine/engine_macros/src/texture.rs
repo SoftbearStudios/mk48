@@ -24,13 +24,7 @@ fn is_normal_map(name: &str) -> bool {
 pub fn include_textures(item: TokenStream) -> TokenStream {
     let input = TokenStream2::from(item)
         .into_iter()
-        .filter(|item| {
-            if let proc_macro2::TokenTree::Punct(_) = item {
-                false
-            } else {
-                true
-            }
-        })
+        .filter(|item| !matches!(item, proc_macro2::TokenTree::Punct(_)))
         .collect::<Vec<_>>();
 
     if input.is_empty() {
@@ -93,14 +87,11 @@ pub fn include_textures(item: TokenStream) -> TokenStream {
                 .unwrap();
 
             // TODO why is this required.
-            let texture_name = texture_name.strip_prefix("/").unwrap_or(texture_name);
+            let texture_name = texture_name.strip_prefix('/').unwrap_or(texture_name);
 
-            names.push(
-                quote! {
-                    Self::#ident => #texture_name
-                }
-                .into(),
-            );
+            names.push(quote! {
+                Self::#ident => #texture_name
+            });
             variants.push(ident);
         }
     }

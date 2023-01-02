@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use glam::{Vec2, Vec3};
+use glam::*;
 use renderer::{derive_vertex, MeshBuilder, Vertex};
 use std::mem::size_of;
 
@@ -28,7 +28,7 @@ impl Model {
     /// Allocates a model as a [`MeshBuilder`].
     pub fn to_builder<V: Vertex>(&self) -> MeshBuilder<V> {
         assert_eq!(
-            self.vertex_size(),
+            self.vertex_floats() * std::mem::size_of::<f32>(),
             size_of::<V>(),
             "vertex size mismatch: {:?}",
             self
@@ -41,7 +41,8 @@ impl Model {
         builder
     }
 
-    fn vertex_size(&self) -> usize {
+    /// Returns the size of each [`Vertex`] in floats.
+    pub(crate) fn vertex_floats(&self) -> usize {
         // positions always Vec3.
         let mut floats = 3;
         if self.normals {
@@ -53,7 +54,7 @@ impl Model {
         if self.colors {
             floats += 4;
         }
-        floats * std::mem::size_of::<f32>()
+        floats
     }
 }
 
@@ -70,7 +71,7 @@ derive_vertex!(
 
 /// Basic model made with [`TextVertex`] vertices.
 #[doc(hidden)]
-pub const TEST_MODEL: Model = include_ply!("model/test.ply");
+pub const TEST_MODEL: Model = include_ply!("models/test.ply");
 
 #[cfg(test)]
 mod tests {

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::component::meter::Meter;
-use crate::translation::{t, Translation};
-use yew::{function_component, html, Properties};
+use crate::translation::{use_translation, Translation};
+use yew::{function_component, html, Html, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct MeterProps {
@@ -30,10 +30,11 @@ pub fn level_meter(props: &MeterProps) -> Html {
             / (next_level_score - current_level_score) as f32)
             .clamp(0.0, 1.0)
     });
+    let t = use_translation();
 
     html! {
         if let Some((progress, next_level)) = progress.zip(next_level) {
-            <Meter value={progress}>{t().upgrade_to_level_progress((progress * 100.0).round() as u8, next_level as u32)}</Meter>
+            <Meter value={progress}>{t.upgrade_to_level_progress((progress * 100.0).round() as u8, next_level as u32)}</Meter>
         }
     }
 }

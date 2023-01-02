@@ -12,11 +12,11 @@ pub fn logo() -> Html {
         viewBox="0 0 843.00003 255.00001"
         xmlns="http://www.w3.org/2000/svg"
         style="width: 100%"><defs
-     id="defs61"><clipPath
+     id="defs61"><@{"clipPath"}
        clipPathUnits="userSpaceOnUse"
        id="clipPath73"><path
          d="M 0,1000 H 1000 V 0 H 0 Z"
-         id="path71" /></clipPath></defs><g
+         id="path71" /></@></defs><g
         id="g63"
         transform="matrix(1.3333333,0,0,-1.3333333,0,1333.3333)"><g
        id="g67"

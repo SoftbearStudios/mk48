@@ -3,7 +3,7 @@
 
 use crate::animation::Animation;
 use crate::audio::Audio;
-use crate::game::{Mk48Game, RendererLayer};
+use crate::game::{Mk48Game, Mk48Layer};
 use crate::particle::Mk48Particle;
 use client_util::audio::AudioPlayer;
 use client_util::context::Context;
@@ -85,7 +85,7 @@ impl InterpolatedContact {
 
     /// Generates particles from changes between model and view, such as muzzle flash particles when
     /// an armament goes from available to consumed.
-    pub fn generate_particles(&mut self, layer: &mut RendererLayer) {
+    pub fn generate_particles(&mut self, layer: &mut Mk48Layer) {
         // If reloads are known before and after, and one goes from zero to non-zero, it was fired.
         if let Some(entity_type) = self.model.entity_type() {
             let data: &EntityData = entity_type.data();
@@ -139,16 +139,12 @@ impl InterpolatedContact {
                         .unwrap_or(2.0);
                     let forward_velocity = 0.5 * armament_entity_data.speed.to_mps().min(100.0);
 
-                    let layer = if self.view.altitude().is_submerged() {
-                        &mut layer.sea_level_particles
-                    } else {
-                        &mut layer.airborne_particles
-                    };
+                    let is_submerged = self.view.altitude().is_submerged();
 
                     // Add muzzle flash particles.
                     let amount = 10;
                     for i in 0..amount {
-                        layer.add(Mk48Particle {
+                        let particle = Mk48Particle {
                             position: armament_transform.position
                                 + direction_vector * forward_offset,
                             velocity: boat_velocity
@@ -162,7 +158,13 @@ impl InterpolatedContact {
                             radius: (armament_entity_data.width * 5.0).clamp(1.0, 3.0),
                             color: -1.0,
                             smoothness: 1.0,
-                        });
+                        };
+
+                        if is_submerged {
+                            layer.sea_level_particles.add(particle);
+                        } else {
+                            layer.airborne_particles.add(particle);
+                        }
                     }
                 }
             }

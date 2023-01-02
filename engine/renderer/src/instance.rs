@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::buffer::*;
-use crate::camera::Camera;
 use crate::gl::*;
 use crate::index::Index;
-use crate::renderer::{Layer, LayerShader, Renderer};
-use crate::shader::Shader;
+use crate::renderer::{Layer, Renderer};
 use crate::vertex::Vertex;
+use crate::{DefaultRender, RenderLayer, ShaderBinding};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -18,32 +17,32 @@ use web_sys::{WebGlBuffer, WebGlVertexArrayObject};
 pub trait MeshId: Clone + Hash + Eq + Ord {}
 impl<T: Clone + Hash + Eq + Ord> MeshId for T {}
 
-enum InnerBuffers<V: Vertex, I: Index, M: Vertex> {
+enum InnerBuffers<V, I, M> {
     Mesh(MeshBuilder<V, I>),
     Render(TriangleBuffer<V, I>, InstanceBuffer<M>),
 }
 
-impl<V: Vertex, I: Index, M: Vertex> InnerBuffers<V, I, M> {
+impl<V, I, M> InnerBuffers<V, I, M> {
     fn unwrap_render(&self) -> (&TriangleBuffer<V, I>, &InstanceBuffer<M>) {
         if let InnerBuffers::Render(r, i) = self {
             (r, i)
         } else {
-            unreachable!()
+            unreachable!("pre_render was never called")
         }
     }
 }
 
-struct Buffers<V: Vertex, I: Index, M: Vertex> {
+struct Buffers<V, I, M> {
     inner: InnerBuffers<V, I, M>,
     instances: Vec<M>,
 }
 
 impl<V: Vertex, I: Index, M: Vertex> Buffers<V, I, M> {
-    fn pre_render<C>(&mut self, renderer: &Renderer<C>) {
+    fn pre_render(&mut self, renderer: &Renderer) {
         match &mut self.inner {
             InnerBuffers::Mesh(mesh) => {
                 let mut render_buffer = TriangleBuffer::new(renderer);
-                render_buffer.buffer_mesh(renderer, &mesh);
+                render_buffer.buffer_mesh(renderer, mesh);
                 let instance_buffer = InstanceBuffer::new(renderer);
 
                 self.inner = InnerBuffers::Render(render_buffer, instance_buffer);
@@ -55,47 +54,27 @@ impl<V: Vertex, I: Index, M: Vertex> Buffers<V, I, M> {
             }
             InnerBuffers::Render(_, instance_buffer) => instance_buffer,
         }
-        .buffer(renderer, &mut self.instances);
+        .buffer(renderer, &self.instances);
         self.instances.clear();
     }
 }
 
 /// [`InstanceLayer`] facilitates drawing multiple [`MeshBuilder`]s multiple times.
-pub struct InstanceLayer<V: Vertex, I: Index, M: Vertex, ID: MeshId, X> {
+pub struct InstanceLayer<V, I, M, ID> {
     buffers: HashMap<ID, Buffers<V, I, M>>,
-    /// The [`LayerShader`] passed to [`with_context`][`Self::with_context`] or
-    /// [`default`][`Default::default`].
-    pub context: X,
-    shader: Shader,
     sorted_ids: Vec<ID>,
 }
 
-impl<V: Vertex, I: Index, M: Vertex, ID: MeshId, X: Default> InstanceLayer<V, I, M, ID, X> {
-    /// Creates a new [`InstanceLayer`] with a [`default`][`Default::default`] [`LayerShader`].
-    pub fn new<C>(renderer: &Renderer<C>) -> Self
-    where
-        X: LayerShader<C>,
-    {
-        Self::with_context(renderer, X::default())
-    }
-}
-
-impl<V: Vertex, I: Index, M: Vertex, ID: MeshId, X> InstanceLayer<V, I, M, ID, X> {
-    /// Creates a new [`InstanceLayer`] with a given `context`.
-    pub fn with_context<C>(renderer: &Renderer<C>, context: X) -> Self
-    where
-        X: LayerShader<C>,
-    {
-        let shader = context.create(renderer);
-
+impl<V, I, M, ID> DefaultRender for InstanceLayer<V, I, M, ID> {
+    fn new(_: &Renderer) -> Self {
         Self {
             buffers: Default::default(),
-            context,
-            shader,
             sorted_ids: Default::default(),
         }
     }
+}
 
+impl<V, I, M, ID: MeshId> InstanceLayer<V, I, M, ID> {
     /// Draws an `instance` of the [`MeshBuilder`] previously created with the same `id` or calls
     /// `create`.
     pub fn draw(&mut self, id: ID, instance: M, create: impl FnOnce() -> MeshBuilder<V, I>) {
@@ -120,36 +99,33 @@ impl<V: Vertex, I: Index, M: Vertex, ID: MeshId, X> InstanceLayer<V, I, M, ID, X
     }
 }
 
-impl<V: Vertex, I: Index, M: Vertex, ID: MeshId, X: LayerShader<C>, C: Camera> Layer<C>
-    for InstanceLayer<V, I, M, ID, X>
-{
-    fn pre_render(&mut self, renderer: &Renderer<C>) {
+impl<V: Vertex, I: Index, M: Vertex, ID: MeshId> Layer for InstanceLayer<V, I, M, ID> {
+    fn pre_render(&mut self, renderer: &Renderer) {
         for buffers in self.buffers.values_mut() {
             buffers.pre_render(renderer);
         }
     }
+}
 
-    fn render(&mut self, renderer: &Renderer<C>) {
-        if let Some(shader) = self.shader.bind(renderer) {
-            renderer.camera.uniform_matrix(&shader);
-            self.context.prepare(renderer, &shader);
-
-            // Could store instances in sorted order if we had a fast to index them.
-            for b in self.sorted_ids.iter().map(|k| &self.buffers[k]) {
-                // unwrap_render won't panic because pre_render ensures that all inners are render.
-                let (render_buffer, instance_buffer) = b.inner.unwrap_render();
-                if instance_buffer.is_empty() {
-                    continue; // Skip empty.
-                }
-
-                instance_buffer.bind(renderer, render_buffer).draw();
+impl<V: Vertex, I: Index, M: Vertex, ID: MeshId> RenderLayer<&ShaderBinding<'_>>
+    for InstanceLayer<V, I, M, ID>
+{
+    fn render(&mut self, renderer: &Renderer, _: &ShaderBinding) {
+        // Could store instances in sorted order if we had a fast way to index them.
+        for b in self.sorted_ids.iter().map(|k| &self.buffers[k]) {
+            // unwrap_render won't panic because pre_render ensures that all inners are render.
+            let (render_buffer, instance_buffer) = b.inner.unwrap_render();
+            if instance_buffer.is_empty() {
+                continue; // Skip empty.
             }
+
+            instance_buffer.bind(renderer, render_buffer).draw();
         }
     }
 }
 
 /// [`InstanceBuffer`] facilitates drawing a [`TriangleBuffer`] multiple times.
-pub struct InstanceBuffer<M: Vertex> {
+pub struct InstanceBuffer<M> {
     instances: GpuBuffer<M, { GpuBufferType::Array.to() }>,
     vao: WebGlVertexArrayObject,
     last_vertex_buffer: RefCell<Option<WebGlBuffer>>,
@@ -157,14 +133,12 @@ pub struct InstanceBuffer<M: Vertex> {
 
 impl<M: Vertex> InstanceBuffer<M> {
     /// Creates a new [`InstanceBuffer`].
-    pub fn new<C>(renderer: &Renderer<C>) -> Self {
-        let buffer = Self {
+    pub fn new(renderer: &Renderer) -> Self {
+        Self {
             instances: GpuBuffer::new(&renderer.gl),
             vao: renderer.ovao.create_vertex_array_oes().unwrap(),
             last_vertex_buffer: Default::default(),
-        };
-
-        buffer
+        }
     }
 
     /// Returns true if there are no instances to draw (note does not check triangles).
@@ -173,9 +147,10 @@ impl<M: Vertex> InstanceBuffer<M> {
     }
 
     /// Binds the [`InstanceBuffer`] and a [`TriangleBuffer`] to draw instances of triangles.
-    pub fn bind<'a, V: Vertex, I: Index, C>(
+    #[must_use]
+    pub fn bind<'a, V: Vertex, I: Index>(
         &'a self,
-        renderer: &'a Renderer<C>,
+        renderer: &'a Renderer,
         triangle_buffer: &'a TriangleBuffer<V, I>,
     ) -> InstanceBufferBinding<'a, V, I, M> {
         let gl = &renderer.gl;
@@ -225,13 +200,13 @@ impl<M: Vertex> InstanceBuffer<M> {
     }
 
     /// Copies instances into the [`InstanceBuffer`].
-    pub fn buffer<C>(&mut self, renderer: &Renderer<C>, instances: &[M]) {
+    pub fn buffer(&mut self, renderer: &Renderer, instances: &[M]) {
         self.instances.buffer(&renderer.gl, instances);
     }
 }
 
 /// A bound [`InstanceBuffer`] that can draw instances of triangles.
-pub struct InstanceBufferBinding<'a, V: Vertex, I: Index, M: Vertex> {
+pub struct InstanceBufferBinding<'a, V, I, M> {
     aia: &'a Aia,
     ovao: &'a Ovao,
     triangle_buffer: &'a TriangleBuffer<V, I>,
@@ -284,7 +259,7 @@ impl<'a, V: Vertex, I: Index, M: Vertex> InstanceBufferBinding<'a, V, I, M> {
     }
 }
 
-impl<'a, V: Vertex, I: Index, M: Vertex> Drop for InstanceBufferBinding<'a, V, I, M> {
+impl<'a, V, I, M> Drop for InstanceBufferBinding<'a, V, I, M> {
     fn drop(&mut self) {
         // Unbind ALWAYS required (unlike all other render unbinds).
         self.ovao.bind_vertex_array_oes(None);

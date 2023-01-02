@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::camera_2d::Camera2d;
-use crate::Renderer2d;
 use glam::{Mat2, Vec2, Vec4};
-use renderer::{derive_vertex, Camera, Index, Layer, MeshBuilder, Shader, TriangleBuffer};
+use renderer::{
+    derive_vertex, DefaultRender, Index, Layer, MeshBuilder, RenderLayer, Renderer, Shader,
+    TriangleBuffer,
+};
 use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::ops::Range;
@@ -21,13 +23,11 @@ pub struct GraphicLayer<I: Index = u16> {
     shader: Shader,
     mesh: MeshBuilder<PosColor, I>,
     buffer: TriangleBuffer<PosColor, I>,
-    /// Cached in pre_prepare.
     zoom: f32,
 }
 
-impl<I: Index> GraphicLayer<I> {
-    /// Creates a new [`GraphicLayer`].
-    pub fn new(renderer: &Renderer2d) -> Self {
+impl<I: Index> DefaultRender for GraphicLayer<I> {
+    fn new(renderer: &Renderer) -> Self {
         let shader = renderer.create_shader(
             include_str!("shaders/graphic.vert"),
             include_str!("shaders/graphic.frag"),
@@ -37,10 +37,12 @@ impl<I: Index> GraphicLayer<I> {
             shader,
             mesh: MeshBuilder::new(),
             buffer: TriangleBuffer::new(renderer),
-            zoom: 0.0,
+            zoom: 1.0,
         }
     }
+}
 
+impl<I: Index> GraphicLayer<I> {
     /// Draws a triangle centered on `center`, with a base of `scale.x`, a height of `scale.y` and
     /// rotated by `angle`. An `angle` of 0 is pointing
     pub fn draw_triangle(&mut self, center: Vec2, scale: Vec2, angle: f32, color: Vec4) {
@@ -54,8 +56,8 @@ impl<I: Index> GraphicLayer<I> {
         let rot = Mat2::from_angle(angle);
         let positions = [
             Vec2::new(-0.5, -0.5),
-            Vec2::new(0.0, 0.25 * 3f32.sqrt()),
             Vec2::new(0.5, -0.5),
+            Vec2::new(0.0, 0.25 * 3f32.sqrt()),
         ];
 
         self.mesh.vertices.extend(positions.map(|pos| PosColor {
@@ -89,10 +91,10 @@ impl<I: Index> GraphicLayer<I> {
         let half_scale = scale * 0.5;
         let rot = Mat2::from_angle(angle);
         let positions = [
-            Vec2::new(-half_scale.x, half_scale.y),
-            Vec2::new(half_scale.x, half_scale.y),
             Vec2::new(-half_scale.x, -half_scale.y),
             Vec2::new(half_scale.x, -half_scale.y),
+            Vec2::new(half_scale.x, half_scale.y),
+            Vec2::new(-half_scale.x, half_scale.y),
         ];
 
         self.mesh
@@ -117,7 +119,7 @@ impl<I: Index> GraphicLayer<I> {
             start + diff * 0.5,
             Vec2::new(diff.length(), thickness),
             angle,
-            [s, e, s, e],
+            [s, e, e, s],
         );
     }
 
@@ -265,14 +267,14 @@ impl<I: Index> GraphicLayer<I> {
             .indices
             .extend((0..segments).into_iter().flat_map(|i| {
                 let index = starting_index + i * 2;
-                // Triangles are [A, D, B] and [A, C, D].
+                // Triangles are [A, B, D] and [A, D, C].
                 IntoIterator::into_iter([
                     I::from_usize(index),
-                    I::from_usize(index + 3),
                     I::from_usize(index + 1),
-                    I::from_usize(index),
-                    I::from_usize(index + 2),
                     I::from_usize(index + 3),
+                    I::from_usize(index),
+                    I::from_usize(index + 3),
+                    I::from_usize(index + 2),
                 ])
             }));
 
@@ -340,18 +342,18 @@ impl<I: Index> GraphicLayer<I> {
     }
 }
 
-impl<I: Index> Layer<Camera2d> for GraphicLayer<I> {
-    fn pre_prepare(&mut self, renderer: &Renderer2d) {
-        self.zoom = renderer.camera.zoom
-    }
+impl<I: Index> Layer for GraphicLayer<I> {
+    const ALPHA: bool = true;
+}
 
-    fn render(&mut self, renderer: &Renderer2d) {
+impl<I: Index> RenderLayer<&Camera2d> for GraphicLayer<I> {
+    fn render(&mut self, renderer: &Renderer, camera: &Camera2d) {
         if self.mesh.is_empty() {
             return;
         }
 
         if let Some(shader) = self.shader.bind(renderer) {
-            renderer.camera.uniform_matrix(&shader);
+            camera.prepare(&shader);
 
             self.buffer.buffer_mesh(renderer, &self.mesh);
             self.buffer.bind(renderer).draw();
@@ -359,5 +361,8 @@ impl<I: Index> Layer<Camera2d> for GraphicLayer<I> {
 
         // Always clear mesh even if shader wasn't bound.
         self.mesh.clear();
+
+        // TODO more accurate zoom.
+        self.zoom = camera.zoom;
     }
 }

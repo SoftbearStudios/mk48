@@ -222,7 +222,12 @@ impl World {
                                             // Cannot sense beyond this angle.
                                             let angle_diff = (angle - weapon.transform.direction).abs();
 
-                                            if (is_rocket_torpedo || distance_squared <= remaining_range.powi(2)) && angle_target_diff <= Angle::from_degrees(60.0) && angle_diff <= Angle::from_degrees(80.0) {
+                                            let (max_angle_target_diff, max_angle_diff) = if weapon.data().sub_kind == EntitySubKind::Missile {
+                                                (Angle::from_degrees(30.0), Angle::from_degrees(40.0))
+                                            } else {
+                                                (Angle::from_degrees(60.0), Angle::from_degrees(80.0))
+                                            };
+                                            if (is_rocket_torpedo || distance_squared <= remaining_range.powi(2)) && angle_target_diff <= max_angle_target_diff && angle_diff <= max_angle_diff {
                                                 if is_rocket_torpedo {
                                                     rocket_torpedo_sensed = true;
                                                 } else {
@@ -596,8 +601,6 @@ mod tests {
 
     #[test]
     fn test_minimum_scan_radius() {
-        unsafe { EntityType::init() }
-
         let mut minimum_scan_radii: Vec<_> = EntityType::iter()
             .map(|entity_type| {
                 let entity = Entity::new(entity_type, None);

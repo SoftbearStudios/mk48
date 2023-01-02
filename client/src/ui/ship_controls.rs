@@ -12,13 +12,17 @@ use core_protocol::id::LanguageId;
 use stylist::yew::styled_component;
 use stylist::{css, StyleSource};
 use web_sys::MouseEvent;
-use yew::{classes, html, html_nested, Callback, Html, Properties};
+use yew::{classes, html, html_nested, AttrValue, Callback, Html, Properties};
+use yew_frontend::component::positioner::Position;
 use yew_frontend::component::section::Section;
-use yew_frontend::frontend::Gctw;
-use yew_frontend::translation::t;
+use yew_frontend::frontend::use_ui_event_callback;
+use yew_frontend::translation::use_translation;
 
 #[derive(Properties, PartialEq)]
 pub struct ShipControlsProps {
+    pub position: Position,
+    #[prop_or(None)]
+    pub style: Option<AttrValue>,
     pub status: UiStatusPlaying,
 }
 
@@ -56,29 +60,41 @@ pub fn ship_controls(props: &ShipControlsProps) -> Html {
     "#
     );
 
+    let consumed_style = css!(
+        r#"
+        opacity: 0.6;
+        "#
+    );
+
     let data: &'static EntityData = props.status.entity_type.data();
 
-    let ui_event_callback = &Gctw::<Mk48Game>::use_ui_event_callback();
-    let select_factory = |entity_type: EntityType| {
-        (!props.status.armament.contains(&entity_type)).then(move || {
-            ui_event_callback.reform(move |_: MouseEvent| UiEvent::Armament(Some(entity_type)))
-        })
+    let ui_event_callback = use_ui_event_callback::<Mk48Game>();
+    let select_factory = {
+        let ui_event_callback = ui_event_callback.clone();
+        move |entity_type: EntityType| {
+            (!props.status.armament.contains(&entity_type)).then(move || {
+                ui_event_callback.reform(move |_: MouseEvent| UiEvent::Armament(Some(entity_type)))
+            })
+        }
     };
 
-    let t = t();
+    let t = use_translation();
     let status = &props.status;
-    let ui_event_callback = Gctw::<Mk48Game>::use_ui_event_callback();
     html! {
-        <Section name={data.label.clone()} closable={false}>
-            {group_armaments(&status.entity_type.data().armaments, &*status.armament_consumption).into_iter().map(|Group{entity_type, total, ready}| {
-                let onclick = select_factory(entity_type);
-                html_nested!{
-                    <div class={classes!(button_style.clone(), onclick.is_none().then(|| button_selected_style.clone()))} {onclick}>
-                        <Sprite {entity_type}/>
-                        <span class={consumption_style.clone()}>{format!("{ready}/{total}")}</span>
-                    </div>
-                }
-            }).collect::<Html>()}
+        <Section id="controls" name={data.label.clone()} position={props.position} style={props.style.clone()} closable={false}>
+            if status.entity_type.data().armaments.is_empty() {
+                <small>{t.entity_kind_hint(status.entity_type.data().kind, status.entity_type.data().sub_kind)}</small>
+            } else {
+                {group_armaments(&status.entity_type.data().armaments, &*status.armament_consumption).into_iter().map(|Group{entity_type, total, ready}| {
+                    let onclick = select_factory.clone()(entity_type);
+                    html_nested!{
+                        <div class={classes!(button_style.clone(), onclick.is_none().then(|| button_selected_style.clone()))} {onclick}>
+                            <Sprite {entity_type} class={classes!((ready == 0).then(|| consumed_style.clone()))}/>
+                            <span class={consumption_style.clone()}>{format!("{ready}/{total}")}</span>
+                        </div>
+                    }
+                }).collect::<Html>()}
+            }
             {surface_button(t, props.status.entity_type, props.status.submerge, &button_style, &button_selected_style, &ui_event_callback)}
             {active_sensor_button(t, props.status.entity_type, props.status.active, props.status.altitude, &button_style, &button_selected_style, &ui_event_callback)}
         </Section>

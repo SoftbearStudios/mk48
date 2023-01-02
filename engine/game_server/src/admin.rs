@@ -22,6 +22,7 @@ use log::{error, info, warn};
 use minicdn::{EmbeddedMiniCdn, MiniCdn};
 use serde::{Deserialize, Serialize};
 use server_util::database_schema::Metrics;
+use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -38,6 +39,8 @@ pub struct AdminRepo<G: GameArenaService> {
     game_client: Arc<RwLock<MiniCdn>>,
     /// Accept incoming JSON websocket traffic (likely used by 3rd-party bots, not used by default clients).
     allow_web_socket_json: &'static AtomicBool,
+    /// Password for admin interface.
+    password: Cow<'static, str>,
     /// Which server id to redirect to, if available.
     pub(crate) redirect_server_id_preference: Option<ServerId>,
     /// Route players to other available servers (bias towards emptier servers).
@@ -48,13 +51,15 @@ pub struct AdminRepo<G: GameArenaService> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ConfigFile {
+struct ConfigFile<'a> {
     allow_web_socket_json: bool,
-    redirect_server_id_preference: Option<ServerId>,
+    password: Cow<'a, str>,
+    /// 0 means None.
+    redirect_server_id_preference: u8,
     distribute_load: bool,
 }
 
-impl ConfigFile {
+impl ConfigFile<'static> {
     fn load(path: &str) -> Result<Self, String> {
         toml::from_str(
             std::str::from_utf8(&fs::read(path).map_err(|e| e.to_string())?)
@@ -64,11 +69,12 @@ impl ConfigFile {
     }
 }
 
-impl Default for ConfigFile {
+impl Default for ConfigFile<'static> {
     fn default() -> Self {
         Self {
             allow_web_socket_json: true,
-            redirect_server_id_preference: None,
+            password: Cow::Borrowed(include_str!("auth.txt")),
+            redirect_server_id_preference: 0,
             distribute_load: false,
         }
     }
@@ -80,15 +86,6 @@ impl Default for ConfigFile {
 pub struct ParameterizedAdminRequest {
     pub auth: String,
     pub request: AdminRequest,
-}
-
-impl ParameterizedAdminRequest {
-    fn is_authentic(&self) -> bool {
-        const AUTH: &'static [u8] = include_bytes!("auth.txt");
-
-        // Avoid timing side channel attack that could be used to get the auth.
-        constant_time_eq::constant_time_eq(self.auth.as_bytes(), AUTH)
-    }
 }
 
 impl<G: GameArenaService> AdminRepo<G> {
@@ -114,12 +111,18 @@ impl<G: GameArenaService> AdminRepo<G> {
             game_client,
             config_file,
             allow_web_socket_json,
-            redirect_server_id_preference: config.redirect_server_id_preference,
+            password: config.password,
+            redirect_server_id_preference: ServerId::new(config.redirect_server_id_preference),
             distribute_load: config.distribute_load,
             #[cfg(unix)]
             profile: None,
             _spooky: PhantomData,
         }
+    }
+
+    pub(crate) fn authenticate(&self, request: &ParameterizedAdminRequest) -> bool {
+        // Avoid timing side channel attack that could be used to get the auth.
+        constant_time_eq::constant_time_eq(self.password.as_bytes(), request.auth.as_bytes())
     }
 
     fn log_save_config_file(&self) {
@@ -132,7 +135,11 @@ impl<G: GameArenaService> AdminRepo<G> {
         if let Some(path) = self.config_file.as_deref() {
             let config = ConfigFile {
                 allow_web_socket_json: self.allow_web_socket_json.load(Ordering::Relaxed),
-                redirect_server_id_preference: self.redirect_server_id_preference,
+                password: Cow::Borrowed(self.password.borrow()),
+                redirect_server_id_preference: self
+                    .redirect_server_id_preference
+                    .map(|n| n.0.get())
+                    .unwrap_or(0),
                 distribute_load: self.distribute_load,
             };
 
@@ -613,7 +620,7 @@ impl<G: GameArenaService> Handler<ParameterizedAdminRequest> for Infrastructure<
     type Result = ResponseActFuture<Self, Result<AdminUpdate, &'static str>>;
 
     fn handle(&mut self, msg: ParameterizedAdminRequest, _ctx: &mut Self::Context) -> Self::Result {
-        if !msg.is_authentic() {
+        if !self.admin.authenticate(&msg) {
             return Box::pin(fut::ready(Err("invalid auth")));
         }
 

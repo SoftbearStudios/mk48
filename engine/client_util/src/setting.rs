@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::browser_storage::BrowserStorages;
+use crate::js_util::is_mobile;
 use core_protocol::id::{ArenaId, CohortId, LanguageId, ServerId, SessionId};
 use core_protocol::name::PlayerAlias;
 use core_protocol::web_socket::WebSocketProtocol;
@@ -47,11 +48,18 @@ pub struct CommonSettings {
     /// Websocket protocol.
     #[setting(volatile)]
     pub protocol: WebSocketProtocol,
+    /// Pending chat message.
+    #[setting(volatile)]
+    pub chat_message: String,
+    /// Whether to add a contrasting border behind UI elements.
+    pub high_contrast: bool,
     /// Whether team menu is open.
+    #[setting(volatile)]
     pub team_dialog_shown: bool,
     /// Whether chat menu is open.
     pub chat_dialog_shown: bool,
     /// Whether leaderboard menu is open.
+    #[setting(volatile)]
     pub leaderboard_dialog_shown: bool,
 }
 
@@ -65,8 +73,10 @@ impl Default for CommonSettings {
             server_id: None,
             arena_id: None,
             session_id: None,
-            antialias: true,
+            antialias: !is_mobile(),
             protocol: WebSocketProtocol::default(),
+            chat_message: String::new(),
+            high_contrast: false,
             team_dialog_shown: true,
             chat_dialog_shown: true,
             leaderboard_dialog_shown: true,

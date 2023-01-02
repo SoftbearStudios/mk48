@@ -114,10 +114,6 @@ mod tests {
 
     #[test]
     fn serialize() {
-        unsafe {
-            EntityType::init();
-        }
-
         EntityType::from_str(EntityType::Barrel.as_str()).unwrap();
 
         let mut rng = thread_rng();

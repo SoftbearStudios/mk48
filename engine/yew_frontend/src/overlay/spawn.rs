@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::component::positioner::Position;
-use crate::frontend::post_message;
-use crate::frontend::Ctw;
-use crate::translation::{t, Translation};
+use crate::frontend::{post_message, use_change_common_settings_callback, use_ctw};
+use crate::translation::{use_translation, Translation};
 use crate::WindowEventListener;
 use core_protocol::name::PlayerAlias;
 use gloo::timers::callback::Timeout;
 use stylist::yew::styled_component;
-use web_sys::{AnimationEvent, HtmlInputElement, MessageEvent};
+use web_sys::{AnimationEvent, HtmlInputElement, MessageEvent, SubmitEvent};
 use yew::prelude::*;
 
 #[derive(PartialEq, Properties)]
@@ -18,6 +17,9 @@ pub struct DialogProps {
     #[prop_or(Position::Center)]
     pub position: Position,
     pub children: Children,
+    // Kiomet used: #22222288
+    #[prop_or("#00000025")]
+    pub input_background_color: &'static str,
 }
 
 #[styled_component(SpawnOverlay)]
@@ -41,13 +43,12 @@ pub fn spawn_overlay(props: &DialogProps) -> Html {
 
     let input_style = css!(
         r#"
-        background-color: #22222288;
         border-radius: 3rem;
         border: 0;
         box-sizing: border-box;
         color: #FFFA;
         cursor: pointer;
-        font-size: 1.5rem;
+        font-size: 1.7rem;
         font-weight: bold;
         margin-top: 0.25em;
         outline: 0;
@@ -68,7 +69,7 @@ pub fn spawn_overlay(props: &DialogProps) -> Html {
         box-sizing: border-box;
         color: white;
         cursor: pointer;
-        font-size: 3rem;
+        font-size: 3.25rem;
         left: 50%;
         margin-top: 0.5em;
         min-width: 12rem;
@@ -95,52 +96,73 @@ pub fn spawn_overlay(props: &DialogProps) -> Html {
     "#
     );
 
+    let t = use_translation();
     let (paused, transitioning, onanimationend) = use_splash_screen();
-
-    let alias_setting = Ctw::use_ctw().setting_cache.alias;
-    let alias = use_state(|| alias_setting.unwrap_or(PlayerAlias::new_unsanitized("")));
-
-    let oninput = {
-        let alias = alias.clone();
-        Callback::from(move |event: InputEvent| {
-            alias.set(PlayerAlias::new_input_sanitized(
-                &event.target_unchecked_into::<HtmlInputElement>().value(),
-            ))
-        })
-    };
+    let alias_setting = use_ctw().setting_cache.alias;
+    let input_ref = use_node_ref();
 
     let onplay = {
-        let alias = alias.clone();
-        let setting_callback = Ctw::use_change_common_settings_callback();
+        let input_ref = input_ref.clone();
+        let setting_callback = use_change_common_settings_callback();
         props.on_play.reform(move |_| {
-            let alias = *alias;
+            let alias = input_ref
+                .cast::<HtmlInputElement>()
+                .map(|input| PlayerAlias::new_input_sanitized(&input.value()));
             setting_callback.emit(Box::new(move |settings, storages| {
-                settings.set_alias(Some(alias), storages);
+                settings.set_alias(alias, storages);
             }));
-            alias
+            alias.unwrap_or_default()
         })
     };
 
     let onclick = onplay.reform(|_: MouseEvent| {});
 
-    // [`FocusEvent`] instead of [`SubmitEvent`] due to:
-    // - https://github.com/rustwasm/wasm-bindgen/issues/2712
-    // - https://github.com/yewstack/yew/issues/1359
-    let onsubmit = onplay.reform(|event: FocusEvent| {
+    let onsubmit = onplay.reform(|event: SubmitEvent| {
         event.prevent_default();
     });
+
+    {
+        let input_ref = input_ref.clone();
+        use_effect_with_deps(
+            move |alias_setting| {
+                if let Some(alias_setting) = alias_setting.as_ref() {
+                    if let Some(input) = input_ref.cast::<HtmlInputElement>() {
+                        input.set_value(&alias_setting);
+                    }
+                }
+            },
+            alias_setting,
+        );
+    }
 
     html! {
         <form id="spawn_overlay" class={form_style} style={props.position.to_string()} {onsubmit} {onanimationend}>
             {props.children.clone()}
-            <input id="alias_input" class={input_style} disabled={*transitioning} type="text" name="name" placeholder={t().splash_screen_alias_placeholder()} autocomplete="off" value={alias.to_string()} {oninput}/>
-            <button id="play_button" class={button_style} disabled={*paused || *transitioning} {onclick}>{t().splash_screen_play_label()}</button>
+            <input
+                ref={input_ref}
+                id="alias_input"
+                class={input_style}
+                style={format!("background-color: {}", props.input_background_color)}
+                disabled={*transitioning}
+                type="text"
+                minlength="1"
+                maxlength="12"
+                placeholder={t.splash_screen_alias_placeholder()}
+                autocomplete="off"
+            />
+            <button
+                id="play_button"
+                class={button_style}
+                disabled={*paused || *transitioning}
+                {onclick}
+            >{t.splash_screen_play_label()}</button>
             <div id="banner_bottom" style="margin: auto;"></div>
         </form>
     }
 }
 
 /// Should be called on game-specific respawn screens.
+#[hook]
 pub fn use_splash_screen() -> (
     UseStateHandle<bool>,
     UseStateHandle<bool>,
@@ -188,7 +210,6 @@ pub fn use_splash_screen() -> (
                     .then_some(Timeout::new(1500, move || transitioning.set(false)));
 
                 || {
-                    post_message("playing");
                     drop(listener);
                     drop(transition_timeout);
                 }
@@ -196,6 +217,17 @@ pub fn use_splash_screen() -> (
             transitioning_dep,
         );
     }
+
+    use_effect_with_deps(
+        |_| {
+            // No-op.
+            || {
+                // Send this when unmounting.
+                post_message("playing");
+            }
+        },
+        (),
+    );
 
     (paused, transitioning, onanimationend)
 }

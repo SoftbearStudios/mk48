@@ -222,7 +222,7 @@ pub(crate) fn derive_smol_routable(input: SmolRoutable) -> TokenStream {
     for route in routes {
         let n = route.segments.len();
         if n >= routes_by_length.len() {
-            routes_by_length.resize_with(n + 1, || vec![]);
+            routes_by_length.resize_with(n + 1, Vec::new);
         }
         routes_by_length[n].push(route);
     }

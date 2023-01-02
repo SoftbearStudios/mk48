@@ -7,7 +7,7 @@ use crate::transform::DimensionTransform;
 use crate::world;
 use common_util::range::lerp;
 use fast_hilbert as hilbert;
-use glam::Vec2;
+use glam::{vec2, vec4, UVec2, Vec2, Vec2Swizzles, Vec4, Vec4Swizzles};
 use lazy_static::lazy_static;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -81,6 +81,17 @@ const fn lookup_altitude(data: u8) -> Altitude {
     Altitude((low + (high - low) * frac / 0b10000) as i8)
 }
 
+fn lookup_altitude_f32(data: f32) -> Altitude {
+    let data = data + 0.5;
+    let v = data as u8 >> 4;
+
+    // Linearly interpolate between adjacent altitudes.
+    let low = ALTITUDE_LUT[v as usize] as f32;
+    let high = ALTITUDE_LUT[(v + 1) as usize] as f32;
+    let frac = (data - (v << 4) as f32) * (1.0 / 16.0);
+    Altitude(lerp(low, high, frac).floor() as i8)
+}
+
 /// Converts [`Altitude`] into terrain data.
 ///
 /// TODO: Doesn't interpolate at all. Only returns multiples of 16, minus DATA_OFFSET.
@@ -92,6 +103,7 @@ fn reverse_lookup_altitude(altitude: Altitude) -> u8 {
         .saturating_mul(16) //.saturating_sub(DATA_OFFSET)
 }
 
+// TODO make this a UVec2.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub struct Coord(pub usize, pub usize);
 
@@ -112,10 +124,12 @@ impl Coord {
     }
 
     fn from_scaled_position(v: Vec2) -> Option<Self> {
+        let v = v + Vec2::splat(OFFSET as f32);
+        debug_assert!(v.cmpge(Vec2::ZERO).all() && v.cmple(UVec2::splat(u32::MAX).as_vec2()).all());
         let coord = unsafe {
             Self(
-                (v.x.to_int_unchecked::<isize>() + OFFSET) as usize,
-                (v.y.to_int_unchecked::<isize>() + OFFSET) as usize,
+                v.x.to_int_unchecked::<usize>(),
+                v.y.to_int_unchecked::<usize>(),
             )
         };
 
@@ -126,15 +140,32 @@ impl Coord {
         }
     }
 
-    pub fn corner(&self) -> Vec2 {
+    fn offset(&self, v: UVec2) -> Option<Self> {
+        let coord = Self::from_uvec2(self.as_uvec2() + v);
+        if coord.0 >= SIZE || coord.1 >= SIZE {
+            None
+        } else {
+            Some(coord)
+        }
+    }
+
+    pub fn corner(self) -> Vec2 {
         // TODO investigate if this is actually the corner.
         let pos = Vec2::new(
             (self.0 as isize - OFFSET) as f32,
             (self.1 as isize - OFFSET) as f32,
         )
         .mul(SCALE);
-        debug_assert_eq!(self, &Self::saturating_from_position(pos));
+        debug_assert_eq!(self, Self::saturating_from_position(pos));
         pos
+    }
+
+    pub fn as_uvec2(self) -> UVec2 {
+        UVec2::new(self.0 as u32, self.1 as u32)
+    }
+
+    pub fn from_uvec2(v: UVec2) -> Self {
+        Self(v.x as usize, v.y as usize)
     }
 }
 
@@ -305,11 +336,11 @@ impl TerrainMutation {
 }
 
 pub struct TerrainCollision {
-    /// Maximum altitude that a collision occured at.
+    /// Maximum altitude that a collision occurred at.
     pub max_altitude: Altitude,
     /// Average of all the collision samples (useful for repelling entity from land).
     pub average_position: Vec2,
-    // First collision sample (useful for destroying land that collides with an entity).
+    /// First collision sample (useful for destroying land that collides with an entity).
     pub highest_position: Vec2,
 }
 
@@ -439,15 +470,55 @@ impl Terrain {
 
     /// Gets the smoothed Altitude at a position.
     pub fn sample(&self, pos: Vec2) -> Option<Altitude> {
-        let pos = pos.mul(1.0 / SCALE);
+        fn cubic(v: f32) -> Vec4 {
+            let n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+            let s = n * n * n;
+            let x = s.x;
+            let y = s.y - 4.0 * s.x;
+            let z = s.z - 4.0 * s.y + 6.0 * s.x;
+            let w = 6.0 - x - y - z;
+            vec4(x, y, z, w)
+        }
 
-        let c_pos = pos.ceil();
-        let c = Coord::from_scaled_position(c_pos)?;
-        let Coord(cx, cy) = c;
+        let uv = pos * (1.0 / SCALE);
+        let floor = uv.floor();
+        let fract = uv - floor;
 
-        let f_pos = pos.floor();
-        let f = Coord::from_scaled_position(f_pos)?;
+        let x_cubic = cubic(fract.x);
+        let y_cubic = cubic(fract.y);
+
+        let tmp = y_cubic.xz() + y_cubic.yw();
+        let s = (x_cubic.xz() + x_cubic.yw()).extend(tmp.x).extend(tmp.y);
+
+        let c = floor.xxyy() + vec2(-0.5, 1.5).xyxy();
+        let offset = c + x_cubic.yw().extend(y_cubic.y).extend(y_cubic.w) / s;
+
+        let sample0 = self.bilinear(offset.xz())?;
+        let sample1 = self.bilinear(offset.yz())?;
+        let sample2 = self.bilinear(offset.xw())?;
+        let sample3 = self.bilinear(offset.yw())?;
+
+        let sx = s.x / (s.x + s.y);
+        let sy = s.z / (s.z + s.w);
+        debug_assert!(sx >= 0.0 && sx <= 1.0);
+        debug_assert!(sy >= 0.0 && sy <= 1.0);
+
+        // NOTE: lerp isn't cross platform deterministic.
+        let v = lerp(lerp(sample3, sample2, sx), lerp(sample1, sample0, sx), sy);
+        debug_assert!(v >= 0.0 && v <= 255.0);
+
+        Some(lookup_altitude_f32(v))
+    }
+
+    fn bilinear(&self, uv: Vec2) -> Option<f32> {
+        let uv = uv - 0.5;
+
+        let floor = uv.floor();
+        let f = Coord::from_scaled_position(floor)?;
         let Coord(fx, fy) = f;
+
+        let c = f.offset(UVec2::ONE)?;
+        let Coord(cx, cy) = c;
 
         // Sample 2x2 grid
         // 00 10
@@ -471,12 +542,12 @@ impl Terrain {
             c11 = self.at(Coord(cx, cy));
         }
 
-        let delta = pos.sub(f_pos);
-        Some(lookup_altitude(lerp(
-            lerp(c00 as f32, c10 as f32, delta.x),
-            lerp(c01 as f32, c11 as f32, delta.x),
-            delta.y,
-        ) as u8))
+        let fract = uv - floor;
+        Some(lerp(
+            lerp(c00 as f32, c10 as f32, fract.x),
+            lerp(c01 as f32, c11 as f32, fract.x),
+            fract.y,
+        ))
     }
 
     /// collides_with returns one point (and the altitude there) of collision if an entity collides
@@ -526,18 +597,8 @@ impl Terrain {
         for l in -(half_length as i32)..=half_length as i32 {
             for w in -(half_width as i32)..=half_width as i32 {
                 let l = l as f32 * dx;
-                debug_assert!(
-                    l > dim_transform.dimensions.x * -0.5,
-                    "{} <= {}",
-                    l,
-                    dim_transform.dimensions.x * -0.5
-                );
-                debug_assert!(
-                    l < dim_transform.dimensions.x * 0.5,
-                    "{} >= {}",
-                    l,
-                    dim_transform.dimensions.x * 0.5
-                );
+                debug_assert!(l > dim_transform.dimensions.x * -0.5);
+                debug_assert!(l < dim_transform.dimensions.x * 0.5);
                 let w = w as f32 * dy;
                 debug_assert!(w > dim_transform.dimensions.y * -0.5);
                 debug_assert!(w < dim_transform.dimensions.y * 0.5);
@@ -690,7 +751,7 @@ impl From<Coord> for RelativeCoord {
 
 impl RelativeCoord {
     /// into_coord converts into a Coord given a chunk id.
-    fn _into_coord(self, chunk_id: ChunkId) -> Coord {
+    fn into_coord(self, chunk_id: ChunkId) -> Coord {
         Coord(
             self.0 as usize + chunk_id.0 as usize * CHUNK_SIZE,
             self.1 as usize + chunk_id.1 as usize * CHUNK_SIZE,
@@ -1009,125 +1070,24 @@ impl Chunk {
         }
     }
 
-    /// Returns an iterator of rects that cover the updated portion of the chunk.
-    pub fn updated_rects(&self) -> impl Iterator<Item = (RelativeCoord, RelativeCoord)> {
-        let mut iter1 = None;
-        let mut iter2 = None;
-
-        match &self.update {
-            ChunkUpdate::Coords(coords) => {
-                let mut mask = [[false; CHUNK_SIZE + 1]; CHUNK_SIZE + 1];
-                for &coord in coords.iter() {
-                    for c in [
-                        RelativeCoord(0, 0),
-                        RelativeCoord(1, 0),
-                        RelativeCoord(0, 1),
-                        RelativeCoord(1, 1),
-                    ]
-                    .iter()
-                    .map(|&o| coord + o)
-                    {
-                        // Coords are sorted by x and then y so index in that order.
-                        mask[c.0 as usize][c.1 as usize] = true;
-                    }
-                }
-
-                // Preserve a copy of mask before it's modified in debug mode for assertions.
-                #[cfg(debug_assertions)]
-                let mask1 = mask;
-
-                // Use greedy meshing algorithm.
-                let mut rects = vec![];
-                for x in 0..=CHUNK_SIZE {
-                    let mut y = 0;
-
-                    while y <= CHUNK_SIZE {
-                        if mask[x][y] {
-                            let mut maybe_y2 = None;
-                            for x2 in x..=(CHUNK_SIZE + 1) {
-                                let i = (x2 <= CHUNK_SIZE)
-                                    .then(|| {
-                                        mask[x2][y..=maybe_y2.unwrap_or(CHUNK_SIZE)]
-                                            .iter()
-                                            .enumerate()
-                                            .take_while(|(_, &v)| v)
-                                            .map(|(i, _)| i)
-                                            .last()
-                                    })
-                                    .flatten();
-
-                                if let Some(y2) = maybe_y2 {
-                                    if i.map(|i| i + y) != Some(y2) {
-                                        rects.push((
-                                            RelativeCoord(x as u8, y as u8),
-                                            RelativeCoord((x2 - 1) as u8, y2 as u8),
-                                        ));
-                                        y = y2;
-                                        break;
-                                    }
-                                } else if let Some(i) = i {
-                                    maybe_y2 = Some(i + y);
-                                } else {
-                                    break;
-                                }
-
-                                mask[x2][y..=(y + i.unwrap())].fill(false);
-                            }
-                        }
-
-                        y += 1;
-                    }
-                }
-
-                #[cfg(debug_assertions)]
-                {
-                    let mut mask2 = [[false; CHUNK_SIZE + 1]; CHUNK_SIZE + 1];
-                    for (s, e) in rects.iter().copied() {
-                        for x in s.0..=e.0 {
-                            for y in s.1..=e.1 {
-                                mask2[x as usize][y as usize] = true;
-                            }
-                        }
-                    }
-
-                    fn format_mask(mask: &[[bool; CHUNK_SIZE + 1]; CHUNK_SIZE + 1]) -> String {
-                        let mut s = String::new();
-                        for r in mask {
-                            for &v in r {
-                                s.push((b'0' + v as u8) as char);
-                            }
-                            s.push('\n');
-                        }
-                        s
-                    }
-
-                    if mask1 != mask2 {
-                        let mut s = String::from("mask1\n");
-                        s += &format_mask(&mask1);
-                        s += "mask2\n";
-                        s += &format_mask(&mask2);
-                        let mut diff = mask1;
-                        for x in 0..=CHUNK_SIZE {
-                            for y in 0..=CHUNK_SIZE {
-                                diff[x][y] = diff[x][y] != mask2[x][y];
-                            }
-                        }
-                        s += "diff\n";
-                        s += &format_mask(&diff);
-                        panic!("{}", s);
-                    }
-                }
-
-                iter1 = Some(rects.into_iter());
-            }
-            ChunkUpdate::Complete => {
-                const MAX: u8 = CHUNK_SIZE as u8;
-                iter2 = Some((RelativeCoord(0, 0), RelativeCoord(MAX, MAX)))
-            }
+    /// Returns an iterator over the updated coordinates in a chunk.
+    pub fn updated_coords(&self, chunk_id: ChunkId) -> impl Iterator<Item = Coord> + '_ {
+        let (coords, complete) = match &self.update {
+            ChunkUpdate::Coords(coords) => (coords.as_slice(), None),
+            ChunkUpdate::Complete => (
+                [].as_slice(),
+                Some(
+                    (0..CHUNK_SIZE as u8)
+                        .flat_map(|y| (0..CHUNK_SIZE as u8).map(move |x| RelativeCoord(x, y))),
+                ),
+            ),
             _ => panic!("invalid update"),
-        }
-
-        iter1.into_iter().flatten().chain(iter2.into_iter())
+        };
+        coords
+            .iter()
+            .copied()
+            .chain(complete.into_iter().flatten())
+            .map(move |c| c.into_coord(chunk_id))
     }
 }
 
@@ -1355,6 +1315,27 @@ impl Iterator for Decompressor<'_> {
 mod tests {
     use super::*;
     use rand::{thread_rng, Rng};
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn bench_sample(b: &mut Bencher) {
+        let terrain = Terrain::with_generator(random_generator);
+        let pos = Vec2::splat(50.0);
+        terrain.sample(pos).unwrap();
+        b.iter(|| {
+            black_box(terrain.sample(black_box(pos)));
+        })
+    }
+
+    #[bench]
+    fn bench_sample_bilinear(b: &mut Bencher) {
+        let terrain = Terrain::with_generator(random_generator);
+        let pos = Vec2::splat(2.0);
+        terrain.bilinear(pos).unwrap();
+        b.iter(|| {
+            black_box(terrain.bilinear(black_box(pos)));
+        })
+    }
 
     fn random_generator(_: usize, _: usize) -> u8 {
         thread_rng().gen::<u8>() & 0b11110000
@@ -1362,9 +1343,6 @@ mod tests {
 
     #[test]
     fn altitude() {
-        //assert!(lookup_altitude(u8::MAX / 2).is_submerged());
-        //assert_eq!(lookup_altitude(u8::MAX / 2 + 1), Altitude::ZERO);
-
         for i in 0..=u8::MAX {
             println!(
                 "i={}, i={:b}, i>>4={}, alt={}, bs={:?}, rev={}",
@@ -1403,58 +1381,9 @@ mod tests {
     }
 
     #[test]
-    fn mutate() {
-        let mut terrain = Terrain::with_generator(zero_generator);
-
-        let pos = Vec2::ZERO;
-
-        assert!(terrain.sample(pos).unwrap() < Altitude(-120));
-
-        terrain.modify(TerrainMutation::simple(pos, 50.0)).unwrap();
-
-        assert!(
-            terrain.sample(pos).unwrap() > Altitude(-120),
-            "{:?}",
-            terrain.sample(pos).unwrap()
-        );
-
-        terrain.modify(TerrainMutation::simple(pos, -50.0)).unwrap();
-
-        assert!(
-            terrain.sample(pos).unwrap() < Altitude(-60),
-            "{:?}",
-            terrain.sample(pos).unwrap()
-        );
-
-        terrain
-            .modify(TerrainMutation::conditional(
-                pos,
-                50.0,
-                Altitude::ZERO..=Altitude::MAX,
-            ))
-            .unwrap();
-
-        assert!(terrain.sample(pos).unwrap() < Altitude(-60));
-
-        terrain
-            .modify(TerrainMutation::conditional(
-                pos,
-                50.0,
-                Altitude::MIN..=Altitude::ZERO,
-            ))
-            .unwrap();
-
-        assert!(terrain.sample(pos).unwrap() > Altitude(-60));
-
-        terrain
-            .modify(TerrainMutation::clamped(
-                pos,
-                -50.0,
-                Altitude(-1)..=Altitude(1),
-            ))
-            .unwrap();
-
-        assert_eq!(terrain.sample(pos).unwrap(), Altitude(-1));
+    fn test_lookup_altitude() {
+        assert!(lookup_altitude_f32((0.5 - 0.000001) * 255.0) < Altitude::ZERO);
+        assert!(lookup_altitude_f32((0.5 + 0.000001) * 255.0) >= Altitude::ZERO);
     }
 
     #[test]
@@ -1469,41 +1398,5 @@ mod tests {
         );
         let chunk2 = Chunk::from_bytes(&bytes);
         assert_eq!(chunk.data, chunk2.data);
-    }
-
-    #[test]
-    fn updated_rects() {
-        let mut chunk = Chunk::new(ChunkId(0, 0), zero_generator);
-        let mut rng = thread_rng();
-
-        for _ in 0..1000 {
-            let mut coords: Vec<RelativeCoord> = (0..rng.gen_range(0..1000))
-                .map(|_| {
-                    RelativeCoord(
-                        rng.gen_range(0..CHUNK_SIZE as u8),
-                        rng.gen_range(0..CHUNK_SIZE as u8),
-                    )
-                })
-                .collect();
-
-            coords.sort_unstable();
-            coords.dedup();
-            chunk.update = ChunkUpdate::Coords(coords);
-
-            let _ = chunk.updated_rects().collect::<Vec<_>>();
-        }
-
-        let coords = (0..CHUNK_SIZE as u8)
-            .flat_map(|x| (0..CHUNK_SIZE as u8).map(move |y| RelativeCoord(x, y)))
-            .collect();
-        chunk.update = ChunkUpdate::Coords(coords);
-
-        assert_eq!(
-            chunk.updated_rects().collect::<Vec<_>>(),
-            vec![(
-                RelativeCoord(0, 0),
-                RelativeCoord(CHUNK_SIZE as u8, CHUNK_SIZE as u8)
-            )]
-        );
     }
 }

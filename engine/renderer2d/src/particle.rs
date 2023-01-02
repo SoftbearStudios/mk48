@@ -1,22 +1,14 @@
 // SPDX-FileCopyrightText: 20 21 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::camera_2d::Camera2d;
-use crate::Renderer2d;
 use bytemuck::{Pod, Zeroable};
-use renderer::{Camera, Layer, LayerShader, PointDeque, Shader, Vertex};
+use renderer::{DefaultRender, Layer, PointDeque, RenderLayer, Renderer, ShaderBinding, Vertex};
 
 /// A single particle (appended with `created: f32`). Requires calling the
 /// [`derive_vertex`][`renderer::derive_vertex`] macro.
 pub trait Particle: Copy + Clone + Pod + Zeroable + Vertex {
     /// How long the particle will be alive for in seconds. Will be alive for 1 frame minimum.
     const LIFESPAN: f32;
-}
-
-/// Implements [`LayerShader<Camera2d>`] and provides an implementation of [`Particle`].
-pub trait ParticleContext: LayerShader<Camera2d> {
-    /// The type of particle that the [`ParticleLayer`] will draw.
-    type Particle: Particle;
 }
 
 /// Can't use derive_vertex because not deriving [`Pod`].
@@ -28,28 +20,23 @@ struct ParticleVertex<T: Vertex + Copy + Pod + Zeroable + 'static> {
 }
 
 /// Draws point [`Particle`]s.
-pub struct ParticleLayer<X: ParticleContext> {
-    buffer: PointDeque<ParticleVertex<X::Particle>>,
-    /// The [`ParticleContext`] passed to [`new`][`Self::new`].
-    pub context: X,
-    shader: Shader,
+pub struct ParticleLayer<X: Particle> {
+    buffer: PointDeque<ParticleVertex<X>>,
     time: f32,
 }
 
-impl<X: ParticleContext> ParticleLayer<X> {
-    /// Crates a new [`ParticleLayer`].
-    pub fn new(renderer: &Renderer2d, context: X) -> Self {
-        let shader = context.create(renderer);
+impl<X: Particle> DefaultRender for ParticleLayer<X> {
+    fn new(renderer: &Renderer) -> Self {
         Self {
             buffer: PointDeque::new(renderer),
-            context,
-            shader,
             time: 0.0,
         }
     }
+}
 
+impl<X: Particle> ParticleLayer<X> {
     /// Adds a particle. The particle will stay alive for its [`LIFESPAN`][`Particle::LIFESPAN`].
-    pub fn add(&mut self, p: X::Particle) {
+    pub fn add(&mut self, p: X) {
         self.buffer.push_back(ParticleVertex {
             inner: p,
             created: self.time,
@@ -57,30 +44,27 @@ impl<X: ParticleContext> ParticleLayer<X> {
     }
 }
 
-impl<X: ParticleContext> Layer<Camera2d> for ParticleLayer<X> {
-    fn pre_prepare(&mut self, r: &Renderer2d) {
+impl<X: Particle> Layer for ParticleLayer<X> {
+    fn pre_prepare(&mut self, r: &Renderer) {
         self.time = r.time;
 
         // Expire particles that were created before expiry time.
-        let expiry = r.time - X::Particle::LIFESPAN;
+        let expiry = r.time - X::LIFESPAN;
         while let Some(particle) = self.buffer.front() && particle.created < expiry {
             self.buffer.pop_front();
         }
     }
+}
 
-    fn render(&mut self, renderer: &Renderer2d) {
+impl<X: Particle> RenderLayer<&ShaderBinding<'_>> for ParticleLayer<X> {
+    fn render(&mut self, renderer: &Renderer, _: &ShaderBinding) {
         // Ensure ParticleVertex safely implements Pod.
-        assert_safe::<X::Particle>();
+        assert_safe::<X>();
 
         if self.buffer.is_empty() {
             return;
         }
-
-        if let Some(shader) = self.shader.bind(renderer) {
-            renderer.camera.uniform_matrix(&shader);
-            self.context.prepare(renderer, &shader);
-            self.buffer.bind(renderer).draw();
-        }
+        self.buffer.bind(renderer).draw();
     }
 }
 

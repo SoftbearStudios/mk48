@@ -30,13 +30,12 @@ pub fn canvas() -> HtmlCanvasElement {
         .get_element_by_id("canvas")
         .expect("no canvas")
         .dyn_into::<HtmlCanvasElement>()
-        .ok()
         .expect("invalid canvas")
 }
 
 /// Returns if the mouse pointer is locked.
 pub fn pointer_locked() -> bool {
-    !document().pointer_lock_element().is_none()
+    document().pointer_lock_element().is_some()
 }
 
 /// Requests [`canvas`] to be pointer locked. Must call during click event.
@@ -46,7 +45,7 @@ pub fn request_pointer_lock() {
 
 /// Extracts an error message from a JavaScript error.
 pub fn error_message(error: &JsValue) -> Option<String> {
-    Reflect::get(&error, &JsValue::from_str("message"))
+    Reflect::get(error, &JsValue::from_str("message"))
         .as_ref()
         .ok()
         .and_then(JsValue::as_string)

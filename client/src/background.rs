@@ -1,17 +1,34 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::sprite::SortableSprite;
+use crate::game::Mk48Params;
+use crate::settings::ShadowSetting;
+use crate::sortable_sprite::SortableSprite;
+use crate::tessellation::TessellationLayer;
+use crate::weather::Weather;
 use common::entity::{EntityId, EntityType};
 use common::terrain::{Coord, RelativeCoord, Terrain};
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common::{terrain, world};
 use common_util::angle::{Angle, AngleRepr};
-use glam::{uvec2, vec2, vec3, Mat3, UVec2, Vec2};
-use renderer::{LayerShader, Shader, ShaderBinding, Texture, TextureFormat};
-use renderer2d::{BackgroundContext, Camera2d, Invalidation, Renderer2d};
-use std::convert::TryInto;
+use glam::{uvec2, vec2, vec3, Mat3, Mat4, Quat, UVec2, Vec2, Vec3};
+use renderer::{DefaultRender, Layer, RenderLayer, Renderer, Shader, Texture, TextureFormat};
+use renderer2d::{BackgroundLayer, Camera2d, Invalidation, Mask};
+use renderer3d::{Aabb3, Camera3d, Orthographic, ShadowParams, ShadowResult};
+
+// Bicubic interpolation in shader needs 4x4 neighbor pixels.
+const KERNEL: u32 = 4;
+const Z_RANGE: f32 = 400.0;
+
+// Diagonal kernel of 4 pixels.
+// _ _ _ X
+// _ _ x _
+// _ x _ _
+// x _ _ _
+// X is original pixel, x are generated pixels.
+// TODO calculate this from terrain scale and default sun dir (requires const fp math).
+const SHADOW_KERNEL: u32 = 4;
 
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
 struct TerrainView {
@@ -21,21 +38,23 @@ struct TerrainView {
 
 impl TerrainView {
     fn new(camera: Vec2, aspect: f32, zoom: f32) -> Self {
-        let center = Coord::from_position(camera).unwrap();
+        // Add 3 for shadow padding (TODO only add in direction of sun).
+        const PADDING: u32 = KERNEL / 2 + SHADOW_KERNEL;
 
         // Both width and height must be odd numbers so there is an equal distance from the center
         // on both sides.
-        let width = (2 * ((zoom / terrain::SCALE).max(2.0) as usize + 1) + 3)
-            .try_into()
-            .unwrap();
-        let height = (2 * ((zoom / (aspect * terrain::SCALE)).max(2.0) as usize + 1) + 3)
-            .try_into()
-            .unwrap();
+        fn view_width(zoom: f32) -> u32 {
+            ((zoom * (1.0 / terrain::SCALE)).ceil() as u32).max(PADDING) * 2 + PADDING * 2 + 1
+        }
 
         Self {
-            center,
-            dimensions: uvec2(width, height),
+            center: Coord::from_position(camera).unwrap(),
+            dimensions: uvec2(view_width(zoom), view_width(zoom / aspect)),
         }
+    }
+
+    fn corner(&self) -> Coord {
+        Coord::from_uvec2(self.center.as_uvec2() - self.dimensions / 2)
     }
 
     /// Returns a matrix that translates world space to terrain texture UV coordinates.
@@ -44,62 +63,88 @@ impl TerrainView {
         let scale = &Mat3::from_scale((self.dimensions.as_vec2() * terrain::SCALE).recip());
         Mat3::from_translation(Vec2::splat(0.5)).mul_mat3(&scale.mul_mat3(&offset))
     }
+
+    fn shadow_model_matrix(&self) -> Mat4 {
+        let translation = Mat4::from_translation(self.center.corner().extend(-Z_RANGE * 0.5));
+        let scale = Mat4::from_scale((self.dimensions.as_vec2() * terrain::SCALE).extend(Z_RANGE));
+        translation
+            .mul_mat4(&scale)
+            .mul_mat4(&Mat4::from_translation(-Vec2::splat(0.5).extend(0.0)))
+    }
 }
 
-pub struct Mk48BackgroundContext {
-    terrain_texture: Texture,
-    grass_texture: Texture,
-    sand_texture: Texture,
-    snow_texture: Texture,
-    wave_quality: u8,
-    animations: bool,
+#[derive(Layer)]
+pub struct Mk48BackgroundLayer {
+    #[layer]
+    background: BackgroundLayer,
+    #[layer]
+    tesselation: TessellationLayer,
+    shader: Shader,
+    shadow_shader: Shader,
+    height_texture: Texture,
+    detail_texture: Texture,
+    detail_load: UVec2, // Dimensions to know when detail texture is done loading.
+    pub cache_frame: bool,
     last_view: TerrainView,
     last_terrain: Vec<u8>,
     last_vegetation: Vec<SortableSprite>,
     invalidation: Option<Invalidation>,
+    shadow_setting: ShadowSetting,
 }
 
-impl Mk48BackgroundContext {
-    const GRASS_COLOR: [u8; 3] = [71, 85, 45];
-    const SAND_COLOR: [u8; 3] = [213, 176, 107];
-    const SNOW_COLOR: [u8; 3] = [233, 235, 237];
+impl Mk48BackgroundLayer {
+    pub fn new(
+        renderer: &Renderer,
+        animations: bool,
+        dynamic_waves: bool,
+        shadow_setting: ShadowSetting,
+    ) -> Self {
+        let inner = BackgroundLayer::new(renderer);
 
-    pub fn new(renderer: &Renderer2d, animations: bool, wave_quality: u8) -> Self {
-        let terrain_texture = Texture::new_empty(renderer, TextureFormat::Alpha, true);
+        let mut defines = format!("#define ARCTIC {:.1}\n", world::ARCTIC);
+        if animations {
+            defines += "#define ANIMATIONS\n";
+        }
+        if dynamic_waves {
+            // renderer.enable_oes_standard_derivatives();
+            defines += "#define WAVES 6\n";
+        }
+        defines += shadow_setting.shader_define();
+        let frag = include_str!("./shaders/background.frag").replace("#defines", &defines);
 
-        let grass_texture = Texture::load(
-            renderer,
-            "/grass.png",
-            TextureFormat::Rgba,
-            Some(Mk48BackgroundContext::GRASS_COLOR),
-            true,
-        );
-        let sand_texture = Texture::load(
-            renderer,
-            "/sand.png",
-            TextureFormat::Rgba,
-            Some(Mk48BackgroundContext::SAND_COLOR),
-            true,
-        );
-        let snow_texture = Texture::load(
-            renderer,
-            "/snow.png",
-            TextureFormat::Rgba,
-            Some(Mk48BackgroundContext::SNOW_COLOR),
-            true,
+        // Don't cache shader because it's dynamic.
+        let shader = Shader::new(renderer, include_str!("./shaders/background.vert"), &frag);
+        let shadow_shader = renderer.create_shader(
+            include_str!("shaders/background_shadow.vert"),
+            include_str!("shaders/shadow.frag"),
         );
 
-        Mk48BackgroundContext {
-            terrain_texture,
-            grass_texture,
-            sand_texture,
-            snow_texture,
-            wave_quality,
-            animations,
-            last_view: TerrainView::default(),
+        // Don't interpolate because it's done in the shader.
+        let height_texture = Texture::new_empty(renderer, TextureFormat::Alpha, false);
+
+        let detail_texture = Texture::load(
+            renderer,
+            "/textures.png",
+            TextureFormat::COLOR_RGBA_STRAIGHT,
+            Some([184, 73, 235]),
+            true,
+        );
+        let detail_load = detail_texture.dimensions();
+
+        Mk48BackgroundLayer {
+            background: inner,
+            cache_frame: !animations,
+            detail_load,
+            detail_texture,
+            height_texture,
+            invalidation: None,
             last_terrain: vec![],
             last_vegetation: vec![],
-            invalidation: None,
+            last_view: TerrainView::default(),
+            shader,
+            shadow_setting,
+            shadow_shader,
+            tesselation: TessellationLayer::new(renderer),
         }
     }
 
@@ -111,7 +156,8 @@ impl Mk48BackgroundContext {
         zoom: f32,
         terrain: &mut Terrain,
         terrain_reset: bool,
-        renderer: &Renderer2d,
+        has_shadows: bool,
+        renderer: &Renderer,
     ) -> impl Iterator<Item = SortableSprite> + '_ {
         let view = TerrainView::new(camera, renderer.aspect_ratio(), zoom);
         let view_changed = view != self.last_view;
@@ -130,7 +176,7 @@ impl Mk48BackgroundContext {
                 0,
             ));
 
-            self.terrain_texture.realloc_with_opt_bytes(
+            self.height_texture.realloc_with_opt_bytes(
                 renderer,
                 view.dimensions,
                 Some(&self.last_terrain),
@@ -143,34 +189,67 @@ impl Mk48BackgroundContext {
                 .extend(generate_vegetation(&self.last_terrain, view))
         }
 
+        // Determine when the detail texture loads (when its dimensions change) so we can invalidate
+        // the bg. This trick won't work on 1x1 textures. TODO find a better method.
+        let detail_dim = self.detail_texture.dimensions();
+        let detail_just_loaded = self.detail_load != detail_dim;
+        self.detail_load = detail_dim;
+
         // Only create invalidations if frame cache is enabled and they'll be used.
-        if self.cache_frame() {
-            // Invalidate frame cache when terrain is reset (aka switch servers).
-            if terrain_reset {
+        if self.cache_frame {
+            // Invalidate bg when terrain is reset (aka switch servers) or when detail texture loads.
+            if terrain_reset || detail_just_loaded {
                 self.invalidation = Some(Invalidation::All);
-            } else {
+            } else if !terrain.updated.is_empty() {
                 let updated = terrain.updated.clone();
-                if !updated.is_empty() {
-                    // Only invalidate the rects where pixels could have possibly changed.
-                    let rects = updated
+                let dimensions = view.dimensions;
+                let corner = view.corner().as_uvec2();
+
+                // Invalidate a square around each point (for shader interpolation).
+                let mask = Mask::new_expanded(
+                    updated
                         .into_iter()
                         .flat_map(|chunk_id| {
-                            let coord = chunk_id.as_coord();
                             terrain
                                 .get_chunk(chunk_id)
-                                .updated_rects()
-                                .map(move |(start, end)| {
-                                    let end = end + RelativeCoord(1, 1);
-                                    let offset = -terrain::SCALE * 1.0;
-
-                                    let s = (coord + start).corner() + offset;
-                                    let e = (coord + end).corner() + offset;
-
-                                    (s, e)
+                                .updated_coords(chunk_id) // TODO whole chuck mask of points is inefficient.
+                                .map(|coord| {
+                                    (coord.as_uvec2().as_ivec2() - corner.as_ivec2()).as_uvec2()
                                 })
                         })
-                        .collect();
+                        .flat_map(|c| {
+                            let diagonal_count = if has_shadows { SHADOW_KERNEL } else { 1 };
 
+                            // TODO diagonal prob only needs 2x2 around each pixel.
+                            // TODO could also limit diagonal count based on pixel height relative to water.
+                            // TODO don't depend on the sun being in this exact direction.
+                            (0..diagonal_count).filter_map(move |i| {
+                                let coord = (c.as_ivec2() - i as i32).as_uvec2();
+                                (coord.cmple(dimensions).all()).then_some(coord)
+                            })
+                        }),
+                    dimensions,
+                    KERNEL,
+                );
+
+                let rects: Vec<_> = mask
+                    .into_rects()
+                    .map(|(start, end)| {
+                        let start = Coord::from_uvec2(start + corner);
+                        let end = Coord::from_uvec2(end + corner);
+
+                        let end = end + RelativeCoord(1, 1);
+                        let offset = -terrain::SCALE * 1.0;
+
+                        let s = start.corner() + offset;
+                        let e = end.corner() + offset;
+
+                        (s, e)
+                    })
+                    .collect();
+
+                // TODO check is mask is empty before creating rects.
+                if !rects.is_empty() {
                     self.invalidation = Some(Invalidation::Rects(rects));
                 }
             }
@@ -182,57 +261,133 @@ impl Mk48BackgroundContext {
 
         self.last_vegetation.iter().copied()
     }
-}
 
-impl LayerShader<Camera2d> for Mk48BackgroundContext {
-    fn create(&self, renderer: &Renderer2d) -> Shader {
-        let background_frag_template = include_str!("./shaders/background.frag");
-        let mut background_frag_source = String::with_capacity(background_frag_template.len() + 40);
-
-        background_frag_source += &*format!("#define ARCTIC {:.1}\n", world::ARCTIC);
-
-        if self.wave_quality != 0 {
-            renderer.enable_oes_standard_derivatives();
-            background_frag_source += &*format!("#define WAVES {}\n", self.wave_quality * 2);
+    pub fn shadow_camera(
+        &self,
+        renderer: &Renderer,
+        camera: &Camera2d,
+        weather: &Weather,
+        shadows: ShadowSetting,
+    ) -> Camera3d {
+        if shadows.is_none() {
+            return Default::default();
         }
 
-        background_frag_source += background_frag_template;
+        let center = camera.center;
+        let width = camera.zoom * 2.0;
+        let aspect = renderer.aspect_ratio();
 
-        // Don't cache shader because it's dynamic.
-        Shader::new(
-            renderer,
-            include_str!("./shaders/background.vert"),
-            &background_frag_source,
-        )
+        let mut center = center.extend(0.0);
+        let mut dimensions = vec3(width, width / aspect, Z_RANGE);
+
+        // Pad shadow map to reduce snapping.
+        // TODO look into fixing visible snapping every 100 meters of movement.
+        // TODO variable shadow map resolution based on viewport so softness changes with zoom.
+        let scale = terrain::SCALE * 4.0;
+        let inv_scale = 1.0 / scale;
+
+        // Round to scale.
+        center = (center * inv_scale).round() * scale;
+
+        // Round up to nearest 2 scale.
+        dimensions = (dimensions * inv_scale * 0.5).ceil() * scale * 2.0;
+        let aabb = Aabb3::from_center_and_dimensions(center, dimensions);
+
+        // TODO figure out why it needs this factor.
+        let sun = weather.sun * vec3(-1.0, -1.0, 1.0);
+        let rotation = Mat4::from_quat(Quat::from_rotation_arc(Vec3::Z, sun));
+        let aabb = aabb.transformed_by(&rotation);
+
+        let pos = ((aabb.min.truncate() + aabb.max.truncate()) * 0.5).extend(aabb.max.z);
+        let target = pos - Vec3::Z;
+        let dimensions = aabb.max - aabb.min;
+
+        let inv_rot = rotation.inverse();
+        let pos = inv_rot.transform_point3(pos);
+        let target = inv_rot.transform_point3(target);
+
+        let projection = Orthographic { dimensions };
+        Camera3d::looking_at(pos, target, projection)
     }
+}
 
-    fn prepare(&mut self, renderer: &Renderer2d, shader: &ShaderBinding) {
-        let matrix = self.last_view.world_space_to_uv_space();
-        shader.uniform_matrix3f("uTexture", &matrix);
+impl RenderLayer<&ShadowResult<&Mk48Params>> for Mk48BackgroundLayer {
+    fn render(&mut self, renderer: &Renderer, result: &ShadowResult<&Mk48Params>) {
+        // TODO don't clear shadow map and redraw shadows if inputs haven't changed.
 
-        // Time only changes if wave animations are on.
-        if self.animations {
-            shader.uniform1f("uTime", renderer.time);
+        if let Some(shader) = self.shader.bind(renderer) {
+            renderer.set_blend(false); // Optimization, doesn't require blend.
+
+            result.prepare_shadows(&shader);
+            let params = &result.params;
+
+            shader.uniform("uTexture", &self.last_view.world_space_to_uv_space());
+            shader.uniform("uDerivative", params.camera.derivative());
+
+            // Only use weather/time if we aren't caching the frame.
+            let mut weather = Weather::default();
+            if !self.cache_frame {
+                weather = params.weather;
+                shader.uniform("uTime", renderer.time);
+                shader.uniform("uWind", weather.wind);
+            }
+            shader.uniform("uSun", weather.sun);
+            shader.uniform("uWaterSun", weather.water_sun());
+
+            shader.uniform("uHeight", &self.height_texture);
+            shader.uniform("uDetail", &self.detail_texture);
+
+            self.background.render(
+                renderer,
+                (
+                    shader,
+                    &params.camera,
+                    self.cache_frame.then(|| self.invalidation.take()),
+                ),
+            );
+
+            renderer.set_blend(true);
+        }
+    }
+}
+
+impl RenderLayer<&ShadowParams> for Mk48BackgroundLayer {
+    fn render(&mut self, renderer: &Renderer, params: &ShadowParams) {
+        // TODO depth layer.
+        renderer.set_depth_test(true);
+
+        if let Some(shader) = self.shadow_shader.bind(renderer) {
+            params.camera.prepare_without_camera_pos(&shader);
+
+            shader.uniform("uModel", &self.last_view.shadow_model_matrix());
+            shader.uniform("uHeight", &self.height_texture);
+
+            // TODO account for aspect ratio instead of hardcoding 16 by 9.
+            let soft = self.shadow_setting == ShadowSetting::Soft;
+            let animations = !self.cache_frame;
+
+            // Use lower vertex count for soft shadows because the shadow map is lower resolution.
+            // Animated zoom makes soft jitter too much with low vertex count.
+            let dim = if soft && !animations {
+                uvec2(192, 108) // Soft shadow map is 1/4 res so use dim / 4.
+            } else {
+                uvec2(192, 108) * 4
+            };
+
+            self.tesselation.render(renderer, (&shader, dim));
         }
 
-        shader.uniform_texture("uSampler", &self.terrain_texture, 0);
-        shader.uniform_texture("uGrass", &self.grass_texture, 1);
-        shader.uniform_texture("uSand", &self.sand_texture, 2);
-        shader.uniform_texture("uSnow", &self.snow_texture, 3);
+        // TODO depth layer.
+        renderer.set_depth_test(false);
     }
 }
 
-impl BackgroundContext for Mk48BackgroundContext {
-    fn cache_frame(&self) -> bool {
-        !self.animations
-    }
-
-    fn take_invalidation(&mut self) -> Option<Invalidation> {
-        std::mem::take(&mut self.invalidation)
-    }
-}
-
-pub struct Mk48OverlayContext {
+#[derive(Layer)]
+#[alpha]
+pub struct Mk48OverlayLayer {
+    #[layer]
+    inner: BackgroundLayer,
+    shader: Shader,
     u_above: f32,
     u_area: f32,
     u_border: f32,
@@ -240,9 +395,17 @@ pub struct Mk48OverlayContext {
     u_visual: f32,
 }
 
-impl Default for Mk48OverlayContext {
-    fn default() -> Self {
+impl DefaultRender for Mk48OverlayLayer {
+    fn new(renderer: &Renderer) -> Self {
+        let inner = BackgroundLayer::new(renderer);
+        let shader = renderer.create_shader(
+            include_str!("./shaders/overlay.vert"),
+            include_str!("./shaders/overlay.frag"),
+        );
+
         Self {
+            inner,
+            shader,
             u_above: 0.0,
             u_area: 0.0,
             u_border: 1000.0,
@@ -252,7 +415,7 @@ impl Default for Mk48OverlayContext {
     }
 }
 
-impl Mk48OverlayContext {
+impl Mk48OverlayLayer {
     pub fn update(
         &mut self,
         visual_range: f32,
@@ -271,28 +434,25 @@ impl Mk48OverlayContext {
     }
 }
 
-impl LayerShader<Camera2d> for Mk48OverlayContext {
-    fn create(&self, renderer: &Renderer2d) -> Shader {
-        renderer.create_shader(
-            include_str!("./shaders/overlay.vert"),
-            include_str!("./shaders/overlay.frag"),
-        )
-    }
+impl RenderLayer<&Camera2d> for Mk48OverlayLayer {
+    fn render(&mut self, renderer: &Renderer, camera: &Camera2d) {
+        let shader = self.shader.bind(renderer);
+        if let Some(shader) = shader {
+            shader.uniform("uMiddle", camera.center);
+            shader.uniform(
+                "uAbove_uArea_uBorder",
+                vec3(self.u_above, self.u_area, self.u_border),
+            );
+            shader.uniform("uRestrict_uVisual", vec2(self.u_restrict, self.u_visual));
 
-    fn prepare(&mut self, _: &Renderer2d, shader: &ShaderBinding) {
-        shader.uniform3f(
-            "uAbove_uArea_uBorder",
-            vec3(self.u_above, self.u_area, self.u_border),
-        );
-        shader.uniform2f("uRestrict_uVisual", vec2(self.u_restrict, self.u_visual));
+            self.inner.render(renderer, (shader, camera, None));
+        }
     }
 }
 
-impl BackgroundContext for Mk48OverlayContext {}
-
 /// Generates trees, coral, etc. for visible terrain.
-fn generate_vegetation<'a>(
-    terrain_bytes: &'a [u8],
+fn generate_vegetation(
+    terrain_bytes: &[u8],
     view: TerrainView,
 ) -> impl Iterator<Item = SortableSprite> + '_ {
     let center = view.center;
@@ -384,4 +544,22 @@ fn hash(mut s: u32) -> u32 {
     let s2 = s ^ 0xa0b4_28db;
     let r = u64::from(s) * u64::from(s2);
     ((r >> 32) ^ r) as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shadow_kernel() {
+        let weather = Weather::default();
+        let sun = weather.sun;
+        let height = 100.0; // Water to tallest mountain.
+        let mul = height / sun.z;
+        let len = sun.truncate() * mul;
+
+        let u = (len / terrain::SCALE).ceil().as_uvec2() + 1;
+        println!("requires {u} units");
+        assert_eq!(u, UVec2::splat(SHADOW_KERNEL), "change SHADOW_KERNEL const");
+    }
 }

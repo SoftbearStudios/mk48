@@ -2,22 +2,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::component::context_menu::{ContextMenu, ContextMenuButton};
+use crate::component::positioner::Position;
 use crate::component::section::Section;
 use crate::event::event_target;
-use crate::translation::{t, Translation};
+use crate::frontend::{
+    use_chat_request_callback, use_core_state, use_ctw, use_player_request_callback,
+    use_set_context_menu_callback,
+};
+use crate::translation::{use_translation, Translation};
 use crate::window::event_listener::WindowEventListener;
-use crate::Ctw;
 use client_util::browser_storage::BrowserStorages;
 use client_util::setting::CommonSettings;
 use core_protocol::id::LanguageId;
 use core_protocol::rpc::{ChatRequest, PlayerRequest};
-use std::ops::Deref;
+use js_sys::JsString;
 use std::str::pattern::Pattern;
 use stylist::yew::styled_component;
 use web_sys::{window, HtmlInputElement, InputEvent, KeyboardEvent, MouseEvent};
 use yew::{
-    classes, html, html_nested, use_effect_with_deps, use_node_ref, use_state, Callback, Html,
-    Properties,
+    classes, html, html_nested, use_effect_with_deps, use_node_ref, use_state_eq, AttrValue,
+    Callback, Html, Properties,
 };
 
 #[derive(PartialEq, Properties)]
@@ -25,6 +29,9 @@ pub struct ChatProps {
     /// Override the default label.
     #[prop_or(LanguageId::chat_label)]
     pub label: fn(LanguageId) -> &'static str,
+    pub position: Position,
+    #[prop_or(None)]
+    pub style: Option<AttrValue>,
     #[prop_or_default]
     pub hints: Vec<(&'static str, Vec<&'static str>)>,
 }
@@ -40,7 +47,14 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
 		text-overflow: ellipsis;
 		word-break: normal;
 		user-select: text;
+		text-align: left;
         "#
+    );
+
+    let whisper_style = css!(
+        r#"
+		filter: brightness(0.7);
+	    "#
     );
 
     let name_css_class = css!(
@@ -97,7 +111,7 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
         "#
     );
 
-    let ctw = Ctw::use_ctw();
+    let ctw = use_ctw();
 
     let on_open_changed = ctw.change_common_settings_callback.reform(|open| {
         Box::new(
@@ -107,23 +121,35 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
         )
     });
 
-    let t = t();
+    let on_save_chat_message = ctw.change_common_settings_callback.reform(|chat_message| {
+        Box::new(
+            move |common_settings: &mut CommonSettings, browser_storages: &mut BrowserStorages| {
+                common_settings.set_chat_message(chat_message, browser_storages);
+            },
+        )
+    });
+
+    let t = use_translation();
     let input_ref = use_node_ref();
-    let message = use_state(String::new);
+    let help_hint = use_state_eq::<Option<&'static str>, _>(|| None);
 
     let oninput = {
-        let message = message.clone();
+        let help_hint = help_hint.clone();
+        let hints = props.hints.clone();
+        let on_save_chat_message = on_save_chat_message.clone();
 
         move |event: InputEvent| {
             let input: HtmlInputElement = event_target(&event);
-            message.set(input.value());
+            let string = input.value();
+            help_hint.set(help_hint_of(&hints, &string));
+            on_save_chat_message.emit(string.clone());
         }
     };
 
     const ENTER: u32 = 13;
 
     let onkeydown = {
-        let message = message.clone();
+        let help_hint = help_hint.clone();
         let chat_request_callback = ctw.chat_request_callback;
 
         move |event: KeyboardEvent| {
@@ -132,38 +158,49 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
             }
             event.stop_propagation();
             let input: HtmlInputElement = event_target(&event);
+            let message = input.value();
+            let _ = input.set_value("");
             let _ = input.blur();
             if message.is_empty() {
                 return;
             }
             chat_request_callback.emit(ChatRequest::Send {
-                message: message.deref().clone(),
+                message,
                 whisper: event.shift_key(),
             });
-            message.set(String::new());
+            on_save_chat_message.emit(String::new());
+            help_hint.set(None);
         }
     };
+
+    fn focus(input: &HtmlInputElement) {
+        // Want the UTF-16 length;
+        let string: JsString = input.value().into();
+        let length = string.length();
+        let _ = input.focus();
+        let _ = input.set_selection_range(length, length);
+    }
 
     // Pressing Enter key focuses the input.
     {
         let input_ref = input_ref.clone();
+        let default_text = ctw.setting_cache.chat_message.clone();
 
         use_effect_with_deps(
-            |input_ref| {
+            |(input_ref, default_text)| {
                 let input_ref = input_ref.clone();
+
+                if let Some(input) = input_ref.cast::<HtmlInputElement>() {
+                    input.set_value(&default_text)
+                }
 
                 let onkeydown = WindowEventListener::new(
                     "keydown",
                     move |e: &KeyboardEvent| {
                         if e.key_code() == ENTER {
-                            match input_ref.cast::<HtmlInputElement>() {
-                                Some(input) => {
-                                    let _ = input.focus();
-                                }
-                                None => {
-                                    // Most likely the chat was closed.
-                                }
-                            };
+                            if let Some(input) = input_ref.cast::<HtmlInputElement>() {
+                                focus(&input);
+                            }
                         }
                     },
                     false,
@@ -171,11 +208,14 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
 
                 move || std::mem::drop(onkeydown)
             },
-            input_ref,
+            (input_ref, default_text),
         );
     }
 
-    let core_state = Ctw::use_core_state();
+    let core_state = use_core_state();
+    let chat_request_callback = use_chat_request_callback();
+    let player_request_callback = use_player_request_callback();
+    let set_context_menu_callback = use_set_context_menu_callback();
     let (mention_string, moderator) = core_state
         .player()
         .map(|p| (format!("@{}", p.alias), p.moderator))
@@ -183,12 +223,15 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
 
     let items = core_state.messages.oldest_ordered().map(|dto| {
         let onclick_reply = {
+            let input_ref_clone = input_ref.clone();
             let at_alias = format!("@{} ", dto.alias).to_string();
-            let message = message.clone();
             move || {
-                // Don't overwrite an unsent (not empty) message.
-                if message.is_empty() {
-                    message.set(at_alias.clone());
+                if let Some(input) = input_ref_clone.cast::<HtmlInputElement>() {
+                    // Don't overwrite an unsent (not empty) message.
+                    if input.value().is_empty() {
+                        input.set_value(&at_alias);
+                        focus(&input);
+                    }
                 }
             }
         };
@@ -196,9 +239,9 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
         let is_me = dto.player_id == core_state.player_id;
         let oncontextmenu = if let Some(player_id) = dto.player_id.filter(|_| moderator || !is_me) {
             let team_id = core_state.player_or_bot(player_id).and_then(|p| p.team_id);
-            let chat_request_callback = Ctw::use_chat_request_callback();
-            let player_request_callback = Ctw::use_player_request_callback();
-            let set_context_menu_callback = Ctw::use_set_context_menu_callback();
+            let chat_request_callback = chat_request_callback.clone();
+            let player_request_callback = player_request_callback.clone();
+            let set_context_menu_callback = set_context_menu_callback.clone();
 
             Some(move |e: MouseEvent| {
                 e.prevent_default();
@@ -257,7 +300,7 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
         };
 
         html_nested!{
-            <p class={message_css_class.clone()} oncontextmenu={oncontextmenu}>
+            <p class={classes!(message_css_class.clone(), dto.whisper.then(|| whisper_style.clone()))} oncontextmenu={oncontextmenu}>
                 <span
                     onclick={move |_| onclick_reply()}
                     class={if dto.player_id.is_some() { name_css_class.clone() } else { official_name_css_class.clone() }}
@@ -278,12 +321,17 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
         t.chat_send_message_hint()
     };
 
-    let help_hint = help_hint_of(props, message.deref());
-
     html! {
-        <Section name={(props.label)(t)} open={ctw.setting_cache.chat_dialog_shown} {on_open_changed}>
+        <Section
+            id="chat"
+            name={(props.label)(t)}
+            position={props.position}
+            style={props.style.clone()}
+            open={ctw.setting_cache.chat_dialog_shown}
+            {on_open_changed}
+        >
             {items}
-            if let Some(help_hint) = help_hint {
+            if let Some(help_hint) = *help_hint {
                 <p><b>{"Automated help: "}{help_hint}</b></p>
             }
             <input
@@ -295,7 +343,6 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
                 autocomplete="off"
                 minLength="1"
                 maxLength="128"
-                value={message.deref().clone()}
                 placeholder={t.chat_send_message_placeholder()}
                 class={input_css_class.clone()}
                 ref={input_ref}
@@ -304,12 +351,12 @@ pub fn chat_overlay(props: &ChatProps) -> Html {
     }
 }
 
-fn help_hint_of(props: &ChatProps, text: &str) -> Option<&'static str> {
+fn help_hint_of(hints: &[(&'static str, Vec<&'static str>)], text: &str) -> Option<&'static str> {
     let text = text.to_ascii_lowercase();
     if text.find("/invite").is_some() {
         Some("Invitation links cannot currently be accepted by players that are already in game. They must send a join request instead.")
     } else {
-        for (value, keys) in props.hints.iter() {
+        for (value, keys) in hints.iter() {
             let mut found = true;
             for &k in keys.iter() {
                 debug_assert_eq!(k, k.to_lowercase());

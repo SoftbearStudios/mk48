@@ -283,7 +283,7 @@ impl<A: Audio> Inner<A> {
     }
 
     fn is_playing(&self, audio: A) -> bool {
-        self.playing[audio.index()].is_empty()
+        !self.playing[audio.index()].is_empty()
     }
 
     fn stop_playing(&mut self, audio: A) {

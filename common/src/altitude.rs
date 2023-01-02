@@ -11,7 +11,6 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 type AltitudeRepr = i8;
 
-// Note: pub(crate) is intentional.
 #[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Altitude(pub AltitudeRepr);
 
@@ -21,7 +20,8 @@ impl Altitude {
     pub const UNIT: Self = Self(1);
     pub const MIN: Self = Self(AltitudeRepr::MIN);
     pub const MAX: Self = Self(AltitudeRepr::MAX);
-    const SCALE: f32 = 2.0;
+    const SCALE_INT: i16 = 2;
+    const SCALE: f32 = Self::SCALE_INT as f32;
 
     /// Altitudes within this margin are considered to be overlapping.
     pub const OVERLAP_MARGIN: Altitude = Altitude(AltitudeRepr::MAX / 4);
@@ -40,6 +40,18 @@ impl Altitude {
 
     pub fn from_meters(meters: f32) -> Self {
         Self((meters * (1.0 / Self::SCALE)) as AltitudeRepr)
+    }
+
+    pub const fn from_whole_meters(meters: i16) -> Self {
+        let scaled = meters / Self::SCALE_INT;
+        // clamp isn't const :(
+        if scaled < AltitudeRepr::MIN as i16 {
+            Self::MIN
+        } else if scaled > AltitudeRepr::MAX as i16 {
+            Self::MAX
+        } else {
+            Self(scaled as AltitudeRepr)
+        }
     }
 
     // The u8 is interpreted as 0-255 meaning MIN-MAX.

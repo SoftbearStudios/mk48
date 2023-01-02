@@ -2,6 +2,10 @@ SSH_KEY := ../.ssh/id_rsa
 SSH_OPTS := -i $(SSH_KEY) -o "UserKnownHostsFile=/dev/null" -o "StrictHostKeyChecking=no"
 SCP_OPTS := $(SSH_OPTS) -C
 
+SERVER_1 := 45.79.147.234
+SERVER_2 := 173.255.228.145
+SERVER_3 := 45.79.147.247
+SERVER_4 := 172.105.50.67
 
 .PHONY: all debug_core target/release/server
 
@@ -21,27 +25,33 @@ ssh:
 	ssh $(SSH_OPTS) root@mk48.io
 
 new1: target/release/server
-	scp $(SCP_OPTS) target/release/server root@45.79.190.29:/root/server1
-	ssh $(SSH_OPTS) root@45.79.190.29 'mv /root/server1 /root/server && ./restart-game-server.sh'
+	scp $(SCP_OPTS) target/release/server root@$(SERVER_1):/root/server1
+	ssh $(SSH_OPTS) root@$(SERVER_1) 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
 new2: target/release/server
-	scp $(SCP_OPTS) target/release/server root@173.255.228.145:/root/server1
-	ssh $(SSH_OPTS) root@173.255.228.145 'mv /root/server1 /root/server && ./restart-game-server.sh'
+	scp $(SCP_OPTS) target/release/server root@$(SERVER_2):/root/server1
+	ssh $(SSH_OPTS) root@$(SERVER_2) 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
 new3: target/release/server
-	scp $(SCP_OPTS) target/release/server root@173.255.225.233:/root/server1
-	ssh $(SSH_OPTS) root@173.255.225.233 'mv /root/server1 /root/server && ./restart-game-server.sh'
+	scp $(SCP_OPTS) target/release/server root@$(SERVER_3):/root/server1
+	ssh $(SSH_OPTS) root@$(SERVER_3) 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
 new4: target/release/server
-	scp $(SCP_OPTS) target/release/server root@194.195.115.239:/root/server1
-	ssh $(SSH_OPTS) root@194.195.115.239 'mv /root/server1 /root/server && ./restart-game-server.sh'
+	scp $(SCP_OPTS) target/release/server root@$(SERVER_4):/root/server1
+	ssh $(SSH_OPTS) root@$(SERVER_4) 'mv /root/server1 /root/server && ./restart-game-server.sh'
 
 client1:
 	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../js/public --url https://1.mk48.io/admin
+
+client2:
+	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../client/dist --url https://2.mk48.io/admin/
+
+client3:
+	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../client/dist --url https://3.mk48.io/admin
 
 client4:
 	cargo run --release --manifest-path ../engine/upload_game_client/Cargo.toml -- --path ../js/public --url https://4.mk48.io/admin
 
 ssh2:
-	ssh $(SSH_OPTS) root@96.126.107.185
+	ssh $(SSH_OPTS) root@$(SERVER_2)
 

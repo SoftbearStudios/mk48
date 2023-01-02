@@ -1,9 +1,12 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::component::positioner::Position;
 use crate::component::section::{Section, SectionArrow};
-use crate::translation::{t, Translation};
-use crate::Ctw;
+use crate::frontend::{use_core_state, use_ctw};
+use crate::translation::Translation;
+use client_util::browser_storage::BrowserStorages;
+use client_util::setting::CommonSettings;
 use core_protocol::dto::LiveboardDto;
 use core_protocol::id::{LanguageId, PeriodId};
 use std::ops::Deref;
@@ -12,6 +15,10 @@ use yew::prelude::*;
 
 #[derive(PartialEq, Properties)]
 pub struct LeaderboardProps {
+    #[prop_or(None)]
+    pub position: Option<Position>,
+    #[prop_or(None)]
+    pub style: Option<AttrValue>,
     /// Override the default liveboard label.
     #[prop_or(LanguageId::liveboard_label)]
     pub liveboard_label: fn(LanguageId) -> &'static str,
@@ -73,7 +80,7 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
         r#"
         color: white;
         font-style: italic;
-        margin-bottom: 1.4rem;
+        margin-bottom: 0rem;
         margin-top: 0.5rem;
         text-align: center;
     "#
@@ -101,6 +108,15 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
         "#
     );
 
+    let ctw = use_ctw();
+    let on_open_changed = ctw.change_common_settings_callback.reform(|open| {
+        Box::new(
+            move |common_settings: &mut CommonSettings, browser_storages: &mut BrowserStorages| {
+                common_settings.set_leaderboard_dialog_shown(open, browser_storages);
+            },
+        )
+    });
+
     let mode = use_state(Mode::default);
 
     let right_arrow = if props.mode_arrow {
@@ -112,8 +128,8 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
         SectionArrow::None
     };
 
-    let t = t();
-    let core_state = Ctw::use_core_state();
+    let t = ctw.setting_cache.language;
+    let core_state = use_core_state();
 
     let (name, items) = match *mode {
         Mode::Liveboard => {
@@ -178,7 +194,15 @@ pub fn leaderboard_overlay(props: &LeaderboardProps) -> Html {
 
     // TODO: <Section ... bind:open={$leaderboardShown}>
     html! {
-        <Section {name} {right_arrow}>
+        <Section
+            id="leaderboard"
+            {name}
+            position={props.position}
+            style={props.style.clone()}
+            {right_arrow}
+            open={ctw.setting_cache.leaderboard_dialog_shown}
+            {on_open_changed}
+        >
             <table class={table_css_class}>
                 {items}
             </table>

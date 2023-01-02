@@ -117,7 +117,6 @@ mod tests {
 
     fn test_render_with(player_count: usize, resolution: u32) {
         crate::noise::init();
-        unsafe { EntityType::init() };
 
         let world_radius =
             World::target_radius(player_count as f32 * 1500f32.powi(2) * std::f32::consts::PI);

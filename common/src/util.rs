@@ -68,13 +68,21 @@ pub fn respawn_score(score: u32) -> u32 {
 }
 
 /// respawn_score returns how much score a boat gets from a kill.
-pub fn kill_score(score: u32) -> u32 {
-    10 + score / 4
+pub fn kill_score(score: u32, killer_score: u32) -> u32 {
+    let raw = 10 + score / 4;
+    let killer_score = killer_score.min(level_to_score(EntityData::MAX_BOAT_LEVEL));
+    if killer_score / 16 >= score {
+        0
+    } else if killer_score / 4 >= score {
+        raw / 2
+    } else {
+        raw
+    }
 }
 
 /// respawn_score returns how much score a boat gets from a ramming kill.
-pub fn ram_score(score: u32) -> u32 {
-    kill_score(score) / 2
+pub fn ram_score(score: u32, killer_score: u32) -> u32 {
+    kill_score(score, killer_score) / 2
 }
 
 /// natural_death_coins returns how many coins a boat should drop, assuming it died of natural causes.
@@ -112,10 +120,6 @@ mod test {
 
     #[test]
     fn score_to_and_from_level() {
-        unsafe {
-            EntityType::init();
-        }
-
         for score in 0..=level_to_score(EntityData::MAX_BOAT_LEVEL) * 3 {
             assert_eq!(
                 score_to_level(score),
@@ -128,10 +132,6 @@ mod test {
 
     #[test]
     fn test_lose_n_levels() {
-        unsafe {
-            EntityType::init();
-        }
-
         for i in 1..EntityData::MAX_BOAT_LEVEL {
             assert_eq!(level_to_score(i), lose_n_levels(level_to_score(i + 1), 1));
         }
@@ -159,10 +159,6 @@ mod test {
 
     #[test]
     fn non_conservation_of_score() {
-        unsafe {
-            EntityType::init();
-        }
-
         let mut total_before = 0u32;
         let mut total_after = 0u32;
 
@@ -200,9 +196,9 @@ mod test {
 
                 if !natural {
                     winnings += if rng.gen_bool(0.1) {
-                        ram_score(boats[died].1)
+                        ram_score(boats[died].1, boats[beneficiary].1)
                     } else {
-                        kill_score(boats[died].1)
+                        kill_score(boats[died].1, boats[beneficiary].1)
                     }
                 }
 

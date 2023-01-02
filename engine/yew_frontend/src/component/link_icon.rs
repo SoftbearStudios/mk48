@@ -3,7 +3,7 @@
 
 use web_sys::{window, MouseEvent};
 use yew::virtual_dom::AttrValue;
-use yew::{function_component, html, Callback, Properties};
+use yew::{function_component, html, Callback, Html, Properties};
 use yew_icons::{Icon, IconId};
 
 #[derive(PartialEq, Properties)]

@@ -1,18 +1,15 @@
 // SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::frontend::Ctw;
+use crate::frontend::use_ctw;
 use core_protocol::id::LanguageId::*;
 use core_protocol::id::{GameId, LanguageId, PeriodId};
+use yew::hook;
 
 /// Only works in function component.
+#[hook]
 pub fn use_translation() -> LanguageId {
-    yew::use_context::<Ctw>().unwrap().setting_cache.language
-}
-
-/// Alias of [`use_translation`] to be more concise.
-pub fn t() -> LanguageId {
-    use_translation()
+    use_ctw().setting_cache.language
 }
 
 /// Declare static translations.
@@ -90,6 +87,7 @@ pub trait Translation: Sized {
     // Upgrading.
     s!(upgrade_label);
     fn upgrade_to_label(self, upgrade: &str) -> String;
+    fn downgrade_to_label(self, downgrade: &str) -> String;
     fn upgrade_to_level_label(self, level: u32) -> String;
     fn upgrade_to_level_progress(self, percent: u8, level: u32) -> String;
 
@@ -110,6 +108,7 @@ pub trait Translation: Sized {
     s!(invitation_copied_label);
 
     // Connection lost.
+    s!(connection_losing_message);
     s!(connection_lost_message);
 
     // Alert
@@ -134,6 +133,7 @@ pub trait Translation: Sized {
     // Help.
     s!(help_hint);
     fn help_title(self, game_id: GameId) -> String;
+    s!(learn_more_label);
 
     // Settings.
     s!(settings_hint);
@@ -164,7 +164,7 @@ impl Translation for LanguageId {
             French => "Français",
             Italian => "Italiano",
             Arabic => "العربية",
-            Japanese => "日本",
+            Japanese => "日本語",
             Russian => "Русский",
             Vietnamese => "Tiếng Việt",
             SimplifiedChinese => "简体中文",
@@ -561,6 +561,23 @@ impl Translation for LanguageId {
         }
     }
 
+    fn downgrade_to_label(self, downgrade: &str) -> String {
+        match self {
+            Bork => format!("Debork to {downgrade}"),
+            German => format!("Downgrade auf {downgrade}"),
+            English => format!("Downgrade to {downgrade}"),
+            Spanish => format!("Rebajar a {downgrade}"),
+            French => format!("Rétrograder à {downgrade}"),
+            Italian => format!("Esegui il downgrade a {downgrade}"),
+            Arabic => format!("الرجوع إلى {downgrade}"),
+            Japanese => format!("{downgrade} にダウングレード"),
+            Russian => format!("Перейти на {downgrade}"),
+            Vietnamese => format!("Hạ cấp xuống {downgrade}"),
+            SimplifiedChinese => format!("降级为 {downgrade}"),
+            Hindi => format!("डाउनग्रेड करके {downgrade} करें"),
+        }
+    }
+
     fn upgrade_to_level_label(self, level: u32) -> String {
         match self {
             Bork => format!("Bork to level {level}"),
@@ -719,6 +736,41 @@ impl Translation for LanguageId {
     fn connection_lost_message(self) -> &'static str {
         match self {
             Bork => "Your connection was borked. Try again later!",
+            German => "Verbindung zum Server verloren. Versuchen Sie es später noch einmal!",
+            English => "Lost connection to server. Try again later!",
+            Spanish => "Se perdió la conexión con el servidor. ¡Inténtalo de nuevo más tarde!",
+            French => "Connexion perdue au serveur. Réessayez plus tard!",
+            Italian => "Connessione persa al server. Riprovare più tardi!",
+            Arabic => "انقطع الاتصال بالخادم. حاول مرة أخرى في وقت لاحق!",
+            Japanese => "サーバーへの接続が失われました。あとでもう一度試してみてください！",
+            Russian => "Потеряно соединение с сервером. Попробуйте позже!",
+            Vietnamese => "Mất kết nối với máy chủ. Thử lại sau!",
+            SimplifiedChinese => "失去与服务器的连接。稍后再试！",
+            Hindi => "सर्वर से कनेक्शन टूट गया। बाद में पुन: प्रयास!",
+        }
+    }
+
+    fn connection_losing_message(self) -> &'static str {
+        match self {
+            Bork => "Your connection was borked. Reborking now...",
+            German => "Verbindung unterbrochen, versucht, die Verbindung wiederherzustellen...",
+            English => "Connection lost, attempting to reconnect...",
+            Spanish => "Conexión perdida, intentando volver a conectar...",
+            French => "Connexion perdue, tentative de reconnexion...",
+            Italian => "Connessione persa, tentativo di riconnessione in corso...",
+            Arabic => "انقطع الاتصال أثناء محاولة إعادة الاتصال ...",
+            Japanese => "接続が失われました。再接続を試みています...",
+            Russian => "Соединение потеряно, попытка переподключения...",
+            Vietnamese => "Mất kết nối, đang cố kết nối lại ...",
+            SimplifiedChinese => "连接丢失，正在尝试重新连接...",
+            Hindi => "कनेक्शन टूट गया, फिर से कनेक्ट करने का प्रयास...",
+        }
+    }
+
+    /*
+    fn connection_lost_message(self) -> &'static str {
+        match self {
+            Bork => "Your connection was borked. Try again later!",
             German => "Die Schlacht ist vorbei. Du kannst es in wenigen Momenten erneut versuchen.",
             English => "The battle is over. Try starting again shortly.",
             Spanish => "La batalla ha terminado. Intente comenzar de nuevo en breve.",
@@ -732,6 +784,7 @@ impl Translation for LanguageId {
             Hindi => "लड़ाई खत्म हो गई है। शीघ्र ही पुन: प्रारंभ करने का प्रयास करें।",
         }
     }
+     */
 
     fn alert_dismiss(self) -> &'static str {
         match self {
@@ -851,6 +904,23 @@ impl Translation for LanguageId {
             Vietnamese => format!("Hướng dẫn trợ giúp {name}"),
             SimplifiedChinese => format!("{name} 帮助指南"),
             Hindi => format!("{name} सहायता"),
+        }
+    }
+
+    fn learn_more_label(self) -> &'static str {
+        match self {
+            Bork => "Bork?",
+            German => "Mehr erfahren",
+            English => "Learn more",
+            Spanish => "Aprende más",
+            French => "Apprendre encore plus",
+            Italian => "Scopri di più",
+            Arabic => "يتعلم أكثر",
+            Japanese => "もっと詳しく知る",
+            Russian => "Учить больше",
+            Vietnamese => "Tìm hiểu thêm",
+            SimplifiedChinese => "学到更多",
+            Hindi => "और अधिक जानें",
         }
     }
 

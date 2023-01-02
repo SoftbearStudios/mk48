@@ -10,7 +10,7 @@ use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 pub type AngleRepr = i16;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Angle(pub AngleRepr);
 
 #[allow(dead_code)]

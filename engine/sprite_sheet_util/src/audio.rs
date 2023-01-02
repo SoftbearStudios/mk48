@@ -10,23 +10,22 @@ use std::io::Write;
 use std::iter;
 use std::process::{Command, Stdio};
 
+/// A single audio file to add to pass to `pack_audio_sprite_sheet`.
 pub struct Sound {
+    /// Name of the sound such as "upgrade".
     pub name: &'static str,
     /// Source file relative to directory.
     pub source: &'static str,
-
-    // Author to credit.
+    /// Author to credit.
     pub author: Option<&'static str>,
-    // Url to credit.
+    /// Url to credit.
     pub url: Option<&'static str>,
-
     /// Trim start seconds.
     pub start: Option<f32>,
     /// Trim end seconds.
     pub end: Option<f32>,
     /// Whether the looping section starts.
     pub loop_start: Option<f32>,
-
     /// Adjust volume (negative decreases, positive increases)
     pub volume: f32,
     /// Adjust pitch (negative decreases, positive increases)
@@ -69,8 +68,10 @@ impl PartialEq for Sound {
 
 impl Eq for Sound {}
 
+/// Packs `sounds` into an [`AudioSpriteSheet`]. Requires ffmpeg to be installed.
+/// TODO allow input_directory to end in a /.
 pub fn pack_audio_sprite_sheet(
-    sounds: impl IntoIterator<Item = Sound>,
+    sounds: Vec<Sound>,
     channels: usize,
     sample_rate: usize,
     input_directory: &str,

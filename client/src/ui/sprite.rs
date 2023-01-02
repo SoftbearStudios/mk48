@@ -8,8 +8,8 @@ use sprite_sheet::SpriteSheet;
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;
-use yew::{classes, html, Callback, Children, Classes, Properties};
-use yew_frontend::translation::t;
+use yew::{classes, html, Callback, Children, Classes, Html, Properties};
+use yew_frontend::translation::use_translation;
 
 #[derive(Properties, PartialEq)]
 pub struct SpriteProps {
@@ -52,7 +52,7 @@ pub fn sprite(props: &SpriteProps) -> Html {
         "#
     );
 
-    let t = t();
+    let t = use_translation();
     let data: &'static EntityData = props.entity_type.data();
     let sprite = SPRITE_SHEET
         .sprites

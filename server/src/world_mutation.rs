@@ -124,8 +124,9 @@ impl Mutation {
                 let e = &mut entities[index];
                 if e.damage(damage) {
                     let killer_alias = {
+                        let e_score = e.borrow_player().score;
                         let mut other_player = other_player.borrow_player_mut();
-                        other_player.score += kill_score(e.borrow_player().score);
+                        other_player.score += kill_score(e_score, other_player.score);
                         let alias = other_player.alias();
                         drop(other_player);
                         alias
@@ -143,9 +144,10 @@ impl Mutation {
             } => {
                 let entity = &mut entities[index];
                 if entity.damage(damage) {
+                    let e_score = entity.borrow_player().score;
                     let killer_alias = {
                         let mut other_player = other_player.borrow_player_mut();
-                        other_player.score += ram_score(entity.borrow_player().score);
+                        other_player.score += ram_score(entity.borrow_player().score, e_score);
                         let alias = other_player.alias();
                         drop(other_player);
                         alias

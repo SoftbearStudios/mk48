@@ -24,7 +24,7 @@ use core_protocol::id::{
 };
 use core_protocol::name::{PlayerAlias, Referrer};
 use core_protocol::rpc::{
-    ClientRequest, ClientUpdate, LeaderboardUpdate, LiveboardUpdate, PlayerUpdate, Request,
+    AdType, ClientRequest, ClientUpdate, LeaderboardUpdate, LiveboardUpdate, PlayerUpdate, Request,
     SystemUpdate, TeamUpdate, Update,
 };
 use futures::stream::FuturesUnordered;
@@ -676,6 +676,31 @@ impl<G: GameArenaService> ClientRepo<G> {
     }
 
     /// Record client frames per second (FPS) for statistical purposes.
+    fn tally_ad(
+        player_id: PlayerId,
+        ad_type: AdType,
+        players: &PlayerRepo<G>,
+        metrics: &mut MetricRepo<G>,
+    ) -> Result<ClientUpdate, &'static str> {
+        let mut player = players
+            .borrow_player_mut(player_id)
+            .ok_or("player doesn't exist")?;
+        let client = player.client_mut().ok_or("only clients can tally ads")?;
+        metrics.mutate_with(
+            |metrics| {
+                let metric = match ad_type {
+                    AdType::Banner => &mut metrics.banner_ads,
+                    AdType::Rewarded => &mut metrics.rewarded_ads,
+                    AdType::Video => &mut metrics.video_ads,
+                };
+                metric.increment();
+            },
+            &mut client.metrics,
+        );
+        Ok(ClientUpdate::AdTallied)
+    }
+
+    /// Record client frames per second (FPS) for statistical purposes.
     fn tally_fps(
         player_id: PlayerId,
         fps: f32,
@@ -773,9 +798,11 @@ impl<G: GameArenaService> ClientRepo<G> {
         player_id: PlayerId,
         request: ClientRequest,
         players: &PlayerRepo<G>,
+        metrics: &mut MetricRepo<G>,
     ) -> Result<ClientUpdate, &'static str> {
         match request {
             ClientRequest::SetAlias(alias) => Self::set_alias(player_id, alias, players),
+            ClientRequest::TallyAd(ad_type) => Self::tally_ad(player_id, ad_type, players, metrics),
             ClientRequest::TallyFps(fps) => Self::tally_fps(player_id, fps, players),
             ClientRequest::Trace { message } => self.trace(player_id, message, players),
         }
@@ -802,10 +829,10 @@ impl<G: GameArenaService> ClientRepo<G> {
                     .map(|u| u.map(Update::Game))
             }
             Request::Client(request) => self
-                .handle_client_request(player_id, request, &*players)
+                .handle_client_request(player_id, request, &*players, metrics)
                 .map(|u| Some(Update::Client(u))),
             Request::Chat(request) => chat
-                .handle_chat_request(player_id, request, players, teams, metrics)
+                .handle_chat_request(player_id, request, service, players, teams, metrics)
                 .map(|u| Some(Update::Chat(u))),
             Request::Invitation(request) => invitations
                 .handle_invitation_request(player_id, request, arena_id, server_id, players)

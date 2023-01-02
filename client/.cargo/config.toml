@@ -9,6 +9,7 @@ strip = "debuginfo"
 panic = "abort"
 
 [unstable]
+# Slows down debug mode quite a bit TODO find a way to only enable in release mode.
 # Requires the rust-src component. `rustup +nightly component add rust-src`
 build-std = ["std", "panic_abort"]
 build-std-features = ["panic_immediate_abort"]

@@ -57,7 +57,7 @@ pub struct Context<G: GameClient + ?Sized> {
 #[derive(Default)]
 pub struct ClientState {
     /// Time of last or current update.
-    pub update_seconds: f32,
+    pub time_seconds: f32,
 }
 
 /// Obtained from server via websocket.

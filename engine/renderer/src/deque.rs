@@ -11,7 +11,7 @@ use std::mem::size_of;
 use web_sys::{WebGlBuffer, WebGlVertexArrayObject};
 
 /// It's analogous to [`VecDeque`] but on the GPU.
-pub struct PointDeque<V: Vertex> {
+pub struct PointDeque<V> {
     // WebGL resources.
     vertices: WebGlBuffer,
     vao: WebGlVertexArrayObject,
@@ -38,9 +38,9 @@ pub struct PointDeque<V: Vertex> {
 // Should be 1 less than a power of 2 because VecDeque skips 1 elem.
 const STARTING_CAP: usize = 1023;
 
-impl<V: Vertex + Copy> PointDeque<V> {
+impl<V: Vertex> PointDeque<V> {
     /// Creates a new [`PointDeque`].
-    pub fn new<C>(renderer: &Renderer<C>) -> Self {
+    pub fn new(renderer: &Renderer) -> Self {
         let gl = &renderer.gl;
         let ovao = &renderer.ovao;
         let deque = Self {
@@ -108,13 +108,13 @@ impl<V: Vertex + Copy> PointDeque<V> {
     }
 
     /// Binds the [`PointDeque`] to draw points.
-    pub fn bind<'a, C>(&'a mut self, renderer: &'a Renderer<C>) -> PointDequeBinding<'a, V> {
+    pub fn bind<'a>(&'a mut self, renderer: &'a Renderer) -> PointDequeBinding<'a, V> {
         self.buffer(renderer);
         PointDequeBinding::new(&renderer.gl, &renderer.ovao, self)
     }
 
     /// Called by bind.
-    fn buffer<C>(&mut self, renderer: &Renderer<C>) {
+    fn buffer(&mut self, renderer: &Renderer) {
         if self.pushed == 0 && self.popped == 0 {
             return;
         }

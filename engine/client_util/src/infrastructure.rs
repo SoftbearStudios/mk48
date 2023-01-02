@@ -11,19 +11,17 @@ use crate::keyboard::{Key, KeyboardEvent as GameClientKeyboardEvent};
 use crate::mouse::{MouseButton, MouseEvent as GameClientMouseEvent};
 use crate::reconn_web_socket::ReconnWebSocket;
 use crate::setting::CommonSettings;
-use crate::setting::Settings;
 use crate::visibility::VisibilityEvent;
 use common_util::range::map_ranges;
 use core_protocol::id::{PlayerId, ServerId, TeamId};
 use core_protocol::name::TeamName;
 use core_protocol::rpc::{
-    ChatRequest, ClientRequest, ClientUpdate, InvitationRequest, PlayerRequest, Request,
+    AdType, ChatRequest, ClientRequest, ClientUpdate, InvitationRequest, PlayerRequest, Request,
     TeamRequest, Update,
 };
 use core_protocol::web_socket::WebSocketProtocol;
 use glam::{IVec2, Vec2};
 use js_sys::Function;
-use renderer::Renderer;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     Event, FocusEvent, HtmlInputElement, KeyboardEvent, MouseEvent, Touch, TouchEvent, WheelEvent,
@@ -38,13 +36,16 @@ pub struct Infrastructure<G: GameClient> {
     /// Id of the [`Touch`] associated with the second earliest finger to make contact with the touch
     /// screen in a gesture, used to emulate right click.
     right_touch_id: Option<i32>,
-    renderer: Renderer<G::Camera>,
-    renderer_layer: G::RendererLayer,
     statistic_fps_monitor: FpsMonitor,
 }
 
 impl<G: GameClient> Infrastructure<G> {
-    pub fn new(frontend: Box<dyn Frontend<G::UiProps> + 'static>) -> Result<Self, String> {
+    pub fn new(
+        browser_storages: BrowserStorages,
+        common_settings: CommonSettings,
+        settings: G::GameSettings,
+        frontend: Box<dyn Frontend<G::UiProps> + 'static>,
+    ) -> Result<Self, (String, BrowserStorages, CommonSettings, G::GameSettings)> {
         // Don't try to catch panics if aborting (because it's useless).
         #[cfg(panic = "unwind")]
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -52,38 +53,23 @@ impl<G: GameClient> Infrastructure<G> {
         #[cfg(feature = "joined")]
         crate::joined::init();
 
-        let mut game = G::new();
+        let context = Context::new(browser_storages, common_settings, settings, frontend);
 
-        // First load local storage common settings.
-        // Not guaranteed to set either or both to Some. Could fail to load.
-        let browser_storages = BrowserStorages::new();
-        let common_settings = CommonSettings::load(&browser_storages, CommonSettings::default());
-
-        // Next create renderer and load game settings with it.
-        let mut renderer = Renderer::new(common_settings.antialias)?;
-        let game_settings =
-            G::GameSettings::load(&browser_storages, game.init_settings(&mut renderer));
-
-        // Finally create context with common and game settings.
-        let mut context = Context::new(browser_storages, common_settings, game_settings, frontend);
-        let renderer_layer = game.init_layer(&mut renderer, &mut context);
-
-        Ok(Self {
-            game,
-            context,
-            left_touch_id: None,
-            right_touch_id: None,
-            renderer,
-            renderer_layer,
-            statistic_fps_monitor: FpsMonitor::new(60.0),
-        })
-    }
-
-    /// Recreates the renderer (with current settings).
-    pub fn recreate_renderer(&mut self) -> Result<(), String> {
-        self.renderer = Renderer::new(self.context.common_settings.antialias)?;
-        self.renderer_layer = self.game.init_layer(&mut self.renderer, &mut self.context);
-        Ok(())
+        match G::new(&context) {
+            Ok(game) => Ok(Self {
+                game,
+                context,
+                left_touch_id: None,
+                right_touch_id: None,
+                statistic_fps_monitor: FpsMonitor::new(60.0),
+            }),
+            Err(e) => Err((
+                e,
+                context.browser_storages,
+                context.common_settings,
+                context.settings,
+            )),
+        }
     }
 
     pub fn frame(&mut self, time_seconds: f32) {
@@ -92,8 +78,8 @@ impl<G: GameClient> Infrastructure<G> {
             .audio
             .set_volume_setting(self.context.common_settings.volume);
 
-        let elapsed_seconds = (time_seconds - self.context.client.update_seconds).clamp(0.001, 0.5);
-        self.context.client.update_seconds = time_seconds;
+        let elapsed_seconds = (time_seconds - self.context.client.time_seconds).clamp(0.001, 0.5);
+        self.context.client.time_seconds = time_seconds;
 
         for inbound in self
             .context
@@ -147,25 +133,12 @@ impl<G: GameClient> Infrastructure<G> {
             }
 
             if let Update::Game(update) = &inbound {
-                self.game.peek_game(
-                    update,
-                    &mut self.context,
-                    &self.renderer,
-                    &mut self.renderer_layer,
-                );
+                self.game.peek_game(update, &mut self.context);
             }
             self.context.state.apply(inbound);
         }
 
-        self.renderer
-            .pre_prepare(&mut self.renderer_layer, time_seconds);
-        self.game.tick(
-            elapsed_seconds,
-            &mut self.context,
-            &mut self.renderer,
-            &mut self.renderer_layer,
-        );
-        self.renderer.render(&mut self.renderer_layer);
+        self.game.tick(elapsed_seconds, &mut self.context);
 
         if let Some(fps) = self.statistic_fps_monitor.update(elapsed_seconds) {
             self.context
@@ -192,7 +165,7 @@ impl<G: GameClient> Infrastructure<G> {
                         ctrl: event.ctrl_key(),
                         down,
                         shift: event.shift_key(),
-                        time: self.context.client.update_seconds,
+                        time: self.context.client.time_seconds,
                     };
 
                     if down {
@@ -240,9 +213,9 @@ impl<G: GameClient> Infrastructure<G> {
                     let e = GameClientMouseEvent::Button {
                         button,
                         down,
-                        time: self.context.client.update_seconds,
+                        time: self.context.client.time_seconds,
                     };
-                    self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                    self.game.peek_mouse(&e, &mut self.context);
                     self.context.mouse.apply(e);
                 }
             }
@@ -273,8 +246,7 @@ impl<G: GameClient> Infrastructure<G> {
 
         // Raw touch event.
         let touch_event = GameClientMouseEvent::Touch;
-        self.game
-            .peek_mouse(&touch_event, &mut self.context, &mut self.renderer);
+        self.game.peek_mouse(&touch_event, &mut self.context);
         self.context.mouse.apply(touch_event);
 
         // Don't care what event type, just consider the current set of touches.
@@ -342,9 +314,9 @@ impl<G: GameClient> Infrastructure<G> {
                                 let e = GameClientMouseEvent::Button {
                                     button: overrides,
                                     down: false,
-                                    time: self.context.client.update_seconds,
+                                    time: self.context.client.time_seconds,
                                 };
-                                self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                                self.game.peek_mouse(&e, &mut self.context);
                                 self.context.mouse.apply(e);
                             }
                         }
@@ -359,9 +331,9 @@ impl<G: GameClient> Infrastructure<G> {
                             let e = GameClientMouseEvent::Button {
                                 button: $mouse_button,
                                 down: true,
-                                time: self.context.client.update_seconds,
+                                time: self.context.client.time_seconds,
                             };
-                            self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                            self.game.peek_mouse(&e, &mut self.context);
                             self.context.mouse.apply(e);
                         }
                     }
@@ -372,9 +344,9 @@ impl<G: GameClient> Infrastructure<G> {
                         let e = GameClientMouseEvent::Button {
                             button: $mouse_button,
                             down: false,
-                            time: self.context.client.update_seconds,
+                            time: self.context.client.time_seconds,
                         };
-                        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+                        self.game.peek_mouse(&e, &mut self.context);
                         self.context.mouse.apply(e);
                     }
                 }
@@ -402,8 +374,7 @@ impl<G: GameClient> Infrastructure<G> {
         // Written with the intention that errors bias towards visible=true.
         let visible = js_hooks::document().visibility_state() != web_sys::VisibilityState::Hidden;
         let e = VisibilityEvent::Visible(visible);
-        self.game
-            .peek_visibility(&e, &mut self.context, &self.renderer);
+        self.game.peek_visibility(&e, &mut self.context);
         #[cfg(feature = "audio")]
         self.context.audio.peek_visibility(&e);
         self.context.visibility.apply(e)
@@ -412,7 +383,7 @@ impl<G: GameClient> Infrastructure<G> {
     /// Creates a mouse wheel event with the given delta.
     pub fn raw_zoom(&mut self, delta: f32) {
         let e = GameClientMouseEvent::Wheel(delta);
-        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+        self.game.peek_mouse(&e, &mut self.context);
         self.context.mouse.apply(e);
     }
 
@@ -437,15 +408,14 @@ impl<G: GameClient> Infrastructure<G> {
     }
 
     pub fn ui_event(&mut self, event: G::UiEvent) {
-        self.game
-            .ui(event, &mut self.context, &mut self.renderer_layer);
+        self.game.ui(event, &mut self.context);
     }
 
     /// Helper to issue a mouse move event from a real mouse event. Takes client coordinates.
     fn mouse_move_real(&mut self, x: i32, y: i32, dx: i32, dy: i32) {
         self.mouse_move(x, y);
         let e = GameClientMouseEvent::DeltaPixels(IVec2::new(dx, dy).as_vec2());
-        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+        self.game.peek_mouse(&e, &mut self.context);
         self.context.mouse.apply(e);
     }
 
@@ -454,7 +424,7 @@ impl<G: GameClient> Infrastructure<G> {
         let view_position = Self::client_coordinate_to_view(x, y);
 
         let e = GameClientMouseEvent::MoveViewSpace(view_position);
-        self.game.peek_mouse(&e, &mut self.context, &self.renderer);
+        self.game.peek_mouse(&e, &mut self.context);
         self.context.mouse.apply(e);
     }
 
@@ -550,6 +520,12 @@ impl<G: GameClient> Infrastructure<G> {
     /// Send error message to server.
     pub fn trace(&mut self, message: String) {
         self.context.send_trace(message);
+    }
+
+    /// Call when an advertisement was played.
+    pub fn tally_ad(&mut self, ad_type: AdType) {
+        self.context
+            .send_to_server(Request::Client(ClientRequest::TallyAd(ad_type)));
     }
 
     /// Connects to a different server.

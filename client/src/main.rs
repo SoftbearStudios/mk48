@@ -18,17 +18,21 @@ mod animation;
 mod armament;
 mod audio;
 mod background;
+mod camera;
 mod game;
 mod interpolated;
 mod interpolated_contact;
+mod licenses;
 mod particle;
 mod settings;
+mod sortable_sprite;
 mod sprite;
 mod state;
+mod tessellation;
 mod trail;
 mod translation;
 mod ui;
-mod zoom;
+mod weather;
 
 fn main() {
     yew_frontend::entry_point::<Mk48Game, Mk48Ui, Mk48Route>();

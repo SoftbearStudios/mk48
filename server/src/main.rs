@@ -38,9 +38,7 @@ mod world_spawn;
 mod world_test;
 
 fn main() {
-    // SAFETY: As per spec, only called once (before .data() is called).
     unsafe {
-        EntityType::init();
         noise::init();
 
         for typ in EntityType::iter() {
