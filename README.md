@@ -36,12 +36,6 @@ to be compatible.
 1. `make` to build and run a test server
 2. Navigate to `localhost:8081` (or whatever port is printed in the console)
 
-### HTTPS
-
-If you build the server in `--release` mode, it will force HTTPS using a self-signed certificate.
-
-Optionally, specify `--certificate-path` and `--private-key-path` to use a trusted CA certificate (e.g. acquired via [Let's Encrypt](https://letsencrypt.org/)). The server will periodically check for and load renewed certificates.
-
 ## Developing
 
 If you follow the *Building* steps, you have a fully functioning game (could be used to host a private server). If your goal
@@ -68,7 +62,7 @@ One notable feature of the engine is an (optional) admin interface. To build it:
 1. Enter `/engine/js`
 2. `make`
 3. Deploy the server to host the admin interface
-4. Go to `localhost:8080/admin`
+4. Go to `localhost:8081/admin/`
 5. Paste the contents of `engine/game_server/src/auth.txt`, generated randomly by a build script, into the alert dialog
 
 ### Macros
@@ -82,3 +76,7 @@ and game engine macros can be found in the `engine/engine_macros` directory. A f
 
 ## Contributing
 See [Contributing](https://github.com/SoftbearStudios/mk48/wiki/Contributing) Wiki page.
+
+## Trademark
+
+Mk48.io is a trademark of Softbear, Inc.
