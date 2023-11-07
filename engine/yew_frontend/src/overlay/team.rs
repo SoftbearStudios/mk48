@@ -143,6 +143,7 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
     let team_request_callback = ctw.team_request_callback;
     let input_ref = use_node_ref();
     let team_name_empty = use_state_eq(|| true);
+    let team_name_exists = use_state_eq(|| true);
 
     let on_open_changed = ctw.change_common_settings_callback.reform(|open| {
         Box::new(
@@ -153,11 +154,22 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
     });
 
     let on_new_team_name_change = {
+        let teams = core_state.teams.clone();
         let team_name_empty = team_name_empty.clone();
-        move |event: InputEvent| {
-            if !event.is_composing() {
-                let input: HtmlInputElement = event_target(&event);
-                team_name_empty.set(input.value().is_empty());
+        let team_name_exists = team_name_exists.clone();
+        let input_ref = input_ref.clone();
+        move || {
+            if let Some(input) = input_ref.cast::<HtmlInputElement>() {
+                let new_team_name = input.value();
+
+                team_name_empty.set(new_team_name.is_empty());
+
+                if !new_team_name.is_empty() {
+                    let sanitized_team_name = TeamName::new_input_sanitized(&new_team_name);
+                    team_name_exists.set(teams.values().any(|team| (team.name == sanitized_team_name)));
+                } else {
+                    team_name_exists.set(false);
+                }
             }
         }
     };
@@ -169,7 +181,7 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
         }
     };
 
-    let on_create_team = {
+    let on_create_team_with_name = {
         let cb = team_request_callback.clone();
         let input_ref = input_ref.clone();
         move || {
@@ -179,6 +191,26 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
                     cb.emit(TeamRequest::Create(TeamName::new_input_sanitized(
                         &new_team_name,
                     )));
+                }
+            }
+        }
+    };
+
+    let on_request_join_team_with_name = {
+        let teams = core_state.teams.clone();
+        let cb = team_request_callback.clone();
+        let input_ref = input_ref.clone();
+        move || {
+            if let Some(input) = input_ref.cast::<HtmlInputElement>() {
+                let new_team_name = input.value();
+                if !new_team_name.is_empty() {
+                    let sanitized_team_name = TeamName::new_input_sanitized(&new_team_name);
+                    let team_id = teams.iter()
+                        .find_map(|(id, team)| (team.name == sanitized_team_name).then_some(id));
+
+                    if let Some(id) = team_id {
+                        cb.emit(TeamRequest::Join(*id));
+                    }
                 }
             }
         }
@@ -240,6 +272,9 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
     const CHECK_MARK: &'static str = "✔";
     const X_MARK: &'static str = "✘";
 
+    // We don't have a dirty flag if teams have changed so assume it has.
+    on_new_team_name_change();
+
     // TODO (use settings): on_open_changed={|o| ctw.dialogs.teams = o}}
     html! {
         <Section
@@ -279,39 +314,38 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
                 </table>
                 <button onclick={move |_| on_leave_team()} class={button_css_class}>{t.team_leave_hint()}</button>
             } else {
-                <form onsubmit={move |e: SubmitEvent| {e.prevent_default(); on_create_team();}}>
-                    <table>
-                        {core_state.teams.iter().sorted_by(cmp_teams).take(5).map(|(_, &TeamDto{closed, name, team_id, ..})| {
-                            let on_request_join_team = on_request_join_team.clone();
-                            let unavailable = closed || core_state.joins.contains(&team_id);
+                <table>
+                    {core_state.teams.iter().sorted_by(cmp_teams).take(5).map(|(_, &TeamDto{closed, name, team_id, ..})| {
+                        let on_request_join_team = on_request_join_team.clone();
+                        let unavailable = closed || core_state.joins.contains(&team_id);
 
-                            html_nested!{
-                                <tr>
-                                    <td class={name_css_class.clone()}>{name}</td>
-                                    <td>
-                                        <button type="button" class={classes!(button_css_class.clone(), unavailable.then(|| hidden_css_class.clone()))} onclick={move |_| on_request_join_team(team_id)}>{t.team_request_hint()}</button>
-                                    </td>
-                                </tr>
-                            }
-                        }).collect::<Html>()}
-                        <tr>
-                            <td>
-                                <input
-                                    ref={input_ref}
-                                    type="text"
-                                    minlength="1"
-                                    maxlength="6"
-                                    placeholder={(props.name_placeholder)(t)}
-                                    oninput={on_new_team_name_change}
-                                    class={input_css_class}
-                                />
-                            </td>
-                            <td>
-                                <button disabled={*team_name_empty} class={button_css_class}>{t.team_create_hint()}</button>
-                            </td>
-                        </tr>
-                    </table>
-                </form>
+                        html_nested!{
+                            <tr>
+                                <td class={name_css_class.clone()}>{name}</td>
+                                <td>
+                                    <button type="button" class={classes!(button_css_class.clone(), unavailable.then(|| hidden_css_class.clone()))} onclick={move |_| on_request_join_team(team_id)}>{t.team_request_hint()}</button>
+                                </td>
+                            </tr>
+                        }
+                    }).collect::<Html>()}
+                    <tr>
+                        <td>
+                            <input
+                                ref={input_ref}
+                                type="text"
+                                minlength="1"
+                                maxlength="6"
+                                placeholder={(props.name_placeholder)(t)}
+                                //oninput={move |_| on_new_team_name_change()}
+                                class={input_css_class}
+                            />
+                        </td>
+                        <td>
+                            <button type="button" hidden={*team_name_exists} disabled={*team_name_empty} class={button_css_class.clone()} onclick={move |_| on_create_team_with_name()}>{t.team_create_hint()}</button>
+                            <button type="button" hidden={!*team_name_exists} disabled={*team_name_empty} class={button_css_class.clone()} onclick={move |_| on_request_join_team_with_name()}>{t.team_request_hint()}</button>
+                        </td>
+                    </tr>
+                </table>
             }
         </Section>
     }
