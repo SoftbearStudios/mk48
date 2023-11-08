@@ -77,6 +77,7 @@ pub trait Translation: Sized {
     s!(team_create_hint);
     s!(team_deny_hint);
     s!(team_kick_hint);
+    s!(team_promote_hint);
     s!(team_leave_hint);
     s!(team_name_placeholder);
     s!(team_request_hint);
@@ -456,6 +457,23 @@ impl Translation for LanguageId {
             Vietnamese => "Trục xuất",
             SimplifiedChinese => "踢出",
             Hindi => "लात",
+        }
+    }
+
+    fn team_promote_hint(self) -> &'static str {
+        match self {
+            Bork => "Bork",
+            German => "Fördern",
+            English => "Promote",
+            Spanish => "Promover",
+            French => "Promouvoir",
+            Italian => "Promuovere",
+            Arabic => "يرقي",
+            Japanese => "推進する",
+            Russian => "Продвигать",
+            Vietnamese => "Khuyến khích",
+            SimplifiedChinese => "推动",
+            Hindi => "पदोन्नति करना",
         }
     }
 

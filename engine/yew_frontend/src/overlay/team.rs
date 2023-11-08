@@ -223,6 +223,13 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
         }
     };
 
+    let on_promote_from_team = {
+        let cb = team_request_callback.clone();
+        move |player_id: PlayerId| {
+            cb.emit(TeamRequest::Promote(player_id));
+        }
+    };
+
     let on_leave_team = {
         let cb = team_request_callback.clone();
         move || cb.emit(TeamRequest::Leave)
@@ -271,6 +278,7 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
 
     const CHECK_MARK: &'static str = "✔";
     const X_MARK: &'static str = "✘";
+    const PROMOTE_MARK: &'static str = "🎖";
 
     // We don't have a dirty flag if teams have changed so assume it has.
     on_new_team_name_change();
@@ -289,13 +297,19 @@ pub fn team_overlay(props: &TeamOverlayProps) -> Html {
                 <table class={table_css_class}>
                     {core_state.members.iter().filter_map(|player_id| core_state.player_or_bot(*player_id)).map(|PlayerDto{alias, player_id, team_captain, ..}| {
                         let on_kick_from_team = on_kick_from_team.clone();
+                        let on_promote_from_team = on_promote_from_team.clone();
 
                         html_nested!{
                             <tr class={tr_css_class.clone()}>
-                                <td class={classes!(name_css_class.clone(), team_captain.then(|| owner_css_class.clone()))}>{alias}</td>
-                                if i_am_team_captain {
-                                    <td><button class={classes!(button_css_class.clone(), hidden_css_class.clone())}>{CHECK_MARK}</button></td>
-                                    <td><button class={classes!(button_css_class.clone(), team_captain.then(|| hidden_css_class.clone()))} onclick={move |_| on_kick_from_team(player_id)} title={t.team_kick_hint()}>{X_MARK}</button></td>
+                                if team_captain {
+                                    <td class={classes!(name_css_class.clone())}>{PROMOTE_MARK}<span class={classes!(owner_css_class.clone())}>{alias}</span></td>
+                                } else {
+                                    <td class={classes!(name_css_class.clone())}>{alias}</td>
+                                    if i_am_team_captain {
+                                        <td><button class={classes!(button_css_class.clone(), hidden_css_class.clone())}>{CHECK_MARK}</button></td>
+                                        <td><button class={classes!(button_css_class.clone())} onclick={move |_| on_kick_from_team(player_id)} title={t.team_kick_hint()}>{X_MARK}</button></td>
+                                        <td><button class={classes!(button_css_class.clone())} onclick={move |_| on_promote_from_team(player_id)} title={t.team_promote_hint()}>{PROMOTE_MARK}</button></td>
+                                    }
                                 }
                             </tr>
                         }
