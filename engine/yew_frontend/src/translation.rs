@@ -268,7 +268,7 @@ impl Translation for LanguageId {
             Japanese => "ミュートする",
             Russian => "Отключить",
             Vietnamese => "Tắt tiếng",
-            SimplifiedChinese => "沉默的",
+            SimplifiedChinese => "静音",
             Hindi => "म्यूट",
         }
     }
@@ -420,7 +420,7 @@ impl Translation for LanguageId {
             Japanese => "作成",
             Russian => "Создавать",
             Vietnamese => "Tạo ra",
-            SimplifiedChinese => "创造",
+            SimplifiedChinese => "创建",
             Hindi => "बनाना",
         }
     }
@@ -539,7 +539,7 @@ impl Translation for LanguageId {
             Japanese => "アドバンス",
             Russian => "модернизировать",
             Vietnamese => "Trèo lên",
-            SimplifiedChinese => "提升",
+            SimplifiedChinese => "升级",
             Hindi => "उन्नत करना",
         }
     }
@@ -798,7 +798,7 @@ impl Translation for LanguageId {
             Japanese => "解散",
             Russian => "Увольнять",
             Vietnamese => "Bỏ qua",
-            SimplifiedChinese => "解雇",
+            SimplifiedChinese => "忽视",
             Hindi => "नकार देना",
         }
     }
@@ -919,7 +919,7 @@ impl Translation for LanguageId {
             Japanese => "もっと詳しく知る",
             Russian => "Учить больше",
             Vietnamese => "Tìm hiểu thêm",
-            SimplifiedChinese => "学到更多",
+            SimplifiedChinese => "了解更多",
             Hindi => "और अधिक जानें",
         }
     }
@@ -938,7 +938,7 @@ impl Translation for LanguageId {
             Japanese => "設定",
             Russian => "Настройки",
             Vietnamese => "Cài đặt",
-            SimplifiedChinese => "竖",
+            SimplifiedChinese => "设置",
             Hindi => "समायोजन",
         }
     }
@@ -955,7 +955,7 @@ impl Translation for LanguageId {
             Japanese => "言語",
             Russian => "Язык",
             Vietnamese => "Ngôn ngữ",
-            SimplifiedChinese => "语",
+            SimplifiedChinese => "语言",
             Hindi => "भाषा",
         }
     }
@@ -989,7 +989,7 @@ impl Translation for LanguageId {
             Japanese => "変更ログ",
             Russian => "Обновления",
             Vietnamese => "Cập nhật",
-            SimplifiedChinese => "变更日志",
+            SimplifiedChinese => "更新日志",
             Hindi => "चेंजलॉग",
         }
     }
