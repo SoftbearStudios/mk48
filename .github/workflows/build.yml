@@ -22,6 +22,8 @@ jobs:
           toolchain: nightly-2024-04-20
           override: true
           components: rust-src, rustfmt, clippy
+      - name: Install target
+        run: rustup target add wasm32-unknown-unknown
       - uses: jetli/trunk-action@v0.1.0
         with:
           version: 'v0.17.5'
