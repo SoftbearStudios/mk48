@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #![feature(proc_macro_span)]
-#![feature(let_else)]
 
 mod entity_type;
 

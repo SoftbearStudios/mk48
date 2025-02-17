@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::EntityData;
-use common_util::range::map_ranges;
+use kodiak_common::{map_ranges, RankNumber};
 use std::sync::Arc;
 
 /// level_to_score converts a boat level to a score required to upgrade to it.
@@ -54,7 +54,7 @@ pub(crate) fn lose_n_levels(score: u32, n: u8) -> u32 {
 }
 
 /// respawn_score returns how much score is kept when a boat owned by a real player dies.
-pub fn respawn_score(score: u32) -> u32 {
+pub fn respawn_score(score: u32, rank: Option<RankNumber>) -> u32 {
     /*
     let levels_to_lose = match score_to_level(score) {
         1 => 0,
@@ -64,7 +64,12 @@ pub fn respawn_score(score: u32) -> u32 {
     lose_n_levels(score, levels_to_lose)
      */
 
-    score.min(level_to_score(EntityData::MAX_BOAT_LEVEL)) * 10 / 25
+    let ret = score.min(level_to_score(EntityData::MAX_BOAT_LEVEL));
+    if rank < Some(RankNumber::Rank6) {
+        ret * 10 / 25
+    } else {
+        ret * 15 / 25
+    }
 }
 
 /// respawn_score returns how much score a boat gets from a kill.
@@ -115,8 +120,8 @@ mod test {
     use crate::util::{
         kill_score, level_to_score, lose_n_levels, ram_score, respawn_score, score_to_level,
     };
-    use rand::seq::IteratorRandom;
-    use rand::{thread_rng, Rng};
+    use kodiak_common::rand::seq::IteratorRandom;
+    use kodiak_common::rand::{thread_rng, Rng};
 
     #[test]
     fn score_to_and_from_level() {

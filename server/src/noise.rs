@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use common::terrain;
-use common_util::range::map_ranges;
+use kodiak_server::map_ranges;
 use noise::{NoiseFn, SuperSimplex};
 use std::mem::MaybeUninit;
 
@@ -107,8 +107,8 @@ mod tests {
     use crate::noise::{noise_generator, SEED};
     use common::altitude::Altitude;
     use common::terrain::*;
-    use glam::Vec2;
     use image::{Rgb, RgbImage};
+    use kodiak_server::glam::Vec2;
 
     type Color = [u8; 3];
     const COLORS: [Color; 4] = [
@@ -120,9 +120,9 @@ mod tests {
 
     fn lerp(a: Color, b: Color, x: f32) -> Color {
         [
-            common_util::range::lerp(a[0] as f32, b[0] as f32, x) as u8,
-            common_util::range::lerp(a[1] as f32, b[1] as f32, x) as u8,
-            common_util::range::lerp(a[2] as f32, b[2] as f32, x) as u8,
+            kodiak_common::range::lerp(a[0] as f32, b[0] as f32, x) as u8,
+            kodiak_common::range::lerp(a[1] as f32, b[1] as f32, x) as u8,
+            kodiak_common::range::lerp(a[2] as f32, b[2] as f32, x) as u8,
         ]
     }
 

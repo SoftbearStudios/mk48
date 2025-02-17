@@ -1,11 +1,10 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
 use crate::world::World;
 use crate::world_mutation::Mutation;
-use arrayvec::ArrayVec;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::death_reason::DeathReason;
@@ -14,8 +13,10 @@ use common::ticks;
 use common::ticks::Ticks;
 use common::util::hash_u32_to_f32;
 use common::velocity::Velocity;
+use kodiak_server::arrayvec::ArrayVec;
+use kodiak_server::rand::{thread_rng, Rng};
+use kodiak_server::PlayerId;
 use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
-use rand::{thread_rng, Rng};
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -60,7 +61,11 @@ impl World {
     }
 
     /// update_entities_and_others performs updates on each pair of entities, with some exceptions.
-    pub fn physics_radius(&mut self, delta: Ticks) {
+    pub fn physics_radius(
+        &mut self,
+        delta: Ticks,
+        tally_kill: &mut impl FnMut(PlayerId, PlayerId),
+    ) {
         let delta_seconds = delta.to_secs();
 
         // TODO: look into lock free data structures.
@@ -385,7 +390,7 @@ impl World {
                             // Regenerating due to oil rigs is too OP, as it makes ships immune from
                             // submarines.
                             // https://discord.com/channels/847143438939717663/847150517938946058/989645078043693146
-                            if collectibles[0].entity_type != EntityType::Barrel {
+                            if !matches!(collectibles[0].entity_type, EntityType::Barrel | EntityType::Coin) {
                                 mutate(boats[0], Mutation::Repair(Ticks::from_secs(1.5)));
                             }
                             mutate(boats[0], Mutation::Reload(collectibles[0].data().reload));
@@ -514,7 +519,7 @@ impl World {
                     {
                         // Coins get consumed every other collectible passes under.
                         if obstacles[0].entity_type == EntityType::OilPlatform && collectibles[0].player.is_some() {
-                            if rand::thread_rng().gen_bool(0.1) {
+                            if thread_rng().gen_bool(0.1) {
                                 mutate(obstacles[0], Mutation::UpgradeHq);
                             }
 
@@ -575,7 +580,9 @@ impl World {
                             != std::mem::discriminant(next_mutation)
                 })
                 .unwrap_or(true);
-            if skip != Some(index) && mutation.apply(self, index, delta, last_of_mutation_type) {
+            if skip != Some(index)
+                && mutation.apply(self, index, delta, last_of_mutation_type, tally_kill)
+            {
                 skip = Some(index);
             }
         }

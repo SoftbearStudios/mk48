@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::{unset_entity_id, Entity};
@@ -11,10 +11,10 @@ use common::ticks::Ticks;
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common::world::distance_to_soft_area_border;
-use common_util::range::gen_radius;
-use glam::Vec2;
-use log::{info, warn};
-use rand::{thread_rng, Rng};
+use kodiak_server::gen_radius;
+use kodiak_server::glam::Vec2;
+use kodiak_server::log::{log, Level};
+use kodiak_server::rand::{thread_rng, Rng};
 use std::time::Instant;
 
 impl World {
@@ -43,13 +43,14 @@ impl World {
         exclusion_zone: Option<Vec2>,
     ) -> bool {
         let retry = initial_radius > 0.0;
+        let is_bot = entity.is_boat() && { entity.borrow_player().player_id.is_bot() };
         if retry {
             let start_time = Instant::now();
-            let mut rng = rand::thread_rng();
+            let mut rng = thread_rng();
             let mut radius = initial_radius.max(1.0);
             let center = entity.transform.position;
             let (max_attempts, mut threshold): (u32, f32) = if entity.is_boat() {
-                if entity.borrow_player().player_id.is_bot() {
+                if is_bot {
                     (128, 4.0)
                 } else {
                     (1024, 6.0)
@@ -116,7 +117,8 @@ impl World {
             entity.guidance.direction_target = entity.transform.direction;
 
             if entity.data().kind == EntityKind::Boat {
-                info!(
+                log!(
+                    if is_bot { Level::Debug } else { Level::Info },
                     "Took {}/{} attempts ({:?}) to spawn {:?} (threshold = {}, final_radius = {}).",
                     max_attempts - governor,
                     max_attempts,
@@ -131,7 +133,19 @@ impl World {
         let t = entity.entity_type;
         let spawned = self.try_spawn(entity);
         if !spawned {
-            warn!("couldn't spawn {:?}", t);
+            log!(
+                if t.data().kind != EntityKind::Boat {
+                    Level::Debug
+                } else {
+                    if is_bot {
+                        Level::Warn
+                    } else {
+                        Level::Error
+                    }
+                },
+                "couldn't spawn {:?}",
+                t
+            );
         }
         spawned
     }
@@ -294,7 +308,7 @@ impl World {
         target: usize,
         rate: usize,
     ) {
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
 
         for _ in 0..target.saturating_sub(current).min(rate) {
             let position = gen_radius(&mut rng, self.radius);

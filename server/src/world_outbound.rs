@@ -1,27 +1,26 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::complete_ref::CompleteRef;
 use crate::contact_ref::ContactRef;
 use crate::entity::Entity;
+use crate::player::PlayerTuple;
 use crate::player::Status;
-use crate::server::Server;
 use crate::world::World;
 use common::entity::{EntityKind, EntitySubKind};
 use common::ticks::Ticks;
-use common_util::range::{map_ranges, map_ranges_fast};
-use game_server::player::PlayerTuple;
-use glam::{vec2, Vec2};
+use kodiak_server::glam::{vec2, Vec2};
+use kodiak_server::{map_ranges, map_ranges_fast};
 
 impl World {
     /// get_player_complete gets the complete update for a player, corresponding to everything they
     /// are able to see at the current moment.
     pub fn get_player_complete<'a>(
         &'a self,
-        tuple: &'a PlayerTuple<Server>,
+        tuple: &'a PlayerTuple,
     ) -> CompleteRef<'a, impl Iterator<Item = ContactRef>> {
         let player = tuple.borrow_player();
-        let player_entity = match &player.data.status {
+        let player_entity = match &player.status {
             Status::Alive { entity_index, .. } => {
                 let entity = &self.entities[*entity_index];
                 debug_assert!(entity.is_boat());
@@ -62,7 +61,7 @@ impl World {
                 sensors.sonar.range
             };
 
-            if player.data.status.is_alive() {
+            if player.status.is_alive() {
                 Camera {
                     active: entity.extension().is_active(),
                     inner: data.radii().start,
@@ -81,7 +80,7 @@ impl World {
             time,
             visual_range,
             ..
-        } = player.data.status
+        } = player.status
         {
             let elapsed = time.elapsed().as_secs_f32();
             // Fade out visibility over time to save bandwidth.
@@ -282,7 +281,7 @@ impl World {
         // 2.0 supports most computer monitors and phones.
         const MAX_ASPECT: f32 = 2.0;
 
-        let aspect = player.data.hint.aspect;
+        let aspect = player.hint.aspect;
         let camera_width = camera_view * 2.0;
         let camera_dims = vec2(
             camera_width * aspect.clamp(1.0, MAX_ASPECT),

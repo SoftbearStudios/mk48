@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
@@ -13,7 +13,7 @@ use common::entity::EntityType;
 use common::guidance::Guidance;
 use common::ticks::Ticks;
 use common::transform::Transform;
-use core_protocol::id::PlayerId;
+use kodiak_server::PlayerId;
 use std::sync::Arc;
 
 /// A contact that references world data to avoid additional allocation.

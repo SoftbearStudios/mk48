@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Params;
 use crate::weather::Weather;
 use common::entity::EntityId;
 use common::ticks::Ticks;
-use common_util::range::map_ranges;
-use glam::{Vec2, Vec3, Vec4};
 use itertools::Itertools;
-use renderer::{DefaultRender, Layer, RenderLayer, Renderer};
-use renderer2d::GraphicLayer;
+use kodiak_client::glam::{Vec2, Vec3, Vec4};
+use kodiak_client::map_ranges;
+use kodiak_client::renderer::{DefaultRender, Layer, RenderLayer, Renderer};
+use kodiak_client::renderer2d::GraphicLayer;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
@@ -156,12 +156,12 @@ impl RenderLayer<&Mk48Params> for TrailLayer {
         // Move trails that weren't updated.
         self.unowned_trails.extend(
             self.trails
-                .drain_filter(|_, t| t.updated != time)
+                .extract_if(|_, t| t.updated != time)
                 .map(|(_, t)| t),
         );
 
         // Drain expired trails.
-        self.unowned_trails.drain_filter(|t| t.expired(time));
+        self.unowned_trails.retain(|t| !t.expired(time));
 
         // Add owned and unowned trails to graphics layer.
         // TODO sorted because alpha blending isn't additive (yet).

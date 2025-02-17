@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
+use crate::player::PlayerTuple;
 use crate::player::Status;
-use crate::server::Server;
 use crate::world::World;
 use crate::world_physics_radius::MINE_SPEED;
 use common::altitude::Altitude;
@@ -16,16 +16,16 @@ use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::*;
 use common::velocity::Velocity;
-use game_server::player::PlayerTuple;
-use glam::Vec2;
-use rand::{thread_rng, Rng};
+use kodiak_server::glam::Vec2;
+use kodiak_server::rand::{thread_rng, Rng};
+use kodiak_server::{PlayerId, TicksTrait};
 use std::sync::Arc;
 
 /// Serialized mutations, targeted at an indexed entity, ordered by priority.
 #[derive(Clone, Debug)]
 pub(crate) enum Mutation {
     CollidedWithBoat {
-        other_player: Arc<PlayerTuple<Server>>,
+        other_player: Arc<PlayerTuple>,
         damage: Ticks,
         impulse: Velocity,
         ram: bool,
@@ -42,8 +42,8 @@ pub(crate) enum Mutation {
     Repair(Ticks),
     Reload(Ticks),
     // For things that may only be collected once.
-    CollectedBy(Arc<PlayerTuple<Server>>, u32),
-    HitBy(Arc<PlayerTuple<Server>>, EntityType, Ticks),
+    CollectedBy(Arc<PlayerTuple>, u32),
+    HitBy(Arc<PlayerTuple>, EntityType, Ticks),
     Attraction(Vec2, Velocity, Altitude), // Altitude is a delta.
     Guidance {
         direction_target: Angle,
@@ -106,6 +106,7 @@ impl Mutation {
         index: EntityIndex,
         delta: Ticks,
         is_last_of_type: bool,
+        tally_kill: &mut impl FnMut(PlayerId, PlayerId),
     ) -> bool {
         let entities = &mut world.entities;
         match self {
@@ -124,10 +125,14 @@ impl Mutation {
                 let e = &mut entities[index];
                 if e.damage(damage) {
                     let killer_alias = {
-                        let e_score = e.borrow_player().score;
+                        let (e_score, dead) = {
+                            let player = e.borrow_player();
+                            (player.score, player.player_id)
+                        };
                         let mut other_player = other_player.borrow_player_mut();
+                        tally_kill(other_player.player_id, dead);
                         other_player.score += kill_score(e_score, other_player.score);
-                        let alias = other_player.alias();
+                        let alias = other_player.alias;
                         drop(other_player);
                         alias
                     };
@@ -144,11 +149,15 @@ impl Mutation {
             } => {
                 let entity = &mut entities[index];
                 if entity.damage(damage) {
-                    let e_score = entity.borrow_player().score;
+                    let (e_score, dead) = {
+                        let player = entity.borrow_player();
+                        (player.score, player.player_id)
+                    };
                     let killer_alias = {
                         let mut other_player = other_player.borrow_player_mut();
+                        tally_kill(other_player.player_id, dead);
                         other_player.score += ram_score(entity.borrow_player().score, e_score);
-                        let alias = other_player.alias();
+                        let alias = other_player.alias;
                         drop(other_player);
                         alias
                     };
@@ -301,7 +310,7 @@ impl Mutation {
                 let boat_index = {
                     let entity = &world.entities[index];
                     let player = entity.borrow_player();
-                    if let Status::Alive { entity_index, .. } = player.data.status {
+                    if let Status::Alive { entity_index, .. } = player.status {
                         Some(entity_index)
                     } else {
                         None
@@ -332,9 +341,9 @@ impl Mutation {
         let score = player.score;
         player.score = if player.is_bot() {
             // Make sure there are bots in the shallow area.
-            respawn_score(player.score).min(level_to_score(rng.gen_range(1..=2)))
+            respawn_score(player.score, player.rank).min(level_to_score(rng.gen_range(1..=2)))
         } else {
-            respawn_score(player.score)
+            respawn_score(player.score, player.rank)
         };
         drop(player);
 

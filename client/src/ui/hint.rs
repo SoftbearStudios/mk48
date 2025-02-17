@@ -1,12 +1,12 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::translation::Mk48Translation;
+use crate::ui::Mk48Phrases;
 use common::entity::EntityType;
+use kodiak_client::use_translator;
 use stylist::yew::styled_component;
 use web_sys::HtmlDivElement;
-use yew::{html, use_effect_with_deps, use_node_ref, Html, Properties};
-use yew_frontend::translation::use_translation;
+use yew::{html, use_effect_with, use_node_ref, Html, Properties};
 
 #[derive(PartialEq, Properties)]
 pub struct HintProps {
@@ -53,23 +53,20 @@ pub fn hint(props: &HintProps) -> Html {
 
     {
         let container_ref = container_ref.clone();
-        use_effect_with_deps(
-            move |_| {
-                if let Some(container) = container_ref.cast::<HtmlDivElement>() {
-                    let style = container.style();
-                    // Reset the animation.
-                    let _ = style.set_property("animation", "none");
-                    // Trigger a reflow.
-                    let _ = container.offset_width();
-                    let _ = style.remove_property("animation");
-                }
-                || {}
-            },
-            props.entity_type,
-        );
+        use_effect_with(props.entity_type, move |_| {
+            if let Some(container) = container_ref.cast::<HtmlDivElement>() {
+                let style = container.style();
+                // Reset the animation.
+                let _ = style.set_property("animation", "none");
+                // Trigger a reflow.
+                let _ = container.offset_width();
+                let _ = style.remove_property("animation");
+            }
+            || {}
+        });
     }
 
-    let t = use_translation();
+    let t = use_translator();
     let data = props.entity_type.data();
     html! {
         <div class={hint_style} ref={container_ref}>

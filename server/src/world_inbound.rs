@@ -1,10 +1,13 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
+use crate::player::PlayerTuple;
+use crate::player::PlayerTupleRepo;
 use crate::player::Status;
 use crate::protocol::*;
 use crate::server::Server;
+use crate::team::TeamRepo;
 use crate::world::World;
 use common::angle::Angle;
 use common::entity::*;
@@ -13,11 +16,10 @@ use common::terrain::TerrainMutation;
 use common::ticks::Ticks;
 use common::util::{level_to_score, score_to_level};
 use common::world::{clamp_y_to_strict_area_border, outside_strict_area, ARCTIC};
-use common_util::range::map_ranges;
-use game_server::player::PlayerTuple;
-use glam::Vec2;
+use kodiak_server::glam::Vec2;
+use kodiak_server::rand::{thread_rng, Rng};
+use kodiak_server::{map_ranges, InvitationDto, PlayerAlias, RankNumber};
 use maybe_parallel_iterator::IntoMaybeParallelIterator;
-use rand::{thread_rng, Rng};
 use std::ops::Range;
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,23 +28,37 @@ impl CommandTrait for Spawn {
     fn apply(
         &self,
         world: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        _players: &PlayerTupleRepo,
+        _teams: &mut TeamRepo<Server>,
+        invitation_accepted: Option<InvitationDto>,
+        rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
+        let mut player = player_tuple.borrow_player_mut();
+
+        if player.status.is_alive() || (player.status.is_dead() && player.flags.left_game) {
+            return Err("cannot spawn while already alive or quitting");
+        }
+
+        // Un-quit.
+        player.flags.left_game = false;
+
+        // Update rank.
+        player.rank = rank;
+
+        // Set alias.
+        if let Some(alias) = self.alias {
+            player.alias = PlayerAlias::new_sanitized(alias.as_str());
+        }
+
+        if rank >= Some(RankNumber::Rank3) {
+            player.score = player.score.max(level_to_score(2));
+        }
+
+        drop(player);
         let player = player_tuple.borrow_player();
 
-        if player.data.flags.left_game {
-            debug_assert!(
-                false,
-                "should never happen, since messages should not be accepted"
-            );
-            return Err("cannot spawn after left game");
-        }
-
-        if player.data.status.is_alive() {
-            return Err("cannot spawn while already alive");
-        }
-
-        if !self.entity_type.can_spawn_as(player.score, player.is_bot()) {
+        if !self.entity_type.can_spawn_as(player.score, true) {
             return Err("cannot spawn as given entity type");
         }
 
@@ -92,7 +108,7 @@ impl CommandTrait for Spawn {
         }
          */
 
-        let exclusion_zone = match &player.data.status {
+        let exclusion_zone = match &player.status {
             // Player is excluded from spawning too close to where another player sunk them, for
             // fairness reasons.
             Status::Dead {
@@ -124,7 +140,7 @@ impl CommandTrait for Spawn {
             _ => None,
         };
 
-        if player.team_id().is_some() || player.invitation_accepted().is_some() {
+        if player.team_id().is_some() || invitation_accepted.is_some() {
             // TODO: Inefficient to scan all entities; only need to scan all players. Unfortunately,
             // that data is not available here, currently.
             if let Some((_, team_boat)) = world
@@ -148,9 +164,9 @@ impl CommandTrait for Spawn {
                     let is_team_member = player.team_id().is_some()
                         && entity.borrow_player().team_id() == player.team_id();
 
-                    let was_invited_by = player.invitation_accepted().is_some()
+                    let was_invited_by = invitation_accepted.is_some()
                         && entity.borrow_player().player_id
-                            == player.invitation_accepted().as_ref().unwrap().player_id;
+                            == invitation_accepted.as_ref().unwrap().player_id;
 
                     is_team_member || was_invited_by
                 })
@@ -186,9 +202,17 @@ impl CommandTrait for Control {
     fn apply(
         &self,
         world: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        players: &PlayerTupleRepo,
+        teams: &mut TeamRepo<Server>,
+        invitation_accepted: Option<InvitationDto>,
+        rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
         let mut player = player_tuple.borrow_player_mut();
+
+        if player.flags.left_game {
+            return Err("quit");
+        }
 
         // Pre-borrow.
         let world_radius = world.radius;
@@ -197,7 +221,7 @@ impl CommandTrait for Control {
             entity_index,
             aim_target,
             ..
-        } = &mut player.data.status
+        } = &mut player.status
         {
             let entity = &mut world.entities[*entity_index];
 
@@ -222,15 +246,36 @@ impl CommandTrait for Control {
             drop(player);
 
             if let Some(fire) = &self.fire {
-                fire.apply(world, player_tuple)?;
+                fire.apply(
+                    world,
+                    player_tuple,
+                    players,
+                    teams,
+                    invitation_accepted,
+                    rank,
+                )?;
             }
 
             if let Some(pay) = &self.pay {
-                pay.apply(world, player_tuple)?;
+                pay.apply(
+                    world,
+                    player_tuple,
+                    players,
+                    teams,
+                    invitation_accepted,
+                    rank,
+                )?;
             }
 
             if let Some(hint) = &self.hint {
-                hint.apply(world, player_tuple)?;
+                hint.apply(
+                    world,
+                    player_tuple,
+                    players,
+                    teams,
+                    invitation_accepted,
+                    rank,
+                )?;
             }
 
             Ok(())
@@ -244,18 +289,26 @@ impl CommandTrait for Fire {
     fn apply(
         &self,
         world: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        _players: &PlayerTupleRepo,
+        _teams: &mut TeamRepo<Server>,
+        _invitation_accepted: Option<InvitationDto>,
+        _rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
         let player = player_tuple.borrow_player();
+
+        if player.flags.left_game {
+            return Err("quit");
+        }
 
         return if let Status::Alive {
             entity_index,
             aim_target,
             ..
-        } = player.data.status
+        } = player.status
         {
             // Prevents limited armaments from being invalidated since all limited armaments are destroyed on upgrade.
-            if player.data.flags.upgraded {
+            if player.flags.upgraded {
                 return Err("cannot fire right after upgrading");
             }
 
@@ -366,15 +419,23 @@ impl CommandTrait for Pay {
     fn apply(
         &self,
         world: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        _players: &PlayerTupleRepo,
+        _teams: &mut TeamRepo<Server>,
+        _invitation_accepted: Option<InvitationDto>,
+        _rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
         let mut player = player_tuple.borrow_player_mut();
+
+        if player.flags.left_game {
+            return Err("quit");
+        }
 
         return if let Status::Alive {
             entity_index,
             aim_target: Some(target),
             ..
-        } = player.data.status
+        } = player.status
         {
             let entity = &world.entities[entity_index];
 
@@ -415,9 +476,13 @@ impl CommandTrait for Hint {
     fn apply(
         &self,
         _: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        _players: &PlayerTupleRepo,
+        _teams: &mut TeamRepo<Server>,
+        _invitation_accepted: Option<InvitationDto>,
+        _rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
-        player_tuple.borrow_player_mut().data.hint = Hint {
+        player_tuple.borrow_player_mut().hint = Hint {
             aspect: sanitize_float(self.aspect, 0.5..2.0)?,
         };
         Ok(())
@@ -428,16 +493,25 @@ impl CommandTrait for Upgrade {
     fn apply(
         &self,
         world: &mut World,
-        player_tuple: &Arc<PlayerTuple<Server>>,
+        player_tuple: &Arc<PlayerTuple>,
+        _players: &PlayerTupleRepo,
+        _teams: &mut TeamRepo<Server>,
+        _invitation_accepted: Option<InvitationDto>,
+        _rank: Option<RankNumber>,
     ) -> Result<(), &'static str> {
         let mut player = player_tuple.borrow_player_mut();
-        let status = &mut player.data.status;
+
+        if player.flags.left_game {
+            return Err("quit");
+        }
+
+        let status = &mut player.status;
 
         if let Status::Alive { entity_index, .. } = status {
             let entity = &mut world.entities[*entity_index];
             if !entity
                 .entity_type
-                .can_upgrade_to(self.entity_type, player.score, player.is_bot())
+                .can_upgrade_to(self.entity_type, player.score, true)
             {
                 return Err("cannot upgrade to provided entity type");
             }
@@ -446,7 +520,7 @@ impl CommandTrait for Upgrade {
                 return Err("cannot upgrade outside the correct area");
             }
 
-            player.data.flags.upgraded = true;
+            player.flags.upgraded = true;
 
             let below_full_potential = self.entity_type.data().level < score_to_level(player.score);
 
@@ -494,5 +568,21 @@ fn clamp_to_range(
         Err("outside maximum range")
     } else {
         Ok(center + delta.clamp_length_max(range))
+    }
+}
+
+impl CommandTrait for TeamRequest {
+    fn apply(
+        &self,
+        _world: &mut World,
+        player_tuple: &Arc<PlayerTuple>,
+        players: &PlayerTupleRepo,
+        teams: &mut TeamRepo<Server>,
+        _invitation_accepted: Option<InvitationDto>,
+        _rank: Option<RankNumber>,
+    ) -> Result<(), &'static str> {
+        let player_id = { player_tuple.borrow_player().player_id };
+        teams.handle_team_request(player_id, self.clone(), players)?;
+        Ok(())
     }
 }

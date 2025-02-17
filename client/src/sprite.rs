@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Params;
 use crate::settings::ShadowSetting;
-use glam::{Mat3, Vec2, Vec4};
-use renderer::{
-    derive_vertex, Layer, MeshBuilder, RenderLayer, Renderer, Shader, Texture, TextureFormat,
-    TriangleBuffer,
+use kodiak_client::glam::{Mat3, Vec2, Vec4};
+use kodiak_client::renderer::{
+    derive_vertex, DefaultRender, Layer, MeshBuilder, RenderLayer, Renderer, Shader, Texture,
+    TextureFormat, TriangleBuffer,
 };
-use renderer3d::ShadowResult;
-use sprite_sheet::UvSpriteSheet;
+use kodiak_client::renderer3d::ShadowResult;
+use kodiak_client::UvSpriteSheet;
 
 derive_vertex!(
     struct SpriteVertex {
@@ -36,14 +36,14 @@ impl SpriteLayer {
 
         let atlas_color = Texture::load(
             renderer,
-            "/sprites_webgl.png",
+            "/data/sprites_webgl.png",
             TextureFormat::COLOR_RGBA,
             None,
             false,
         );
         let atlas_normal = Texture::load(
             renderer,
-            "/sprites_normal_webgl.png",
+            "/data/sprites_normal_webgl.png",
             TextureFormat::Rgba { premultiply: false },
             Some([127, 127, 255]), // +Z
             false,

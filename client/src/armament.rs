@@ -1,18 +1,17 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Game;
 use crate::interpolated_contact::InterpolatedContact;
 use crate::particle::{Mk48Particle, Mk48ParticleLayer};
-use client_util::context::CoreState;
-use client_util::rate_limiter::RateLimiter;
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
 use common::entity::{Armament, EntityData, EntityId, EntityKind, EntitySubKind, EntityType};
-use common_util::range::gen_radius;
-use glam::Vec2;
-use rand::{thread_rng, Rng};
-use renderer2d::Particle;
+use common::ticks::Ticks;
+use kodiak_client::glam::Vec2;
+use kodiak_client::rand::{thread_rng, Rng};
+use kodiak_client::renderer2d::Particle;
+use kodiak_client::{gen_radius, CoreState, RateLimiter};
 use std::collections::HashMap;
 
 impl Mk48Game {
@@ -230,6 +229,7 @@ pub struct Group {
     pub entity_type: EntityType,
     pub total: u8,
     pub ready: u8,
+    pub reload_override: Option<Ticks>,
 }
 
 pub fn group_armaments(armaments: &[Armament], armament_consumption: &[bool]) -> Vec<Group> {
@@ -242,11 +242,13 @@ pub fn group_armaments(armaments: &[Armament], armament_consumption: &[bool]) ->
         {
             group.total += 1;
             group.ready += ready;
+            debug_assert_eq!(group.reload_override, armament.reload_override);
         } else {
             groups.push(Group {
                 entity_type: armament.entity_type,
                 total: 1,
                 ready,
+                reload_override: armament.reload_override,
             });
         }
     }

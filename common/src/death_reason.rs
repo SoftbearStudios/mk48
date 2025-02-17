@@ -1,14 +1,13 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::{EntityKind, EntityType};
-use core_protocol::name::PlayerAlias;
-use serde::{Deserialize, Serialize};
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::PlayerAlias;
 use std::cmp::Ordering;
 
 // DeathReason stores what a player collided with in order to die.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Eq, PartialEq, Encode, Decode)]
 pub enum DeathReason {
     // For non-boats
     Landing(usize), // Contains index of armament aka landing pad.
@@ -23,7 +22,7 @@ pub enum DeathReason {
     Weapon(PlayerAlias, EntityType),
     // Allows code to convey a reason for killing an entity that is not necessarily a player's boat.
     // In release mode, Unknown is used instead.
-    #[cfg(debug_assertions)]
+    //#[cfg(debug_assertions)]
     Debug(String),
 }
 
@@ -45,7 +44,7 @@ impl DeathReason {
             }
             Self::Ram(_) => true,
             Self::Weapon(_, _) => true,
-            #[cfg(debug_assertions)]
+            //#[cfg(debug_assertions)]
             Self::Debug(_) => false,
         }
     }

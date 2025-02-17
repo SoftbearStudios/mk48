@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::armament::{group_armaments, FireRateLimiter, Group};
@@ -14,16 +14,9 @@ use crate::sprite::SpriteLayer;
 use crate::state::Mk48State;
 use crate::trail::TrailLayer;
 use crate::ui::{
-    InstructionStatus, UiEvent, UiProps, UiState, UiStatus, UiStatusPlaying, UiStatusRespawning,
+    Mk48Route, Mk48Ui, UiEvent, UiProps, UiState, UiStatus, UiStatusPlaying, UiStatusRespawning,
 };
 use crate::weather::Weather;
-use client_util::context::Context;
-use client_util::fps_monitor::FpsMonitor;
-use client_util::game_client::GameClient;
-use client_util::joystick::Joystick;
-use client_util::keyboard::{Key, KeyboardEvent};
-use client_util::mouse::{MouseButton, MouseEvent, MouseState};
-use client_util::rate_limiter::RateLimiter;
 use common::altitude::Altitude;
 use common::angle::Angle;
 use common::contact::{Contact, ContactTrait};
@@ -34,14 +27,19 @@ use common::ticks::Ticks;
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common::world::strict_area_border;
-use common_util::range::{gen_radius, lerp, map_ranges};
-use core_protocol::id::{GameId, TeamId};
-use glam::{Mat2, UVec2, Vec2, Vec3, Vec4Swizzles};
-use rand::{thread_rng, Rng};
-use renderer::{gray_a, rgb_array, rgba, DefaultRender, Layer, RenderChain};
-use renderer2d::{Camera2d, GraphicLayer, TextLayer};
-use renderer3d::ShadowLayer;
-use renderer3d::{ShadowParams, ShadowResult};
+use common::MK48_CONSTANTS;
+use kodiak_client::glam::{Mat2, UVec2, Vec2, Vec3, Vec4Swizzles};
+use kodiak_client::rand::{thread_rng, Rng};
+use kodiak_client::renderer::{
+    gray_a, rgb_array, rgba, DefaultRender, Layer, RenderChain, TextStyle,
+};
+use kodiak_client::renderer2d::{Camera2d, GraphicLayer, TextLayer};
+use kodiak_client::renderer3d::{ShadowLayer, ShadowParams, ShadowResult};
+use kodiak_client::{
+    gen_radius, js_hooks, lerp, map_ranges, translate, translation_prerequisites, ClientContext,
+    FatalError, FpsMonitor, GameClient, GameConstants, Joystick, Key, KeyboardEvent, MouseButton,
+    MouseEvent, MouseState, RankNumber, RateLimiter, TeamId, Translator,
+};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 
@@ -60,8 +58,6 @@ pub struct Mk48Game {
     pub holding: bool,
     /// Currently in mouse control reverse mode.
     pub reversing: bool,
-    /// Override respawning with regular spawning.
-    respawn_overridden: bool,
     /// Interpolate altitude for smooth animation of visual range and restriction.
     pub interpolated_altitude: Interpolated,
     /// Last control, for diffing.
@@ -137,10 +133,12 @@ impl Mk48Game {
         mouse.is_down(MouseButton::Right) || mouse.is_down_not_click(MouseButton::Left, time)
     }
 
-    fn create_render_chain(context: &Context<Self>) -> Result<RenderChain<FullLayer>, String> {
+    fn create_render_chain(
+        context: &ClientContext<Self>,
+    ) -> Result<RenderChain<FullLayer>, String> {
         let shadows = context.settings.shadows;
 
-        RenderChain::new([0, 53, 116, 255], context.common_settings.antialias, |r| {
+        RenderChain::new([0, 53, 116, 255], context.settings.antialias, |r| {
             r.enable_cull_face(); // Required for shadows.
             ShadowLayer::with_viewport(
                 r,
@@ -171,18 +169,23 @@ impl Mk48Game {
 }
 
 impl GameClient for Mk48Game {
-    const GAME_ID: GameId = GameId::Mk48;
-    const LICENSES: &'static [(&'static str, &'static [&'static str])] = crate::licenses::LICENSES;
+    const GAME_CONSTANTS: &'static GameConstants = MK48_CONSTANTS;
+    const LICENSES: &'static str = concat!(
+        include_str!("../../assets/sounds/README.md"),
+        include_str!("ui/translations/licenses.md")
+    );
 
     type Audio = Audio;
     type GameRequest = Command;
     type GameState = Mk48State;
     type UiEvent = UiEvent;
     type UiProps = UiProps;
+    type UiRoute = Mk48Route;
+    type Ui = Mk48Ui;
     type GameUpdate = Update;
     type GameSettings = Mk48Settings;
 
-    fn new(context: &Context<Self>) -> Result<Self, String> {
+    fn new(context: &mut ClientContext<Self>) -> Result<Self, FatalError> {
         let ui_props_rate_limiter = RateLimiter::new(0.1);
 
         let render_chain = Self::create_render_chain(context)?;
@@ -198,7 +201,6 @@ impl GameClient for Mk48Game {
             holding: false,
             reversing: false,
             interpolated_altitude: Interpolated::new(0.2),
-            respawn_overridden: false,
             last_control: None,
             control_rate_limiter: RateLimiter::new(0.1),
             ui_props_rate_limiter,
@@ -210,8 +212,30 @@ impl GameClient for Mk48Game {
         })
     }
 
+    fn translate_rank_number(t: &Translator, n: RankNumber) -> String {
+        match n {
+            RankNumber::Rank1 => translate!(t, "rank_1", "Ensign"),
+            RankNumber::Rank2 => translate!(t, "rank_2", "Lieutenant"),
+            RankNumber::Rank3 => translate!(t, "rank_3", "Commander"),
+            RankNumber::Rank4 => translate!(t, "rank_4", "Captain"),
+            RankNumber::Rank5 => translate!(t, "rank_5", "Colonel"),
+            RankNumber::Rank6 => translate!(t, "rank_6", "Admiral"),
+        }
+    }
+
+    fn translate_rank_benefits(t: &Translator, n: RankNumber) -> Vec<String> {
+        match n {
+            RankNumber::Rank1 => vec![translate!(t, "Unlock early submarines")],
+            RankNumber::Rank2 => vec![translate!(t, "Unlock special-purpose ships")],
+            RankNumber::Rank3 => vec![translate!(t, "Start at level 2")],
+            RankNumber::Rank4 => vec![],
+            RankNumber::Rank5 => vec![translate!(t, "Pirate ship")],
+            RankNumber::Rank6 => vec![translate!(t, "Respawn with more points")],
+        }
+    }
+
     /// This violates the normal "peek" contract by doing the work of apply, when it comes to contacts.
-    fn peek_game(&mut self, update: &Update, context: &mut Context<Self>) {
+    fn peek_game(&mut self, update: &Update, context: &mut ClientContext<Self>) {
         self.peek_update_sound_counter = self.peek_update_sound_counter.saturating_add(1);
         // Only play sounds for 10 peeked updates between frames.
         let play_sounds = self.peek_update_sound_counter < 10;
@@ -276,7 +300,7 @@ impl GameClient for Mk48Game {
             .state
             .game
             .contacts
-            .drain_filter(|id, InterpolatedContact { idle, view, .. }| {
+            .extract_if(|id, InterpolatedContact { idle, view, .. }| {
                 if updated.contains_key(id) {
                     *idle = Ticks::ZERO;
                     false
@@ -399,7 +423,7 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn peek_keyboard(&mut self, event: &KeyboardEvent, context: &mut Context<Self>) {
+    fn peek_keyboard(&mut self, event: &KeyboardEvent, context: &mut ClientContext<Self>) {
         if event.down {
             if let Some(contact) = context.state.game.player_contact() {
                 let entity_type = contact.entity_type().unwrap();
@@ -442,14 +466,39 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn peek_mouse(&mut self, event: &MouseEvent, _context: &mut Context<Self>) {
+    fn peek_mouse(&mut self, event: &MouseEvent, _context: &mut ClientContext<Self>) {
         if let MouseEvent::Wheel(delta) = event {
             self.mk48_camera.zoom(*delta);
             self.first_zoom = false;
         }
     }
 
-    fn tick(&mut self, elapsed_seconds: f32, context: &mut Context<Self>) {
+    fn tick(&mut self, elapsed_seconds: f32, context: &mut ClientContext<Self>) {
+        {
+            let renderer = self.render_chain.renderer();
+            let layer = self.render_chain.layer();
+            if (
+                context.settings.animations,
+                context.settings.antialias,
+                context.settings.dynamic_waves,
+                context.settings.shadows,
+            ) != (
+                layer.inner.background.animations(),
+                renderer.antialias(),
+                layer.inner.background.dynamic_waves,
+                layer.inner.background.shadow_setting,
+            ) {
+                match Self::create_render_chain(context) {
+                    Ok(render_chain) => {
+                        self.render_chain = render_chain;
+                    }
+                    Err(e) => {
+                        js_hooks::console_error!("{e}");
+                    }
+                }
+            }
+        }
+
         let mut frame = self.render_chain.begin(context.client.time_seconds);
         let (renderer, shadow_layer) = frame.draw();
         let layer = &mut shadow_layer.inner;
@@ -481,7 +530,7 @@ impl GameClient for Mk48Game {
         {
             context.audio.set_muted_by_game(false);
             if !context.audio.is_playing(Audio::Ocean) {
-                context.audio.play_looping(Audio::Ocean);
+                context.audio.play(Audio::Ocean);
             }
         } else {
             context.audio.set_muted_by_game(true);
@@ -503,12 +552,12 @@ impl GameClient for Mk48Game {
             {
                 // Update team_proximity.
                 if let Some(player_id) = interp.model.player_id() {
-                    if let Some(player) = context.state.core.only_players().get(&player_id) {
+                    if let Some(player) = context.state.core.players.get(&player_id) {
                         if let Some(team_id) = player.team_id {
                             let mut distance =
                                 camera.distance_squared(interp.model.transform().position);
 
-                            if let Some(team) = context.state.core.teams.get(&team_id) {
+                            if let Some(team) = context.state.game.teams.get(&team_id) {
                                 if team.closed {
                                     distance *= 10.0;
                                 }
@@ -690,19 +739,13 @@ impl GameClient for Mk48Game {
                 if contact.is_boat() {
                     for i in 0..data.armaments.len() {
                         let armament = &data.armaments[i];
-                        if armament.hidden
-                            || armament.vertical
-                            || !(armament.external || (friendly && !context.settings.cinematic))
+                        if armament.hidden || armament.vertical || !(armament.external || friendly)
                         {
                             continue;
                         }
                         let armament_type = armament.entity_type;
 
                         let reloaded = contact.reloads().get(i).map(|r| *r).unwrap_or(false);
-                        if !reloaded && context.settings.cinematic {
-                            continue;
-                        }
-
                         sortable_sprites.push(SortableSprite::new_child_entity(
                             entity_id,
                             entity_type,
@@ -740,421 +783,423 @@ impl GameClient for Mk48Game {
                 // GUI overlays.
                 let overlay_vertical_position = data.radius * 1.2;
 
-                if !context.settings.cinematic {
-                    match data.kind {
-                        EntityKind::Boat => {
-                            // Is this player's own boat?
-                            if context.state.core.player_id.is_some()
-                                && contact.player_id() == context.state.core.player_id
-                            {
-                                // Radii
-                                let hud_color = gray_a(255, 50);
-                                let reverse_color = rgba(255, 75, 75, 75);
-                                let hud_thickness = 0.0025 * zoom;
+                match data.kind {
+                    EntityKind::Boat => {
+                        // Is this player's own boat?
+                        if context.state.core.player_id.is_some()
+                            && contact.player_id() == context.state.core.player_id
+                        {
+                            // Radii
+                            let hud_color = gray_a(255, 50);
+                            let reverse_color = rgba(255, 75, 75, 75);
+                            let hud_thickness = 0.0025 * zoom;
 
-                                if context.settings.circle_hud {
-                                    // Throttle rings.
-                                    // 1. Inner
-                                    layer.graphics.draw_circle(
-                                        contact.transform().position,
-                                        data.radii().start,
-                                        hud_thickness,
-                                        hud_color,
-                                    );
-                                    // 2. Outer
-                                    layer.graphics.draw_circle(
-                                        contact.transform().position,
-                                        data.radii().end,
-                                        hud_thickness,
-                                        hud_color,
-                                    );
-                                    // 3. Actual speed
-                                    layer.graphics.draw_circle(
-                                        contact.transform().position,
-                                        map_ranges(
-                                            contact.transform().velocity.abs().to_mps(),
-                                            0.0..data.speed.to_mps(),
-                                            data.radii(),
-                                            false,
-                                        ),
-                                        hud_thickness,
-                                        if contact.transform().velocity < Velocity::ZERO {
-                                            reverse_color
-                                        } else {
-                                            hud_color
-                                        },
-                                    );
-                                    // 4. Target speed
+                            if context.settings.circle_hud {
+                                // Throttle rings.
+                                // 1. Inner
+                                layer.graphics.draw_circle(
+                                    contact.transform().position,
+                                    data.radii().start,
+                                    hud_thickness,
+                                    hud_color,
+                                );
+                                // 2. Outer
+                                layer.graphics.draw_circle(
+                                    contact.transform().position,
+                                    data.radii().end,
+                                    hud_thickness,
+                                    hud_color,
+                                );
+                                // 3. Actual speed
+                                layer.graphics.draw_circle(
+                                    contact.transform().position,
+                                    map_ranges(
+                                        contact.transform().velocity.abs().to_mps(),
+                                        0.0..data.speed.to_mps(),
+                                        data.radii(),
+                                        false,
+                                    ),
+                                    hud_thickness,
+                                    if contact.transform().velocity < Velocity::ZERO {
+                                        reverse_color
+                                    } else {
+                                        hud_color
+                                    },
+                                );
+                                // 4. Target speed
+                                let velocity_target = contact
+                                    .guidance()
+                                    .velocity_target
+                                    .max(data.speed * Velocity::MAX_REVERSE_SCALE);
+                                layer.graphics.draw_circle(
+                                    contact.transform().position,
+                                    map_ranges(
+                                        velocity_target.abs().to_mps(),
+                                        0.0..data.speed.to_mps(),
+                                        data.radii(),
+                                        true,
+                                    ),
+                                    hud_thickness,
+                                    if velocity_target < Velocity::ZERO {
+                                        reverse_color
+                                    } else {
+                                        hud_color
+                                    },
+                                );
+                            }
+
+                            // Target bearing line.
+                            if context.settings.circle_hud
+                                || Self::is_holding_control(
+                                    &context.mouse,
+                                    context.client.time_seconds,
+                                )
+                            {
+                                let guidance = contact.guidance();
+                                let mut direction = guidance.direction_target;
+                                let mut color = hud_color;
+
+                                // Is reversing.
+                                // Fix ambiguity when loading guidance from server.
+                                if guidance.velocity_target < Velocity::ZERO
+                                    || guidance.velocity_target == Velocity::ZERO && self.reversing
+                                {
+                                    // Flip dir if going backwards.
+                                    direction += Angle::PI;
+                                    // Reversing color.
+                                    color = reverse_color;
+                                    // TODO BEEP BEEP BEEP
+                                }
+
+                                let angle = direction.to_radians();
+                                let dir_mat = Mat2::from_angle(angle);
+                                let radii = data.radii();
+
+                                // Don't overlap inner/outer hud circles.
+                                let overlap =
+                                    hud_thickness * context.settings.circle_hud as u8 as f32 * 0.5;
+                                let start = contact.transform().position
+                                    + dir_mat * Vec2::new(radii.start + overlap, 0.0);
+                                let mut end = contact.transform().position
+                                    + dir_mat * Vec2::new(radii.end - overlap, 0.0);
+                                let mut line_width = hud_thickness;
+
+                                if !context.settings.circle_hud {
                                     let velocity_target = contact
                                         .guidance()
                                         .velocity_target
                                         .max(data.speed * Velocity::MAX_REVERSE_SCALE);
-                                    layer.graphics.draw_circle(
-                                        contact.transform().position,
-                                        map_ranges(
-                                            velocity_target.abs().to_mps(),
-                                            0.0..data.speed.to_mps(),
-                                            data.radii(),
-                                            true,
-                                        ),
+                                    let t = velocity_target.abs().to_mps() / data.speed.to_mps();
+
+                                    // Make sure scale is never too big or too small.
+                                    let mut scale = (hud_thickness * 2.0)
+                                        .min(radii.start * 0.03)
+                                        .max(hud_thickness);
+                                    let new_scale = scale * 2.5;
+
+                                    let diff = end - start;
+                                    let len = diff.length();
+                                    if len * t < new_scale {
+                                        scale = new_scale;
+                                    }
+
+                                    let scale_t = scale / len;
+                                    let center =
+                                        start.lerp(end, (t - scale_t * 0.5).max(scale_t * 0.5));
+                                    end = start + diff * (t - scale_t).max(0.0);
+
+                                    layer.graphics.draw_triangle(
+                                        center,
+                                        Vec2::splat(scale),
+                                        angle - PI * 0.5,
+                                        color,
+                                    );
+                                    line_width = scale;
+                                }
+
+                                layer.graphics.draw_line(start, end, line_width, color);
+                            }
+
+                            // Reverse azimuths.
+                            if context.settings.circle_hud && Self::has_reverse(contact) {
+                                let mut range = data.radii();
+                                // Don't overlap inner hud circle.
+                                range.start += hud_thickness * 0.5;
+                                range.end = lerp(range.start, range.end, 0.1);
+
+                                let position = contact.transform().position;
+                                let direction = contact.transform().direction.to_radians() - PI;
+                                let mut color = hud_color;
+
+                                if self.holding || !Self::can_reverse(self.first_control, contact) {
+                                    if self.reversing {
+                                        color = reverse_color
+                                    } else {
+                                        color.w *= 0.5;
+                                    }
+                                }
+                                let end_color = color.xyz().extend(0.0);
+
+                                for m in [-0.5, 0.5] {
+                                    let direction = direction + REVERSE_ANGLE * m;
+                                    let dir_mat = Mat2::from_angle(direction);
+
+                                    layer.graphics.draw_line_gradient(
+                                        position + dir_mat * Vec2::new(range.start, 0.0),
+                                        position + dir_mat * Vec2::new(range.end, 0.0),
                                         hud_thickness,
-                                        if velocity_target < Velocity::ZERO {
-                                            reverse_color
-                                        } else {
-                                            hud_color
-                                        },
+                                        color,
+                                        end_color,
                                     );
                                 }
+                            }
 
-                                // Target bearing line.
-                                if context.settings.circle_hud
-                                    || Self::is_holding_control(
-                                        &context.mouse,
-                                        context.client.time_seconds,
+                            // Turret azimuths.
+                            // Pre-borrow to not borrow all of context (will be fixed eventually).
+                            let ui_armament = self.ui_state.armament;
+                            if let Some((i, mouse_pos)) =
+                                context.mouse.view_position.and_then(|view_pos| {
+                                    let mouse_pos = self.camera.to_world_position(view_pos);
+                                    Self::find_best_armament(
+                                        &self.fire_rate_limiter,
+                                        contact,
+                                        false,
+                                        mouse_pos,
+                                        ui_armament,
                                     )
-                                {
-                                    let guidance = contact.guidance();
-                                    let mut direction = guidance.direction_target;
-                                    let mut color = hud_color;
-
-                                    // Is reversing.
-                                    // Fix ambiguity when loading guidance from server.
-                                    if guidance.velocity_target < Velocity::ZERO
-                                        || guidance.velocity_target == Velocity::ZERO
-                                            && self.reversing
-                                    {
-                                        // Flip dir if going backwards.
-                                        direction += Angle::PI;
-                                        // Reversing color.
-                                        color = reverse_color;
-                                        // TODO BEEP BEEP BEEP
-                                    }
-
-                                    let angle = direction.to_radians();
-                                    let dir_mat = Mat2::from_angle(angle);
-                                    let radii = data.radii();
-
-                                    // Don't overlap inner/outer hud circles.
-                                    let overlap = hud_thickness
-                                        * context.settings.circle_hud as u8 as f32
-                                        * 0.5;
-                                    let start = contact.transform().position
-                                        + dir_mat * Vec2::new(radii.start + overlap, 0.0);
-                                    let mut end = contact.transform().position
-                                        + dir_mat * Vec2::new(radii.end - overlap, 0.0);
-                                    let mut line_width = hud_thickness;
-
-                                    if !context.settings.circle_hud {
-                                        let velocity_target = contact
-                                            .guidance()
-                                            .velocity_target
-                                            .max(data.speed * Velocity::MAX_REVERSE_SCALE);
-                                        let t =
-                                            velocity_target.abs().to_mps() / data.speed.to_mps();
-
-                                        // Make sure scale is never too big or too small.
-                                        let mut scale = (hud_thickness * 2.0)
-                                            .min(radii.start * 0.03)
-                                            .max(hud_thickness);
-                                        let new_scale = scale * 2.5;
-
-                                        let diff = end - start;
-                                        let len = diff.length();
-                                        if len * t < new_scale {
-                                            scale = new_scale;
-                                        }
-
-                                        let scale_t = scale / len;
-                                        let center =
-                                            start.lerp(end, (t - scale_t * 0.5).max(scale_t * 0.5));
-                                        end = start + diff * (t - scale_t).max(0.0);
-
-                                        layer.graphics.draw_triangle(
-                                            center,
-                                            Vec2::splat(scale),
-                                            angle - PI * 0.5,
-                                            color,
-                                        );
-                                        line_width = scale;
-                                    }
-
-                                    layer.graphics.draw_line(start, end, line_width, color);
-                                }
-
-                                // Reverse azimuths.
-                                if context.settings.circle_hud && Self::has_reverse(contact) {
-                                    let mut range = data.radii();
-                                    // Don't overlap inner hud circle.
-                                    range.start += hud_thickness * 0.5;
-                                    range.end = lerp(range.start, range.end, 0.1);
-
-                                    let position = contact.transform().position;
-                                    let direction = contact.transform().direction.to_radians() - PI;
-                                    let mut color = hud_color;
-
-                                    if self.holding
-                                        || !Self::can_reverse(self.first_control, contact)
-                                    {
-                                        if self.reversing {
-                                            color = reverse_color
-                                        } else {
-                                            color.w *= 0.5;
-                                        }
-                                    }
-                                    let end_color = color.xyz().extend(0.0);
-
-                                    for m in [-0.5, 0.5] {
-                                        let direction = direction + REVERSE_ANGLE * m;
-                                        let dir_mat = Mat2::from_angle(direction);
-
-                                        layer.graphics.draw_line_gradient(
-                                            position + dir_mat * Vec2::new(range.start, 0.0),
-                                            position + dir_mat * Vec2::new(range.end, 0.0),
-                                            hud_thickness,
-                                            color,
-                                            end_color,
-                                        );
-                                    }
-                                }
-
-                                // Turret azimuths.
-                                // Pre-borrow to not borrow all of context (will be fixed eventually).
-                                let ui_armament = self.ui_state.armament;
-                                if let Some((i, mouse_pos)) =
-                                    context.mouse.view_position.and_then(|view_pos| {
-                                        let mouse_pos = self.camera.to_world_position(view_pos);
-                                        Self::find_best_armament(
-                                            &self.fire_rate_limiter,
-                                            contact,
-                                            false,
-                                            mouse_pos,
-                                            ui_armament,
-                                        )
-                                        .zip(Some(mouse_pos))
-                                    })
-                                {
-                                    let armament = &data.armaments[i];
-                                    if armament.entity_type != EntityType::Depositor {
-                                        let transform = *contact.transform();
-                                        let direction = contact.transform().direction;
-                                        let color = hud_color;
-
-                                        if let Some(turret_index) = armament.turret {
-                                            let turret = &data.turrets[turret_index];
-                                            let turret_radius = turret
-                                                .entity_type
-                                                .map(|e| e.data().radius)
-                                                .unwrap_or(0.0);
-                                            let transform = transform
-                                                + Transform::from_position(turret.position());
-
-                                            let inner: f32 = 0.2 * data.width;
-                                            let outer: f32 = 0.325 * data.width;
-                                            let arc_thickness: f32 = outer - inner;
-                                            let middle: f32 = inner + arc_thickness * 0.5;
-
-                                            // Aim line is only helpful on small turrets.
-                                            if turret_radius < inner {
-                                                let turret_direction = (direction
-                                                    + contact.turrets()[turret_index])
-                                                    .to_radians();
-                                                let dir_mat = Mat2::from_angle(turret_direction);
-                                                let line_thickness = hud_thickness * 2.0;
-
-                                                layer.graphics.draw_line(
-                                                    transform.position
-                                                        + dir_mat * Vec2::new(inner, 0.0),
-                                                    transform.position
-                                                        + dir_mat * Vec2::new(outer, 0.0),
-                                                    line_thickness,
-                                                    color,
-                                                );
-                                            }
-
-                                            let left_back = (direction + turret.angle
-                                                - turret.azimuth_bl
-                                                + Angle::PI)
-                                                .to_radians();
-                                            let left_front =
-                                                (direction + turret.angle + turret.azimuth_fl)
-                                                    .to_radians();
-                                            let right_back = (direction
-                                                + turret.angle
-                                                + turret.azimuth_br
-                                                + Angle::PI)
-                                                .to_radians();
-                                            let right_front = (direction + turret.angle
-                                                - turret.azimuth_fr)
-                                                .to_radians();
-
-                                            if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
-                                                layer.graphics.draw_arc(
-                                                    transform.position,
-                                                    middle,
-                                                    right_back..if right_front > right_back {
-                                                        right_front
-                                                    } else {
-                                                        right_front + 2.0 * std::f32::consts::PI
-                                                    },
-                                                    arc_thickness,
-                                                    color,
-                                                );
-                                            }
-                                            if turret.azimuth_fl + turret.azimuth_bl < Angle::PI {
-                                                layer.graphics.draw_arc(
-                                                    transform.position,
-                                                    middle,
-                                                    left_front..if left_back > left_front {
-                                                        left_back
-                                                    } else {
-                                                        left_back + 2.0 * PI
-                                                    },
-                                                    arc_thickness,
-                                                    color,
-                                                );
-                                            }
-                                        } else {
-                                            let armament_data = armament.entity_type.data();
-
-                                            let transform = transform
-                                                + Transform::from_position(armament.position());
-                                            let color = hud_color.xyz().extend(0.45);
-
-                                            let is_vertical = armament.vertical;
-                                            let is_stationary = matches!(
-                                                armament_data.sub_kind,
-                                                EntitySubKind::DepthCharge | EntitySubKind::Mine
-                                            );
-
-                                            if !is_stationary {
-                                                let direction = if is_vertical
-                                                    || armament_data.sub_kind == EntitySubKind::Heli
-                                                {
-                                                    (mouse_pos - transform.position).into()
-                                                } else {
-                                                    direction + armament.angle
-                                                };
-
-                                                let angle_radians = direction.to_radians();
-                                                let dir_mat = Mat2::from_angle(angle_radians);
-
-                                                let scale = data.width * 0.15;
-                                                let start: f32 = (0.65 * armament_data.length)
-                                                    .max(data.width * 0.2)
-                                                    + scale * 0.5;
-                                                let center = transform.position
-                                                    + dir_mat * Vec2::new(start, 0.0);
-
-                                                // Widen triangle for aircraft.
-                                                let scale_x =
-                                                    if armament_data.kind == EntityKind::Aircraft {
-                                                        scale
-                                                    } else {
-                                                        scale * (2.0 / 3.0)
-                                                    };
-                                                let scale = Vec2::new(scale_x, scale);
-
-                                                layer.graphics.draw_triangle(
-                                                    center,
-                                                    scale,
-                                                    angle_radians - PI * 0.5,
-                                                    color,
-                                                );
-                                            } else {
-                                                let inner: f32 = 0.11 * data.width;
-                                                layer.graphics.draw_circle(
-                                                    transform.position,
-                                                    inner,
-                                                    inner * 0.55,
-                                                    color,
-                                                )
-                                            }
-
-                                            if is_vertical {
-                                                let inner: f32 = 0.055 * data.width;
-                                                layer.graphics.draw_filled_circle(
-                                                    transform.position,
-                                                    inner,
-                                                    color,
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Health bar
-                            if contact.damage() > Ticks::ZERO {
-                                let length = 0.12 * zoom;
-                                let health =
-                                    1.0 - contact.damage().to_secs() / data.max_health().to_secs();
-                                let center = contact.transform().position
-                                    + Vec2::new(0.0, overlay_vertical_position);
-                                let offset_x = |v, x| v + Vec2::new(x, 0.0);
-
-                                let bg_color = rgba(85, 85, 85, 127);
-                                let health_color = color.extend(1.0);
-                                let thickness = 0.0075 * zoom;
-
-                                // Background of health bar.
-                                layer.graphics.draw_rounded_line(
-                                    offset_x(center, length * -0.5),
-                                    offset_x(center, length * 0.5),
-                                    thickness,
-                                    bg_color,
-                                    true,
-                                );
-
-                                // Health indicator.
-                                layer.graphics.draw_rounded_line(
-                                    offset_x(center, length * -0.5),
-                                    offset_x(center, length * (health - 0.5)),
-                                    thickness,
-                                    health_color,
-                                    true,
-                                );
-                            }
-
-                            // Name
-                            let text = if let Some(player) = context
-                                .state
-                                .core
-                                .player_or_bot(contact.player_id().unwrap())
+                                    .zip(Some(mouse_pos))
+                                })
                             {
-                                if let Some(team) = player
-                                    .team_id
-                                    .and_then(|team_id| context.state.core.teams.get(&team_id))
-                                {
-                                    format!("[{}] {}", team.name, player.alias)
-                                } else {
-                                    player.alias.as_str().to_owned()
-                                }
-                            } else {
-                                // This is not meant to happen in production. It is for debugging.
-                                format!("{}", contact.player_id().unwrap().0.get())
-                            };
+                                let armament = &data.armaments[i];
+                                if armament.entity_type != EntityType::Depositor {
+                                    let transform = *contact.transform();
+                                    let direction = contact.transform().direction;
+                                    let color = hud_color;
 
-                            let c = color_bytes;
-                            layer.text.draw(
-                                &text,
-                                contact.transform().position
-                                    + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
-                                0.035 * zoom,
-                                [c[0], c[1], c[2], 255],
-                            );
+                                    if let Some(turret_index) = armament.turret {
+                                        let turret = &data.turrets[turret_index];
+                                        let turret_radius = turret
+                                            .entity_type
+                                            .map(|e| e.data().radius)
+                                            .unwrap_or(0.0);
+                                        let transform =
+                                            transform + Transform::from_position(turret.position());
+
+                                        let inner: f32 = 0.2 * data.width;
+                                        let outer: f32 = 0.325 * data.width;
+                                        let arc_thickness: f32 = outer - inner;
+                                        let middle: f32 = inner + arc_thickness * 0.5;
+
+                                        // Aim line is only helpful on small turrets.
+                                        if turret_radius < inner {
+                                            let turret_direction = (direction
+                                                + contact.turrets()[turret_index])
+                                                .to_radians();
+                                            let dir_mat = Mat2::from_angle(turret_direction);
+                                            let line_thickness = hud_thickness * 2.0;
+
+                                            layer.graphics.draw_line(
+                                                transform.position
+                                                    + dir_mat * Vec2::new(inner, 0.0),
+                                                transform.position
+                                                    + dir_mat * Vec2::new(outer, 0.0),
+                                                line_thickness,
+                                                color,
+                                            );
+                                        }
+
+                                        let left_back = (direction + turret.angle
+                                            - turret.azimuth_bl
+                                            + Angle::PI)
+                                            .to_radians();
+                                        let left_front =
+                                            (direction + turret.angle + turret.azimuth_fl)
+                                                .to_radians();
+                                        let right_back = (direction
+                                            + turret.angle
+                                            + turret.azimuth_br
+                                            + Angle::PI)
+                                            .to_radians();
+                                        let right_front = (direction + turret.angle
+                                            - turret.azimuth_fr)
+                                            .to_radians();
+
+                                        if turret.azimuth_fr + turret.azimuth_br < Angle::PI {
+                                            layer.graphics.draw_arc(
+                                                transform.position,
+                                                middle,
+                                                right_back..if right_front > right_back {
+                                                    right_front
+                                                } else {
+                                                    right_front + 2.0 * std::f32::consts::PI
+                                                },
+                                                arc_thickness,
+                                                color,
+                                            );
+                                        }
+                                        if turret.azimuth_fl + turret.azimuth_bl < Angle::PI {
+                                            layer.graphics.draw_arc(
+                                                transform.position,
+                                                middle,
+                                                left_front..if left_back > left_front {
+                                                    left_back
+                                                } else {
+                                                    left_back + 2.0 * PI
+                                                },
+                                                arc_thickness,
+                                                color,
+                                            );
+                                        }
+                                    } else {
+                                        let armament_data = armament.entity_type.data();
+
+                                        let transform = transform
+                                            + Transform::from_position(armament.position());
+                                        let color = hud_color.xyz().extend(0.45);
+
+                                        let is_vertical = armament.vertical;
+                                        let is_stationary = matches!(
+                                            armament_data.sub_kind,
+                                            EntitySubKind::DepthCharge | EntitySubKind::Mine
+                                        );
+
+                                        if !is_stationary {
+                                            let direction = if is_vertical
+                                                || armament_data.sub_kind == EntitySubKind::Heli
+                                            {
+                                                (mouse_pos - transform.position).into()
+                                            } else {
+                                                direction + armament.angle
+                                            };
+
+                                            let angle_radians = direction.to_radians();
+                                            let dir_mat = Mat2::from_angle(angle_radians);
+
+                                            let scale = data.width * 0.15;
+                                            let start: f32 = (0.65 * armament_data.length)
+                                                .max(data.width * 0.2)
+                                                + scale * 0.5;
+                                            let center = transform.position
+                                                + dir_mat * Vec2::new(start, 0.0);
+
+                                            // Widen triangle for aircraft.
+                                            let scale_x =
+                                                if armament_data.kind == EntityKind::Aircraft {
+                                                    scale
+                                                } else {
+                                                    scale * (2.0 / 3.0)
+                                                };
+                                            let scale = Vec2::new(scale_x, scale);
+
+                                            layer.graphics.draw_triangle(
+                                                center,
+                                                scale,
+                                                angle_radians - PI * 0.5,
+                                                color,
+                                            );
+                                        } else {
+                                            let inner: f32 = 0.11 * data.width;
+                                            layer.graphics.draw_circle(
+                                                transform.position,
+                                                inner,
+                                                inner * 0.55,
+                                                color,
+                                            )
+                                        }
+
+                                        if is_vertical {
+                                            let inner: f32 = 0.055 * data.width;
+                                            layer.graphics.draw_filled_circle(
+                                                transform.position,
+                                                inner,
+                                                color,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
-                            let triangle_position = contact.transform().position
+
+                        // Health bar
+                        if contact.damage() > Ticks::ZERO {
+                            let length = 0.12 * zoom;
+                            let health =
+                                1.0 - contact.damage().to_secs() / data.max_health().to_secs();
+                            let center = contact.transform().position
                                 + Vec2::new(0.0, overlay_vertical_position);
-                            layer.graphics.draw_triangle(
-                                triangle_position + Vec2::new(0.0, 0.01 * zoom),
-                                Vec2::splat(0.02 * zoom),
-                                180f32.to_radians(),
-                                color.extend(1.0),
+                            let offset_x = |v, x| v + Vec2::new(x, 0.0);
+
+                            let bg_color = rgba(85, 85, 85, 127);
+                            let health_color = color.extend(1.0);
+                            let thickness = 0.0075 * zoom;
+
+                            // Background of health bar.
+                            layer.graphics.draw_rounded_line(
+                                offset_x(center, length * -0.5),
+                                offset_x(center, length * 0.5),
+                                thickness,
+                                bg_color,
+                                true,
+                            );
+
+                            // Health indicator.
+                            layer.graphics.draw_rounded_line(
+                                offset_x(center, length * -0.5),
+                                offset_x(center, length * (health - 0.5)),
+                                thickness,
+                                health_color,
+                                true,
                             );
                         }
-                        _ => {}
+
+                        // Name
+                        let text = if let Some(player) = context
+                            .state
+                            .core
+                            .player_or_bot(contact.player_id().unwrap())
+                        {
+                            if let Some(team) = player
+                                .team_id
+                                .and_then(|team_id| context.state.game.teams.get(&team_id))
+                            {
+                                format!("[{}] {}", team.name, player.alias)
+                            } else {
+                                player.alias.as_str().to_owned()
+                            }
+                        } else {
+                            // This is not meant to happen in production. It is for debugging.
+                            format!("{}", contact.player_id().unwrap().0.get())
+                        };
+
+                        let c = color_bytes;
+                        layer.text.draw(
+                            &text,
+                            contact.transform().position
+                                + Vec2::new(0.0, overlay_vertical_position + 0.035 * zoom),
+                            0.035 * zoom,
+                            [c[0], c[1], c[2], 255],
+                            TextStyle::italic_if(
+                                false
+                                    && context
+                                        .state
+                                        .core
+                                        .player_or_bot(contact.player_id().unwrap())
+                                        .map(|p| p.authentic)
+                                        .unwrap_or(false),
+                            ),
+                        );
                     }
+                    EntityKind::Weapon | EntityKind::Decoy | EntityKind::Aircraft => {
+                        let triangle_position = contact.transform().position
+                            + Vec2::new(0.0, overlay_vertical_position);
+                        layer.graphics.draw_triangle(
+                            triangle_position + Vec2::new(0.0, 0.01 * zoom),
+                            Vec2::splat(0.02 * zoom),
+                            180f32.to_radians(),
+                            color.extend(1.0),
+                        );
+                    }
+                    _ => {}
                 }
 
                 // Add particles.
@@ -1484,14 +1529,23 @@ impl GameClient for Mk48Game {
                 altitude: player_contact.altitude(),
                 submerge: self.ui_state.submerge,
                 active: self.ui_state.active,
-                instruction_status: if player_contact.data().level <= 3 {
-                    InstructionStatus {
-                        touch: context.mouse.touch_screen,
-                        basics: self.first_control,
-                        zoom: self.first_zoom,
-                    }
+                primary: if player_contact.data().level <= 3 && self.first_control {
+                    Some(if context.mouse.touch_screen {
+                        translate!("Touch in a direction to move, tap to fire torpedoes")
+                    } else {
+                        translate!("Click and hold to move, click to fire torpedoes")
+                    })
                 } else {
-                    InstructionStatus::default()
+                    None
+                },
+                secondary: if player_contact.data().level <= 3 && self.first_zoom {
+                    Some(if context.mouse.touch_screen {
+                        translate!("Pinch to zoom out for a better view")
+                    } else {
+                        translate!("Scroll to zoom out for a better view")
+                    })
+                } else {
+                    None
                 },
                 armament: self.ui_state.armament,
                 armament_consumption: player_contact.reloads().iter().map(|b| *b).collect(),
@@ -1557,18 +1611,8 @@ impl GameClient for Mk48Game {
                 }
             }
 
-            // Playing, so reset respawn override for next time.
-            self.respawn_overridden = false;
-
             status
-        } else if let Some(death_reason) = context
-            .state
-            .game
-            .death_reason
-            .as_ref()
-            .filter(|_| !self.respawn_overridden)
-            .cloned()
-        {
+        } else if let Some(death_reason) = context.state.game.death_reason.clone() {
             UiStatus::Respawning(UiStatusRespawning { death_reason })
         } else {
             UiStatus::Spawning
@@ -1586,7 +1630,7 @@ impl GameClient for Mk48Game {
         }
     }
 
-    fn ui(&mut self, event: UiEvent, context: &mut Context<Self>) {
+    fn ui(&mut self, event: UiEvent, context: &mut ClientContext<Self>) {
         match event {
             UiEvent::Active(active) => {
                 self.set_active(active, &*context);
@@ -1594,18 +1638,17 @@ impl GameClient for Mk48Game {
             UiEvent::Armament(armament) => {
                 self.ui_state.armament = armament;
             }
-            UiEvent::GraphicsSettingsChanged => {
-                self.render_chain = Self::create_render_chain(context).unwrap();
-            }
-            UiEvent::OverrideRespawn => {
-                self.respawn_overridden = true;
-            }
             UiEvent::Respawn(entity_type) => {
-                context.send_to_game(Command::Spawn(Spawn { entity_type }));
+                context.send_to_game(Command::Spawn(Spawn {
+                    alias: None,
+                    entity_type,
+                }));
             }
             UiEvent::Spawn { alias, entity_type } => {
-                context.send_set_alias(alias);
-                context.send_to_game(Command::Spawn(Spawn { entity_type }));
+                context.send_to_game(Command::Spawn(Spawn {
+                    alias: Some(alias),
+                    entity_type,
+                }));
             }
             UiEvent::Submerge(submerge) => {
                 self.set_submerge(submerge, &*context);
@@ -1614,21 +1657,24 @@ impl GameClient for Mk48Game {
                 context.audio.play(Audio::Upgrade);
                 context.send_to_game(Command::Upgrade(Upgrade { entity_type }));
             }
+            UiEvent::Team(team) => {
+                context.send_to_game(Command::Team(team));
+            }
         }
     }
 }
 
 impl Mk48Game {
-    fn set_active(&mut self, active: bool, context: &Context<Self>) {
+    fn set_active(&mut self, active: bool, context: &ClientContext<Self>) {
         if let Some(contact) = context.state.game.player_contact() {
-            if active && contact.data().sensors.sonar.range >= 0.0 {
+            if active && contact.data().sensors.sonar.range > 0.0 {
                 context.audio.play(Audio::Sonar1);
             }
         }
         self.ui_state.active = active;
     }
 
-    fn set_submerge(&mut self, submerge: bool, context: &Context<Self>) {
+    fn set_submerge(&mut self, submerge: bool, context: &ClientContext<Self>) {
         if let Some(contact) = context.state.game.player_contact() {
             if contact.data().sub_kind == EntitySubKind::Submarine {
                 if !self.ui_state.submerge && submerge {

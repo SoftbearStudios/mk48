@@ -1,12 +1,12 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Params;
 use crate::settings::ShadowSetting;
-use glam::Vec2;
-use renderer::{derive_vertex, DefaultRender, Layer, RenderLayer, Renderer, Shader};
-use renderer2d::{Particle, ParticleLayer};
-use renderer3d::ShadowResult;
+use kodiak_client::glam::Vec2;
+use kodiak_client::renderer::{derive_vertex, DefaultRender, Layer, RenderLayer, Renderer, Shader};
+use kodiak_client::renderer2d::{Particle, ParticleLayer};
+use kodiak_client::renderer3d::ShadowResult;
 use std::ops::{Deref, DerefMut};
 
 derive_vertex!(

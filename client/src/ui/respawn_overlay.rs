@@ -1,15 +1,14 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::translation::Mk48Translation;
 use crate::ui::ship_menu::ShipMenu;
-use crate::ui::{UiEvent, UiStatusRespawning};
+use crate::ui::{Mk48Phrases, UiEvent, UiStatusRespawning};
 use crate::Mk48Game;
+use kodiak_client::{
+    use_interstitial_ad, use_splash_screen, use_translator, use_ui_event_callback, InterstitialAd,
+};
 use stylist::yew::styled_component;
-use yew::{html, Html, Properties};
-use yew_frontend::frontend::use_ui_event_callback;
-use yew_frontend::overlay::spawn::use_splash_screen;
-use yew_frontend::translation::use_translation;
+use yew::{html, Callback, Html, Properties};
 
 #[derive(Properties, PartialEq)]
 pub struct RespawnOverlayProps {
@@ -49,9 +48,18 @@ pub fn respawn_overlay(props: &RespawnOverlayProps) -> Html {
         "#
     );
 
-    let t = use_translation();
+    let t = use_translator();
     let (_paused, _transitioning, onanimationend) = use_splash_screen();
-    let onclick = use_ui_event_callback::<Mk48Game>().reform(UiEvent::Respawn);
+    let ui_event_callback = use_ui_event_callback::<Mk48Game>();
+    let interstitial_ad = use_interstitial_ad();
+    let onclick = Callback::from(move |entity_type| {
+        let onspawn = ui_event_callback.reform(move |_| UiEvent::Respawn(entity_type));
+        if let InterstitialAd::Available { request } = &interstitial_ad {
+            request.emit(Some(onspawn));
+        } else {
+            onspawn.emit(());
+        }
+    });
     html! {
         <div id="death" class={container_style} {onanimationend}>
             <h2 class={reason_style}>{t.death_reason(&props.status.death_reason)}</h2>
@@ -60,7 +68,12 @@ pub fn respawn_overlay(props: &RespawnOverlayProps) -> Html {
                 {onclick}
                 closable={false}
             />
-            <div id="banner_bottom" style="margin: 5rem auto;"></div>
+            <div
+                id="banner_container"
+                data-instance="respawn"
+                data-fallback="bottom"
+                style="margin: 5rem auto;"
+            ></div>
         </div>
     }
 }

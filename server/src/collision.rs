@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use common::transform::Transform;
-use glam::Vec2;
+use kodiak_server::glam::Vec2;
 
 /// radius_collision performs a simple radius check. This is faster but less accurate than SAT.
 pub fn radius_collision(

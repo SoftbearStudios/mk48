@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::contact::Contact;
@@ -6,13 +6,14 @@ use crate::death_reason::DeathReason;
 use crate::entity::*;
 use crate::guidance::Guidance;
 use crate::terrain::{ChunkId, SerializedChunk};
-use glam::Vec2;
-use serde::{Deserialize, Serialize};
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::glam::Vec2;
+use kodiak_common::{Owned, PlayerAlias, PlayerId, TeamId, TeamName};
 
 /// Server to client update.
 #[cfg_attr(feature = "server", derive(actix::Message))]
 #[cfg_attr(feature = "server", rtype(result = "()"))]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Encode, Decode)]
 pub struct Update {
     /// All currently visible contacts.
     pub contacts: Vec<Contact>,
@@ -23,23 +24,25 @@ pub struct Update {
     /// Current world border radius.
     pub world_radius: f32,
     pub terrain: Box<TerrainUpdate>,
+    pub team: Vec<TeamUpdate>,
 }
 
 /// Updates for terrain chunks.
 pub type TerrainUpdate = [(ChunkId, SerializedChunk)];
 
 /// Client to server commands.
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Encode, Decode, Debug)]
 #[cfg_attr(feature = "server", derive(actix::Message))]
 #[cfg_attr(feature = "server", rtype(result = "()"))]
 pub enum Command {
     Control(Control),
     Spawn(Spawn),
     Upgrade(Upgrade),
+    Team(TeamRequest),
 }
 
 /// Generic command to control one's ship.
-#[derive(Clone, Serialize, PartialEq, Deserialize, Debug)]
+#[derive(Clone, Encode, Decode, PartialEq, Debug)]
 pub struct Control {
     /// Steering commands.
     pub guidance: Option<Guidance>,
@@ -58,14 +61,14 @@ pub struct Control {
 }
 
 /// Fire/use a single weapon.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Debug, Encode, Decode)]
 pub struct Fire {
     /// The index of the weapon to fire/use, relative to `EntityData.armaments`.
     pub armament_index: u8,
 }
 
 /// Provide hints to optimize experience.
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Encode, Decode)]
 pub struct Hint {
     /// aspect ratio of screen (width / height).
     /// Allows the server to send the correct amount of terrain.
@@ -80,19 +83,63 @@ impl Default for Hint {
 
 /// Pay one coin. TODO: Can't use Option<empty struct>, as serde_json serializes both [`None`] and
 /// [`Some`] to `"null"`.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Debug, Encode, Decode)]
 pub struct Pay;
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Encode, Decode, Debug)]
 pub struct Spawn {
+    pub alias: Option<PlayerAlias>,
     /// What to spawn as. Must be an affordable boat.
     pub entity_type: EntityType,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Encode, Decode, Debug)]
 pub struct Upgrade {
     /// What to upgrade to. Must be an affordable boat of higher level.
     pub entity_type: EntityType,
+}
+
+/// The Team Data Transfer Object (DTO) binds team ID to team name.
+#[derive(Clone, Debug, PartialEq, Encode, Decode)]
+pub struct TeamDto {
+    pub team_id: TeamId,
+    pub name: TeamName,
+    /// Maximum number of numbers reached.
+    pub full: bool,
+    /// Closed to additional requests.
+    pub closed: bool,
+}
+
+/// Team related requests from the client to the server.
+#[derive(Clone, Debug, Encode, Decode)]
+pub enum TeamRequest {
+    Accept(PlayerId),
+    Create(TeamName),
+    Join(TeamId),
+    Kick(PlayerId),
+    Leave,
+    Promote(PlayerId),
+    Reject(PlayerId),
+}
+
+/// Team related update from server to client.
+#[derive(Clone, Debug, Encode, Decode)]
+pub enum TeamUpdate {
+    Accepted(PlayerId),
+    AddedOrUpdated(Owned<[TeamDto]>),
+    Created(TeamId, TeamName),
+    /// A complete enumeration of joiners, for the team captain only.
+    Joiners(Box<[PlayerId]>),
+    Joining(TeamId),
+    /// The following is for the joiner only, to indicate which teams they are joining.
+    Joins(Box<[TeamId]>),
+    Kicked(PlayerId),
+    Left,
+    /// A complete enumeration of team members, in order (first is captain).
+    Members(Owned<[PlayerId]>),
+    Promoted(PlayerId),
+    Rejected(PlayerId),
+    Removed(Owned<[TeamId]>),
 }
 
 #[cfg(test)]
@@ -107,9 +154,9 @@ mod tests {
     use crate::velocity::Velocity;
     use bincode::{DefaultOptions, Options};
     use bitvec::array::BitArray;
-    use core_protocol::id::PlayerId;
-    use glam::vec2;
-    use rand::prelude::*;
+    use kodiak_common::glam::vec2;
+    use kodiak_common::rand::prelude::*;
+    use kodiak_common::PlayerId;
     use std::num::NonZeroU32;
 
     #[test]

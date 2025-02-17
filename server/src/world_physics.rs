@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entities::EntityIndex;
@@ -15,10 +15,10 @@ use common::velocity::Velocity;
 use common::world::{
     clamp_y_to_strict_area_border, outside_strict_area, strict_area_border_normal, ARCTIC,
 };
-use common_util::range::map_ranges;
-use glam::Vec2;
+use kodiak_server::glam::Vec2;
+use kodiak_server::map_ranges;
+use kodiak_server::rand::{thread_rng, Rng};
 use maybe_parallel_iterator::{IntoMaybeParallelIterator, MaybeParallelSort};
-use rand::Rng;
 use std::sync::{Arc, Mutex};
 
 /// Fate terminates the physics for a particular entity with a single fate.
@@ -57,7 +57,7 @@ impl World {
                     // Downgrade or die when expired.
                     if entity.ticks > data.lifespan {
                         return if entity.entity_type == EntityType::Hq {
-                            if entity.transform.position.y > ARCTIC {
+                            if entity.transform.position.y > ARCTIC || thread_rng().gen_bool(0.25) {
                                 // Prevent excessive buildup of HQ's
                                 Some((index, Fate::Remove(DeathReason::Unknown)))
                             } else {
@@ -74,9 +74,8 @@ impl World {
 
                     // Remove limited entities if player upgrades or is dead.
                     // Remove all of player's entities when player leaves.
-                    if (data.limited
-                        && (player.data.flags.upgraded || !player.data.status.is_alive()))
-                        || player.data.flags.left_game
+                    if (data.limited && (player.flags.upgraded || !player.status.is_alive()))
+                        || player.flags.left_game
                     {
                         return Some((index, Fate::Remove(DeathReason::Unknown)));
                     }
@@ -90,7 +89,7 @@ impl World {
                         let position_diff = if let Status::Alive {
                             aim_target: Some(aim_target),
                             ..
-                        } = entity.borrow_player().data.status
+                        } = entity.borrow_player().status
                         {
                             aim_target - entity.transform.position
                         } else {
@@ -156,7 +155,7 @@ impl World {
                                 }
                                 EntitySubKind::Mine => {
                                     // Delete mines when leaving populated team.
-                                    if entity.borrow_player().data.flags.left_populated_team {
+                                    if entity.borrow_player().flags.left_populated_team {
                                         return Some((index, Fate::Remove(DeathReason::Unknown)));
                                     }
                                 }
@@ -172,7 +171,7 @@ impl World {
                             delta,
                         );
 
-                        if entity.borrow_player().data.flags != Flags::default() {
+                        if entity.borrow_player().flags != Flags::default() {
                             reset_flags
                                 .lock()
                                 .unwrap()
@@ -186,9 +185,7 @@ impl World {
                             _ => 0.0,
                         };
 
-                        if rand::thread_rng()
-                            .gen_bool((1.0 - (1.0 - rate).powf(delta_seconds)) as f64)
-                        {
+                        if thread_rng().gen_bool((1.0 - (1.0 - rate).powf(delta_seconds)) as f64) {
                             barrel_spawns
                                 .lock()
                                 .unwrap()
@@ -374,7 +371,7 @@ impl World {
         }
 
         // Spawn barrels around oil platforms.
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         for mut position in barrel_spawns.into_inner().unwrap() {
             const BARREL_RADIUS: f32 = 120.0;
             position +=
@@ -419,7 +416,7 @@ impl World {
 
         // Clear flags at end so they can be asserted in Mutation::reload_limited_armament.
         for player in reset_flags.into_inner().unwrap() {
-            player.borrow_player_mut().data.flags = Flags::default();
+            player.borrow_player_mut().flags = Flags::default();
         }
     }
 }
@@ -433,7 +430,7 @@ mod tests {
     use common::terrain::Terrain;
     use common::ticks::Ticks;
     use core_protocol::id::PlayerId;
-    use game_server::player::{PlayerData, PlayerTuple};
+    use kodiak_server::{PlayerData, PlayerTuple};
     use std::num::NonZeroU32;
     use std::sync::Arc;
 

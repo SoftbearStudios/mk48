@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Angle is very sharable code. However, it is more game related than core_protocol related, so
+// Angle is very sharable code. However, it is more game related than kodiak_common related, so
 // it is imported from common.
-pub use common_util::ticks::TicksRepr;
-pub type Ticks = common_util::ticks::GenTicks<10>;
+pub use kodiak_common::TicksRepr;
+pub type Ticks = kodiak_common::GenTicks<10>;
 
 /// REGEN_DAMAGE controls how long it takes to regenerate one unit of damage.
 const REGEN_DAMAGE: Ticks = Ticks::from_whole_secs(60);

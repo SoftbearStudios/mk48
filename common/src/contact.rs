@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::altitude::Altitude;
@@ -8,15 +8,9 @@ use crate::guidance::Guidance;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::util::make_mut_slice;
-use crate::velocity::Velocity;
 use bitvec::prelude::*;
-use core_protocol::id::*;
-use serde::de::{DeserializeSeed, SeqAccess, Visitor};
-use serde::ser::SerializeTuple;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::fmt;
-use std::fmt::Formatter;
-use std::iter::repeat_with;
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::PlayerId;
 use std::sync::Arc;
 
 pub type ReloadsStorage = u32;
@@ -58,16 +52,21 @@ pub trait ContactTrait {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Encode, Decode)]
 pub struct Contact {
+    // TODO: hint velocity = 0
     transform: Transform,
+    // TODO: hint = 0
     altitude: Altitude,
     guidance: Guidance,
+    // TODO: hint = 0
     damage: Ticks,
     entity_type: Option<EntityType>,
     id: EntityId,
     player_id: Option<PlayerId>,
-    reloads: Option<BitArray<ReloadsStorage>>,
+    // TODO: no option + gamma
+    reloads: Option<ReloadsStorage>,
+    // TODO: no option + len 0
     turrets: Option<Arc<[Angle]>>,
 }
 
@@ -108,7 +107,7 @@ impl Contact {
             guidance,
             id,
             player_id,
-            reloads,
+            reloads: reloads.map(|a| a.into_inner()),
             transform,
             turrets,
         }
@@ -253,7 +252,7 @@ impl ContactTrait for Contact {
     #[inline]
     fn reloads(&self) -> &BitSlice<ReloadsStorage> {
         self.reloads.as_ref().map_or(&RELOADS_ARRAY_ZERO, |a| {
-            &a.as_bitslice()[0..self.entity_type.unwrap().data().armaments.len()]
+            &BitSlice::from_element(a)[0..self.entity_type.unwrap().data().armaments.len()]
         })
     }
 
@@ -277,444 +276,5 @@ impl ContactTrait for Contact {
     #[inline]
     fn turrets_known(&self) -> bool {
         self.turrets.is_some()
-    }
-}
-
-/// Useful for efficiently serializing contact.
-struct ContactHeader {
-    has_vel: bool,
-    has_alt: bool,
-    has_dir_target: bool,
-    has_vel_target: bool,
-    has_damage: bool,
-    has_type: bool,
-    has_player_id: bool,
-    has_reloads: bool,
-}
-
-impl ContactHeader {
-    fn as_bits(&self) -> u8 {
-        let bools = [
-            self.has_vel,
-            self.has_alt,
-            self.has_dir_target,
-            self.has_vel_target,
-            self.has_damage,
-            self.has_type,
-            self.has_player_id,
-            self.has_reloads,
-        ];
-
-        let mut bits: u8 = 0;
-        for (i, &bit) in bools.iter().enumerate() {
-            bits |= (bit as u8) << i;
-        }
-        bits
-    }
-
-    fn from_bits(bits: u8) -> Self {
-        let mut bools = [false; 8];
-        for (i, bit) in bools.iter_mut().enumerate() {
-            *bit = bits & (1 << i) != 0
-        }
-
-        let [has_vel, has_alt, has_dir_target, has_vel_target, has_damage, has_type, has_player_id, has_reloads] =
-            bools;
-
-        let header = Self {
-            has_vel,
-            has_alt,
-            has_dir_target,
-            has_vel_target,
-            has_damage,
-            has_type,
-            has_player_id,
-            has_reloads,
-        };
-        debug_assert_eq!(bits, header.as_bits());
-        header
-    }
-
-    fn tuple_len(&self) -> usize {
-        12 - self.as_bits().count_zeros() as usize
-    }
-}
-
-impl Serialize for Contact {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        ContactSerializer::serialize_to(self, serializer)
-    }
-}
-
-struct ContactSerializer<'a> {
-    c: &'a Contact,
-    h: ContactHeader,
-}
-
-impl<'a> ContactSerializer<'a> {
-    fn serialize_to<S>(c: &'a Contact, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        // Assert that all boats have turrets.
-        assert_eq!(c.turrets.is_some(), c.is_boat());
-
-        // Assert that, if reloads are known, so is entity type.
-        debug_assert!(!(c.reloads.is_some() && c.entity_type.is_none()), "{:?}", c);
-
-        let s = Self {
-            c,
-            h: ContactHeader {
-                has_type: c.entity_type.is_some(),
-                has_vel: c.transform.velocity != Velocity::ZERO,
-                has_alt: c.altitude != Altitude::ZERO,
-                has_dir_target: c.guidance.direction_target != c.transform.direction,
-                has_vel_target: c.guidance.velocity_target != c.transform.velocity,
-                has_damage: c.damage != Ticks::ZERO,
-                has_player_id: c.player_id.is_some(),
-                has_reloads: c.reloads.is_some(),
-            },
-        };
-
-        // Contains bits, variable tuple.
-        let mut header = serializer.serialize_tuple(2)?;
-        header.serialize_element(&s.h.as_bits())?;
-        header.serialize_element(&s)?;
-        header.end()
-    }
-}
-
-impl<'a> Serialize for ContactSerializer<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut tup = serializer.serialize_tuple(self.h.tuple_len())?;
-
-        // 3 required elements.
-        tup.serialize_element(&self.c.id)?;
-        tup.serialize_element(&self.c.transform.position)?;
-        tup.serialize_element(&self.c.transform.direction)?;
-
-        // 8 optional elements.
-        if self.h.has_vel {
-            tup.serialize_element(&self.c.transform.velocity)?;
-        }
-        if self.h.has_alt {
-            tup.serialize_element(&self.c.altitude)?;
-        }
-        if self.h.has_dir_target {
-            tup.serialize_element(&self.c.guidance.direction_target)?;
-        }
-        if self.h.has_vel_target {
-            tup.serialize_element(&self.c.guidance.velocity_target)?;
-        }
-        if self.h.has_damage {
-            tup.serialize_element(&self.c.damage)?;
-        }
-        if self.h.has_type {
-            tup.serialize_element(&self.c.entity_type.unwrap())?;
-        }
-        if self.h.has_player_id {
-            tup.serialize_element(&self.c.player_id)?;
-        }
-        if self.h.has_reloads {
-            // Round bits up to bytes.
-            let size: usize = (self.c.entity_type.unwrap().data().armaments.len() + 7) / 8;
-            let reloads = &self.c.reloads.unwrap().data.to_le_bytes()[..size];
-            if reloads.is_empty() {
-                tup.serialize_element(&())?;
-            } else {
-                tup.serialize_element(&ByteSerializer::new(reloads))?;
-            }
-        }
-
-        // 1 option or unit element.
-        if self.c.is_boat() {
-            let turrets = self.c.turrets.as_ref().unwrap();
-            if turrets.is_empty() {
-                tup.serialize_element(&())?;
-            } else {
-                tup.serialize_element(&KnownSizeSerializer::new(turrets))?;
-            }
-        } else {
-            tup.serialize_element(&())?;
-        }
-
-        tup.end()
-    }
-}
-
-/// Serializes a slice of bytes without length (known size).
-struct ByteSerializer<'a> {
-    items: &'a [u8],
-}
-
-impl<'a> ByteSerializer<'a> {
-    fn new(items: &'a [u8]) -> Self {
-        debug_assert!(!items.is_empty());
-        Self { items }
-    }
-}
-
-impl<'a> Serialize for ByteSerializer<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut tup = serializer.serialize_tuple(self.items.len())?;
-        for item in self.items {
-            tup.serialize_element(item)?;
-        }
-        tup.end()
-    }
-}
-
-struct KnownSizeSerializer<'a, T> {
-    items: &'a [T],
-}
-
-impl<'a, T> KnownSizeSerializer<'a, T> {
-    fn new(items: &'a [T]) -> Self {
-        debug_assert!(!items.is_empty());
-        Self { items }
-    }
-}
-
-impl<'a, T: Serialize> Serialize for KnownSizeSerializer<'a, T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut tup = serializer.serialize_tuple(self.items.len())?;
-        for item in self.items {
-            tup.serialize_element(item)?;
-        }
-        tup.end()
-    }
-}
-
-impl<'de> Deserialize<'de> for Contact {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        pub struct HeaderVisitor;
-
-        impl<'de> Visitor<'de> for HeaderVisitor {
-            type Value = Contact;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a header tuple")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let h = ContactHeader::from_bits(seq.next_element()?.unwrap());
-
-                let mut contact = Contact::default();
-                let d = ContactDeserializer { h, c: &mut contact };
-
-                seq.next_element_seed(d)?;
-
-                Ok(contact)
-            }
-        }
-
-        deserializer.deserialize_tuple(2, HeaderVisitor)
-    }
-}
-
-struct ContactDeserializer<'a> {
-    c: &'a mut Contact,
-    h: ContactHeader,
-}
-
-impl<'de, 'a> DeserializeSeed<'de> for ContactDeserializer<'a> {
-    type Value = ();
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_tuple(self.h.tuple_len(), self)
-    }
-}
-
-impl<'de, 'a> Visitor<'de> for ContactDeserializer<'a> {
-    type Value = ();
-
-    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_str("a contact tuple")
-    }
-
-    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        // 3 required elements.
-        self.c.id = seq.next_element()?.unwrap();
-        self.c.transform.position = seq.next_element()?.unwrap();
-        self.c.transform.direction = seq.next_element()?.unwrap();
-
-        // 8 optional elements.
-        if self.h.has_vel {
-            self.c.transform.velocity = seq.next_element()?.unwrap();
-        }
-        if self.h.has_alt {
-            self.c.altitude = seq.next_element()?.unwrap();
-        }
-        if self.h.has_dir_target {
-            self.c.guidance.direction_target = seq.next_element()?.unwrap();
-        } else {
-            self.c.guidance.direction_target = self.c.transform.direction;
-        }
-        if self.h.has_vel_target {
-            self.c.guidance.velocity_target = seq.next_element()?.unwrap();
-        } else {
-            self.c.guidance.velocity_target = self.c.transform.velocity
-        }
-        if self.h.has_damage {
-            self.c.damage = seq.next_element()?.unwrap();
-        }
-        if self.h.has_type {
-            self.c.entity_type = Some(seq.next_element()?.unwrap());
-        }
-        if self.h.has_player_id {
-            self.c.player_id = seq.next_element()?.unwrap();
-        }
-        if self.h.has_reloads {
-            // Must be after type is assigned.
-            // Round bits up to bytes.
-            let size: usize = (self.c.entity_type.unwrap().data().armaments.len() + 7) / 8;
-            if size == 0 {
-                let _: () = seq.next_element()?.unwrap();
-                self.c.reloads = Some(BitArray::ZERO)
-            } else {
-                let bytes = seq
-                    .next_element_seed(
-                        ByteDeserializer::<{ ReloadsStorage::BITS as usize / 8 }>::new(size),
-                    )?
-                    .unwrap();
-                self.c.reloads = Some(BitArray::from(ReloadsStorage::from_le_bytes(bytes)));
-            }
-        }
-
-        // 1 option or unit element.
-        if self.c.is_boat() {
-            // Must be after type is assigend.
-            let size = self.c.entity_type.unwrap().data().turrets.len();
-            if size == 0 {
-                let _: () = seq.next_element()?.unwrap();
-                self.c.turrets = Some(Arc::new([]))
-            } else {
-                self.c.turrets = Some(
-                    seq.next_element_seed(KnownSizeDeserializer::new(size))?
-                        .unwrap(),
-                );
-            }
-        } else {
-            let _: () = seq.next_element()?.unwrap();
-        }
-
-        Ok(())
-    }
-}
-
-struct ByteDeserializer<const MAX: usize> {
-    items: [u8; MAX],
-    size: usize,
-}
-
-impl<const MAX: usize> ByteDeserializer<MAX> {
-    fn new(size: usize) -> Self {
-        debug_assert!(size != 0);
-        Self {
-            items: [0; MAX],
-            size,
-        }
-    }
-}
-
-impl<'de, const MAX: usize> DeserializeSeed<'de> for ByteDeserializer<MAX> {
-    type Value = [u8; MAX];
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_tuple(self.size, self)
-    }
-}
-
-impl<'de, const MAX: usize> Visitor<'de> for ByteDeserializer<MAX> {
-    type Value = [u8; MAX];
-
-    fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_str("an array of bytes")
-    }
-
-    fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let mut i = 0;
-        while let Some(v) = seq.next_element()? {
-            self.items[i] = v;
-            i += 1;
-        }
-        Ok(self.items)
-    }
-}
-
-struct KnownSizeDeserializer<T> {
-    items: Arc<[T]>,
-}
-
-impl<'de, T: Deserialize<'de> + Default> KnownSizeDeserializer<T> {
-    fn new(size: usize) -> Self {
-        debug_assert!(size != 0);
-        Self {
-            items: repeat_with(T::default).take(size).collect(),
-        }
-    }
-}
-
-impl<'de, T: Deserialize<'de>> DeserializeSeed<'de> for KnownSizeDeserializer<T> {
-    type Value = Arc<[T]>;
-
-    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct ItemVisitor<I>(Arc<[I]>);
-
-        impl<'de, I: Deserialize<'de>> Visitor<'de> for ItemVisitor<I> {
-            type Value = Arc<[I]>;
-
-            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-                formatter.write_str("an array")
-            }
-
-            fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let items = Arc::get_mut(&mut self.0).unwrap();
-                let mut i = 0;
-                while let Some(v) = seq.next_element()? {
-                    items[i] = v;
-                    i += 1;
-                }
-                Ok(self.0)
-            }
-        }
-
-        deserializer.deserialize_tuple(self.items.len(), ItemVisitor(self.items))
     }
 }

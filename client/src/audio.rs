@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Game;
-use client_util::audio::AudioPlayer;
+use kodiak_client::{include_audio, AudioPlayer};
 
-engine_macros::include_audio!("/sprites_audio.mp3" "./sprites_audio.json");
+include_audio!("/data/sprites_audio.ogg" "./sprites_audio.json");
 
 impl Mk48Game {
     /// Gets the volume at a distance from the center of the screen.

@@ -1,16 +1,16 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::altitude::Altitude;
 use crate::protocol::TerrainUpdate;
 use crate::transform::DimensionTransform;
 use crate::world;
-use common_util::range::lerp;
 use fast_hilbert as hilbert;
-use glam::{vec2, vec4, UVec2, Vec2, Vec2Swizzles, Vec4, Vec4Swizzles};
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::glam::{vec2, vec4, UVec2, Vec2, Vec2Swizzles, Vec4, Vec4Swizzles};
+use kodiak_common::lerp;
+use kodiak_common::rand::{thread_rng, Rng};
 use lazy_static::lazy_static;
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -96,10 +96,11 @@ fn lookup_altitude_f32(data: f32) -> Altitude {
 ///
 /// TODO: Doesn't interpolate at all. Only returns multiples of 16, minus DATA_OFFSET.
 fn reverse_lookup_altitude(altitude: Altitude) -> u8 {
+    // TODO: Convert to `.partition_point(|a| a <= &altitude.0) - 1`
+    // https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=9d155aa8be197abf5d2ddb5b9c957df1
     (ALTITUDE_LUT
         .binary_search(&altitude.0)
-        .map_err(|n| n.saturating_sub(1))
-        .into_ok_or_err() as u8)
+        .unwrap_or_else(|n| n.saturating_sub(1)) as u8)
         .saturating_mul(16) //.saturating_sub(DATA_OFFSET)
 }
 
@@ -189,7 +190,7 @@ where
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
 pub struct ChunkId(pub u16, pub u16);
 
 /// Any terrain chunk can be represented as a `ChunkId`.
@@ -207,7 +208,7 @@ impl ChunkId {
     }
 
     #[inline]
-    fn from_coord(coord: Coord) -> Self {
+    pub fn from_coord(coord: Coord) -> Self {
         Self((coord.0 / CHUNK_SIZE) as u16, (coord.1 / CHUNK_SIZE) as u16)
     }
 
@@ -244,6 +245,7 @@ impl ChunkId {
 impl TryFrom<Vec2> for ChunkId {
     type Error = &'static str;
 
+    /// Likely broken?
     fn try_from(mut pos: Vec2) -> Result<Self, Self::Error> {
         pos *= 1.0 / (SCALE * CHUNK_SIZE as f32);
         pos += SIZE as f32 / 2.0;
@@ -361,6 +363,13 @@ impl Terrain {
             mutex: Mutex::new(()),
             generator,
         }
+    }
+
+    pub fn generated_chunks(&self) -> usize {
+        self.chunks
+            .iter()
+            .flat_map(|c| c.iter().filter(|c| c.is_some()))
+            .count()
     }
 
     /// Returns the maximum world radius to not exceed the terrain size, which is effectively a
@@ -837,7 +846,7 @@ impl Default for ChunkUpdate {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Encode, Decode)]
 pub struct SerializedChunk {
     is_update: bool,
     bytes: Arc<[u8]>, // TODO: use serde_bytes.
@@ -862,9 +871,8 @@ impl Chunk {
 
     /// Generates a new chunk by invoking generator for each pixel.
     pub fn new(chunk_id: ChunkId, generator: Generator) -> Box<Self> {
-        // Ensure array is initialized on the heap, not the stack.
-        // See https://github.com/rust-lang/rust/issues/28008#issuecomment-135032399
-        let mut chunk = box Self::zero();
+        // TODO: box syntax was removed...
+        let mut chunk = Box::new(Self::zero());
 
         let coord = chunk_id.as_coord();
         let x_offset = coord.0;
@@ -1314,7 +1322,7 @@ impl Iterator for Decompressor<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{thread_rng, Rng};
+    use kodiak_common::rand::{thread_rng, Rng};
     use test::{black_box, Bencher};
 
     #[bench]

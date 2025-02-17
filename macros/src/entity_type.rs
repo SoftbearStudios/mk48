@@ -1,5 +1,4 @@
-use common_util::angle::Angle;
-use common_util::range::map_ranges;
+use kodiak_common::{map_ranges, Angle, glam};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
@@ -39,12 +38,12 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                 fn set_string(string: &mut Option<String>, meta: Meta) {
                     let path = meta.path().get_ident().unwrap().to_string();
-                    let Meta::NameValue(MetaNameValue{ lit, .. }) = meta else {
-                    panic!("expected name value for {path}")
-                };
+                    let Meta::NameValue(MetaNameValue { lit, .. }) = meta else {
+                        panic!("expected name value for {path}")
+                    };
                     let Lit::Str(str_lit) = lit else {
-                    panic!("expected string literal {path}");
-                };
+                        panic!("expected string literal {path}");
+                    };
                     if string.is_some() {
                         panic!("duplicate key for {path}");
                     }
@@ -53,12 +52,12 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                 fn set_usize(int: &mut Option<usize>, meta: Meta) {
                     let path = meta.path().get_ident().unwrap().to_string();
-                    let Meta::NameValue(MetaNameValue{ lit, .. }) = meta else {
-                    panic!("expected name value for {path}")
-                };
+                    let Meta::NameValue(MetaNameValue { lit, .. }) = meta else {
+                        panic!("expected name value for {path}")
+                    };
                     let Lit::Int(int_lit) = lit else {
-                    panic!("expected int literal {path}");
-                };
+                        panic!("expected int literal {path}");
+                    };
                     if int.is_some() {
                         panic!("duplicate key for {path}");
                     }
@@ -70,7 +69,7 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                 fn set_f32(float: &mut Option<f32>, meta: Meta) {
                     let path = meta.path().get_ident().unwrap().to_string();
-                    let Meta::NameValue(MetaNameValue{ lit, .. }) = meta else {
+                    let Meta::NameValue(MetaNameValue { lit, .. }) = meta else {
                         panic!("expected name value for {path}")
                     };
                     let value = match lit {
@@ -90,7 +89,7 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                 fn set_angle(angle: &mut Option<Angle>, meta: Meta) {
                     let path = meta.path().get_ident().unwrap().to_string();
-                    let Meta::NameValue(MetaNameValue{ lit, .. }) = meta else {
+                    let Meta::NameValue(MetaNameValue { lit, .. }) = meta else {
                         panic!("expected name value for {path}")
                     };
                     let value = match lit {
@@ -111,8 +110,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                 fn set_bool(boolean: &mut bool, meta: Meta) {
                     let path = meta.path().get_ident().unwrap().to_string();
                     let Meta::Path(_) = meta else {
-                    panic!("expected simple path for {path}")
-                };
+                        panic!("expected simple path for {path}")
+                    };
                     if *boolean {
                         panic!("duplicate key for {path}");
                     }
@@ -167,8 +166,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                     "size" => {
                         for nested in list.nested {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta, found {:?}", nested);
-                        };
+                                panic!("expected nested meta, found {:?}", nested);
+                            };
 
                             let path = nested.path().get_ident().unwrap().to_string();
 
@@ -187,8 +186,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                     "offset" => {
                         for nested in list.nested {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta");
-                        };
+                                panic!("expected nested meta");
+                            };
 
                             let path = nested.path().get_ident().unwrap().to_string();
 
@@ -205,8 +204,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                     "props" => {
                         for nested in list.nested {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta");
-                        };
+                                panic!("expected nested meta");
+                            };
 
                             let path = nested.path().get_ident().unwrap().to_string();
 
@@ -245,8 +244,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                     "sensors" => {
                         for nested in list.nested {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta");
-                        };
+                                panic!("expected nested meta");
+                            };
 
                             let mut sensor = Sensor::default();
 
@@ -273,8 +272,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                         for (i, nested) in list.nested.into_iter().enumerate() {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta");
-                        };
+                                panic!("expected nested meta");
+                            };
 
                             let path = nested.path().get_ident().unwrap().to_string();
 
@@ -283,6 +282,9 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                                     armament._type = Some(path);
                                 }
                                 _ => match path.as_str() {
+                                    "reload_override" => {
+                                        set_f32(&mut armament.reload_override, nested);
+                                    }
                                     "forward" => {
                                         set_f32(&mut armament.position_forward, nested);
                                     }
@@ -392,8 +394,8 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
 
                         for nested in list.nested {
                             let NestedMeta::Meta(nested) = nested else {
-                            panic!("expected nested meta");
-                        };
+                                panic!("expected nested meta");
+                            };
 
                             let path = nested.path().get_ident().unwrap().to_string();
 
@@ -832,7 +834,7 @@ pub(crate) fn derive_entity_type(input: TokenStream) -> TokenStream {
                 })
             }
 
-            const DATA: &[EntityData] = &[
+            const DATA: &'static [EntityData] = &[
                 #(#entity_datas),*
             ];
         }
@@ -917,6 +919,7 @@ struct Sensor {
 #[derive(Clone, Debug, Default)]
 struct Armament {
     _type: Option<String>,
+    reload_override: Option<f32>,
     position_forward: Option<f32>,
     position_side: Option<f32>,
     angle: Option<Angle>,
@@ -1137,6 +1140,12 @@ impl quote::ToTokens for Entity {
 impl quote::ToTokens for Armament {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let entity_type = string_to_ident(self._type());
+        let reload_override = quote_option(self.reload_override.map(|f| {
+            let m = (f * 1000.0) as u32;
+            quote! {
+                Ticks::from_whole_millis(#m)
+            }
+        }));
         let hidden = self.hidden;
         let external = self.external;
         let vertical = self.vertical;
@@ -1149,6 +1158,7 @@ impl quote::ToTokens for Armament {
             quote! {
                 Armament{
                     entity_type: EntityType::#entity_type,
+                    reload_override: #reload_override,
                     hidden: #hidden,
                     external: #external,
                     vertical: #vertical,

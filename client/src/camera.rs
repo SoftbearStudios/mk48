@@ -1,8 +1,8 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use common::contact::{Contact, ContactTrait};
-use glam::Vec2;
+use kodiak_client::glam::Vec2;
 
 pub struct Mk48Camera {
     /// In meters.

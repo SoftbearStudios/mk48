@@ -1,9 +1,9 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::*;
 use common::death_reason::DeathReason;
-use glam::Vec2;
+use kodiak_server::glam::Vec2;
 use maybe_parallel_iterator::{
     IntoMaybeParallelIterator, IntoMaybeParallelRefIterator, IntoMaybeParallelRefMutIterator,
 };

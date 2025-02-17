@@ -1,21 +1,18 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::animation::Animation;
 use crate::audio::Audio;
 use crate::game::{Mk48Game, Mk48Layer};
 use crate::particle::Mk48Particle;
-use client_util::audio::AudioPlayer;
-use client_util::context::Context;
 use common::contact::{Contact, ContactTrait};
 use common::entity::EntityId;
 use common::entity::{EntityData, EntityKind, EntitySubKind};
 use common::ticks::Ticks;
-use common_util::angle::Angle;
-use common_util::range::map_ranges;
-use glam::Vec2;
-use js_hooks::console_log;
-use rand::{thread_rng, Rng};
+use kodiak_client::glam::Vec2;
+use kodiak_client::js_hooks::console_log;
+use kodiak_client::rand::{thread_rng, Rng};
+use kodiak_client::{map_ranges, Angle, AudioPlayer, ClientContext};
 use std::collections::HashMap;
 
 /// A contact that may be locally controlled by simulated elsewhere (by the server).
@@ -254,7 +251,7 @@ impl Mk48Game {
         &mut self,
         contact: &Contact,
         player_position: Vec2,
-        context: &Context<Mk48Game>,
+        context: &ClientContext<Mk48Game>,
         audio_layer: &AudioPlayer<Audio>,
     ) {
         let position_diff = contact.transform().position - player_position;

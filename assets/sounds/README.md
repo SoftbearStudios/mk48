@@ -1,6 +1,6 @@
 # Sound Credits
 
-Sounds are either licensed under CC0/public domain or via transfer of Copyright
+Sounds are either licensed under CC0/public domain or via transfer of Copyright.
 
 **Warning: Sounds in this directory are unprocessed and potentially very loud!**
 

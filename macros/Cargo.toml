@@ -1,9 +1,9 @@
 [package]
+authors = ["Softbear, Inc."]
+edition = "2021"
+license = "AGPL-3.0-or-later"
 name = "macros"
 version = "0.1.0"
-edition = "2021"
-authors = ["Softbear, Inc."]
-license = "AGPL-3.0-or-later"
 
 [lib]
 proc-macro = true
@@ -11,8 +11,7 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-common_util = {path = "../engine/common_util"}
-glam = "0.18"
+kodiak_common = { git = "https://github.com/softbearstudios/kodiak", tag="0.1.0" }
 quote = "1.0"
 syn = "1.0"
 litrs = "0.2"

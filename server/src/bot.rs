@@ -1,8 +1,6 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::complete_ref::CompleteRef;
-use crate::contact_ref::ContactRef;
 use crate::server::Server;
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -13,17 +11,16 @@ use common::guidance::Guidance;
 use common::protocol::*;
 use common::terrain;
 use common::terrain::Terrain;
-use common_util::range::gen_radius;
-use core_protocol::id::PlayerId;
-use game_server::game_service::{BotAction, GameArenaService};
-use game_server::player::{PlayerRepo, PlayerTuple};
-use glam::Vec2;
-use rand::rngs::ThreadRng;
-use rand::seq::IteratorRandom;
-use rand::{thread_rng, Rng};
-use std::sync::Arc;
+use kodiak_server::glam::Vec2;
+use kodiak_server::rand::rngs::ThreadRng;
+use kodiak_server::rand::seq::IteratorRandom;
+use kodiak_server::rand::{thread_rng, Rng};
+use kodiak_server::{
+    gen_radius, random_bot_name, ArenaService, ArenaSettingsDto, BotAction, Player, PlayerId,
+};
 
 /// Bot implements a ship-controlling AI that is, in many ways, equivalent to a player.
+#[derive(Debug)]
 pub struct Bot {
     /// Chance of attacking, randomized to improve variety of bots.
     aggression: f32,
@@ -79,7 +76,9 @@ impl Bot {
         &mut self,
         mut update: U,
         player_id: PlayerId,
+        settings: &ArenaSettingsDto<<Server as ArenaService>::ArenaSettings>,
     ) -> BotAction<Command> {
+        let aggression = self.aggression * settings.bot_aggression();
         let mut rng = thread_rng();
 
         let mut contacts = update.contacts();
@@ -305,7 +304,7 @@ impl Bot {
 
             self.was_submerging = if data.sub_kind == EntitySubKind::Submarine {
                 // More positive values mean want to surface, more negative values mean want to dive.
-                let surface_bias = health_percent - self.aggression * (1.0 / Self::MAX_AGGRESSION);
+                let surface_bias = health_percent - aggression * (1.0 / Self::MAX_AGGRESSION);
 
                 // Hysteresis.
                 if self.was_submerging && surface_bias >= 0.1 {
@@ -328,7 +327,7 @@ impl Bot {
                 aim_target: best_firing_solution.map(|solution| solution.1 + self.aim_bias),
                 active: health_percent >= 0.5,
                 fire: best_firing_solution
-                    .filter(|_| rng.gen_bool(self.aggression as f64))
+                    .filter(|_| rng.gen_bool((aggression as f64).min(1.0)))
                     .map(|sol| Fire {
                         armament_index: sol.0,
                     }),
@@ -336,7 +335,7 @@ impl Bot {
                 hint: None,
             });
 
-            if rng.gen_bool(self.aggression as f64) && data.level < self.level_ambition {
+            if rng.gen_bool(aggression.min(0.25) as f64) && data.level < self.level_ambition {
                 // Upgrade, if possible.
                 if let Some(entity_type) = boat_type
                     .upgrade_options(update.score(), true)
@@ -352,6 +351,7 @@ impl Bot {
             BotAction::Quit
         } else {
             BotAction::Some(Command::Spawn(Spawn {
+                alias: Some(random_bot_name()),
                 entity_type: EntityType::spawn_options(0, true)
                     .choose(&mut rng)
                     .expect("there must be at least one entity type to spawn as"),
@@ -360,23 +360,19 @@ impl Bot {
     }
 }
 
-impl game_server::game_service::Bot<Server> for Bot {
-    type Input<'a> = CompleteRef<'a, impl Iterator<Item = ContactRef<'a>>>;
-
-    fn get_input<'a>(
-        server: &'a Server,
-        player: &'a Arc<PlayerTuple<Server>>,
-        _players: &'a PlayerRepo<Server>,
-    ) -> Self::Input<'a> {
-        server.world.get_player_complete(player)
-    }
-
+impl kodiak_server::Bot<Server> for Bot {
     fn update(
-        &mut self,
-        update: Self::Input<'_>,
+        server: &Server,
         player_id: PlayerId,
-        _players: &PlayerRepo<Server>,
-    ) -> BotAction<<Server as GameArenaService>::GameRequest> {
-        self.update(update, player_id)
+        player: &mut Player<Server>,
+        settings: &ArenaSettingsDto<<Server as ArenaService>::ArenaSettings>,
+    ) -> BotAction<<Server as ArenaService>::GameRequest> {
+        let player_tuple = server.player.get(player_id).unwrap();
+        let update = server.world.get_player_complete(player_tuple);
+        player
+            .inner
+            .bot_mut()
+            .unwrap()
+            .update(update, player_id, settings)
     }
 }

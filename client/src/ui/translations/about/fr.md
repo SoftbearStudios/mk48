@@ -1,0 +1,2 @@
+# Description
+Mk48.io est un jeu de combat naval multijoueur en ligne créé par Softbear Games. Le but est de faire évoluer votre navire en collectant des caisses et en coulant d'autres navires. Il existe [# navires](/ships/) et [#](weapons) types d’armes à choisir, répartis sur [# niveaux progressivement plus puissants](/levels/).

@@ -1,11 +1,15 @@
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::entity::EntityType;
 use crate::ticks::Ticks;
-use common_util::angle::Angle;
-use glam::Vec2;
+use kodiak_common::glam::Vec2;
+use kodiak_common::Angle;
 
 #[derive(Clone, Debug)]
 pub struct Armament {
     pub entity_type: EntityType,
+    pub reload_override: Option<Ticks>,
     pub hidden: bool,
     pub external: bool,
     pub vertical: bool,
@@ -17,7 +21,8 @@ pub struct Armament {
 
 impl Armament {
     pub fn reload(&self) -> Ticks {
-        self.entity_type.data().reload
+        self.reload_override
+            .unwrap_or_else(|| self.entity_type.data().reload)
     }
 
     pub fn position(&self) -> Vec2 {
@@ -27,6 +32,8 @@ impl Armament {
     /// is_similar_to reports if two armaments are similar enough to reload
     /// together (presumably will be grouped in GUI).
     pub fn is_similar_to(&self, other: &Self) -> bool {
-        self.entity_type == other.entity_type && self.turret == other.turret
+        let ret = self.entity_type == other.entity_type && self.turret == other.turret;
+        debug_assert!(!ret || self.reload_override == other.reload_override);
+        ret
     }
 }

@@ -1,11 +1,11 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::animation::Animation;
 use common::altitude::Altitude;
 use common::entity::{EntityId, EntityKind, EntitySubKind, EntityType};
 use common::transform::Transform;
-use glam::Vec2;
+use kodiak_client::glam::Vec2;
 use std::cmp::Ordering;
 
 /// Rendering information of a sprite that may be sorted relative to other sprites.

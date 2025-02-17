@@ -1,17 +1,16 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::ticks::{Ticks, TicksRepr};
-use common_util::range::map_ranges;
-use core_protocol::serde_util::{F32Visitor, I8Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::map_ranges;
 use std::cmp::Ordering;
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 type AltitudeRepr = i8;
 
-#[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
 pub struct Altitude(pub AltitudeRepr);
 
 #[allow(dead_code)]
@@ -188,33 +187,5 @@ impl Mul<Ticks> for Altitude {
 impl fmt::Debug for Altitude {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_meters())
-    }
-}
-
-impl Serialize for Altitude {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            serializer.serialize_f32(self.to_meters())
-        } else {
-            serializer.serialize_i8(self.0)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Altitude {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if deserializer.is_human_readable() {
-            deserializer
-                .deserialize_f32(F32Visitor)
-                .map(Self::from_meters)
-        } else {
-            deserializer.deserialize_i8(I8Visitor).map(Self)
-        }
     }
 }

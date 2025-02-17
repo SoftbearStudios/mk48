@@ -1,13 +1,16 @@
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::entities::EntityIndex;
 use crate::entity::Entity;
 use crate::world::World;
 use common::altitude::Altitude;
 use common::entity::EntityKind;
 use common::world::ARCTIC;
-use glam::Vec2;
 use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_polygon_mut, Blend};
 use imageproc::point::Point;
+use kodiak_server::glam::Vec2;
 use maybe_parallel_iterator::IntoMaybeParallelIterator;
 use std::sync::Mutex;
 
@@ -97,9 +100,8 @@ mod tests {
     use common::protocol::{Command, Spawn};
     use common::ticks::Ticks;
     use common::util::level_to_score;
-    use core_protocol::id::PlayerId;
-    use game_server::player::{PlayerData, PlayerTuple};
     use glam::Vec2;
+    use kodiak_server::{PlayerData, PlayerId, PlayerTuple};
     use rand::prelude::IteratorRandom;
     use rand::{thread_rng, Rng};
     use server_util::generate_id::generate_id;

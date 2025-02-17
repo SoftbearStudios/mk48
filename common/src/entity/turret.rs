@@ -1,6 +1,9 @@
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::entity::EntityType;
-use common_util::angle::Angle;
-use glam::Vec2;
+use kodiak_common::glam::Vec2;
+use kodiak_common::Angle;
 
 #[derive(Clone, Debug)]
 pub struct Turret {

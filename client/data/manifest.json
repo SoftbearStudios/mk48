@@ -1,0 +1,57 @@
+{
+  "name": "mk48.io",
+  "short_name": "mk48.io",
+  "description": "Mk48.io is a multiplayer ship combat game. It is free to play online in a web browser with no install required. Start with a small warship and defeat rival players or collect floating barrels to earn upgrades to increasingly larger battleships, submarines, and aircraft carriers. Avoid torpedos and incoming shells. Team and chat with other players.",
+  "categories": [
+    "games"
+  ],
+  "background_color": "#00487d",
+  "theme_color": "#00487d",
+  "display": "standalone",
+  "orientation": "landscape",
+  "id": "/mk48",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/data/256x256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    },
+    {
+      "src": "/data/mask256x256.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/data/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/data/512x340.png",
+      "sizes": "512x340",
+      "type": "image/png"
+    },
+    {
+      "src": "/data/1280x720.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    },
+    {
+      "src": "/data/1920x1080.png",
+      "sizes": "1920x1080",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/data/ss1920x1080.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "handle_links": "not-preferred",
+  "ms_start_compatible": true
+}

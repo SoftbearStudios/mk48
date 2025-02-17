@@ -1,16 +1,15 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::ticks::{Ticks, TicksRepr};
-use core_protocol::serde_util::{F32Visitor, I16Visitor};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use kodiak_common::bitcode::{self, *};
 use std::fmt;
 use std::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
 type VelocityRepr = i16;
 
 // Note: pub(crate) is intentional.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
 pub struct Velocity(pub VelocityRepr);
 
 /// Velocity efficiently stores a signed speed.
@@ -168,32 +167,6 @@ impl Mul<Ticks> for Velocity {
 impl fmt::Debug for Velocity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_mps())
-    }
-}
-
-impl Serialize for Velocity {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            serializer.serialize_f32(self.to_mps())
-        } else {
-            serializer.serialize_i16(self.0)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Velocity {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if deserializer.is_human_readable() {
-            deserializer.deserialize_f32(F32Visitor).map(Self::from_mps)
-        } else {
-            deserializer.deserialize_i16(I16Visitor).map(Self)
-        }
     }
 }
 

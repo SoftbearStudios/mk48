@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::entity::Entity;
@@ -35,6 +35,12 @@ impl Arena {
             delay_recycle,
             counts: vec![0; EntityType::iter().count()],
         }
+    }
+
+    pub fn count_all(&self) -> usize {
+        EntityType::iter()
+            .map(|t| self.count(t) as usize)
+            .sum::<usize>()
     }
 
     /// count returns the number of entities with a certain type.

@@ -1,49 +1,37 @@
 [package]
-name = "client"
-version = "0.1.0"
 authors = ["Softbear, Inc."]
 edition = "2021"
 license = "AGPL-3.0-or-later"
+name = "client"
+version = "0.1.0"
 
 [profile.release]
 lto = "fat"
 opt-level = 's'
 codegen-units = 1
 
+[patch.crates-io]
+yew-router = { git = "https://github.com/finnbear/yew", package = "yew-router", branch = "dynamic_basename_2_hack_2" }
+
 [dependencies]
-arrayvec = "0.7"
 bytemuck = "1.9"
-client_util = { path = "../engine/client_util" }
 common = { path = "../common", features = [ "js" ] }
-common_util = { path = "../engine/common_util", features = [ "rand" ] }
 console_error_panic_hook = "0.1"
-core_protocol = { path = "../engine/core_protocol"}
-engine_macros = { path = "../engine/engine_macros" }
 getrandom = { version = "0.2", features = [ "js" ] }
-glam = { version = "0.18", features = [ "scalar-math" ] }
 instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
 itertools = "0.10"
-js-sys = "0.3"
-js_hooks = { path = "../engine/js_hooks" }
+kodiak_client = { features = [ "audio", "music", "high_contrast_setting", "renderer_srgb", "renderer_webgl2", "renderer2d", "renderer3d_shadow" ], git = "https://github.com/softbearstudios/kodiak", tag="0.1.0" }
 lazy_static = "1.4"
-rand = "0.8"
-renderer = { path = "../engine/renderer", features = [ "srgb", "webgl2" ] }
-renderer2d = { path = "../engine/renderer2d" }
-renderer3d = { path = "../engine/renderer3d", features = [ "shadow" ] }
-serde = "1.0"
-serde-wasm-bindgen = "0.3"
+minicdn = { version = "0.2.1", default-features = false } # Version and features set via core_protocol.
 serde_json = "1.0"
-sprite_sheet = { path = "../engine/sprite_sheet" }
-stylist = "0.11"
-wasm-bindgen = { version = "0.2", features = [ "serde-serialize" ] }
-wasm-bindgen-futures = "0.4"
-yew = "0.20"
-yew-router = "0.17"
-yew_frontend = { path = "../engine/yew_frontend" }
-yew_icons = { version = "0.7", features = [ "BootstrapSnow2", "BootstrapLockFill", "BootstrapUnlockFill", "OcticonsVideo16" ] }
+strum_macros = "0.25"
+strum = "0.25"
+stylist = "0.13"
+yew = "0.21"
+yew_icons = { version = "0.8", features = [ "BootstrapSnow2", "BootstrapLockFill", "BootstrapUnlockFill", "OcticonsVideo16" ] }
 
 [dependencies.web-sys]
-version = "0.3"
+version = "0.3.72"
 features = [
     'CssStyleDeclaration',
     'HtmlDivElement',

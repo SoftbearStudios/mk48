@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Params;
@@ -11,11 +11,13 @@ use common::terrain::{Coord, RelativeCoord, Terrain};
 use common::transform::Transform;
 use common::velocity::Velocity;
 use common::{terrain, world};
-use common_util::angle::{Angle, AngleRepr};
-use glam::{uvec2, vec2, vec3, Mat3, Mat4, Quat, UVec2, Vec2, Vec3};
-use renderer::{DefaultRender, Layer, RenderLayer, Renderer, Shader, Texture, TextureFormat};
-use renderer2d::{BackgroundLayer, Camera2d, Invalidation, Mask};
-use renderer3d::{Aabb3, Camera3d, Orthographic, ShadowParams, ShadowResult};
+use kodiak_client::glam::{uvec2, vec2, vec3, Mat3, Mat4, Quat, UVec2, Vec2, Vec3};
+use kodiak_client::renderer::{
+    include_shader, DefaultRender, Layer, RenderLayer, Renderer, Shader, Texture, TextureFormat,
+};
+use kodiak_client::renderer2d::{BackgroundLayer, Camera2d, Invalidation};
+use kodiak_client::renderer3d::{Aabb3, Camera3d, Orthographic, ShadowParams, ShadowResult};
+use kodiak_client::{Angle, AngleRepr, Mask2d};
 
 // Bicubic interpolation in shader needs 4x4 neighbor pixels.
 const KERNEL: u32 = 4;
@@ -85,11 +87,12 @@ pub struct Mk48BackgroundLayer {
     detail_texture: Texture,
     detail_load: UVec2, // Dimensions to know when detail texture is done loading.
     pub cache_frame: bool,
+    pub dynamic_waves: bool,
     last_view: TerrainView,
     last_terrain: Vec<u8>,
     last_vegetation: Vec<SortableSprite>,
     invalidation: Option<Invalidation>,
-    shadow_setting: ShadowSetting,
+    pub shadow_setting: ShadowSetting,
 }
 
 impl Mk48BackgroundLayer {
@@ -114,6 +117,7 @@ impl Mk48BackgroundLayer {
 
         // Don't cache shader because it's dynamic.
         let shader = Shader::new(renderer, include_str!("./shaders/background.vert"), &frag);
+        #[allow(deprecated)]
         let shadow_shader = renderer.create_shader(
             include_str!("shaders/background_shadow.vert"),
             include_str!("shaders/shadow.frag"),
@@ -124,7 +128,7 @@ impl Mk48BackgroundLayer {
 
         let detail_texture = Texture::load(
             renderer,
-            "/textures.png",
+            "/data/textures.png",
             TextureFormat::COLOR_RGBA_STRAIGHT,
             Some([184, 73, 235]),
             true,
@@ -133,9 +137,11 @@ impl Mk48BackgroundLayer {
 
         Mk48BackgroundLayer {
             background: inner,
+            // If this is changed, also change `self.animations()`.
             cache_frame: !animations,
             detail_load,
             detail_texture,
+            dynamic_waves,
             height_texture,
             invalidation: None,
             last_terrain: vec![],
@@ -146,6 +152,11 @@ impl Mk48BackgroundLayer {
             shadow_shader,
             tesselation: TessellationLayer::new(renderer),
         }
+    }
+
+    /// Whether animations are on.
+    pub fn animations(&self) -> bool {
+        !self.cache_frame
     }
 
     // Update the background with terrain.
@@ -206,7 +217,7 @@ impl Mk48BackgroundLayer {
                 let corner = view.corner().as_uvec2();
 
                 // Invalidate a square around each point (for shader interpolation).
-                let mask = Mask::new_expanded(
+                let mut mask = Mask2d::new_expanded(
                     updated
                         .into_iter()
                         .flat_map(|chunk_id| {
@@ -232,8 +243,10 @@ impl Mk48BackgroundLayer {
                     KERNEL,
                 );
 
+                // TODO: used to use `into_rects` but that was removed.
                 let rects: Vec<_> = mask
-                    .into_rects()
+                    .take_rects()
+                    .into_iter()
                     .map(|(start, end)| {
                         let start = Coord::from_uvec2(start + corner);
                         let end = Coord::from_uvec2(end + corner);
@@ -398,10 +411,7 @@ pub struct Mk48OverlayLayer {
 impl DefaultRender for Mk48OverlayLayer {
     fn new(renderer: &Renderer) -> Self {
         let inner = BackgroundLayer::new(renderer);
-        let shader = renderer.create_shader(
-            include_str!("./shaders/overlay.vert"),
-            include_str!("./shaders/overlay.frag"),
-        );
+        let shader = include_shader!(renderer, "overlay");
 
         Self {
             inner,

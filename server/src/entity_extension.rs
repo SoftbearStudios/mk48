@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use common::altitude::Altitude;
@@ -6,7 +6,7 @@ use common::angle::Angle;
 use common::entity::*;
 use common::ticks::Ticks;
 use common::util::make_mut_slice;
-use common_util::alloc::{arc_default_n, box_default_n};
+use kodiak_server::{arc_default_n, box_default_n};
 use std::iter::FromIterator;
 use std::sync::Arc;
 

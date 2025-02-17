@@ -1,16 +1,16 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::angle::Angle;
 use crate::entity::{EntityData, EntityKind, EntitySubKind};
 use crate::guidance::Guidance;
 use crate::velocity::Velocity;
-use glam::Vec2;
-use serde::{Deserialize, Serialize};
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::glam::Vec2;
+use kodiak_common::Angle;
 use std::ops::Add;
 
 /// Transform stores a position, direction, and single-component velocity (along the direction).
-#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Encode, Decode)]
 pub struct Transform {
     pub position: Vec2,
     pub direction: Angle,

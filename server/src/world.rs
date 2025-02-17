@@ -1,15 +1,16 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::arena::Arena;
 use crate::entities::{Entities, EntityIndex};
 use crate::entity::Entity;
-use crate::noise::noise_generator;
+use crate::terrain_pool::new_terrain;
 use crate::world_mutation::Mutation;
 use common::death_reason::DeathReason;
 use common::entity::{EntityKind, EntityType};
 use common::terrain::Terrain;
 use common::ticks::Ticks;
+use kodiak_server::PlayerId;
 
 /// A game world of variable radius, consisting of entities and a terrain.
 pub struct World {
@@ -25,16 +26,16 @@ impl World {
         Self {
             arena: Arena::new(),
             entities: Entities::new(),
-            terrain: Terrain::with_generator(noise_generator),
+            terrain: new_terrain(),
             radius: initial_radius,
         }
     }
 
     /// Updates the internals of the world, spawning and updating existing entities.
-    pub fn update(&mut self, delta: Ticks) {
+    pub fn update(&mut self, delta: Ticks, tally_kill: &mut impl FnMut(PlayerId, PlayerId)) {
         self.spawn_statics(delta);
         self.physics(delta);
-        self.physics_radius(delta);
+        self.physics_radius(delta, tally_kill);
         self.arena.recycle();
 
         let total_visual_area = EntityType::iter()
@@ -88,7 +89,7 @@ impl World {
     pub fn target_radius(total_visual_area: f32) -> f32 {
         (total_visual_area * Self::BOAT_VISUAL_OVERLAP / std::f32::consts::PI)
             .sqrt()
-            .clamp(400.0, Self::max_radius())
+            .clamp(1000.0, Self::max_radius())
     }
 
     fn max_radius() -> f32 {

@@ -1,16 +1,16 @@
 [package]
+authors = ["Softbear, Inc."]
+edition = "2021"
+license = "AGPL-3.0-or-later"
 name = "server"
 version = "0.1.0"
-edition = "2018"
-authors = ["Softbear, Inc."]
-license = "AGPL-3.0-or-later"
 
 [profile.release]
 debug = true
 #lto = true
 #codegen-units=1
 
-#[profile.release.package.game_server]
+#[profile.release.package.kodiak_server]
 #debug = true
 
 [profile.release.package."*"]
@@ -33,28 +33,19 @@ opt-level = 3
 opt-level = 3
 
 [dependencies]
-glam = { version = "0.18", features = ["serde"] }
-serde = "1.0"
-serde_json = "1.0"
-serde_bytes = "0.11"
 atomic_refcell = "0.1"
-arrayvec = {version = "0.7", features = [ "serde" ] }
-rand = "0.8"
-idalloc = "0.1"
-noise = { version = "0.7", default-features = false }
-common = {path="../common", version="0.1", features=["server"]}
-common_util = {path="../engine/common_util", features=["rand"]}
-game_server = {path="../engine/game_server"}
-core_protocol = {path="../engine/core_protocol"}
-server_util = {path="../engine/server_util"}
-maybe_parallel_iterator = {version = "0.10.0", features = []}
-ringbuffer = "0.8"
-log = {version = "0.4", features = [ "release_max_level_info" ] }
-env_logger = "0.9"
-lazy_static = "1"
-rustrict = {version = "0", features=["customize"], default-features=false}
 bitvec = "1.0.0"
-minicdn = "0.1"
+common = {path="../common", version="0.1", features=["server"]}
+env_logger = "0.9"
+idalloc = "0.1"
+kodiak_server = { features = [ "glam_serde", "log_release_max_level_info" ], git = "https://github.com/softbearstudios/kodiak", tag="0.1.0" }
+lazy_static = "1"
+maybe_parallel_iterator = {version = "0.10.0", features = []}
+noise = { version = "0.7", default-features = false }
+ringbuffer = "0.8"
+serde = "1.0"
+serde_bytes = "0.11"
+serde_json = "1.0"
 tokio = "1"
 
 [dev-dependencies]

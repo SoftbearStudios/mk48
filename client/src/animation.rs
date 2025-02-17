@@ -1,7 +1,7 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use glam::Vec2;
+use kodiak_client::glam::Vec2;
 
 /// Tracks the state of an animation e.g. explosion.
 pub struct Animation {

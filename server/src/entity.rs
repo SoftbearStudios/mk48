@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::arena::Arena;
@@ -6,7 +6,6 @@ use crate::collision::{radius_collision, sat_collision};
 use crate::entities::*;
 use crate::entity_extension::EntityExtension;
 use crate::player::*;
-use crate::server::Server;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use common::altitude::Altitude;
 use common::angle::Angle;
@@ -17,8 +16,8 @@ use common::terrain::*;
 use common::ticks::{Ticks, TicksRepr};
 use common::transform::{DimensionTransform, Transform};
 use common::util::hash_u32_to_f32;
-use game_server::player::{PlayerData, PlayerTuple};
-use glam::Vec2;
+use kodiak_server::glam::Vec2;
+use kodiak_server::TicksTrait;
 use std::ptr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -35,7 +34,7 @@ pub struct Entity {
     /// Unique id, useful for communicating contacts between client and server.
     pub id: EntityId,
     /// All boats, aircraft, decoys, weapons, and paid coins have `Some`, everything else has `None`.
-    pub player: Option<Arc<PlayerTuple<Server>>>,
+    pub player: Option<Arc<PlayerTuple>>,
     /// When it represents damage, it is less than or equal to self.data().max_health(). Otherwise,
     /// it represents lifetime (for entities with finite lifespan).
     pub ticks: Ticks,
@@ -48,7 +47,7 @@ pub fn unset_entity_id() -> EntityId {
 
 impl Entity {
     /// Allocates a new entity with some blank fields that should probably be populated, e.g. transform.
-    pub fn new(entity_type: EntityType, player: Option<Arc<PlayerTuple<Server>>>) -> Self {
+    pub fn new(entity_type: EntityType, player: Option<Arc<PlayerTuple>>) -> Self {
         Self {
             transform: Transform::default(),
             guidance: Guidance::new(),
@@ -127,20 +126,25 @@ impl Entity {
         }
 
         // Penalty for upgrading with fired weapons to nerf upgrading during fights (see #168).
-        total_reload = total_reload * 3 / 2;
+        total_reload = total_reload * 2;
 
         // Change the extension to correspond with the new type.
         extension.change_entity_type(entity_type);
 
         // Finish by (un)reloading.
-        for (i, reload) in extension.reloads_mut().iter_mut().enumerate() {
-            let armament = &new_data.armaments[i];
-            if !armament.entity_type.data().limited {
-                let to_consume = (armament.reload().0 as u32).min(total_reload);
-                *reload = Ticks::from_repr(to_consume as TicksRepr);
-                total_reload -= to_consume;
-                if total_reload == 0 {
-                    break;
+        'outer: for parity in [0, 1] {
+            for (i, reload) in extension.reloads_mut().iter_mut().enumerate() {
+                if i % 2 != parity {
+                    continue;
+                }
+                let armament = &new_data.armaments[i];
+                if !armament.entity_type.data().limited {
+                    let to_consume = (armament.reload().0 as u32).min(total_reload);
+                    *reload = Ticks::from_repr(to_consume as TicksRepr);
+                    total_reload -= to_consume;
+                    if total_reload == 0 {
+                        break 'outer;
+                    }
                 }
             }
         }
@@ -157,11 +161,11 @@ impl Entity {
         let mut player = self.borrow_player_mut();
 
         // Set status to alive.
-        assert!(!player.data.status.is_alive());
-        player.data.status = Status::new_alive(i);
+        assert!(!player.status.is_alive());
+        player.status = Status::new_alive(i);
 
         // Clear flags when player's boat is spawned.
-        player.data.flags = Flags::default();
+        player.flags = Flags::default();
         drop(player);
 
         // Change entity type (allocate turrets/reloads).
@@ -174,7 +178,7 @@ impl Entity {
     pub fn set_index(&mut self, i: EntityIndex) {
         debug_assert!(self.is_boat());
 
-        self.borrow_player_mut().data.status.set_entity_index(i);
+        self.borrow_player_mut().status.set_entity_index(i);
     }
 
     /// Set's player to dead, removing reference to self, if applicable.
@@ -185,7 +189,7 @@ impl Entity {
         let visual_range = self.data().sensors.visual.range;
 
         let mut player = self.borrow_player_mut();
-        player.data.status = if player.data.flags.left_game {
+        player.status = if player.flags.left_game {
             Status::Spawning
         } else {
             Status::Dead {
@@ -200,13 +204,11 @@ impl Entity {
     /// Borrows player immutably.
     /// Must be manually serialized to avoid contention.
     /// Panics if entity doesn't have player.
-    pub fn borrow_player(&self) -> AtomicRef<PlayerData<Server>> {
+    pub fn borrow_player(&self) -> AtomicRef<TempPlayer> {
         Self::borrow_player_inner(&self.player)
     }
 
-    fn borrow_player_inner(
-        player: &Option<Arc<PlayerTuple<Server>>>,
-    ) -> AtomicRef<PlayerData<Server>> {
+    fn borrow_player_inner(player: &Option<Arc<PlayerTuple>>) -> AtomicRef<TempPlayer> {
         player
             .as_ref()
             .expect("only call on entities that are guaranteed to have players")
@@ -216,13 +218,13 @@ impl Entity {
     /// Borrows player mutably.
     /// Must be manually serialized to avoid contention.
     /// Panics if entity doesn't have player.
-    pub fn borrow_player_mut(&mut self) -> AtomicRefMut<PlayerData<Server>> {
+    pub fn borrow_player_mut(&mut self) -> AtomicRefMut<TempPlayer> {
         Self::borrow_player_mut_inner(&mut self.player)
     }
 
     pub fn borrow_player_mut_inner(
-        player: &mut Option<Arc<PlayerTuple<Server>>>,
-    ) -> AtomicRefMut<PlayerData<Server>> {
+        player: &mut Option<Arc<PlayerTuple>>,
+    ) -> AtomicRefMut<TempPlayer> {
         player
             .as_ref()
             .expect("only call on entities that are guaranteed to have players")
@@ -332,8 +334,7 @@ impl Entity {
 
     /// Updates the aim of all turrets, assuming delta_seconds have elapsed.
     pub fn update_turret_aim(&mut self, delta_seconds: f32) {
-        let aim_target = if let Status::Alive { aim_target, .. } = &self.borrow_player().data.status
-        {
+        let aim_target = if let Status::Alive { aim_target, .. } = &self.borrow_player().status {
             *aim_target
         } else {
             panic!("boat's player was not alive in update_turret_aim()");
@@ -555,7 +556,7 @@ impl Entity {
         self.is_friendly_to_player(other.player.as_deref())
     }
 
-    pub fn is_friendly_to_player(&self, other_player: Option<&PlayerTuple<Server>>) -> bool {
+    pub fn is_friendly_to_player(&self, other_player: Option<&PlayerTuple>) -> bool {
         let (player, other_player) = match (self.player.as_ref(), other_player) {
             (Some(player), Some(other_player)) => (player, other_player),
             _ => return false,

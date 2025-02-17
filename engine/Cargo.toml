@@ -1,3 +1,0 @@
-[workspace]
-members = ["*", "renderer2d/examples"]
-exclude = ["game_terraform", "js", "target", "terraform", ".cargo", ".git"]

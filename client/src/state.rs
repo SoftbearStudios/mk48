@@ -1,14 +1,14 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::animation::Animation;
 use crate::interpolated_contact::InterpolatedContact;
-use client_util::apply::Apply;
 use common::contact::Contact;
 use common::death_reason::DeathReason;
 use common::entity::EntityId;
-use common::protocol::Update;
+use common::protocol::{TeamDto, TeamUpdate, Update};
 use common::terrain::Terrain;
+use kodiak_client::{owned_into_box, owned_into_iter, Apply, PlayerId, TeamId};
 use std::collections::HashMap;
 
 /// State associated with game server connection. Reset when connection is reset.
@@ -21,6 +21,11 @@ pub struct Mk48State {
     pub terrain: Terrain,
     pub world_radius: f32,
     terrain_reset: bool,
+    pub teams: HashMap<TeamId, TeamDto>,
+    /// Ordered, i.e. first is captain.
+    pub members: Box<[PlayerId]>,
+    pub joiners: Box<[PlayerId]>,
+    pub joins: Box<[TeamId]>,
 }
 
 impl Default for Mk48State {
@@ -35,6 +40,10 @@ impl Default for Mk48State {
             // Keep border off splash screen by assuming radius.
             world_radius: 10000.0,
             terrain_reset: false,
+            teams: Default::default(),
+            members: Default::default(),
+            joiners: Default::default(),
+            joins: Default::default(),
         }
     }
 }
@@ -72,6 +81,31 @@ impl Apply<Update> for Mk48State {
 
         self.world_radius = update.world_radius;
         self.score = update.score;
+
+        for update in update.team {
+            match update {
+                TeamUpdate::Members(members) => {
+                    self.members = owned_into_box(members);
+                }
+                TeamUpdate::Joiners(joiners) => {
+                    self.joiners = joiners;
+                }
+                TeamUpdate::Joins(joins) => {
+                    self.joins = joins;
+                }
+                TeamUpdate::AddedOrUpdated(added_or_updated) => {
+                    for team in owned_into_iter(added_or_updated) {
+                        self.teams.insert(team.team_id, team);
+                    }
+                }
+                TeamUpdate::Removed(removed) => {
+                    for team_id in removed.iter() {
+                        self.teams.remove(team_id);
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 
     fn reset(&mut self) {

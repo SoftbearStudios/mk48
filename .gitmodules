@@ -1,0 +1,3 @@
+[submodule "engine"]
+	path = engine
+	url = git@gitlab.com:softbeargames/kodiak.git

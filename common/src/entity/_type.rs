@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::altitude::Altitude;
 use crate::entity::{
     Armament, EntityData, EntityKind, EntitySubKind, Exhaust, Sensor, Sensors, Turret,
@@ -5,13 +8,12 @@ use crate::entity::{
 use crate::ticks::Ticks;
 use crate::util::{level_to_score, natural_death_coins};
 use crate::velocity::Velocity;
-use arrayvec::ArrayVec;
-use common_util::angle::Angle;
-use core_protocol::serde_util::{StrVisitor, U8Visitor};
+use kodiak_common::arrayvec::ArrayVec;
+use kodiak_common::bitcode::{self, *};
+use kodiak_common::rand::prelude::IteratorRandom;
+use kodiak_common::rand::{thread_rng, Rng};
+use kodiak_common::Angle;
 use macros::EntityTypeData;
-use rand::prelude::IteratorRandom;
-use rand::{thread_rng, Rng};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 impl EntityType {
     /// Data returns the data associated with the entity type.
@@ -28,33 +30,37 @@ impl EntityType {
 
     /// can_spawn_as returns whether it is possible to spawn as the entity type, which may depend
     /// on whether you are a bot.
-    pub fn can_spawn_as(self, score: u32, bot: bool) -> bool {
+    pub fn can_spawn_as(self, score: u32, allow_npc: bool) -> bool {
         let data = self.data();
-        data.kind == EntityKind::Boat && level_to_score(data.level) <= score && (bot || !data.npc)
+        data.kind == EntityKind::Boat
+            && level_to_score(data.level) <= score
+            && (allow_npc || !data.npc)
     }
 
     /// can_upgrade_to returns whether it is possible to upgrade to the entity type, which may depend
     /// on your score and whether you are a bot.
-    pub fn can_upgrade_to(self, upgrade: Self, score: u32, bot: bool) -> bool {
+    pub fn can_upgrade_to(self, upgrade: Self, score: u32, allow_npc: bool) -> bool {
         let data = self.data();
         let upgrade_data = upgrade.data();
         upgrade_data.level > data.level
             && upgrade_data.kind == data.kind
             && score >= level_to_score(upgrade_data.level)
-            && (bot || !upgrade_data.npc)
+            && (allow_npc || !upgrade_data.npc)
     }
 
     /// iter returns an iterator that visits all possible entity types and allows a random choice to
     /// be made.
     pub fn iter() -> impl Iterator<Item = Self> + IteratorRandom {
-        use enum_iterator::IntoEnumIterator;
-        Self::into_enum_iter()
+        <Self as strum::IntoEnumIterator>::iter()
     }
 
     /// spawn_options returns an iterator that visits all spawnable entity types and allows a random
     /// choice to be made.
-    pub fn spawn_options(score: u32, bot: bool) -> impl Iterator<Item = Self> + IteratorRandom {
-        Self::iter().filter(move |t| t.can_spawn_as(score, bot))
+    pub fn spawn_options(
+        score: u32,
+        allow_npc: bool,
+    ) -> impl Iterator<Item = Self> + IteratorRandom {
+        Self::iter().filter(move |t| t.can_spawn_as(score, allow_npc))
     }
 
     /// upgrade_options returns an iterator that visits all entity types that may be upgraded to
@@ -63,11 +69,11 @@ impl EntityType {
     pub fn upgrade_options(
         self,
         score: u32,
-        bot: bool,
+        allow_npc: bool,
     ) -> impl Iterator<Item = Self> + IteratorRandom {
         // Don't iterate if not enough score for next level.
         if score >= level_to_score(self.data().level + 1) {
-            Some(Self::iter().filter(move |t| self.can_upgrade_to(*t, score, bot)))
+            Some(Self::iter().filter(move |t| self.can_upgrade_to(*t, score, allow_npc)))
         } else {
             None
         }
@@ -120,41 +126,6 @@ impl EntityType {
     }
 }
 
-impl Serialize for EntityType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            serializer.serialize_str(self.as_str())
-        } else {
-            debug_assert_eq!(Self::from_u8(*self as u8).unwrap(), *self);
-            serializer.serialize_u8(*self as u8)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for EntityType {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if deserializer.is_human_readable() {
-            deserializer.deserialize_str(StrVisitor).and_then(|s| {
-                Self::from_str(s.as_str()).ok_or_else(|| {
-                    serde::de::Error::custom(format!("invalid entity type {}", s.as_str()))
-                })
-            })
-        } else {
-            deserializer.deserialize_u8(U8Visitor).and_then(|i| {
-                Self::from_u8(i).ok_or_else(|| {
-                    serde::de::Error::custom(format!("invalid entity type integer {}", i))
-                })
-            })
-        }
-    }
-}
-
 #[repr(u8)]
 #[derive(
     Copy,
@@ -164,8 +135,11 @@ impl<'de> Deserialize<'de> for EntityType {
     Ord,
     PartialOrd,
     Hash,
-    enum_iterator::IntoEnumIterator,
+    strum::EnumIter,
+    strum::IntoStaticStr,
     EntityTypeData,
+    Encode,
+    Decode,
 )]
 pub enum EntityType {
     #[info(
@@ -253,7 +227,7 @@ pub enum EntityType {
     #[entity(Boat, Submarine, level = 6)]
     #[size(length = 113.3, width = 20.137, draft = 8.14, mast = 8.81)]
     #[props(speed = 18.00556, depth = 480)]
-    #[sensors(sonar, visual)]
+    #[sensors(radar, sonar, visual)]
     #[armament(Set65, forward = 50.5, side = 1.5, angle = 0, count = 2, symmetrical)]
     #[armament(Set65, forward = 51, side = 0.6, angle = 0, count = 2, symmetrical)]
     #[armament(Igla, forward = 4.86495, count = 2, vertical)]
@@ -905,6 +879,7 @@ pub enum EntityType {
     #[sensors(radar, sonar, visual)]
     #[armament(
         Mark48,
+        reload_override = 8.0,
         forward = 37.7849,
         side = 4.73435,
         angle = 0,
@@ -1094,11 +1069,11 @@ pub enum EntityType {
     #[size(length = 130, width = 19.804688, draft = 10)]
     #[props(speed = 18.00556, depth = 450)]
     #[sensors(radar, sonar, visual)]
-    #[armament(Set65, forward = 41, side = 5.75, angle = 2, count = 3, symmetrical)]
+    #[armament(Set65, forward = 41, side = 5.75, angle = 2, count = 2, symmetrical)]
     #[armament(Rpk6, forward = 41, side = 5.75, angle = 2, count = 2, symmetrical)]
     #[armament(BrahMos, forward = -4.5, side = 2, symmetrical, vertical)]
     #[armament(BrahMos, forward = -7, side = 2, symmetrical, vertical)]
-    #[armament(Igla, forward = 29.19, count = 4, vertical)]
+    #[armament(Igla, forward = 29.19, count = 2, vertical)]
     #[armament(Brosok, forward = 43, side = 3, angle = 0, symmetrical)]
     #[armament(Brosok, forward = -16.5, side = 1.5, angle = -180, symmetrical)]
     Yasen,
@@ -1171,12 +1146,12 @@ pub enum EntityType {
     #[info(label = "HQ")]
     #[entity(Obstacle, Structure)]
     #[size(length = 90, width = 90)]
-    #[props(lifespan = 600)]
+    #[props(lifespan = 300)]
     Hq,
     #[info(label = "Oil Platform")]
     #[entity(Obstacle, Structure)]
     #[size(length = 90, width = 90)]
-    #[props(lifespan = 600)]
+    #[props(lifespan = 300)]
     #[exhaust(forward = 7, side = 21)]
     #[exhaust(forward = -23, side = 21)]
     OilPlatform,

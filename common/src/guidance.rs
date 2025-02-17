@@ -1,12 +1,11 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::angle::Angle;
-
 use crate::velocity::Velocity;
-use serde::{Deserialize, Serialize};
+use kodiak_common::bitcode::{self, *};
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Encode, Decode)]
 pub struct Guidance {
     pub direction_target: Angle,
     pub velocity_target: Velocity,

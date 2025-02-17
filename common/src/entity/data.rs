@@ -1,12 +1,14 @@
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use crate::altitude::Altitude;
 use crate::entity::{Armament, EntityKind, EntitySubKind, Exhaust, Sensors, Turret};
 use crate::ticks;
 use crate::ticks::Ticks;
 use crate::transform::Transform;
 use crate::velocity::Velocity;
-use common_util::angle::Angle;
-use common_util::range::map_ranges_fast;
-use glam::Vec2;
+use kodiak_common::glam::Vec2;
+use kodiak_common::{map_ranges_fast, Angle};
 use std::ops::Range;
 
 #[allow(dead_code)]

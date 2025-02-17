@@ -1,27 +1,52 @@
-// SPDX-FileCopyrightText: 2021 Softbear, Inc.
+// SPDX-FileCopyrightText: 2024 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use client_util::browser_storage::BrowserStorages;
-use client_util::js_util::is_mobile;
-use client_util::setting::Settings;
-use std::str::FromStr;
+use kodiak_client::{
+    is_mobile, settings_prerequisites, BrowserStorages, SettingCategory, Settings, Translator,
+};
+use strum_macros::{EnumIter, EnumMessage, EnumString, IntoStaticStr};
 
 /// Settings can be set via Javascript (see util/settings.js and page/Settings.svelte).
-#[derive(Clone, Default, PartialEq, Settings)]
+#[derive(Clone, PartialEq, Settings)]
 pub struct Mk48Settings {
+    #[setting(preference, checkbox = "Graphics/Antialias", post)]
+    pub antialias: bool,
+    #[setting(preference, checkbox = "Graphics/Animations", post)]
     pub animations: bool,
-    #[setting(no_store)]
-    pub cinematic: bool,
+    #[setting(preference, checkbox = "Circle HUD", post)]
     pub circle_hud: bool,
+    #[setting(preference, checkbox = "Graphics/Dynamic Waves", post)]
     pub dynamic_waves: bool,
+    #[setting(preference, checkbox = "Show FPS Counter", post)]
     pub fps_shown: bool,
+    /// Whether team menu is open.
+    #[setting(preference, volatile, post)]
+    pub team_dialog_shown: bool,
+    #[setting(preference, dropdown = "Graphics/Shadows", post)]
     pub shadows: ShadowSetting,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+impl Default for Mk48Settings {
+    fn default() -> Self {
+        Self {
+            antialias: !is_mobile(),
+            animations: false,
+            circle_hud: false,
+            dynamic_waves: false,
+            fps_shown: false,
+            team_dialog_shown: true,
+            shadows: Default::default(),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, EnumString, EnumMessage, IntoStaticStr, EnumIter)]
 pub enum ShadowSetting {
+    #[strum(ascii_case_insensitive, message = "No shadows")]
     None,
+    #[strum(ascii_case_insensitive, message = "Hard shadows")]
     Hard,
+    #[strum(ascii_case_insensitive, message = "Soft shadows")]
     Soft,
 }
 
@@ -58,27 +83,9 @@ impl ShadowSetting {
     }
 }
 
-// TODO use strum to derive ToString and FromStr.
 impl ToString for ShadowSetting {
     fn to_string(&self) -> String {
-        match self {
-            Self::None => "none",
-            Self::Hard => "hard",
-            Self::Soft => "soft",
-        }
-        .to_string()
-    }
-}
-
-impl FromStr for ShadowSetting {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "none" => Self::None,
-            "hard" => Self::Hard,
-            "soft" => Self::Soft,
-            _ => return Err(()),
-        })
+        let str: &str = self.into();
+        str.to_owned()
     }
 }
