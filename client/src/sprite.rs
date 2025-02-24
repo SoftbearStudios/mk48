@@ -1,15 +1,15 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::game::Mk48Params;
 use crate::settings::ShadowSetting;
 use kodiak_client::glam::{Mat3, Vec2, Vec4};
 use kodiak_client::renderer::{
-    derive_vertex, DefaultRender, Layer, MeshBuilder, RenderLayer, Renderer, Shader, Texture,
+    self, derive_vertex, DefaultRender, Layer, MeshBuilder, RenderLayer, Renderer, Shader, Texture,
     TextureFormat, TriangleBuffer,
 };
 use kodiak_client::renderer3d::ShadowResult;
-use kodiak_client::UvSpriteSheet;
+use sprite_sheet::UvSpriteSheet;
 
 derive_vertex!(
     struct SpriteVertex {

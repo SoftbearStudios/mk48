@@ -1,10 +1,11 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::ui::phrases::Mk48Phrases;
 use common::entity::{EntityData, EntityType};
-use kodiak_client::{use_translator, SpriteSheet};
+use kodiak_client::use_translator;
 use lazy_static::lazy_static;
+use sprite_sheet::SpriteSheet;
 use stylist::yew::styled_component;
 use web_sys::MouseEvent;
 use yew::virtual_dom::AttrValue;

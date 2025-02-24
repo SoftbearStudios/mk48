@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 use kodiak_client::glam::{vec2, vec3, Vec2, Vec3};
 use std::f32::consts::TAU;
 

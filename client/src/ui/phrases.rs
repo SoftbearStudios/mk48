@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
+// SPDX-FileCopyrightText: 2021 Softbear, Inc.
 
 use crate::game::{ACTIVE_KEY, SURFACE_KEY};
 use common::death_reason::DeathReason;

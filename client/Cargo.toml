@@ -1,9 +1,9 @@
 [package]
+name = "client"
+version = "0.1.1"
 authors = ["Softbear, Inc."]
 edition = "2021"
 license = "AGPL-3.0-or-later"
-name = "client"
-version = "0.1.0"
 
 [profile.release]
 lto = "fat"
@@ -20,10 +20,11 @@ console_error_panic_hook = "0.1"
 getrandom = { version = "0.2", features = [ "js" ] }
 instant = { version = "0.1.10", features = [ "wasm-bindgen" ] }
 itertools = "0.10"
-kodiak_client = { features = [ "audio", "music", "high_contrast_setting", "renderer_srgb", "renderer_webgl2", "renderer2d", "renderer3d_shadow" ], git = "https://github.com/softbearstudios/kodiak", tag="0.1.0" }
+kodiak_client = { git = "https://github.com/softbearstudios/kodiak", tag="0.1.1", features = [ "audio", "music", "high_contrast_setting", "renderer_srgb", "renderer_webgl2", "renderer3d_shadow" ] }
 lazy_static = "1.4"
 minicdn = { version = "0.2.1", default-features = false } # Version and features set via core_protocol.
 serde_json = "1.0"
+sprite_sheet = { path = "../engine/sprite_sheet" }
 strum_macros = "0.25"
 strum = "0.25"
 stylist = "0.13"

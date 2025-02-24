@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 use kodiak_client::glam::{uvec2, UVec2, Vec2};
 use kodiak_client::renderer::{
     DefaultRender, Layer, MeshBuilder, RenderLayer, Renderer, ShaderBinding, TriangleBuffer,

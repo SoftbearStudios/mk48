@@ -1,6 +1,3 @@
-// SPDX-FileCopyrightText: 2024 Softbear, Inc.
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 use crate::entity::EntitySubKind;
 use crate::entity::EntityType;
 use kodiak_common::glam::{vec2, Vec2};

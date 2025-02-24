@@ -1,4 +1,4 @@
-use kodiak_common::{map_ranges, Angle, glam};
+use kodiak_common::{map_ranges, Angle};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::{quote, ToTokens};
