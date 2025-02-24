@@ -3,7 +3,7 @@ authors = ["Softbear, Inc."]
 edition = "2021"
 license = "AGPL-3.0-or-later"
 name = "server"
-version = "0.1.0"
+version = "0.1.1"
 
 [profile.release]
 debug = true
@@ -38,7 +38,7 @@ bitvec = "1.0.0"
 common = {path="../common", version="0.1", features=["server"]}
 env_logger = "0.9"
 idalloc = "0.1"
-kodiak_server = { features = [ "glam_serde", "log_release_max_level_info" ], git = "https://github.com/softbearstudios/kodiak", tag="0.1.0" }
+kodiak_server = { features = [ "glam_serde", "log_release_max_level_info" ], git = "https://github.com/softbearstudios/kodiak", tag="0.1.1" }
 lazy_static = "1"
 maybe_parallel_iterator = {version = "0.10.0", features = []}
 noise = { version = "0.7", default-features = false }
