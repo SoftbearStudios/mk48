@@ -559,6 +559,12 @@ pub enum EntityType {
     #[armament(Set65, forward = 41, side = 0.5, angle = 0, symmetrical)]
     #[armament(Set65, forward = 41, side = 0.5, angle = 0, symmetrical)]
     Golf,
+    #[info(label = "Harbin SH-5", link = "https://en.wikipedia.org/wiki/Harbin_SH-5")]
+    #[entity(Boat, FlyingBoat, level = 10)]
+    #[size(length = 38.9, width = 36, draft = 2)]
+    #[props(speed = 61.74)]
+    #[sensors(radar, visual)]
+    HarbinSh5,
     #[info(
         label = "East Indiaman",
         link = "https://en.wikipedia.org/wiki/East_Indiaman"

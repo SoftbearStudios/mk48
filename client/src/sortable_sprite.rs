@@ -102,7 +102,9 @@ impl SortableSprite {
             mast * 0.25
         } else {
             let mut height = data.width.min(data.length) * 0.33;
-            if data.kind == EntityKind::Aircraft {
+            if data.sub_kind == EntitySubKind::FlyingBoat {
+                height *= 0.25;
+            } else if data.kind == EntityKind::Aircraft {
                 // Aircraft have wings/blades that are wide compared to the height of the aircraft.
                 height *= 0.66;
             } else if data.kind == EntityKind::Obstacle && data.sub_kind != EntitySubKind::Tree {

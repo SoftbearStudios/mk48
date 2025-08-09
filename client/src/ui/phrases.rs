@@ -55,6 +55,9 @@ impl Mk48Phrases for Translator {
             (EntityKind::Boat, EntitySubKind::Dredger) => {
                 translate!(self, "dredger")
             }
+            (EntityKind::Boat, EntitySubKind::FlyingBoat) => {
+                translate!(self, "flying boat")
+            }
             (EntityKind::Boat, EntitySubKind::Hovercraft) => {
                 translate!(self, "hovercraft")
             }
@@ -149,6 +152,9 @@ impl Mk48Phrases for Translator {
             }
             (EntityKind::Boat, EntitySubKind::Dredger) => {
                 translate!(self, "Your ship can create and destroy land!")
+            }
+            (EntityKind::Boat, EntitySubKind::FlyingBoat) => {
+                translate!(self, "Your aircraft can take off and land on water!")
             }
             (EntityKind::Boat, EntitySubKind::Hovercraft) => {
                 translate!(self, "Your boat can travel on both land and water!")
