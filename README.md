@@ -15,29 +15,28 @@
 
 1. Install `rustup` ([see instructions here](https://rustup.rs/))
 2. Install `gmake` and `gcc` if they are not already installed.
-3. Run `download_makefiles.sh`
-4. Install trunk, Rust Nightly, and the WebAssembly target
+3. Install trunk, Rust Nightly, and the WebAssembly target
 
 ```console
 make rustup
 make trunk
 ```
 
-6. Build client
+4. Build client
 
 ```console
 cd client
 make release
 ```
 
-7. Build and run server
+5. Build and run server
 
 ```console
 cd server
 make run_release
 ```
 
-8. Navigate to `https://localhost:8443/` and play!
+6. Navigate to `https://localhost:8443/` and play!
 
 ## Developing
 
