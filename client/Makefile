@@ -2,7 +2,7 @@ GAME_ID = Mk48
 
 all: release
 
-include ../engine/makefiles/client.mk
+include ../makefiles/client.mk
 
 manifest:
 	cargo run --manifest-path ../engine/manifest/Cargo.toml -- \
